@@ -6,7 +6,7 @@ describe('Manufacturing element interactions and rendering', () => {
   it('should open an empty creation form without premature validation errors', () => {
     const api = givenReferential();
     whenVisitingReferential();
-    whenOpeningCreation('elements-new-moule');
+    whenOpeningCreation('elements-new-MOULE');
 
     thenCreationStartsEmpty(api);
   });
@@ -14,7 +14,7 @@ describe('Manufacturing element interactions and rendering', () => {
   it('should dismiss creation with Escape without writing', () => {
     const api = givenReferential();
     whenVisitingReferential();
-    whenOpeningCreation('elements-new-of');
+    whenOpeningCreation('elements-new-OF');
     whenPressingEscape('element-reference');
 
     thenCreationIsDismissed(api);
@@ -24,7 +24,7 @@ describe('Manufacturing element interactions and rendering', () => {
     givenReferential();
     const response = givenPendingCreation();
     whenVisitingReferential();
-    whenOpeningCreation('elements-new-moule');
+    whenOpeningCreation('elements-new-MOULE');
     whenReplacing('element-reference', '1015');
     whenTryingToDismissPendingSave();
     whenCompletingCreation(response);
@@ -43,7 +43,7 @@ describe('Manufacturing element interactions and rendering', () => {
   it('should refuse an oversized company number before writing', () => {
     const api = givenReferential();
     whenVisitingReferential();
-    whenOpeningCreation('elements-new-moule');
+    whenOpeningCreation('elements-new-MOULE');
     whenReplacing('element-reference', 'a'.repeat(101));
     whenSubmittingInvalidEntries();
 
@@ -75,7 +75,7 @@ describe('Manufacturing element interactions and rendering', () => {
   it('should keep creation usable on a narrow screen', () => {
     givenReferential(2);
     whenVisitingMobileReferential();
-    whenOpeningCreation('elements-new-moule');
+    whenOpeningCreation('elements-new-MOULE');
 
     thenMobileFormIsUsable();
   });
@@ -116,7 +116,7 @@ const whenReplacing = (selector: string, value: string): void => {
   if (value !== '') cy.get(dataSelector(selector)).type(value);
 };
 const whenCreating = (reference: string, libelle: string): void => {
-  whenOpeningCreation('elements-new-moule');
+  whenOpeningCreation('elements-new-MOULE');
   whenReplacing('element-reference', reference);
   whenReplacing('element-libelle', libelle);
   whenSaving();
@@ -143,12 +143,12 @@ const whenCompletingCreation = (response: ReturnType<typeof interceptForever>): 
   cy.wait('@pendingCreation');
 };
 const thenPendingSaveWasProtected = (): void => {
-  cy.get('@pendingTitle').should('contain', 'Nouveau moule');
+  cy.get('@pendingTitle').should('contain', 'Nouveau produit MOULE');
   cy.get('@pendingDisabled').should('equal', true);
   cy.get(dataSelector('element-form')).should('not.exist');
 };
 const thenCreationStartsEmpty = (api: ElementsApiFixture): void => {
-  cy.get(dataSelector('element-form-title')).should('have.text', 'Nouveau moule');
+  cy.get(dataSelector('element-form-title')).should('have.text', 'Nouveau produit MOULE');
   cy.get(dataSelector('element-reference')).should('have.value', '');
   cy.get(dataSelector('element-libelle')).should('have.value', '');
   cy.get(dataSelector('element-reference-error')).invoke('text').should('match', /^\s*$/);
@@ -180,8 +180,8 @@ const thenWriteFailureIsVisible = (): void => {
 };
 const thenDesktopLayoutIsVisible = (): void => {
   cy.get(dataSelector('element-row')).should('have.length', 6);
-  cy.get(dataSelector('element-type-cell')).first().should('have.text', 'Moule');
-  cy.get(dataSelector('element-edit')).first().should('have.attr', 'aria-label', 'Modifier le moule 1015');
+  cy.get(dataSelector('element-categorie-cell')).first().should('have.text', 'MOULE');
+  cy.get(dataSelector('element-edit')).first().should('have.attr', 'aria-label', 'Modifier 1015');
   cy.screenshot('elements-desktop', { capture: 'fullPage' });
 };
 const thenMobileFormIsUsable = (): void => {

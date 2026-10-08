@@ -9,6 +9,7 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { ElementsDeFabricationFixture } from '@test/unit/fixtures/gestion/element-de-fabrication/ElementsDeFabricationFixture';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
+import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
 import { ElementDeFabrication } from '../../domain/ElementDeFabrication';
 import { ElementDeFabricationId } from '../../domain/ElementDeFabricationId';
 import { ElementDeFabricationIntrouvable } from '../../domain/ElementDeFabricationIntrouvable';
@@ -36,6 +37,7 @@ interface ElementFixture {
 }
 
 const ROUTE = '/api/elements-de-fabrication';
+const CATEGORIE_DU_TYPE = { ORDRE_DE_FABRICATION: 'OF', PRODUIT: 'MOULE' } as const;
 const NOM_ATTRIBUE = 'PRD-2026-000001';
 
 const mouleFixture: ElementFixture = {
@@ -49,7 +51,7 @@ const ofSansReferenceFixture: ElementFixture = { id: 'of-1', type: 'ORDRE_DE_FAB
 
 interface ProjectionElement {
   readonly id: string;
-  readonly type: string;
+  readonly categorie: string;
   readonly nom: string;
   readonly reference: string | undefined;
   readonly libelle: string | undefined;
@@ -57,7 +59,7 @@ interface ProjectionElement {
 
 const projeter = (element: ElementDeFabrication): ProjectionElement => ({
   id: element.id.value,
-  type: element.type,
+  categorie: element.categorie.value,
   nom: element.nom.value,
   reference: element.reference?.value,
   libelle: element.libelle?.value,
@@ -158,7 +160,7 @@ const createHttpHarness = (): ElementsHarness => {
 
 const toDomain = (element: ElementFixture): ElementDeFabrication =>
   new ElementDeFabrication(new ElementDeFabricationId(element.id), {
-    type: element.type,
+    categorie: new CategorieDeProduit(CATEGORIE_DU_TYPE[element.type]),
     nom: new NomDElement(element.nom),
     reference: element.reference === undefined ? undefined : new ReferenceDElement(element.reference),
     libelle: element.description === undefined ? undefined : new LibelleDElement(element.description),
@@ -203,8 +205,8 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
 
     expect(page.totalCount).toBe(2);
     expect(page.elements.map(projeter)).toEqual([
-      { id: 'moule-1', type: 'PRODUIT', nom: 'PRD-2026-000001', reference: '1015', libelle: 'Moule de capot' },
-      { id: 'of-1', type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000042', reference: undefined, libelle: undefined },
+      { id: 'moule-1', categorie: 'MOULE', nom: 'PRD-2026-000001', reference: '1015', libelle: 'Moule de capot' },
+      { id: 'of-1', categorie: 'OF', nom: 'OF-2026-000042', reference: undefined, libelle: undefined },
     ]);
   });
 
@@ -232,18 +234,18 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
     ['with a company number and a label', '1015', 'Moule de capot'],
     ['reduced to its produced number', undefined, undefined],
   ] as const)('should create an element %s and list it', async (_scenario, reference, libelle) => {
-    const resultat = await whenCreating('PRODUIT', reference, libelle);
+    const resultat = await whenCreating('MOULE', reference, libelle);
 
     expect(resultat).toEqual({ ok: true, value: undefined });
-    expect(await whenListing()).toEqual([{ id: 'created-element', type: 'PRODUIT', nom: NOM_ATTRIBUE, reference, libelle }]);
+    expect(await whenListing()).toEqual([{ id: 'created-element', categorie: 'MOULE', nom: NOM_ATTRIBUE, reference, libelle }]);
   });
 
-  it('should create an ordre de fabrication carrying its own type', async () => {
-    const resultat = await whenCreating('ORDRE_DE_FABRICATION', '1016', undefined);
+  it('should create an ordre de fabrication carrying its own category', async () => {
+    const resultat = await whenCreating('OF', '1016', undefined);
 
     expect(resultat).toEqual({ ok: true, value: undefined });
     expect(await whenListing()).toEqual([
-      { id: 'created-element', type: 'ORDRE_DE_FABRICATION', nom: NOM_ATTRIBUE, reference: '1016', libelle: undefined },
+      { id: 'created-element', categorie: 'OF', nom: NOM_ATTRIBUE, reference: '1016', libelle: undefined },
     ]);
   });
 
@@ -254,7 +256,7 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
 
     expect(resultat).toEqual({ ok: true, value: undefined });
     expect(await whenListing()).toEqual([
-      { id: 'moule-1', type: 'PRODUIT', nom: 'PRD-2026-000001', reference: '1016', libelle: 'Moule de portière' },
+      { id: 'moule-1', categorie: 'MOULE', nom: 'PRD-2026-000001', reference: '1016', libelle: 'Moule de portière' },
     ]);
   });
 
@@ -265,7 +267,7 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
 
     expect(resultat).toEqual({ ok: true, value: undefined });
     expect(await whenListing()).toEqual([
-      { id: 'moule-1', type: 'PRODUIT', nom: 'PRD-2026-000001', reference: undefined, libelle: undefined },
+      { id: 'moule-1', categorie: 'MOULE', nom: 'PRD-2026-000001', reference: undefined, libelle: undefined },
     ]);
   });
 
@@ -292,13 +294,13 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
   };
 
   const whenCreating = (
-    type: 'PRODUIT' | 'ORDRE_DE_FABRICATION',
+    code: string,
     reference: string | undefined,
     libelle: string | undefined,
   ): Promise<Result<void, ReferenceDejaUtilisee>> =>
     port.creer({
       kind: 'CREATION',
-      type,
+      categorie: new CategorieDeProduit(code),
       reference: reference === undefined ? undefined : new ReferenceDElement(reference),
       libelle: libelle === undefined ? undefined : new LibelleDElement(libelle),
     });
@@ -411,7 +413,7 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
   });
 
   it('should send only the fields the manager filled in', async () => {
-    const result = port.creer({ kind: 'CREATION', type: 'ORDRE_DE_FABRICATION', reference: undefined, libelle: undefined });
+    const result = port.creer({ kind: 'CREATION', categorie: new CategorieDeProduit('OF'), reference: undefined, libelle: undefined });
     const request = await whenWriteAnswers(ROUTE, 201, {});
 
     await result;
@@ -423,7 +425,7 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
       case 'creer':
         return port.creer({
           kind: 'CREATION',
-          type: 'PRODUIT',
+          categorie: new CategorieDeProduit('MOULE'),
           reference: new ReferenceDElement('1015'),
           libelle: new LibelleDElement('Moule de capot'),
         });

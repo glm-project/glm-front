@@ -51,7 +51,7 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
       this.liste = [
         ...this.liste,
         new ElementDeFabrication(new ElementDeFabricationId('created-element'), {
-          type: commande.type,
+          categorie: commande.categorie,
           nom: new NomDElement(NOM_ATTRIBUE),
           reference: commande.reference,
           libelle: commande.libelle,
@@ -72,7 +72,7 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
 
   private revise(element: ElementDeFabrication, commande: CommandeModificationElement): ElementDeFabrication {
     return new ElementDeFabrication(element.id, {
-      type: element.type,
+      categorie: element.categorie,
       nom: element.nom,
       reference: commande.reference,
       libelle: commande.libelle,

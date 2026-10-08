@@ -1,3 +1,4 @@
+import { CategorieDeProduit } from './CategorieDeProduit';
 import { ElementDeFabrication } from './ElementDeFabrication';
 import { ElementDeFabricationId } from './ElementDeFabricationId';
 import { LibelleDElement } from './LibelleDElement';
@@ -21,14 +22,14 @@ describe('ElementDeFabrication', () => {
     const element = elementFixture(new ReferenceDElement('1015'));
 
     expect(element.id.value).toBe('moule-1');
-    expect(element.type).toBe('PRODUIT');
+    expect(element.categorie.value).toBe('MOULE');
     expect(element.nom.value).toBe('PRD-2026-000001');
     expect(element.libelle?.value).toBe('Moule de capot');
   });
 
   const elementFixture = (reference: ReferenceDElement | undefined): ElementDeFabrication =>
     new ElementDeFabrication(new ElementDeFabricationId('moule-1'), {
-      type: 'PRODUIT',
+      categorie: new CategorieDeProduit('MOULE'),
       nom: new NomDElement('PRD-2026-000001'),
       reference,
       libelle: new LibelleDElement('Moule de capot'),

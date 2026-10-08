@@ -14,15 +14,15 @@ describe('Manufacturing element referential in gestion', () => {
   it('should create the first moule and list it with its screen words', () => {
     givenReferential();
     whenVisitingReferential();
-    whenCreating('elements-empty-create-moule', '1015', 'Moule de capot');
+    whenCreating('elements-empty-create-MOULE', '1015', 'Moule de capot');
 
-    thenElementIsListed('1015', 'Moule', 'Moule de capot');
+    thenElementIsListed('1015', 'MOULE', 'Moule de capot');
   });
 
   it('should create an OF carrying the type of the button that opened the form', () => {
     givenReferential();
     whenVisitingReferential();
-    whenCreating('elements-empty-create-of', '1016', 'Reprise du capot');
+    whenCreating('elements-empty-create-OF', '1016', 'Reprise du capot');
 
     thenElementIsListed('1016', 'OF', 'Reprise du capot');
   });
@@ -30,7 +30,7 @@ describe('Manufacturing element referential in gestion', () => {
   it('should create an element reduced to its produced number', () => {
     const api = givenReferential();
     whenVisitingReferential();
-    whenOpeningCreation('elements-empty-create-moule');
+    whenOpeningCreation('elements-empty-create-MOULE');
     whenSaving();
 
     thenElementWithoutFicheIsListed(api);
@@ -39,10 +39,10 @@ describe('Manufacturing element referential in gestion', () => {
   it('should save and list the element after correcting a duplicate reference', () => {
     givenReferential(1);
     whenVisitingReferential();
-    whenCreating('elements-new-moule', '1015', 'Moule de capot');
+    whenCreating('elements-new-MOULE', '1015', 'Moule de capot');
     whenCorrectingReference('1099');
 
-    thenElementIsListed('1099', 'Moule', 'Moule de capot');
+    thenElementIsListed('1099', 'MOULE', 'Moule de capot');
   });
 
   it('should modify an element and remove its label', () => {
@@ -53,7 +53,7 @@ describe('Manufacturing element referential in gestion', () => {
     whenReplacing('element-libelle', '');
     whenSavingModification();
 
-    thenElementIsListed('1099', 'Moule', '—');
+    thenElementIsListed('1099', 'MOULE', '—');
   });
 
   it('should paginate the referential without asking for any period', () => {
@@ -116,12 +116,12 @@ const thenReferentialIsVisible = (): void => {
   cy.get(dataSelector('elements-page')).should('be.visible');
   cy.get(dataSelector('elements-empty')).should('contain.text', 'Aucun moule ni OF');
 };
-const thenElementIsListed = (reference: string, type: string, libelle: string): void => {
+const thenElementIsListed = (reference: string, categorie: string, libelle: string): void => {
   cy.get(dataSelector('element-form')).should('not.exist');
-  cy.get(dataSelector('element-row')).contains(reference).closest('tr').should('contain.text', type).and('contain.text', libelle);
+  cy.get(dataSelector('element-row')).contains(reference).closest('tr').should('contain.text', categorie).and('contain.text', libelle);
 };
 const thenElementWithoutFicheIsListed = (api: ElementsApiFixture): void => {
-  thenElementIsListed('—', 'Moule', '—');
+  thenElementIsListed('—', 'MOULE', '—');
   cy.wrap(api.writes).should('deep.equal', [{ type: 'PRODUIT' }]);
 };
 const thenLastPageShowsTheRemainingElement = (): void => {

@@ -6,18 +6,18 @@ les moules et les OF — que le dirigeant ou son assistante créent et tiennent 
 
 ## Langage
 
-**Élément de fabrication** : mot de repli, employé uniquement quand on ne présume pas du type — page de
-détail, état vide, message d'erreur venu du back. Il ne titre jamais un écran.
+**Élément de fabrication** : mot de repli, employé uniquement quand on ne présume pas de la catégorie —
+page de détail, état vide, message d'erreur venu du back. Il ne titre jamais un écran.
 
-**Moule** (`PRODUIT`) et **OF** (`ORDRE_DE_FABRICATION`) : les deux valeurs du type, distinguées
-visuellement et traitées de façon identique. Le type est une **valeur portée par l'élément**, pas une
-hiérarchie ni deux référentiels.
+**Catégorie de produit** : famille dans laquelle l'entreprise range ce qu'elle fabrique (`MOULE`, `OF`…).
+Chaque entreprise déclare les siennes ; le **code est son propre libellé** et s'affiche tel quel. La
+catégorie est une **valeur portée par l'élément**, pas une hiérarchie ni plusieurs référentiels.
 
 **Référence** : le numéro que l'entreprise donne elle-même (« 1015 »). Facultative, bornée à 100
 caractères, et unique dans l'entreprise lorsqu'elle est renseignée. C'est elle qui domine l'affichage.
 
 **Nom** : le numéro produit par le domaine du back à la création (`PRD-2026-000001`), par numérotation
-propre au type et à l'année. **L'API ne le reçoit jamais** : aucun formulaire ne le propose. Seul
+propre à la catégorie et à l'année. **L'API ne le reçoit jamais** : aucun formulaire ne le propose. Seul
 identifiant stable et jamais nul, il reste visible en second rang et sert de repli à la désignation.
 
 **Libellé** : le texte libre d'une ligne qui rend reconnaissable un élément sans référence. Il porte le
@@ -25,20 +25,20 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
 
 ## Modèle de domaine
 
-- **ElementDeFabrication** : agrégat racine portant son identifiant, son type, son nom, sa référence
+- **ElementDeFabrication** : agrégat racine portant son identifiant, sa catégorie, son nom, sa référence
   éventuelle et son libellé éventuel. `numero()` répond à la question « comment cet élément se désigne » :
   la référence si elle existe, le nom sinon.
 - **ElementDeFabricationId** : Value Object de l'identifiant immuable.
-- **TypeDElementDeFabrication** : union des deux valeurs du type, structurellement compatible avec l'énum
-  de l'API.
+- **CategorieDeProduit** : Value Object du code de la catégorie, non vide. `estLaMeme` compare deux codes.
 - **NomDElement** : Value Object du numéro produit par le domaine, non vide.
 - **ReferenceDElement** : Value Object du numéro de l'entreprise, non vide et borné à 100 caractères.
 - **LibelleDElement** : Value Object du libellé. Il porte deux bornes : celle du contrat back (1000
   caractères) à la construction, et celle de l'écran (100 caractères) sur la saisie, le libellé tenant sur
   une ligne.
-- **CommandeCreationElement** : commande de création, portant le type et les attributs facultatifs validés.
+- **CommandeCreationElement** : commande de création, portant la catégorie et les attributs facultatifs
+  validés.
 - **CommandeModificationElement** : commande de modification, portant l'identifiant et les attributs
-  facultatifs validés. Le type n'y figure pas : il ne se change pas.
+  facultatifs validés. La catégorie n'y figure pas : elle ne se change pas.
 - **RequeteElements** : objet de requête paginée (`page`, `taille`).
 - **FormulaireElementDeFabrication** : modèle riche d'interaction pour la création et la modification, qui
   valide les saisies, produit la commande adéquate et efface le refus de doublon dès que la référence est
@@ -56,8 +56,8 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   (`urn:glm:erreur:element-de-fabrication:reference-deja-utilisee`) se reporte sur le champ référence sans
   fermer le formulaire.
 - Le nom n'est jamais saisi ni envoyé : le domaine du back le produit à la création.
-- Le type est obligatoire à la création et immuable ensuite. Deux boutons le portent — « Nouveau moule » et
-  « Nouvel OF » — et ouvrent le même formulaire, type pré-rempli et non affiché.
+- La catégorie est obligatoire à la création et immuable ensuite. Un bouton par catégorie la porte et ouvre
+  le même formulaire, catégorie pré-remplie et non affichée.
 - **L'écran ne propose pas de supprimer.** Le `DELETE` existe à l'API, mais le client parle de clôture, et
   supprimer un élément portant des temps détruirait des heures de paie. La sortie d'un élément est la
   clôture de son suivi d'atelier, qui appartient à un autre contexte.
@@ -80,9 +80,9 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   `fin`, qui filtrent la date de création. L'adapter secondaire absorbe ce piège en demandant toute
   l'amplitude ; aucun filtre de période n'atteint l'écran. C'est le suivi d'atelier qui porte des dates,
   pas l'élément.
-- Tous les mots affichés vivent dans `LibellesElementsDeFabrication`, indexés par les valeurs du type.
-  Aucun mot en dur dans un template : le jour où une deuxième entreprise cliente entre, un seul fichier
-  change.
+- Tous les mots affichés vivent dans `LibellesElementsDeFabrication`. Aucun mot en dur dans un template : le
+  jour où une deuxième entreprise cliente entre, un seul fichier change. La catégorie fait exception : son code
+  s'affiche tel quel.
 - Pour les formulaires et la validation des saisies, appliquer l'[ADR 0036](../../../../../../documentation/adr/0036-rich-domain-models-for-form-interactions.md) :
   la saisie et ses invariants sont portés par un modèle de domaine riche, sans `ReactiveFormsModule`.
 
@@ -92,5 +92,5 @@ Le port fournit `referentiel()` comme acquisition complète pour la recherche de
 parcourt les pages avec la taille commune et refuse les échos de page, tailles, totaux, troncatures et
 doublons incohérents. Il signale une panne une seule fois et ne présente jamais une collection partielle
 comme résultat complet. La page cherche sans casse ni accents, puis pagine localement les résultats.
-Une nouvelle recherche ou un changement de type repart de la première page. Actualiser et les écritures
+Une nouvelle recherche ou un changement de catégorie repart de la première page. Actualiser et les écritures
 réussies relisent toute la collection ; une réponse obsolète ne remplace pas une lecture récente.

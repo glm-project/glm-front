@@ -1,4 +1,5 @@
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
+import { CategorieDeProduit } from './CategorieDeProduit';
 import { CommandeCreationElement } from './CommandeCreationElement';
 import { CommandeModificationElement } from './CommandeModificationElement';
 import { ElementDeFabrication } from './ElementDeFabrication';
@@ -7,7 +8,6 @@ import { ErreursFormulaireElement } from './ErreursFormulaireElement';
 import { LibelleDElement } from './LibelleDElement';
 import { ReferenceDElement } from './ReferenceDElement';
 import { RefusModificationElement } from './RefusModificationElement';
-import { TypeDElementDeFabrication } from './TypeDElementDeFabrication';
 
 interface SaisieElement {
   readonly reference: string;
@@ -15,7 +15,7 @@ interface SaisieElement {
 }
 
 interface EtatFormulaireElement {
-  readonly type: TypeDElementDeFabrication;
+  readonly categorie: CategorieDeProduit;
   readonly saisie: SaisieElement;
   readonly id: ElementDeFabricationId | undefined;
   readonly refus: RefusModificationElement | undefined;
@@ -26,25 +26,25 @@ export type CommandeElement = CommandeCreationElement | CommandeModificationElem
 const SAISIE_VIDE: SaisieElement = { reference: '', libelle: '' };
 
 export class FormulaireElementDeFabrication {
-  readonly type: TypeDElementDeFabrication;
+  readonly categorie: CategorieDeProduit;
   readonly saisie: SaisieElement;
   readonly id: ElementDeFabricationId | undefined;
   private readonly refus: RefusModificationElement | undefined;
 
   private constructor(etat: EtatFormulaireElement) {
-    this.type = etat.type;
+    this.categorie = etat.categorie;
     this.saisie = etat.saisie;
     this.id = etat.id;
     this.refus = etat.refus;
   }
 
-  static pourCreation(type: TypeDElementDeFabrication): FormulaireElementDeFabrication {
-    return new FormulaireElementDeFabrication({ type, saisie: SAISIE_VIDE, id: undefined, refus: undefined });
+  static pourCreation(categorie: CategorieDeProduit): FormulaireElementDeFabrication {
+    return new FormulaireElementDeFabrication({ categorie, saisie: SAISIE_VIDE, id: undefined, refus: undefined });
   }
 
   static pourModification(element: ElementDeFabrication): FormulaireElementDeFabrication {
     return new FormulaireElementDeFabrication({
-      type: element.type,
+      categorie: element.categorie,
       saisie: { reference: element.reference?.value ?? '', libelle: element.libelle?.value ?? '' },
       id: element.id,
       refus: undefined,
@@ -63,14 +63,14 @@ export class FormulaireElementDeFabrication {
     const libelle = this.libelleSaisi();
 
     if (this.id === undefined) {
-      return ok({ kind: 'CREATION', type: this.type, reference, libelle });
+      return ok({ kind: 'CREATION', categorie: this.categorie, reference, libelle });
     }
     return ok({ kind: 'MODIFICATION', id: this.id, reference, libelle });
   }
 
   avecReference(reference: string): FormulaireElementDeFabrication {
     return new FormulaireElementDeFabrication({
-      type: this.type,
+      categorie: this.categorie,
       saisie: { ...this.saisie, reference },
       id: this.id,
       refus: this.refusApresReference(reference),
@@ -79,7 +79,7 @@ export class FormulaireElementDeFabrication {
 
   avecLibelle(libelle: string): FormulaireElementDeFabrication {
     return new FormulaireElementDeFabrication({
-      type: this.type,
+      categorie: this.categorie,
       saisie: { ...this.saisie, libelle },
       id: this.id,
       refus: this.refus,
@@ -87,7 +87,7 @@ export class FormulaireElementDeFabrication {
   }
 
   avecRefus(refus: RefusModificationElement): FormulaireElementDeFabrication {
-    return new FormulaireElementDeFabrication({ type: this.type, saisie: this.saisie, id: this.id, refus });
+    return new FormulaireElementDeFabrication({ categorie: this.categorie, saisie: this.saisie, id: this.id, refus });
   }
 
   erreurReference(): string | undefined {

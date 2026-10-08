@@ -8,6 +8,7 @@ import { buildPageFrom } from '@/app/shared/pagination/infrastructure/secondary/
 import { collectAllPages } from '@/app/shared/pagination/infrastructure/secondary/collectAllPages';
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
+import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
 import { CommandeCreationElement } from '../../domain/CommandeCreationElement';
 import { CommandeModificationElement } from '../../domain/CommandeModificationElement';
 import { ElementDeFabrication } from '../../domain/ElementDeFabrication';
@@ -31,9 +32,14 @@ const toReference = (reference: string | undefined): ReferenceDElement | undefin
 const toLibelle = (description: string | undefined): LibelleDElement | undefined =>
   description === undefined ? undefined : new LibelleDElement(description);
 
+const CATEGORIE_DU_TYPE = { ORDRE_DE_FABRICATION: 'OF', PRODUIT: 'MOULE' } as const;
+
+const typeDeLaCategorie = (categorie: CategorieDeProduit): keyof typeof CATEGORIE_DU_TYPE =>
+  categorie.value === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT';
+
 const toElement = (element: RestElement): ElementDeFabrication =>
   new ElementDeFabrication(new ElementDeFabricationId(required(element.id, 'element.id')), {
-    type: required(element.type, 'element.type'),
+    categorie: new CategorieDeProduit(CATEGORIE_DU_TYPE[required(element.type, 'element.type')]),
     nom: new NomDElement(required(element.nom, 'element.nom')),
     reference: toReference(element.reference),
     libelle: toLibelle(element.description),
@@ -90,7 +96,7 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
 
   override creer(commande: CommandeCreationElement): Promise<Result<void, ReferenceDejaUtilisee>> {
     return this.execute(
-      this.api.write('/api/elements-de-fabrication', { body: { type: commande.type, ...toFiche(commande) } }),
+      this.api.write('/api/elements-de-fabrication', { body: { type: typeDeLaCategorie(commande.categorie), ...toFiche(commande) } }),
       refusCreation,
     );
   }

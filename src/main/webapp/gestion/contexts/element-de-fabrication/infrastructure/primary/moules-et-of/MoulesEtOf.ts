@@ -7,9 +7,9 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorIntl, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
+import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
-import { TypeDElementDeFabrication } from '../../../domain/TypeDElementDeFabrication';
 import { ElementFormDialog, ElementFormDialogData } from '../element-form-dialog/ElementFormDialog';
 import { LIBELLES_ELEMENTS_DE_FABRICATION } from '../LibellesElementsDeFabrication';
 
@@ -52,7 +52,7 @@ export class MoulesEtOf implements OnInit {
   private readonly viewContainerRef = inject(ViewContainerRef);
   private lecture = 0;
   protected readonly libelles = LIBELLES_ELEMENTS_DE_FABRICATION;
-  protected readonly colonnes = ['type', 'reference', 'nom', 'libelle', 'actions'];
+  protected readonly colonnes = ['categorie', 'reference', 'nom', 'libelle', 'actions'];
   protected readonly etat = signal<EtatElements>({
     elements: [],
     totalElementsCount: 0,
@@ -62,10 +62,11 @@ export class MoulesEtOf implements OnInit {
     echec: false,
   });
 
-  protected readonly type = signal<TypeDElementDeFabrication | 'TOUS'>('TOUS');
+  protected readonly categories: readonly CategorieDeProduit[] = [new CategorieDeProduit('MOULE'), new CategorieDeProduit('OF')];
+  protected readonly filtre = signal<CategorieDeProduit | undefined>(undefined);
 
-  protected choisirType(type: TypeDElementDeFabrication | 'TOUS'): void {
-    this.type.set(type);
+  protected choisirCategorie(categorie: CategorieDeProduit | undefined): void {
+    this.filtre.set(categorie);
     this.etat.update(etat => ({ ...etat, page: 0 }));
   }
 
@@ -76,7 +77,7 @@ export class MoulesEtOf implements OnInit {
       const texte = [entry.reference?.value, entry.nom.value, entry.libelle?.value];
       return (
         texte.join(' ').normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr-FR').includes(recherche)
-        && (this.type() === 'TOUS' || entry.type === this.type())
+        && this.correspondAuFiltre(entry)
       );
     });
   });
@@ -101,20 +102,25 @@ export class MoulesEtOf implements OnInit {
     this.etat.update(etat => ({ ...etat, page: event.pageIndex, taille: event.pageSize }));
   }
 
-  protected libelleDuType(element: ElementDeFabrication): string {
-    return this.libelles.types[element.type];
+  protected estFiltree(categorie: CategorieDeProduit): boolean {
+    return this.filtre()?.estLaMeme(categorie) ?? false;
   }
 
   protected identifiantDe(element: ElementDeFabrication): string {
     return element.id.value;
   }
 
-  protected openCreation(type: TypeDElementDeFabrication): void {
-    this.openForm({ type, element: null });
+  protected openCreation(categorie: CategorieDeProduit): void {
+    this.openForm({ categorie, element: null });
   }
 
   protected openModification(element: ElementDeFabrication): void {
-    this.openForm({ type: element.type, element });
+    this.openForm({ categorie: element.categorie, element });
+  }
+
+  private correspondAuFiltre(element: ElementDeFabrication): boolean {
+    const filtre = this.filtre();
+    return filtre === undefined || element.categorie.estLaMeme(filtre);
   }
 
   private openForm(data: ElementFormDialogData): void {

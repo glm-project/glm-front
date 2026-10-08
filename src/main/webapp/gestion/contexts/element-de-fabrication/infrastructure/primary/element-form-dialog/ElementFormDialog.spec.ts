@@ -9,6 +9,7 @@ import { ElementsDeFabricationFixture } from '@test/unit/fixtures/gestion/elemen
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
+import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementDeFabricationId } from '../../../domain/ElementDeFabricationId';
 import { ElementDeFabricationIntrouvable } from '../../../domain/ElementDeFabricationIntrouvable';
@@ -17,14 +18,13 @@ import { LibelleDElement } from '../../../domain/LibelleDElement';
 import { NomDElement } from '../../../domain/NomDElement';
 import { ReferenceDElement } from '../../../domain/ReferenceDElement';
 import { ReferenceDejaUtilisee } from '../../../domain/ReferenceDejaUtilisee';
-import { TypeDElementDeFabrication } from '../../../domain/TypeDElementDeFabrication';
 import { ElementFormDialog, ElementFormDialogData } from './ElementFormDialog';
 
 @Component({ template: '' })
 class DialogHostFixture {}
 
 const mouleFixture = new ElementDeFabrication(new ElementDeFabricationId('moule-1'), {
-  type: 'PRODUIT',
+  categorie: new CategorieDeProduit('MOULE'),
   nom: new NomDElement('PRD-2026-000001'),
   reference: new ReferenceDElement('1015'),
   libelle: new LibelleDElement('Moule de capot'),
@@ -58,22 +58,24 @@ describe('ElementFormDialog', () => {
   });
 
   it('should never propose the produced number, only the company number and the label', async () => {
-    await whenOpeningCreation('PRODUIT');
+    await whenOpeningCreation('MOULE');
 
     expect(fields()).toEqual(['element-reference', 'element-libelle']);
   });
 
   it('should create an element reduced to its produced number', async () => {
-    await whenOpeningCreation('PRODUIT');
+    await whenOpeningCreation('MOULE');
     await whenSubmitting();
     await whenClosed();
 
-    expect(port.enregistrements).toEqual([{ kind: 'CREATION', type: 'PRODUIT', reference: undefined, libelle: undefined }]);
+    expect(port.enregistrements).toEqual([
+      { kind: 'CREATION', categorie: new CategorieDeProduit('MOULE'), reference: undefined, libelle: undefined },
+    ]);
     expect(closed).toEqual([true]);
   });
 
   it('should create an ordre de fabrication from the entered company number and label', async () => {
-    await whenOpeningCreation('ORDRE_DE_FABRICATION');
+    await whenOpeningCreation('OF');
     await whenEntering('element-reference', '1016');
     await whenEntering('element-libelle', 'Reprise du capot');
     await whenSubmitting();
@@ -82,7 +84,7 @@ describe('ElementFormDialog', () => {
     expect(port.enregistrements).toEqual([
       {
         kind: 'CREATION',
-        type: 'ORDRE_DE_FABRICATION',
+        categorie: new CategorieDeProduit('OF'),
         reference: new ReferenceDElement('1016'),
         libelle: new LibelleDElement('Reprise du capot'),
       },
@@ -91,7 +93,7 @@ describe('ElementFormDialog', () => {
   });
 
   it('should display an oversized company number and keep the dialog open', async () => {
-    await whenOpeningCreation('PRODUIT');
+    await whenOpeningCreation('MOULE');
     await whenEntering('element-reference', 'a'.repeat(101));
     await whenSubmitting();
 
@@ -101,7 +103,7 @@ describe('ElementFormDialog', () => {
   });
 
   it('should display a label beyond one line and keep the dialog open', async () => {
-    await whenOpeningCreation('PRODUIT');
+    await whenOpeningCreation('MOULE');
     await whenEntering('element-libelle', 'a'.repeat(101));
     await whenSubmitting();
 
@@ -112,7 +114,7 @@ describe('ElementFormDialog', () => {
 
   it('should show a duplicate reference refusal until the manager changes the reference', async () => {
     givenDuplicateReferenceIsRefused();
-    await whenOpeningCreation('PRODUIT');
+    await whenOpeningCreation('MOULE');
     await whenEntering('element-reference', '1015');
     await whenSubmitting();
     const duplicate = text('element-reference-error');
@@ -134,7 +136,7 @@ describe('ElementFormDialog', () => {
     await whenSubmitting();
     await whenClosed();
 
-    expect(titre).toBe('Modifier le moule 1015');
+    expect(titre).toBe('Modifier 1015');
     expect(reference).toBe('1015');
     expect(libelle).toBe('Moule de capot');
     expect(port.enregistrements).toEqual([
@@ -154,7 +156,7 @@ describe('ElementFormDialog', () => {
 
   it('should display a technical failure and report it through the error boundary', async () => {
     givenSavingFails();
-    await whenOpeningCreation('PRODUIT');
+    await whenOpeningCreation('MOULE');
     await whenSubmitting();
 
     expect(text('element-technical-error')).toContain('L’enregistrement a échoué');
@@ -165,7 +167,7 @@ describe('ElementFormDialog', () => {
   it('should prevent duplicate submission while saving', async () => {
     const deferred = new DeferredFixture<Result<void, ReferenceDejaUtilisee>>();
     givenSavingIsPending(deferred);
-    await whenOpeningCreation('PRODUIT');
+    await whenOpeningCreation('MOULE');
     await whenSubmitting();
     const busy = button('element-save').disabled;
     await whenSubmitting();
@@ -178,7 +180,7 @@ describe('ElementFormDialog', () => {
   });
 
   it('should cancel without writing', async () => {
-    await whenOpeningCreation('PRODUIT');
+    await whenOpeningCreation('MOULE');
     await whenClicking('element-cancel');
     await whenClosed();
 
@@ -199,8 +201,8 @@ describe('ElementFormDialog', () => {
     port.creationDifferee = deferred.promise;
   };
 
-  const whenOpeningCreation = (type: TypeDElementDeFabrication): Promise<void> => whenOpening({ type, element: null });
-  const whenOpeningModification = (element: ElementDeFabrication): Promise<void> => whenOpening({ type: element.type, element });
+  const whenOpeningCreation = (code: string): Promise<void> => whenOpening({ categorie: new CategorieDeProduit(code), element: null });
+  const whenOpeningModification = (element: ElementDeFabrication): Promise<void> => whenOpening({ categorie: element.categorie, element });
   const whenOpening = async (data: ElementFormDialogData): Promise<void> => {
     dialog = TestBed.inject(MatDialog).open<ElementFormDialog, ElementFormDialogData, boolean>(ElementFormDialog, { data });
     fermeture = firstValueFrom(dialog.afterClosed());

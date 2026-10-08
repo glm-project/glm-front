@@ -5,17 +5,17 @@
       <p class="mt-1 max-w-3xl text-body text-ink-muted">{{ libelles.sousTitre }}</p>
     </div>
     <div class="flex flex-wrap gap-2">
+      @for (categorie of categories; track categorie.value) {
       <button
         mat-stroked-button
-        (click)="openCreation('ORDRE_DE_FABRICATION')"
+        (click)="openCreation(categorie)"
         [disabled]="etat().chargement"
-        data-selector="elements-new-of"
+        [attr.aria-label]="libelles.creation(categorie)"
+        [attr.data-selector]="'elements-new-' + categorie.value"
       >
-        <glm-icon name="plus" /> {{ libelles.creations.ORDRE_DE_FABRICATION }}
+        <glm-icon name="plus" /> {{ categorie.value }}
       </button>
-      <button mat-flat-button (click)="openCreation('PRODUIT')" [disabled]="etat().chargement" data-selector="elements-new-moule">
-        <glm-icon name="plus" /> {{ libelles.creations.PRODUIT }}
-      </button>
+      }
     </div>
   </header>
 
@@ -30,34 +30,27 @@
         data-selector="elements-search"
       />
     </label>
-    <div class="gestion-segments" role="group" [attr.aria-label]="libelles.filtrerType">
+    <div class="gestion-segments" role="group" [attr.aria-label]="libelles.filtrerCategorie">
       <button
         class="gestion-segment"
         type="button"
-        [attr.aria-pressed]="type() === 'TOUS'"
-        (click)="choisirType('TOUS')"
-        data-selector="elements-type-tous"
+        [attr.aria-pressed]="filtre() === undefined"
+        (click)="choisirCategorie(undefined)"
+        data-selector="elements-categorie-tous"
       >
         {{ libelles.tous }}
       </button>
+      @for (categorie of categories; track categorie.value) {
       <button
         class="gestion-segment"
         type="button"
-        [attr.aria-pressed]="type() === 'PRODUIT'"
-        (click)="choisirType('PRODUIT')"
-        data-selector="elements-type-moule"
+        [attr.aria-pressed]="estFiltree(categorie)"
+        (click)="choisirCategorie(categorie)"
+        [attr.data-selector]="'elements-categorie-' + categorie.value"
       >
-        {{ libelles.types.PRODUIT }}
+        {{ categorie.value }}
       </button>
-      <button
-        class="gestion-segment"
-        type="button"
-        [attr.aria-pressed]="type() === 'ORDRE_DE_FABRICATION'"
-        (click)="choisirType('ORDRE_DE_FABRICATION')"
-        data-selector="elements-type-of"
-      >
-        {{ libelles.types.ORDRE_DE_FABRICATION }}
-      </button>
+      }
     </div>
     <button mat-stroked-button type="button" (click)="reload()" data-selector="elements-refresh">{{ libelles.actualiser }}</button>
   </section>
@@ -79,12 +72,16 @@
       <h2 class="text-section">{{ libelles.vide }}</h2>
       <p class="mx-auto mb-6 mt-2 max-w-lg text-body text-ink-muted">{{ libelles.videDetails }}</p>
       <div class="flex flex-wrap justify-center gap-2">
-        <button mat-flat-button (click)="openCreation('PRODUIT')" data-selector="elements-empty-create-moule">
-          <glm-icon name="plus" /> {{ libelles.creations.PRODUIT }}
+        @for (categorie of categories; track categorie.value) {
+        <button
+          mat-stroked-button
+          (click)="openCreation(categorie)"
+          [attr.aria-label]="libelles.creation(categorie)"
+          [attr.data-selector]="'elements-empty-create-' + categorie.value"
+        >
+          <glm-icon name="plus" /> {{ categorie.value }}
         </button>
-        <button mat-stroked-button (click)="openCreation('ORDRE_DE_FABRICATION')" data-selector="elements-empty-create-of">
-          <glm-icon name="plus" /> {{ libelles.creations.ORDRE_DE_FABRICATION }}
-        </button>
+        }
       </div>
     </div>
     } @else if (resultats().length === 0) {
@@ -94,10 +91,10 @@
     } @else {
     <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
       <table mat-table [dataSource]="affiches()" [attr.aria-label]="libelles.tableau">
-        <ng-container matColumnDef="type">
-          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.type }}</th>
+        <ng-container matColumnDef="categorie">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.categorie }}</th>
           <td mat-cell *matCellDef="let element">
-            <span class="gestion-type" data-selector="element-type-cell">{{ libelleDuType(element) }}</span>
+            <span class="gestion-type" data-selector="element-categorie-cell">{{ element.categorie.value }}</span>
           </td>
         </ng-container>
         <ng-container matColumnDef="reference">
@@ -136,7 +133,7 @@
                 mat-button
                 [routerLink]="['/atelier']"
                 [queryParams]="{ element: identifiantDe(element) }"
-                [attr.aria-label]="libelles.miseALAtelierDe(element.type, element.numero())"
+                [attr.aria-label]="libelles.miseALAtelierDe(element.numero())"
                 data-selector="element-mise-a-l-atelier"
               >
                 {{ libelles.miseALAtelier }}
@@ -144,7 +141,7 @@
               <a
                 mat-button
                 [routerLink]="['/couts-de-revient', identifiantDe(element)]"
-                [attr.aria-label]="libelles.coutDeRevientDe(element.type, element.numero())"
+                [attr.aria-label]="libelles.coutDeRevientDe(element.numero())"
                 data-selector="element-cout-de-revient"
               >
                 {{ libelles.coutDeRevient }}
@@ -152,7 +149,7 @@
               <button
                 mat-icon-button
                 (click)="openModification(element)"
-                [attr.aria-label]="libelles.modification(element.type, element.numero())"
+                [attr.aria-label]="libelles.modification(element.numero())"
                 data-selector="element-edit"
               >
                 <glm-icon name="pencil" />
