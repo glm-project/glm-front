@@ -100,7 +100,11 @@
       {{ libelles.filtrer }}
     </button>
   </form>
-  @if (echecNavigation()) {
+  @if (plusAucuneAnomalie()) {
+  <p role="status" class="gestion-carte mb-4 p-4 text-body font-semibold" data-selector="anomalies-plus-aucune">
+    {{ libelles.plusAucuneAnomalie }}
+  </p>
+  } @if (echecNavigation()) {
   <p role="alert" class="mb-4 text-body-sm text-danger" data-selector="anomalies-navigation-erreur">{{ libelles.erreurNavigation }}</p>
   } @if (natureDemandee() === undefined) {
   <p role="alert" class="gestion-carte p-6 text-body text-danger" data-selector="anomalies-adresse-invalide">

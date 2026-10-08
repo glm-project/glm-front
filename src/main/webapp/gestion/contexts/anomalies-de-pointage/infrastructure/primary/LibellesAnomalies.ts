@@ -112,6 +112,55 @@ const PROBLEMES = {
   },
 } as const;
 
+const CHAMP_INSTANT = {
+  legend: 'Date et heure du fait',
+  date: 'Date',
+  datePlaceholder: 'JJ/MM/AAAA',
+  time: 'Heure',
+  timePlaceholder: 'HH:MM:SS',
+  openTimeList: 'Ouvrir la liste des heures',
+  timeList: 'Heures proposées',
+  skippedHour: 'Cette heure n’existe pas ce jour-là, à cause du changement d’heure.',
+} as const;
+
+const RESOLUTION = {
+  champFin: { ...CHAMP_INSTANT, legend: 'Fin réelle' },
+  validerLaFin: (heure: string) => `Valider la fin à ${heure}`,
+  validerLaFinSansHeure: 'Valider la fin',
+  champPassage: { ...CHAMP_INSTANT, legend: 'Heure du passage' },
+  validerLePassage: (heure: string) => `Valider le passage à ${heure}`,
+  validerLePassageSansHeure: 'Valider le passage',
+  motifs: {
+    finTardive: 'Arrêt pointé après l’échéance : heure vérifiée en gestion',
+    passageTardif: 'Passage pointé après l’échéance : heure vérifiée en gestion',
+  },
+  activiteOuverte: {
+    NON_CONFORMITE: 'La non-conformité commencera à cette heure.',
+    TRAVAIL: 'Le travail reprendra à cette heure.',
+  },
+  autresFinsAutomatiques: (nombre: number) =>
+    nombre === 1 ? '1 autre fin automatique sur cet élément' : `${nombre} autres fins automatiques sur cet élément`,
+  autreCorrection: 'Autre correction…',
+  anomalieSuivante: 'Anomalie suivante',
+  revenirALaVueSimple: 'Revenir à la vue simple',
+  sortie: {
+    avertissement: 'L’heure saisie sera perdue si vous passez à la vue complète.',
+    continuer: 'Passer à la vue complète',
+    rester: 'Rester ici',
+  },
+  verification: 'Vérification des conséquences…',
+  reessayerLApercu: 'Réessayer l’aperçu',
+  voirLeDetail: 'Voir le détail',
+  consequences: 'Conséquences',
+  resume: {
+    TRAITEE: 'anomalie traitée',
+    ANOMALIE_RESTANTE: 'anomalie restante',
+    CONFLIT_RESTANT: 'conflit restant',
+    CONFLIT_LEVE_FIN_AUTOMATIQUE_RESTANTE: 'conflit levé · fin automatique restante',
+    finsAutomatiquesRestantes: (nombre: number) => (nombre === 1 ? '1 fin automatique restante' : `${nombre} fins automatiques restantes`),
+  },
+} as const;
+
 const ACTIONS_DIRECTES = {
   titre: 'Actions directes',
   annuler: (pointage: string) => `Annuler ${pointage}`,
@@ -119,6 +168,7 @@ const ACTIONS_DIRECTES = {
 } as const;
 
 export const LIBELLES_ANOMALIES = {
+  resolution: RESOLUTION,
   actionsDirectes: ACTIONS_DIRECTES,
   autresCorrections: 'Autres corrections',
   autresCorrectionsAide:
@@ -193,16 +243,7 @@ export const LIBELLES_ANOMALIES = {
   autresPostes: 'Autres postes',
   chargementReferentiel: 'Chargement des opérateurs et des postes…',
   referentielIndisponible: 'Liste des opérateurs et des postes indisponible',
-  champInstant: {
-    legend: 'Date et heure du fait',
-    date: 'Date',
-    datePlaceholder: 'JJ/MM/AAAA',
-    time: 'Heure',
-    timePlaceholder: 'HH:MM:SS',
-    openTimeList: 'Ouvrir la liste des heures',
-    timeList: 'Heures proposées',
-    skippedHour: 'Cette heure n’existe pas ce jour-là, à cause du changement d’heure.',
-  },
+  champInstant: CHAMP_INSTANT,
   motif: 'Motif de la correction ou de l’annulation',
   motifAide: 'Obligatoire, 255 caractères au maximum.',
   previsualiser: 'Vérifier les conséquences',
@@ -302,6 +343,7 @@ export const LIBELLES_ANOMALIES = {
     poignee: 'Heure proposée du fait',
     heureInconnue: 'Heure ?',
     placerLHeure: 'Tirez le bout de la barre ou cliquez dessus pour placer l’heure du fait, ou saisissez-la.',
+    placerLaFinReelle: 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle, ou saisissez-la.',
     badgeRegularise: 'R',
     badgeTardif: '!',
     symboles: SYMBOLES_DES_GESTES,

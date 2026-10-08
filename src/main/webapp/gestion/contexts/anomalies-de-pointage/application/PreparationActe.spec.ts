@@ -699,6 +699,78 @@ describe('Preparation of an acte through asynchronous ports', () => {
     expect(previews.requests).toHaveLength(1);
   });
 
+  it('should preview in the background without occupying the input, then offer the confirmation', async () => {
+    const attente = givenPreviewWaits();
+    const saisie = cancellationFixture();
+    preparation.choose(saisie);
+    const apercu = preparation.previewInBackground(dossierFixture);
+    await attente.arrival;
+    const etatPendantLAttente = preparation.operation().kind;
+
+    attente.release({ kind: 'APERCU', apercu: previewFixture(saisie) });
+    await apercu;
+
+    expect(etatPendantLAttente).toBe('APERCU_EN_ARRIERE_PLAN');
+    expect(preparation.operation().kind).toBe('REPOS');
+    expect(preparation.resolution().confirmation()).toEqual(propositionFixture(saisie));
+  });
+
+  it('should discard a background preview answered after the manager edited the proposition', async () => {
+    const attente = givenPreviewWaits();
+    const saisie = cancellationFixture();
+    preparation.choose(saisie);
+    const apercu = preparation.previewInBackground(dossierFixture);
+    await attente.arrival;
+
+    preparation.change({ motif: 'Autre décision' });
+    attente.release({ kind: 'APERCU', apercu: previewFixture(saisie) });
+    await apercu;
+
+    expect(preparation.operation().kind).toBe('REPOS');
+    expect(preparation.resolution().confirmation()).toBeUndefined();
+  });
+
+  it('should not start a background preview while the local checks refuse the fact', async () => {
+    preparation.choose(finARegulariserFixture);
+
+    await preparation.previewInBackground(dossierFinAutomatiqueFixture);
+
+    expect(previews.requests).toEqual([]);
+    expect(preparation.operation().kind).toBe('REPOS');
+  });
+
+  it('should not start a background preview while the outcome of a confirmation is unknown', async () => {
+    await givenUnknownOutcome();
+
+    await preparation.previewInBackground(dossierFixture);
+
+    expect(previews.requests).toHaveLength(1);
+    expect(preparation.operation().kind).toBe('ISSUE_INCONNUE');
+  });
+
+  it('should report a failed background preview and preview again when the manager retries', async () => {
+    const panne = new Error('Lecture impossible');
+    const saisie = cancellationFixture();
+    preparation.choose(saisie);
+    const echec = givenPreviewWaits();
+    const premier = preparation.previewInBackground(dossierFixture);
+    await echec.arrival;
+    echec.fail(panne);
+    await premier;
+    const etatApresLEchec = preparation.operation().kind;
+    const succes = givenPreviewWaits();
+    const second = preparation.previewInBackground(dossierFixture);
+    await succes.arrival;
+
+    succes.release({ kind: 'APERCU', apercu: previewFixture(saisie) });
+    await second;
+
+    expect(etatApresLEchec).toBe('ERREUR');
+    expect(errors.failures).toEqual([panne]);
+    expect(preparation.operation().kind).toBe('REPOS');
+    expect(preparation.resolution().confirmation()).toEqual(propositionFixture(saisie));
+  });
+
   const whenTheClockIs = (instant: string): void => {
     vi.setSystemTime(new Date(instant));
   };

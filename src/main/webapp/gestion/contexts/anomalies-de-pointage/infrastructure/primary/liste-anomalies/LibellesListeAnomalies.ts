@@ -12,6 +12,7 @@ const finAutomatique = (echeance: Date, debut: Date): string =>
 
 export const LIBELLES_LISTE_ANOMALIES = {
   filtrer: 'Filtrer',
+  plusAucuneAnomalie: 'Plus aucune anomalie',
   reessayer: 'Réessayer',
   precedente: 'Précédente',
   suivante: 'Suivante',

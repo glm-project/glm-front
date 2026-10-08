@@ -11,7 +11,8 @@ crée aucun. La confirmation transmet ces champs explicites ; l'évaluation et l
 après servent uniquement à la consultation. Toute modification de saisie invalide l'aperçu.
 
 L'obsolescence conserve la saisie et retire l'aperçu. Une réacquisition échouée ne rétablit pas la
-confirmation. Après récupération du dossier courant, le gestionnaire demande un nouvel aperçu.
+confirmation. Après récupération du dossier courant, le gestionnaire demande un nouvel aperçu dans la vue complète ; la vue de
+résolution relance elle-même l'aperçu.
 
 Une réponse d'écriture perdue bloque les nouvelles décisions. Vérifier le reçu ne rejoue aucun acte.
 La reprise explicite transmet la proposition initiale immuable. Un reçu ne conclut l'écriture que si
@@ -122,6 +123,41 @@ les deux sont portés, le pointage en cause ; sinon le panneau dit « Sélection
 voir ses détails. ». Un nouveau dossier (autre adresse, relecture, reçu) rend la sélection initiale du nouveau dossier, jamais
 un élément absent de celui-ci. Sélectionner n'est pas choisir un acte : la proposition, l'aperçu et le choix guidé ne
 bougent pas. Corriger et Annuler du panneau préparent la proposition exactement comme avant.
+
+## Vue de résolution d'une fin automatique
+
+Un dossier de fin automatique sans conflit à expliquer, qui porte un seul choix (`REGULARISER_FIN`, `CORRIGER_FIN_TARDIVE` ou
+`CORRIGER_TRANSITION_TARDIVE`) visant l'activité que son adresse ouvre, s'ouvre dans une vue de résolution : la phrase du problème, la frise en lecture seule, le champ « Fin réelle », l'aperçu en
+une ligne, « Valider la fin à HH:MM » et « Autre correction… ». La page choisit la vue à l'ouverture de l'adresse et la fige
+jusqu'au changement d'adresse : le reçu qui remplace le dossier ne la fait pas basculer. Tout autre dossier (un conflit, un choix de
+conflit en plus de la fin, un choix qui vise une autre activité) garde la vue complète.
+
+Pour une correction tardive (`CORRIGER_FIN_TARDIVE`, `CORRIGER_TRANSITION_TARDIVE`), la vue s'ouvre sur l'heure reçue du pointage
+tardif : le champ, la poignée et le bouton « Valider la fin à HH:MM » (« Valider le passage à HH:MM » pour une transition, avec
+le champ « Heure du passage » et une ligne « La non-conformité commencera à cette heure. » ou « Le travail reprendra à cette heure. »)
+la portent, et l'aperçu part dès l'ouverture, sans que le gestionnaire ait rien touché. Le motif découle du cas (« Arrêt pointé
+après l'échéance : heure vérifiée en gestion », « Passage pointé après l'échéance : heure vérifiée en gestion ») : il part avec
+l'acte et le journal le garde, mais la vue ne le montre nulle part, « Voir le détail » compris. Valider sans rien changer est
+légitime : l'activité se termine alors au-delà de l'échéance. « Autre correction… » ne demande de confirmation que si l'heure
+diffère de l'heure reçue.
+
+Pour `REGULARISER_FIN`, la vue ne pré-remplit aucune heure. Le gestionnaire la place en tirant la poignée « Heure ? », en cliquant sur la barre ou en la
+saisissant au champ. L'aperçu part seul : au relâcher de la poignée, 400 ms après la dernière frappe ou touche, ou après un clic
+sur la barre ; il ne désactive ni le champ, ni la poignée, ni le clic sur la barre, et ne déplace pas le focus. Une heure hors des
+bornes locales (future, avant le début de l'activité) ne part pas au serveur et se dit sous le champ ; un refus du serveur se dit sous
+la frise ; une erreur réseau offre « Réessayer l'aperçu » ; une réponse périmée est écartée. « Valider » n'est actif que sur un aperçu
+reçu, à jour et sans refus. Après `CONCURRENCE`, la vue relit le dossier et relance l'aperçu avec la même heure.
+
+Le reçu s'affiche dans la vue (« Anomalie traitée », ou « Acte enregistré, anomalie restante » avec un lien par fin automatique
+restante). Une ligne « 1 autre fin automatique sur cet élément » mène à l'adresse d'une autre fin échue de l'élément, avec les
+paramètres de la liste. « Autre correction… » mène à la vue complète, sans acte choisi, avec un lien « Revenir à la vue simple »,
+retiré dès qu'un autre acte y est enregistré ; une heure saisie est d'abord confirmée.
+
+Avec le reçu, la vue offre « Anomalie suivante ». Au clic, elle mène : 1. à la première fin automatique restante du même dossier, sans lire
+la liste ; 2. sinon à une autre ligne de la liste, lue à ce moment avec les filtres de l'adresse (`nature`, `operateur`, `element`, `page`,
+la nature valant `FIN_AUTOMATIQUE` si elle manque), l'adresse d'origine exclue ; si la page n'a plus d'autre ligne, la lecture recule d'une seule
+page ; 3. sinon à la liste (`page` retirée, `plusAucune=1`), qui dit « Plus aucune anomalie » au-dessus de ses lignes. Si la lecture de la liste
+échoue, la vue mène à la liste sans ce message, et la liste affiche sa propre erreur.
 
 ## Actions directes
 

@@ -26,13 +26,56 @@ describe('Automatic end tab of the anomalies list', () => {
     thenTheTabUsesTheFocusRing();
   });
 
+  it('should say that no anomaly is left when the address comes from the last resolution, above the list', () => {
+    whenVisitingTheAutomaticEndsAt(1280, '&plusAucune=1');
+
+    thenNoAnomalyIsSaidToBeLeftAboveTheList();
+  });
+
+  it('should not say that no anomaly is left on an ordinary visit', () => {
+    whenVisitingTheAutomaticEndsAt(1280);
+
+    thenNoMessageSaysThatNoAnomalyIsLeft();
+  });
+
+  it('should drop the message when the manager moves to the other tab', () => {
+    givenTheAddressOfTheLastResolution();
+
+    whenOpeningTheConflictsTab();
+
+    thenTheMessageIsDropped();
+  });
+
+  const givenTheAddressOfTheLastResolution = (): void => {
+    whenVisitingTheAutomaticEndsAt(1280, '&plusAucune=1');
+  };
+
+  const whenOpeningTheConflictsTab = (): void => {
+    cy.get(dataSelector('anomalies-onglet-conflits')).click();
+  };
+
+  const thenNoAnomalyIsSaidToBeLeftAboveTheList = (): void => {
+    cy.get(dataSelector('anomalies-plus-aucune')).should('be.visible').and('contain.text', 'Plus aucune anomalie');
+    cy.get(dataSelector('fin-automatique-ligne')).should('have.length', 1);
+  };
+
+  const thenNoMessageSaysThatNoAnomalyIsLeft = (): void => {
+    cy.get(dataSelector('fin-automatique-ligne')).should('have.length', 1);
+    cy.get(dataSelector('anomalies-plus-aucune')).should('not.exist');
+  };
+
+  const thenTheMessageIsDropped = (): void => {
+    cy.location('search').should('not.contain', 'plusAucune');
+    cy.get(dataSelector('anomalies-plus-aucune')).should('not.exist');
+  };
+
   const givenOneAutomaticEnd = (): void => {
     cy.intercept('GET', '/api/atelier/anomalies*', { body: pageFinsAutomatiquesFixture() });
   };
 
-  const whenVisitingTheAutomaticEndsAt = (width: number): void => {
+  const whenVisitingTheAutomaticEndsAt = (width: number, more = ''): void => {
     cy.viewport(width, 900);
-    cy.visit('/anomalies?nature=FIN_AUTOMATIQUE');
+    cy.visit(`/anomalies?nature=FIN_AUTOMATIQUE${more}`);
   };
 
   const whenFocusingTheConflictsTab = (): void => {

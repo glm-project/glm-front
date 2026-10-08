@@ -130,6 +130,7 @@ describe('Frise of a dossier', () => {
   let requestedSelections: SelectionDuDossier[];
   let requestedMoves: DeplacementDemande[];
   let requestedPlacements: PlacementDemande[];
+  let handleReleases: number;
   let resizeObserver: ResizeObserverFixture;
 
   beforeEach(() => {
@@ -137,6 +138,7 @@ describe('Frise of a dossier', () => {
     requestedSelections = [];
     requestedMoves = [];
     requestedPlacements = [];
+    handleReleases = 0;
     HTMLElement.prototype.setPointerCapture = () => undefined;
   });
 
@@ -1314,6 +1316,56 @@ describe('Frise of a dossier', () => {
     whenMovingThePointerOverTheHandleTo(900);
 
     thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 30).getTime() }]);
+  });
+
+  it.each(['pointerup', 'pointercancel'])('should announce that the handle was released when the gesture ends with %s', async fin => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+    whenDraggingTheHandle({ from: 500, to: 750 });
+
+    whenTheGestureEndsWith(fin);
+
+    thenTheHandleWasReleased(1);
+  });
+
+  it('should announce no release when a pointer ends over the handle without having grabbed it', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    whenTheGestureEndsWith('pointerup');
+
+    thenTheHandleWasReleased(0);
+  });
+
+  it('should announce the release of a disabled handle never, since it cannot be grabbed', async () => {
+    const dossier = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    await whenRenderingTheFrise(
+      dossier,
+      undefined,
+      poigneeFixture('10:00', { desactivee: true, bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+    whenDraggingTheHandle({ from: 500, to: 750 });
+
+    whenTheGestureEndsWith('pointerup');
+
+    thenTheHandleWasReleased(0);
   });
 
   it('should not follow the pointer on a disabled handle', async () => {
@@ -2604,14 +2656,123 @@ describe('Frise of a dossier', () => {
     });
   });
 
+  describe('read only', () => {
+    const lectureSeule = true;
+    const dossierAvecPoignee = {
+      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-12', 'ARRET', '12:00')],
+      activites: [],
+    };
+    const poigneeAuxBornes = poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } });
+    const dossierEnLigne = {
+      journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-a-2', 'DEMARRAGE', '09:00')],
+      activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00'), activiteFixture('a-2', 'TERMINEE', '09:00', '10:00')],
+      enConflit: false,
+    };
+
+    it('should draw the markers and the bars as images, with no button, out of the tab order', async () => {
+      await whenRenderingTheFrise(dossierEnLigne, undefined, undefined, undefined, undefined, lectureSeule);
+
+      thenTheMarkersAndTheBarsAreImages(['debut-a-1', 'debut-a-2'], ['a-1', 'a-2']);
+      thenTheTabOrderIs([]);
+    });
+
+    it('should say nothing of a selection, even one the frise is given', async () => {
+      const selection = { kind: 'POINTAGE', id: 'debut-a-1' } as const;
+
+      await whenRenderingTheFrise(dossierEnLigne, selection, undefined, undefined, undefined, lectureSeule);
+
+      thenNoMarkerNorBarIsPressable();
+    });
+
+    it('should keep the name, the symbol, the hour and the badges of a marker', async () => {
+      const regularise = { ...arretDe('arret-a-1', 'a-1', '11:00'), regularisation: true };
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), regularise],
+        activites: [activiteFixture('a-1', 'TERMINEE', '08:00', '11:00')],
+        enConflit: false,
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, undefined, undefined, undefined, lectureSeule);
+
+      thenTheMarkerIsNamed('arret-a-1', '11:00:00 · Arrêt · régularisé');
+      thenTheMarkerSymbolIs('arret-a-1', '■');
+      thenTheMarkerTimeIs('arret-a-1', '11:00');
+      thenTheMarkerBadgeIs('arret-a-1', 'R');
+    });
+
+    it('should keep the late badge of the marker a choice corrects', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-23', 'ARRET', '23:00')],
+        activites: [],
+        choix: [correctionTardiveFixture('CORRIGER_FIN_TARDIVE', 'fin-23')],
+      };
+
+      await whenRenderingTheFrise(dossier, undefined, undefined, undefined, undefined, lectureSeule);
+
+      thenTheLateBadgeIsDrawnOn('fin-23');
+      thenNoLateBadgeIsDrawnOn('debut-8');
+    });
+
+    it('should keep the name and the text of a bar', async () => {
+      await whenRenderingTheFrise(dossierEnLigne, undefined, undefined, undefined, undefined, lectureSeule);
+
+      thenTheBarIsNamed('a-2', 'Travail · lundi 14 septembre à 09:00 → lundi 14 septembre à 10:00 · Terminée');
+    });
+
+    it.each([
+      { cible: 'a marker', element: () => marker('debut-a-1') },
+      { cible: 'a bar', element: () => bar('a-2') },
+    ])('should select nothing when $cible is clicked', async ({ element }) => {
+      await whenRenderingTheFrise(dossierEnLigne, undefined, undefined, undefined, undefined, lectureSeule);
+
+      whenClickingWithAPointerAt(element(), 500);
+
+      expect(requestedSelections).toEqual([]);
+    });
+
+    it('should let the pointer through the markers and the bars to the placement row under them', async () => {
+      await whenRenderingTheFrise(dossierEnLigne, undefined, undefined, placementDeLaFixture('a-1'), undefined, lectureSeule);
+
+      thenThePointerGoesThroughTheMarkersAndTheBars(['debut-a-1', 'debut-a-2'], ['a-1', 'a-2']);
+    });
+
+    it('should ask to place the instant where the row of the aimed bar is clicked beyond the bar', async () => {
+      await whenRenderingTheFrise(dossierEnLigne, undefined, undefined, placementDeLaFixture('a-1'), undefined, lectureSeule);
+
+      whenClickingThePointagesRowAt(750);
+
+      thenThePlacementsAsked([new Date(2026, 8, 14, 13, 0).getTime()]);
+    });
+
+    it('should leave the handle the only element of the focus order, still a slider that moves with the keys', async () => {
+      await whenRenderingTheFrise(dossierAvecPoignee, undefined, poigneeAuxBornes, undefined, undefined, lectureSeule);
+
+      whenPressingKeyOnTheHandle('ArrowLeft');
+
+      thenTheFocusOrderIs(['Heure proposée du fait']);
+      thenTheHandleIsASlider();
+      thenTheMovesAsked([{ kind: 'DE', minutes: -1 }]);
+    });
+
+    it('should ask to move the instant where the handle is dragged to', async () => {
+      await whenRenderingTheFrise(dossierAvecPoignee, undefined, poigneeAuxBornes, undefined, undefined, lectureSeule);
+
+      whenDraggingTheHandle({ from: 500, to: 750 });
+
+      thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 30).getTime() }]);
+    });
+  });
+
   const whenRenderingTheFrise = async (
     dossier: VueDeTest,
     selection?: SelectionDuDossier,
     poignee?: PoigneeDeFrise,
     placement?: PlacementDeLInstant,
     apercu?: { readonly avant: VueDeTest; readonly apres: VueDeTest },
+    lectureSeule = false,
   ): Promise<void> => {
     fixture = TestBed.createComponent(FriseDossier);
+    fixture.componentRef.setInput('lectureSeule', lectureSeule);
     fixture.componentRef.setInput('apercu', apercu === undefined ? undefined : { avant: vueDe(apercu.avant), apres: vueDe(apercu.apres) });
     fixture.componentRef.setInput('dossier', vueDe(dossier));
     fixture.componentRef.setInput('poignee', poignee);
@@ -2621,6 +2782,9 @@ describe('Frise of a dossier', () => {
     fixture.componentInstance.selectionDemandee.subscribe(demandee => requestedSelections.push(demandee));
     fixture.componentInstance.deplacementDemande.subscribe(demande => requestedMoves.push(demande));
     fixture.componentInstance.placementDemande.subscribe(demande => requestedPlacements.push(demande));
+    fixture.componentInstance.poigneeRelachee.subscribe(() => {
+      handleReleases += 1;
+    });
     await fixture.whenStable();
   };
 
@@ -2751,6 +2915,10 @@ describe('Frise of a dossier', () => {
 
   const thenTheKeyIsLeftToTheBrowser = (touche: KeyboardEvent): void => {
     expect(touche.defaultPrevented).toBe(false);
+  };
+
+  const thenTheHandleWasReleased = (expected: number): void => {
+    expect(handleReleases).toBe(expected);
   };
 
   const thenTheMovesAsked = (expected: readonly DemandeDeDeplacement[]): void => {
@@ -2918,6 +3086,22 @@ describe('Frise of a dossier', () => {
   const thenOnlyThisIsPressed = (pressed: HTMLElement, others: readonly HTMLElement[]): void => {
     expect(pressed.getAttribute('aria-pressed')).toBe('true');
     expect(others.map(other => other.getAttribute('aria-pressed'))).toEqual(others.map(() => 'false'));
+  };
+
+  const thenTheMarkersAndTheBarsAreImages = (pointages: readonly string[], activites: readonly string[]): void => {
+    const elements = [...pointages.map(marker), ...activites.map(bar)];
+    expect(elements.map(element => [element.tagName, element.getAttribute('role')])).toEqual(elements.map(() => ['DIV', 'img']));
+  };
+
+  const thenThePointerGoesThroughTheMarkersAndTheBars = (pointages: readonly string[], activites: readonly string[]): void => {
+    const elements = [...pointages.map(marker), ...activites.map(bar)];
+    expect(elements.map(element => getComputedStyle(element).pointerEvents)).toEqual(elements.map(() => 'none'));
+  };
+
+  const thenNoMarkerNorBarIsPressable = (): void => {
+    const elements = [...markers(), ...bars()];
+    expect(elements.length).toBeGreaterThan(0);
+    expect(elements.map(element => element.hasAttribute('aria-pressed'))).toEqual(elements.map(() => false));
   };
 
   const thenTheTabOrderIs = (expected: readonly string[]): void => {

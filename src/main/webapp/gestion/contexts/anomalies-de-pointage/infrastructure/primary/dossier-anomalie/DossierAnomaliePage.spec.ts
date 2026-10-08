@@ -31,7 +31,9 @@ import {
   ActiviteAnomalie,
   AdresseDossier,
   ChoixGuide,
+  FiltreAnomalies,
   LectureDossier,
+  LigneFinAutomatique,
   PageAnomalies,
   PointageAnomalie,
 } from '../../../domain/dossier/DossierAnomalie';
@@ -45,8 +47,10 @@ const INSTANT_FIN_DE_TRAVAIL = instantLocalFixture(new Date(2026, 8, 14, 17, 0))
 const INSTANT_ENREGISTREMENT = instantLocalFixture(new Date(2026, 8, 15, 8, 0));
 const INSTANT_ENGAGEMENT = instantLocalFixture(new Date(2026, 8, 1, 7, 30));
 
+const realSetTimeout = setTimeout;
+
 const roundTripFixture = async <T>(result: () => T): Promise<T> => {
-  await new Promise<void>(resolve => setTimeout(resolve));
+  await new Promise<void>(resolve => realSetTimeout(resolve));
   return result();
 };
 
@@ -122,6 +126,7 @@ class DossierReadFixture extends AnomaliesReadPort {
   result: LectureDossier = { kind: 'DOSSIER', dossier: dossierAnomalieFixture() };
   pending: PendingResponseFixture<LectureDossier> | undefined;
   readonly demandes: AdresseDossier[] = [];
+  readonly followingResults: LectureDossier[] = [];
   referentielFailure: Error | undefined;
   referentielResult = referentielFixture();
   referentielPending: PendingResponseFixture<ReferentielAnomalies> | undefined;
@@ -156,15 +161,25 @@ class DossierReadFixture extends AnomaliesReadPort {
     this.pending = undefined;
     if (pending !== undefined) return pending.arrive();
     const failure = this.failure;
-    const result = lectureAvecLePerimetreDuJournal(this.result);
+    const result = lectureAvecLePerimetreDuJournal(this.followingResults.shift() ?? this.result);
     return roundTripFixture(() => {
       if (failure !== undefined) throw failure;
       return result;
     });
   }
 
-  list(): Promise<PageAnomalies> {
-    return roundTripFixture(() => ({ nature: 'CONFLIT', lignes: [], total: 0, complete: true }));
+  readonly listesDemandees: FiltreAnomalies[] = [];
+  listFailure: Error | undefined;
+  lignesDeLaListe: readonly LigneFinAutomatique[] = [];
+
+  list(filtre: FiltreAnomalies): Promise<PageAnomalies> {
+    this.listesDemandees.push(filtre);
+    const failure = this.listFailure;
+    const lignes = this.lignesDeLaListe;
+    return roundTripFixture(() => {
+      if (failure !== undefined) throw failure;
+      return { nature: 'FIN_AUTOMATIQUE', lignes, total: lignes.length, complete: true };
+    });
   }
 }
 
@@ -185,11 +200,19 @@ class RepliesFixture<T> {
 class DossierPreviewFixture extends PrevisualisationAnomaliePort {
   readonly replies = new RepliesFixture<ResultatApercu>();
   readonly actes: ActeResolution[] = [];
+  readonly followingResults: ResultatApercu[] = [];
   result: ResultatApercu = { kind: 'REFUS', code: 'evenement-deja-annule' };
+  failure: Error | undefined;
 
   preview(_adresse: AdresseDossier, _version: number, acte: ActeResolution): Promise<ResultatApercu> {
     this.actes.push(acte);
-    return this.replies.answer(apercuAvecLePerimetreDuJournal(this.result));
+    const failure = this.failure;
+    if (failure !== undefined) {
+      return roundTripFixture(() => {
+        throw failure;
+      });
+    }
+    return this.replies.answer(apercuAvecLePerimetreDuJournal(this.followingResults.shift() ?? this.result));
   }
 }
 
@@ -213,8 +236,18 @@ class RouteFixture {
   readonly queryParamMap = new BehaviorSubject<ParamMap>(convertToParamMap({ pointage: 'fin-17' }));
 }
 
+interface NavigationFixture {
+  readonly commands: readonly unknown[];
+  readonly queryParams: Record<string, string | null | undefined>;
+}
+
 class RouterFixture {
   readonly events = EMPTY;
+  readonly navigations: NavigationFixture[] = [];
+  navigate(commands: readonly unknown[], extras?: { queryParams?: Record<string, string | null | undefined> }): Promise<boolean> {
+    this.navigations.push({ commands, queryParams: extras?.queryParams ?? {} });
+    return Promise.resolve(true);
+  }
   createUrlTree(commands: unknown[], extras?: { queryParams?: Record<string, string | null | undefined>; fragment?: string | null }) {
     const queryParams = Object.entries(extras?.queryParams ?? {}).filter(([, value]) => value !== null && value !== undefined);
     return { commands, queryParams: Object.fromEntries(queryParams), fragment: extras?.fragment ?? null };
@@ -840,6 +873,7 @@ describe('Anomaly dossier page', () => {
   let fixture: ComponentFixture<DossierAnomaliePage>;
   let read: DossierReadFixture;
   let route: RouteFixture;
+  let router: RouterFixture;
   let preview: DossierPreviewFixture;
   let application: DossierApplicationFixture;
   let resizeObserver: ResizeObserverFixture;
@@ -850,12 +884,13 @@ describe('Anomaly dossier page', () => {
     vi.setSystemTime(new Date(2026, 9, 5, 10, 0));
     read = new DossierReadFixture();
     route = new RouteFixture();
+    router = new RouterFixture();
     preview = new DossierPreviewFixture();
     application = new DossierApplicationFixture();
     TestBed.configureTestingModule({
       providers: [
         { provide: ActivatedRoute, useValue: route },
-        { provide: Router, useClass: RouterFixture },
+        { provide: Router, useFactory: () => router },
         { provide: AnomaliesReadPort, useValue: read },
         { provide: PrevisualisationAnomaliePort, useValue: preview },
         { provide: ApplicationActePort, useValue: application },
@@ -2149,17 +2184,6 @@ describe('Anomaly dossier page', () => {
     await whenPreparingTheCorrection();
     await whenClicking('anomalie-confirmer');
 
-    thenAbsent('anomalie-fin-automatique-restante');
-  });
-
-  it('should link no automatic end in the receipt of an automatic end that is still the one the manager is on', async () => {
-    givenAnAutomaticEndStillExpiredAfterItsRegularisation();
-    await whenRendering();
-
-    await whenPreviewingTheDatedEnd();
-    await whenClicking('anomalie-confirmer');
-
-    thenTextContains('anomalie-resultat', 'Acte enregistré, anomalie restante');
     thenAbsent('anomalie-fin-automatique-restante');
   });
 
@@ -4432,6 +4456,1076 @@ describe('Anomaly dossier page', () => {
     });
   });
 
+  describe('resolution view of an automatic end', () => {
+    beforeEach(() => {
+      HTMLElement.prototype.setPointerCapture = () => undefined;
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+      vi.setSystemTime(new Date(2026, 9, 5, 10, 0));
+    });
+
+    it('should open a resolution view instead of the full view when the dossier carries one regularisation of the end of the activity its address opens', async () => {
+      givenAnAutomaticEndWithAResolutionView();
+
+      await whenRendering();
+
+      thenTheResolutionViewIsShown();
+    });
+
+    it('should say the problem and keep the link to the day of the operator', async () => {
+      givenAnAutomaticEndWithAResolutionView();
+
+      await whenRendering();
+
+      thenTheProblemReads('Le travail démarré à 08:00 n’a jamais été arrêté : fin automatique à 21:00.');
+      thenTextContains('anomalie-frise-journee', 'Voir la journée de Camille Martin');
+    });
+
+    it('should draw the frise read only, with the markers and the bars as images', async () => {
+      givenAnAutomaticEndWithAResolutionView();
+
+      await whenRendering();
+
+      thenTheFriseIsReadOnly();
+    });
+
+    it('should leave the end field empty and the handle without hour, and tell how to place the end', async () => {
+      givenAnAutomaticEndWithAResolutionView();
+
+      await whenRendering();
+
+      thenTheEndFieldsShow('', '');
+      thenTheHandleHoldsNoHour();
+      thenTextContains('anomalie-frise-aide', 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle, ou saisissez-la.');
+    });
+
+    it('should offer a validation that waits for the end', async () => {
+      givenAnAutomaticEndWithAResolutionView();
+
+      await whenRendering();
+
+      thenDisabled('anomalie-resolution-valider');
+      thenTextContains('anomalie-resolution-valider', 'Valider la fin');
+    });
+
+    it.each([
+      'anomalie-selection',
+      'anomalie-choix',
+      'anomalie-action-directe',
+      'anomalie-detail',
+      'anomalie-regulariser',
+      'anomalie-motif',
+      'anomalie-instant-moins-5',
+      'anomalie-instant-plus-5',
+      'anomalie-previsualiser',
+      'anomalie-champs-detail',
+    ])('should not show %s of the full view', async selector => {
+      givenAnAutomaticEndWithAResolutionView();
+
+      await whenRendering();
+
+      thenAbsent(selector);
+    });
+
+    it('should ask for no preview while the manager is still typing the end', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+
+      await whenTypingTheEnd('14/09/2026', '17:00');
+
+      thenNoPreviewWasAsked();
+    });
+
+    it('should preview the end once the typing paused, and say the outcome in one line', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      thenTheOutcomeReads('Travail 13 h → 9 h · anomalie traitée');
+      thenTextContains('anomalie-resolution-valider', 'Valider la fin à 17:00');
+      thenEnabled('anomalie-resolution-valider');
+      expect(preview.actes).toEqual([acteFinRegulariseeFixture('poste-1', '2026-09-14T17:00:00-03:00')]);
+    });
+
+    it('should preview again once the typing of another hour paused', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenPlacingTheEndAt('14/09/2026', '16:30');
+
+      thenThePreviewsWereAskedForTheHours(['17:00', '16:30']);
+    });
+
+    it('should withdraw the outcome and the validation as soon as the hour changes', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenTypingTheEnd('14/09/2026', '16:30');
+
+      thenAbsent('anomalie-resolution-apercu');
+      thenDisabled('anomalie-resolution-valider');
+    });
+
+    it('should preview the hour a key moved the handle to once the key pressing paused', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenPressingOnTheHandle('ArrowRight');
+      await whenTheTypingPauses();
+
+      thenThePreviewsWereAskedForTheHours(['17:00', '17:01']);
+    });
+
+    it('should preview the hour a click on the bar placed once the clicking paused', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+
+      await whenClickingThePointagesRowAt(504);
+      await whenTheTypingPauses();
+
+      thenThePreviewsWereAskedForTheHours(['15:35']);
+    });
+
+    it('should not preview while the handle is dragged, however long the gesture lasts', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenDraggingTheHandleForAWhile({ from: 500, to: 400 });
+
+      thenThePreviewsWereAskedForTheHours(['17:00']);
+    });
+
+    it('should preview as soon as the handle is released', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenDraggingTheHandle({ from: 500, to: 400 });
+
+      await whenReleasingTheHandle();
+
+      thenThePreviewsWereAskedForTheHours(['17:00', '15:20']);
+    });
+
+    it('should preview nothing and say why while the hour lies in the future', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+
+      await whenPlacingTheEndAt('06/10/2026', '10:00');
+
+      thenNoPreviewWasAsked();
+      thenTheEndValidationReads(['La date et l’heure du fait ne peuvent pas être dans le futur.']);
+    });
+
+    it('should preview nothing and say why while the hour precedes the start of the activity', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+
+      await whenPlacingTheEndAt('14/09/2026', '07:00');
+
+      thenNoPreviewWasAsked();
+      thenTheEndValidationReads(['Le fait ne peut pas précéder le début de l’activité qu’il termine.']);
+    });
+
+    it('should say nothing of the missing hour before the manager gives one', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+
+      await whenRendering();
+
+      thenTheEndValidationReads([]);
+    });
+
+    it('should show the refusal of the server under the frise and keep the hour', async () => {
+      givenAnAutomaticEndWithAResolutionView();
+      preview.result = { kind: 'REFUS', code: 'date-de-survenue-future' };
+      await whenRendering();
+
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      thenTextContains('anomalie-refus', 'La date et l’heure du fait ne peuvent pas être dans le futur.');
+      thenTheRefusalComesAfterTheFrise();
+      thenTheEndFieldsShow('14/09/2026', '17:00:00');
+      thenDisabled('anomalie-resolution-valider');
+    });
+
+    it('should offer to retry the preview after a network failure and preview again at once when asked', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      preview.failure = new Error('Réseau indisponible');
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      preview.failure = undefined;
+
+      await whenClicking('anomalie-resolution-reessayer');
+
+      thenTheOutcomeReads('Travail 13 h → 9 h · anomalie traitée');
+      thenAbsent('anomalie-resolution-reessayer');
+    });
+
+    it('should offer no retry while the preview has not failed', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      thenAbsent('anomalie-resolution-reessayer');
+    });
+
+    it('should reread the dossier after a concurrent preview and preview again by itself', async () => {
+      givenTheRegularisationOfTheEndWillBeAcceptedOnceTheDossierIsReread();
+      await whenRendering();
+      givenTheDossierWillBeRereadWithAnotherVersion();
+
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      expect(read.demandes).toHaveLength(2);
+      thenThePreviewsWereAskedForTheHours(['17:00', '17:00']);
+      thenTheOutcomeReads('Travail 13 h → 9 h · anomalie traitée');
+      thenEnabled('anomalie-resolution-valider');
+    });
+
+    it('should keep the field and the handle usable while the preview is on its way', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      const attente = new PendingResponseFixture<ResultatApercu>();
+      preview.replies.pending = attente;
+      await whenRendering();
+      await whenTypingTheEnd('14/09/2026', '17:00');
+
+      await whenThePreviewIsOnItsWay(attente);
+
+      thenTextContains('anomalie-resolution-verification', 'Vérification des conséquences…');
+      thenTheFieldAndTheHandleStayUsable();
+    });
+
+    it('should keep the focus where it is while the preview comes back', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      const attente = new PendingResponseFixture<ResultatApercu>();
+      preview.replies.pending = attente;
+      await whenRendering();
+      await whenTypingTheEnd('14/09/2026', '17:00');
+      whenFocusingTheHour();
+      await whenThePreviewIsOnItsWay(attente);
+
+      await whenResponseArrives(attente, preview.result);
+
+      thenTheFocusStaysOnTheHour();
+    });
+
+    it('should keep the validation disabled while the preview is on its way', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      const attente = new PendingResponseFixture<ResultatApercu>();
+      preview.replies.pending = attente;
+      await whenRendering();
+      await whenTypingTheEnd('14/09/2026', '17:00');
+
+      await whenThePreviewIsOnItsWay(attente);
+
+      thenDisabled('anomalie-resolution-valider');
+    });
+
+    it('should enable the validation once the preview has come back', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      const attente = new PendingResponseFixture<ResultatApercu>();
+      preview.replies.pending = attente;
+      await whenRendering();
+      await whenTypingTheEnd('14/09/2026', '17:00');
+      await whenThePreviewIsOnItsWay(attente);
+
+      await whenResponseArrives(attente, preview.result);
+
+      thenEnabled('anomalie-resolution-valider');
+      thenAbsent('anomalie-resolution-verification');
+    });
+
+    it('should neither preview nor keep a pending preview when the address changes before the typing paused', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenTypingTheEnd('14/09/2026', '17:00');
+      read.result = { kind: 'DOSSIER', dossier: dossierAnomalieFixture() };
+
+      await whenAddressChanges('fin-18');
+      await whenTheTypingPauses();
+
+      thenNoPreviewWasAsked();
+    });
+
+    it('should fold the detail of the preview, and unfold the consequences and the journals without any reason', async () => {
+      givenTheRegularisationOfTheEndWillBeAcceptedWithConsequences();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      thenTheDetailIsFolded();
+      thenTheDetailReads('Durée du travail recalculée', 'Pointage annulé');
+      thenTheDetailGivesNoReason('Erreur de saisie');
+    });
+
+    it('should record the end from the resolution view and keep the link to the day of the operator beside the receipt', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenValidatingTheEnd();
+
+      thenAbsent('anomalie-resolution-instant-date');
+      thenTextContains('anomalie-frise-journee', 'Voir la journée de Camille Martin');
+    });
+
+    it('should draw no handle on the frise once the end is recorded', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenValidatingTheEnd();
+
+      thenAbsent('anomalie-poignee');
+    });
+
+    it('should reread the dossier after an obsolete confirmation and preview the same hour again by itself', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      application.result = { kind: 'CONCURRENCE' };
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      givenTheDossierWillBeRereadWithAnotherVersion();
+      preview.result = apercuDeLaRegularisationFixture(dossierRelu(), dossierRegulariseFixture());
+
+      await whenValidatingTheEnd();
+
+      expect(read.demandes).toHaveLength(2);
+      thenThePreviewsWereAskedForTheHours(['17:00', '17:00']);
+      thenTheEndFieldsShow('14/09/2026', '17:00:00');
+      thenEnabled('anomalie-resolution-valider');
+    });
+
+    it('should show the refusal of the confirmation and keep the hour', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      application.result = { kind: 'REFUS', code: 'suivi-d-atelier-cloture' };
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenValidatingTheEnd();
+
+      thenTextContains('anomalie-refus', 'Ce suivi d’atelier est clôturé : il n’accepte plus de décision.');
+      thenTheEndFieldsShow('14/09/2026', '17:00:00');
+    });
+
+    it('should block the end while the outcome of the confirmation is unknown, and offer to check or resume', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      application.result = { kind: 'ISSUE_INCONNUE' };
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenValidatingTheEnd();
+
+      expect(field('anomalie-resolution-instant-heure').disabled).toBe(true);
+      thenTheHandleIsLocked();
+      thenDisabled('anomalie-resolution-valider');
+      expect(present('anomalie-verifier') && present('anomalie-reprendre-confirmation')).toBe(true);
+    });
+
+    it('should show the receipt once the verification attests the end', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      application.result = { kind: 'ISSUE_INCONNUE' };
+      application.verification = { kind: 'ATTESTE', dossier: dossierRegulariseFixture() };
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenValidatingTheEnd();
+
+      await whenClicking('anomalie-verifier');
+
+      thenTheResolutionViewShowsTheReceipt();
+    });
+
+    it('should show the receipt once the same confirmation is resumed', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      application.result = { kind: 'ISSUE_INCONNUE' };
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenValidatingTheEnd();
+      application.result = { kind: 'APPLIQUE', dossier: dossierRegulariseFixture() };
+
+      await whenClicking('anomalie-reprendre-confirmation');
+
+      thenTheResolutionViewShowsTheReceipt();
+    });
+
+    it('should offer the other correction under the validation', async () => {
+      givenAnAutomaticEndWithAResolutionView();
+
+      await whenRendering();
+
+      thenTextContains('anomalie-resolution-autre-correction', 'Autre correction…');
+    });
+
+    it('should leave to the full view, with no act chosen, when the manager asks for another correction before entering any hour', async () => {
+      givenAnAutomaticEndWithAResolutionView();
+      await whenRendering();
+
+      await whenClicking('anomalie-resolution-autre-correction');
+
+      thenTheFullViewIsShown();
+      thenNoActIsChosen();
+      thenTextContains('anomalie-resolution-retour-simple', 'Revenir à la vue simple');
+    });
+
+    it('should ask for a confirmation before leaving to the full view when an hour was entered', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenClicking('anomalie-resolution-autre-correction');
+
+      expect(present('anomalie-resolution-sortie')).toBe(true);
+      thenTheResolutionViewIsShown();
+    });
+
+    it('should stay in the resolution view, hour kept, when the manager refuses to leave', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenClicking('anomalie-resolution-autre-correction');
+
+      await whenClicking('anomalie-resolution-sortie-annuler');
+
+      thenAbsent('anomalie-resolution-sortie');
+      thenTheEndFieldsShow('14/09/2026', '17:00:00');
+    });
+
+    it('should leave to the full view with no hour and no act when the manager confirms the exit', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenClicking('anomalie-resolution-autre-correction');
+
+      await whenClicking('anomalie-resolution-sortie-confirmer');
+
+      thenTheFullViewIsShown();
+      thenNoActIsChosen();
+    });
+
+    it('should come back to a fresh resolution view from the full view it left', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenClicking('anomalie-resolution-autre-correction');
+
+      await whenClicking('anomalie-resolution-retour-simple');
+
+      thenTheResolutionViewIsShown();
+      thenTheEndFieldsShow('', '');
+    });
+
+    it('should offer no way back to the resolution view once another act was recorded from the full view', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenClicking('anomalie-resolution-autre-correction');
+      await whenPreviewingTheDatedEnd();
+
+      await whenClicking('anomalie-confirmer');
+
+      thenTextContains('anomalie-resultat', 'Anomalie traitée');
+      thenAbsent('anomalie-resolution-retour-simple');
+    });
+
+    it('should block the exit while the outcome of the confirmation is unknown', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      application.result = { kind: 'ISSUE_INCONNUE' };
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenValidatingTheEnd();
+
+      thenDisabled('anomalie-resolution-autre-correction');
+    });
+
+    it('should offer no way back to a resolution view the full view never replaced', async () => {
+      await whenRendering();
+
+      thenAbsent('anomalie-resolution-retour-simple');
+    });
+
+    it('should offer no other correction once the end is recorded', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenValidatingTheEnd();
+
+      thenAbsent('anomalie-resolution-autre-correction');
+    });
+
+    it('should link the other automatic end of the element to its own address', async () => {
+      givenAResolutionViewBesideExpiredActivities(['debut-14']);
+
+      await whenRendering();
+
+      thenTextContains('anomalie-resolution-autre-fin', '1 autre fin automatique sur cet élément');
+      thenTheLinkTargets('anomalie-resolution-autre-fin', '/anomalies/suivi-camille', { pointage: 'debut-14' });
+    });
+
+    it('should say the number of the other automatic ends and lead to the first of them', async () => {
+      givenAResolutionViewBesideExpiredActivities(['debut-14', 'debut-15']);
+
+      await whenRendering();
+
+      thenTextContains('anomalie-resolution-autre-fin', '2 autres fins automatiques sur cet élément');
+      thenTheLinkTargets('anomalie-resolution-autre-fin', '/anomalies/suivi-camille', { pointage: 'debut-14' });
+    });
+
+    it('should draw the other automatic ends on the frise without offering to regularise them', async () => {
+      givenAResolutionViewBesideExpiredActivities(['debut-14']);
+
+      await whenRendering();
+
+      expect(friseElements('anomalie-activite').map(barre => barre.dataset['activite'])).toEqual(['travail-8', 'travail-debut-14']);
+    });
+
+    it('should say nothing of other automatic ends when the dossier holds none', async () => {
+      givenAnAutomaticEndWithAResolutionView();
+
+      await whenRendering();
+
+      thenAbsent('anomalie-resolution-autre-fin');
+    });
+
+    it('should show that the pointage no longer is an anomaly when the dossier reread after a concurrent preview says so, and preview no more', async () => {
+      givenTheRegularisationOfTheEndWillBeAcceptedOnceTheDossierIsReread();
+      await whenRendering();
+      read.followingResults.push({ kind: 'SANS_ANOMALIE', journal: [] });
+
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      thenTextContains('anomalie-adresse-obsolete', 'Ce pointage ne relève plus d’une anomalie.');
+      thenThePreviewsWereAskedForTheHours(['17:00']);
+    });
+
+    it('should offer to read the dossier again when it cannot be reread after a concurrent preview', async () => {
+      givenTheRegularisationOfTheEndWillBeAcceptedOnceTheDossierIsReread();
+      await whenRendering();
+      givenTheDossierCannotBeReread();
+
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      thenTextContains('anomalie-retry', 'Réessayer');
+      thenAbsent('anomalie-resolution');
+    });
+
+    it('should come back to a fresh resolution view once the dossier is read again', async () => {
+      givenTheRegularisationOfTheEndWillBeAcceptedOnceTheDossierIsReread();
+      await whenRendering();
+      givenTheDossierCannotBeReread();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      givenTheDossierCanBeReadAgain();
+
+      await whenClicking('anomalie-retry');
+
+      thenTheResolutionViewIsShown();
+      thenTheEndFieldsShow('', '');
+    });
+
+    it('should keep the full view for a choice that carries no code', async () => {
+      const dossier = dossierDeResolutionFixture();
+      read.result = {
+        kind: 'DOSSIER',
+        dossier: { ...dossier, choix: [{ id: 'sans-code', libelle: 'Régulariser', explication: '', saisie: finARegulariserFixture() }] },
+      };
+
+      await whenRendering();
+
+      thenTheFullViewIsShown();
+    });
+
+    it('should not preview again when the handle is pressed and released without moving', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenPressingAndReleasingTheHandleWithoutMoving();
+
+      thenThePreviewsWereAskedForTheHours(['17:00']);
+    });
+
+    it('should offer to read the dossier again when it cannot be reread after an obsolete confirmation', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      application.result = { kind: 'CONCURRENCE' };
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      read.failure = new Error('Dossier courant indisponible');
+
+      await whenValidatingTheEnd();
+
+      thenTextContains('anomalie-retry', 'Réessayer');
+      thenThePreviewsWereAskedForTheHours(['17:00']);
+    });
+
+    it('should keep the full view when a conflict choice comes beside the regularisation of the end', async () => {
+      givenAnAutomaticEndWithAResolutionView();
+      const dossier = dossierDeResolutionFixture();
+      read.result = {
+        kind: 'DOSSIER',
+        dossier: {
+          ...dossier,
+          choix: [
+            ...dossier.choix,
+            {
+              id: 'ANNULER_TRANSITION:nc-12',
+              code: 'ANNULER_TRANSITION',
+              libelle: '',
+              explication: '',
+              saisie: SaisieActe.cancel('nc-12'),
+            },
+          ],
+        },
+      };
+
+      await whenRendering();
+
+      thenTheFullViewIsShown();
+    });
+
+    it('should keep the full view when no resolution view exists for the code of the choice', async () => {
+      read.result = {
+        kind: 'DOSSIER',
+        dossier: {
+          ...dossierDeResolutionFixture(),
+          choix: [
+            {
+              id: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE:fin-23',
+              code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE',
+              libelle: '',
+              explication: '',
+              saisie: SaisieActe.correct('fin-23', faitFinTardiveFixture()),
+            },
+          ],
+        },
+      };
+
+      await whenRendering();
+
+      thenTheFullViewIsShown();
+    });
+
+    it('should keep the resolution view when the receipt replaces the dossier by one that carries no choice', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenValidatingTheEnd();
+
+      thenTheResolutionViewShowsTheReceipt();
+    });
+
+    it('should link no automatic end in the receipt of an automatic end that is still the one the manager is on', async () => {
+      givenAnAutomaticEndStillExpiredAfterItsRegularisation();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenValidatingTheEnd();
+
+      thenTextContains('anomalie-resultat', 'Acte enregistré, anomalie restante');
+      thenAbsent('anomalie-fin-automatique-restante');
+    });
+
+    it('should offer no next anomaly before the end is validated', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      thenAbsent('anomalie-resolution-suivante');
+    });
+
+    it('should offer the next anomaly with the receipt', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenValidatingTheEnd();
+
+      thenTextContains('anomalie-resolution-suivante', 'Anomalie suivante');
+    });
+
+    it('should lead to the automatic end still remaining on the dossier, keeping the way back to the list', async () => {
+      givenAnotherAutomaticEndRemainingAfterTheRegularisation();
+      givenTheAddressComesFromTheList();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenValidatingTheEnd();
+
+      await whenAskingForTheNextAnomaly();
+
+      thenTheManagerIsLedTo(['/anomalies', 'suivi-camille'], { ...QUERY_DE_LA_LISTE, pointage: 'debut-10' });
+      expect(read.listesDemandees).toEqual([]);
+    });
+
+    it('should lead to another row of the list read with the filters of the address when no automatic end remains', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      givenTheAddressComesFromTheList();
+      read.lignesDeLaListe = [uneLigneDeLaListe('suivi-autre', 'debut-12')];
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenValidatingTheEnd();
+
+      await whenAskingForTheNextAnomaly();
+
+      thenTheListWasReadFor({ nature: 'FIN_AUTOMATIQUE', operateur: 'op-1', element: 'el-1', page: 2 });
+      thenTheManagerIsLedTo(['/anomalies', 'suivi-autre'], { ...QUERY_DE_LA_LISTE, pointage: 'debut-12' });
+    });
+
+    it('should lead back to the list saying that no anomaly is left when the list holds no other row', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      givenTheAddressComesFromTheList();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenValidatingTheEnd();
+
+      await whenAskingForTheNextAnomaly();
+
+      thenTheManagerIsLedTo(['/anomalies'], { ...QUERY_DE_LA_LISTE, page: null, plusAucune: '1' });
+    });
+
+    it('should lead back to the list, without that message, when the list cannot be read', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      givenTheAddressComesFromTheList();
+      read.listFailure = new Error('lecture impossible');
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenValidatingTheEnd();
+
+      await whenAskingForTheNextAnomaly();
+
+      thenTheManagerIsLedTo(['/anomalies'], QUERY_DE_LA_LISTE);
+    });
+
+    it('should choose the view again when the address changes', async () => {
+      givenAnAutomaticEndWithAResolutionView();
+      await whenRendering();
+      read.result = { kind: 'DOSSIER', dossier: dossierAnomalieFixture() };
+
+      await whenAddressChanges('fin-18');
+
+      thenTheFullViewIsShown();
+    });
+  });
+
+  describe('resolution view of a pointage pointed after the deadline', () => {
+    const MOTIF_FIN_TARDIVE = 'Arrêt pointé après l’échéance : heure vérifiée en gestion';
+    const MOTIF_PASSAGE_TARDIF = 'Passage pointé après l’échéance : heure vérifiée en gestion';
+
+    interface CorrectionTardiveFixture {
+      readonly code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE';
+      readonly type: FaitPropose['type'];
+      readonly intention: FaitPropose['intention'];
+      readonly motif: string;
+      readonly champ: string;
+      readonly bouton: string;
+      readonly ligne?: string;
+    }
+
+    const FIN_TARDIVE: CorrectionTardiveFixture = {
+      code: 'CORRIGER_FIN_TARDIVE',
+      type: 'FIN',
+      intention: 'FIN',
+      motif: MOTIF_FIN_TARDIVE,
+      champ: 'Fin réelle',
+      bouton: 'Valider la fin à',
+    };
+    const PASSAGE_EN_NC_TARDIF: CorrectionTardiveFixture = {
+      code: 'CORRIGER_TRANSITION_TARDIVE',
+      type: 'NON_CONFORMITE',
+      intention: 'TRANSITION',
+      motif: MOTIF_PASSAGE_TARDIF,
+      champ: 'Heure du passage',
+      bouton: 'Valider le passage à',
+      ligne: 'La non-conformité commencera à cette heure.',
+    };
+    const RETOUR_EN_BON_TARDIF: CorrectionTardiveFixture = {
+      code: 'CORRIGER_TRANSITION_TARDIVE',
+      type: 'DEBUT',
+      intention: 'TRANSITION',
+      motif: MOTIF_PASSAGE_TARDIF,
+      champ: 'Heure du passage',
+      bouton: 'Valider le passage à',
+      ligne: 'Le travail reprendra à cette heure.',
+    };
+
+    beforeEach(() => {
+      HTMLElement.prototype.setPointerCapture = () => undefined;
+      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+      vi.setSystemTime(new Date(2026, 9, 5, 10, 0));
+    });
+
+    const faitTardifFixture = (cas: CorrectionTardiveFixture, instant = INSTANT_FIN_TARDIVE): FaitPropose => ({
+      ...faitFinTardiveFixture(instant),
+      type: cas.type,
+      intention: cas.intention,
+    });
+
+    const actePourLaCorrectionTardiveFixture = (cas: CorrectionTardiveFixture, instant = INSTANT_FIN_TARDIVE): ActeResolution => ({
+      kind: 'CORRECTION',
+      pointage: 'fin-23',
+      motif: cas.motif,
+      fait: faitTardifFixture(cas, instant),
+    });
+
+    const dossierAvecUneCorrectionTardiveFixture = (cas: CorrectionTardiveFixture): DossierAnomalie => {
+      const dossier = dossierFinTardiveFixture();
+      const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+      return {
+        ...dossier,
+        ligne: { ...dossier.ligne, adresse },
+        journal: dossier.journal.map(pointage =>
+          pointage.id.pointage === 'fin-23' ? { ...pointage, fait: faitTardifFixture(cas) } : pointage,
+        ),
+        choix: [
+          {
+            id: `${cas.code}:fin-23`,
+            code: cas.code,
+            libelle: '',
+            explication: '',
+            saisie: SaisieActe.correct('fin-23', faitTardifFixture(cas)),
+          },
+        ],
+      };
+    };
+
+    const dossierApresLaCorrectionTardiveFixture = (cas: CorrectionTardiveFixture): DossierAnomalie => {
+      const avant = dossierAvecUneCorrectionTardiveFixture(cas);
+      const activite = requiredFixture(avant.activites[0], 'automatic end activity');
+      const periode = requiredFixture(activite.periode, 'automatic end period');
+      return {
+        ...avant,
+        etat: 'SANS_ANOMALIE',
+        finAutomatique: false,
+        version: 2,
+        choix: [],
+        activites: [{ ...activite, etat: 'TERMINEE', periode: { ...periode, fin: INSTANT_FIN_TARDIVE, duree: 'PT15H' } }],
+      };
+    };
+
+    const givenALateCorrectionWillBeAccepted = (cas: CorrectionTardiveFixture): void => {
+      const avant = dossierAvecUneCorrectionTardiveFixture(cas);
+      const apres = dossierApresLaCorrectionTardiveFixture(cas);
+      read.result = { kind: 'DOSSIER', dossier: avant };
+      givenASuccessfulPreview(apres, actePourLaCorrectionTardiveFixture(cas), avant);
+      application.result = { kind: 'APPLIQUE', dossier: apres };
+    };
+
+    it('should open the resolution view of a late end with its received hour in the field, on the handle and on the button', async () => {
+      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
+
+      await whenRendering();
+
+      thenTheResolutionViewIsShown();
+      thenTheEndFieldsShow('14/09/2026', '23:00:00');
+      thenTheHandleHoldsAt(new Date(2026, 8, 14, 23, 0));
+      thenTextContains('anomalie-resolution-valider', 'Valider la fin à 23:00');
+    });
+
+    it.each([FIN_TARDIVE, PASSAGE_EN_NC_TARDIF, RETOUR_EN_BON_TARDIF])(
+      'should preview the correction by itself at the opening, with the fixed reason, and enable the validation ($code $type)',
+      async cas => {
+        givenALateCorrectionWillBeAccepted(cas);
+
+        await whenRendering();
+        await whenThePreviewOfTheOpeningArrives();
+
+        expect(preview.actes).toEqual([actePourLaCorrectionTardiveFixture(cas)]);
+        thenTheOutcomeReads('Travail 13 h → 15 h · anomalie traitée');
+        thenEnabled('anomalie-resolution-valider');
+      },
+    );
+
+    it.each([FIN_TARDIVE, PASSAGE_EN_NC_TARDIF, RETOUR_EN_BON_TARDIF])(
+      'should label the field "$champ" and the button "$bouton 23:00" ($code $type)',
+      async cas => {
+        givenALateCorrectionWillBeAccepted(cas);
+
+        await whenRendering();
+
+        thenTheLegendOfTheHourReads(cas.champ);
+        thenTextContains('anomalie-resolution-valider', `${cas.bouton} 23:00`);
+      },
+    );
+
+    it.each([PASSAGE_EN_NC_TARDIF, RETOUR_EN_BON_TARDIF])('should say what the hour of the passage starts ($type)', async cas => {
+      givenALateCorrectionWillBeAccepted(cas);
+
+      await whenRendering();
+
+      thenTextContains('anomalie-resolution-activite-ouverte', cas.ligne ?? '');
+    });
+
+    it('should say nothing of an open activity for the end of an activity', async () => {
+      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
+
+      await whenRendering();
+
+      thenAbsent('anomalie-resolution-activite-ouverte');
+    });
+
+    it.each([FIN_TARDIVE, PASSAGE_EN_NC_TARDIF])('should show no reason anywhere, though the preview carries one ($code)', async cas => {
+      givenALateCorrectionWillBeAccepted(cas);
+      await whenRendering();
+      await whenThePreviewOfTheOpeningArrives();
+
+      thenAbsent('anomalie-motif');
+      thenNoTextOfTheViewContains(cas.motif);
+      thenNoTextOfTheViewContains('Erreur de saisie');
+    });
+
+    it('should hide the reason of the cancelled pointage in the detail of the preview', async () => {
+      givenALateCorrectionWillBeAcceptedWithACancelledPointage(FIN_TARDIVE);
+      await whenRendering();
+      await whenThePreviewOfTheOpeningArrives();
+
+      thenTheDetailReads('Pointage annulé');
+      thenTheDetailGivesNoReason('Erreur de saisie');
+    });
+
+    it('should preview the new hour with the same fixed reason once the manager moved it', async () => {
+      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
+      await whenRendering();
+      await whenThePreviewOfTheOpeningArrives();
+
+      await whenPlacingTheEndAt('14/09/2026', '22:30');
+
+      expect(preview.actes).toEqual([
+        actePourLaCorrectionTardiveFixture(FIN_TARDIVE),
+        expect.objectContaining({ kind: 'CORRECTION', motif: MOTIF_FIN_TARDIVE }),
+      ]);
+      thenThePreviewsWereAskedForTheHours(['23:00', '22:30']);
+      thenTextContains('anomalie-resolution-valider', 'Valider la fin à 22:30');
+    });
+
+    it('should keep the validation disabled until the preview of the opening comes back', async () => {
+      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
+      const attente = new PendingResponseFixture<ResultatApercu>();
+      preview.replies.pending = attente;
+
+      await whenRendering();
+      await attente.arrival;
+
+      thenDisabled('anomalie-resolution-valider');
+      thenTheFieldAndTheHandleStayUsable();
+    });
+
+    it('should offer to retry the preview of the opening after a network failure', async () => {
+      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
+      preview.failure = new Error('Réseau indisponible');
+      await whenRendering();
+      await whenThePreviewOfTheOpeningArrives();
+      preview.failure = undefined;
+
+      await whenClicking('anomalie-resolution-reessayer');
+
+      thenTheOutcomeReads('Travail 13 h → 15 h · anomalie traitée');
+    });
+
+    it('should record the correction with the fixed reason and show the receipt', async () => {
+      givenALateCorrectionWillBeAccepted(PASSAGE_EN_NC_TARDIF);
+      await whenRendering();
+      await whenThePreviewOfTheOpeningArrives();
+
+      await whenValidatingTheEnd();
+
+      thenTheResolutionViewShowsTheReceipt();
+    });
+
+    it('should leave to the full view with no act chosen when the manager asks for another correction without changing the hour', async () => {
+      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
+      await whenRendering();
+      await whenThePreviewOfTheOpeningArrives();
+
+      await whenClicking('anomalie-resolution-autre-correction');
+
+      thenTheFullViewIsShown();
+      thenNoActIsChosen();
+    });
+
+    it('should ask the reason of the manager in the full view, the fixed reason of the resolution view being dropped', async () => {
+      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
+      await whenRendering();
+      await whenThePreviewOfTheOpeningArrives();
+      await whenClicking('anomalie-resolution-autre-correction');
+
+      await whenClicking('anomalie-choix');
+
+      thenFieldValueIs('anomalie-motif', '');
+    });
+
+    it('should ask a confirmation before leaving to the full view once the manager changed the received hour', async () => {
+      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '22:30');
+
+      await whenClicking('anomalie-resolution-autre-correction');
+
+      expect(present('anomalie-resolution-sortie')).toBe(true);
+      thenAbsent('anomalie-decision');
+    });
+
+    it('should ask no confirmation when the manager comes back to the received hour', async () => {
+      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '22:30');
+      await whenPlacingTheEndAt('14/09/2026', '23:00');
+
+      await whenClicking('anomalie-resolution-autre-correction');
+
+      thenTheFullViewIsShown();
+    });
+
+    it('should keep the full view when the address does not open the activity the correction ends', async () => {
+      read.result = { kind: 'DOSSIER', dossier: dossierFinTardiveFixture() };
+
+      await whenRendering();
+
+      thenTheFullViewIsShown();
+    });
+
+    const whenThePreviewOfTheOpeningArrives = async (): Promise<void> => {
+      await new Promise<void>(resolve => realSetTimeout(resolve));
+      await Promise.allSettled(preview.replies.automaticResponses);
+      await fixture.whenStable();
+    };
+
+    const givenALateCorrectionWillBeAcceptedWithACancelledPointage = (cas: CorrectionTardiveFixture): void => {
+      givenALateCorrectionWillBeAccepted(cas);
+      if (preview.result.kind !== 'APERCU') throw new Error('Expected a successful preview.');
+      const apercu = preview.result.apercu;
+      const pointage = requiredFixture(apercu.apres.journal[0], 'journal fixture pointage');
+      preview.result = {
+        kind: 'APERCU',
+        apercu: {
+          ...apercu,
+          apres: {
+            ...apercu.apres,
+            journal: [
+              ...apercu.apres.journal,
+              {
+                ...pointage,
+                id: new PointageAnomalieId('annule-9'),
+                annulation: { motif: 'Erreur de saisie', auteur: 'camille', instant: INSTANT_ENREGISTREMENT },
+              },
+            ],
+          },
+        },
+      };
+    };
+
+    const thenTheLegendOfTheHourReads = (expected: string): void => {
+      const legende = requiredFixture(
+        element('anomalie-resolution-instant-date').closest('fieldset')?.querySelector('legend'),
+        'legend of the hour field',
+      );
+      expect(legende.textContent.trim()).toBe(expected);
+    };
+
+    const thenNoTextOfTheViewContains = (texte: string): void => {
+      expect((fixture.nativeElement as HTMLElement).textContent.replace(/\s+/g, ' ')).not.toContain(texte);
+    };
+  });
+
   describe('in a time zone that changes hour', () => {
     const original = process.env['TZ'];
 
@@ -4705,6 +5799,291 @@ describe('Anomaly dossier page', () => {
 
     thenTextContains('anomalie-chargement', 'Chargement du dossier…');
   });
+
+  const dossierDeResolutionFixture = (): DossierAnomalie => {
+    const dossier = dossierFinAutomatiqueFixture();
+    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
+    return { ...dossier, ligne: { ...dossier.ligne, adresse } };
+  };
+
+  const dossierRegulariseFixture = (): DossierAnomalie => {
+    const dossier = dossierDeResolutionFixture();
+    const activite = requiredFixture(dossier.activites[0], 'automatic end activity');
+    const periode = requiredFixture(activite.periode, 'automatic end period');
+    return {
+      ...dossier,
+      etat: 'SANS_ANOMALIE',
+      finAutomatique: false,
+      version: 2,
+      choix: [],
+      activites: [{ ...activite, etat: 'TERMINEE', periode: { ...periode, fin: INSTANT_FIN_DE_TRAVAIL, duree: 'PT9H' } }],
+    };
+  };
+
+  const givenAnAutomaticEndWithAResolutionView = (): void => {
+    read.result = { kind: 'DOSSIER', dossier: dossierDeResolutionFixture() };
+  };
+
+  const givenTheRegularisationOfTheEndWillBeAccepted = (): void => {
+    givenAnAutomaticEndWithAResolutionView();
+    const apres = dossierRegulariseFixture();
+    givenASuccessfulPreview(apres, acteFinRegulariseeFixture('poste-1', '2026-09-14T17:00:00-03:00'), dossierDeResolutionFixture());
+    application.result = { kind: 'APPLIQUE', dossier: apres };
+  };
+
+  const whenTypingTheEnd = async (date: string, time: string): Promise<void> => {
+    await whenEntering('anomalie-resolution-instant-date', date);
+    await whenEntering('anomalie-resolution-instant-heure', time);
+  };
+
+  const whenPlacingTheEndAt = async (date: string, time: string): Promise<void> => {
+    await whenTypingTheEnd(date, time);
+    await whenTheTypingPauses();
+  };
+
+  const whenTheTypingPauses = async (): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(400);
+    await fixture.whenStable();
+  };
+
+  const QUERY_DE_LA_LISTE = { nature: 'FIN_AUTOMATIQUE', operateur: 'op-1', element: 'el-1', page: '2' };
+
+  const givenTheAddressComesFromTheList = (): void => {
+    route.queryParamMap.next(convertToParamMap({ pointage: 'debut-8', ...QUERY_DE_LA_LISTE }));
+  };
+
+  const givenAnotherAutomaticEndRemainingAfterTheRegularisation = (): void => {
+    givenTheRegularisationOfTheEndWillBeAccepted();
+    const apres = dossierRegulariseFixture();
+    const autre: ActiviteAnomalie = {
+      ...requiredFixture(dossierDeResolutionFixture().activites[0], 'automatic end activity'),
+      id: new ActiviteAnomalieId('travail-10'),
+      ouvrant: new PointageAnomalieId('debut-10'),
+    };
+    application.result = { kind: 'APPLIQUE', dossier: { ...apres, finAutomatique: true, activites: [...apres.activites, autre] } };
+  };
+
+  const uneLigneDeLaListe = (suivi: string, pointage: string): LigneFinAutomatique => ({
+    adresse: { suivi: new SuiviAnomalieId(suivi), pointage: new PointageAnomalieId(pointage) },
+    element: new ElementAnomalieId('moule-42'),
+    designation: 'M-042',
+    operateur: 'Camille Martin',
+    poste: 'DMU 50',
+    debut: INSTANT_DEBUT,
+    echeance: INSTANT_ECHEANCE,
+  });
+
+  const whenAskingForTheNextAnomaly = async (): Promise<void> => {
+    await whenClicking('anomalie-resolution-suivante');
+    await fixture.whenStable();
+  };
+
+  const thenTheListWasReadFor = (filtre: FiltreAnomalies): void => {
+    expect(read.listesDemandees).toEqual([filtre]);
+  };
+
+  const thenTheManagerIsLedTo = (commands: readonly unknown[], queryParams: Record<string, string | null>): void => {
+    expect(router.navigations).toEqual([{ commands, queryParams }]);
+  };
+
+  const whenValidatingTheEnd = async (): Promise<void> => {
+    await whenClicking('anomalie-resolution-valider');
+  };
+
+  const thenTheEndFieldsShow = (date: string, time: string): void => {
+    thenFieldValueIs('anomalie-resolution-instant-date', date);
+    thenFieldValueIs('anomalie-resolution-instant-heure', time);
+  };
+
+  const thenTheFriseIsReadOnly = (): void => {
+    expect(friseElements('anomalie-activite').map(barre => barre.getAttribute('role'))).toEqual(['img']);
+    expect(friseElements('anomalie-pointage').map(repere => repere.getAttribute('role'))).toEqual(['img']);
+  };
+
+  const thenNoPreviewWasAsked = (): void => {
+    expect(preview.actes).toEqual([]);
+  };
+
+  const thenTheOutcomeReads = (expected: string): void => {
+    expect(element('anomalie-resolution-apercu').textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
+  };
+
+  const thenThePreviewsWereAskedForTheHours = (expected: readonly string[]): void => {
+    expect(preview.actes.map(acte => (acte.kind === 'ANNULATION' ? '' : new Date(acte.fait.instant)).toString())).toEqual(
+      expected.map(heure => new Date(2026, 8, 14, Number(heure.slice(0, 2)), Number(heure.slice(3))).toString()),
+    );
+  };
+
+  const whenDraggingTheHandle = async ({ from, to }: { from: number; to: number }): Promise<void> => {
+    friseElements('anomalie-frise-plan').forEach(plan => {
+      plan.getBoundingClientRect = () => new DOMRect(0, 0, 1000, 200);
+    });
+    element('anomalie-poignee').dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: from, bubbles: true }));
+    element('anomalie-poignee').dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: to, bubbles: true }));
+    await fixture.whenStable();
+  };
+
+  const whenPressingAndReleasingTheHandleWithoutMoving = async (): Promise<void> => {
+    friseElements('anomalie-frise-plan').forEach(plan => {
+      plan.getBoundingClientRect = () => new DOMRect(0, 0, 1000, 200);
+    });
+    element('anomalie-poignee').dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 500, bubbles: true }));
+    await whenReleasingTheHandle();
+  };
+
+  const whenReleasingTheHandle = async (): Promise<void> => {
+    element('anomalie-poignee').dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, bubbles: true }));
+    await Promise.allSettled(preview.replies.automaticResponses);
+    await fixture.whenStable();
+  };
+
+  const apercuDeLaRegularisationFixture = (avant: DossierAnomalie, apres: DossierAnomalie): ResultatApercu => ({
+    kind: 'APERCU',
+    apercu: {
+      empreinteConsequences: 'empreinte-1',
+      evaluation: '2026-10-03T10:00:00Z',
+      evenement: 'evenement-1',
+      commande: 'commande-1',
+      version: avant.version,
+      adresse: avant.ligne.adresse,
+      avant,
+      apres,
+      acte: acteFinRegulariseeFixture('poste-1', '2026-09-14T17:00:00-03:00'),
+    },
+  });
+
+  const givenTheRegularisationOfTheEndWillBeAcceptedOnceTheDossierIsReread = (): void => {
+    givenAnAutomaticEndWithAResolutionView();
+    preview.followingResults.push({ kind: 'CONCURRENCE' });
+    preview.result = apercuDeLaRegularisationFixture(dossierRelu(), { ...dossierRegulariseFixture(), version: 3 });
+  };
+
+  const dossierRelu = (): DossierAnomalie => ({ ...dossierDeResolutionFixture(), version: 2 });
+
+  const givenTheDossierWillBeRereadWithAnotherVersion = (): void => {
+    read.followingResults.push({ kind: 'DOSSIER', dossier: dossierRelu() });
+  };
+
+  const givenTheRegularisationOfTheEndWillBeAcceptedWithConsequences = (): void => {
+    givenAnAutomaticEndWithAResolutionView();
+    const apres = dossierRegulariseFixture();
+    const pointage = requiredFixture(apres.journal[0], 'journal fixture pointage');
+    preview.result = apercuDeLaRegularisationFixture(dossierDeResolutionFixture(), {
+      ...apres,
+      version: 1,
+      consequences: ['Durée du travail recalculée'],
+      journal: [
+        ...apres.journal,
+        {
+          ...pointage,
+          id: new PointageAnomalieId('annule-9'),
+          annulation: { motif: 'Erreur de saisie', auteur: 'camille', instant: INSTANT_ENREGISTREMENT },
+        },
+      ],
+    });
+  };
+
+  const thenTheRefusalComesAfterTheFrise = (): void => {
+    expect(element('anomalie-frise').compareDocumentPosition(element('anomalie-refus')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      element('anomalie-refus').compareDocumentPosition(element('anomalie-resolution-instant-date')) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  };
+
+  const thenTheEndValidationReads = (expected: readonly string[]): void => {
+    const erreurs = [...element('anomalie-resolution-validation').querySelectorAll('li')];
+    expect(erreurs.map(erreur => erreur.textContent.trim())).toEqual(expected);
+  };
+
+  const thenTheDetailIsFolded = (): void => {
+    const detail = element('anomalie-resolution-detail');
+    if (!(detail instanceof HTMLDetailsElement)) throw new Error('Expected a detail');
+    expect(detail.open).toBe(false);
+  };
+
+  const thenTheDetailReads = (...expected: readonly string[]): void => {
+    expected.forEach(texte => {
+      expect(element('anomalie-resolution-detail').textContent).toContain(texte);
+    });
+  };
+
+  const thenTheDetailGivesNoReason = (motif: string): void => {
+    expect(element('anomalie-resolution-detail').textContent).not.toContain(motif);
+  };
+
+  const thenNoActIsChosen = (): void => {
+    thenAbsent('anomalie-acte');
+    thenNoInterpretationIsSelected();
+  };
+
+  const givenAResolutionViewBesideExpiredActivities = (ouvrants: readonly string[]): void => {
+    const dossier = dossierDeResolutionFixture();
+    const modele = requiredFixture(dossier.activites[0], 'automatic end activity');
+    read.result = {
+      kind: 'DOSSIER',
+      dossier: {
+        ...dossier,
+        activites: [
+          modele,
+          ...ouvrants.map(ouvrant => ({
+            ...modele,
+            id: new ActiviteAnomalieId(`travail-${ouvrant}`),
+            ouvrant: new PointageAnomalieId(ouvrant),
+          })),
+        ],
+      },
+    };
+  };
+
+  const givenTheDossierCannotBeReread = (): void => {
+    read.followingResults.push({ kind: 'DOSSIER', dossier: dossierRelu() });
+    read.failure = new Error('Dossier courant indisponible');
+  };
+
+  const givenTheDossierCanBeReadAgain = (): void => {
+    read.failure = undefined;
+  };
+
+  const whenDraggingTheHandleForAWhile = async (geste: { from: number; to: number }): Promise<void> => {
+    await whenDraggingTheHandle(geste);
+    await vi.advanceTimersByTimeAsync(1000);
+  };
+
+  const whenThePreviewIsOnItsWay = async (attente: PendingResponseFixture<ResultatApercu>): Promise<void> => {
+    await whenTheTypingPauses();
+    await attente.arrival;
+  };
+
+  const whenFocusingTheHour = (): void => {
+    element('anomalie-resolution-instant-heure').focus();
+  };
+
+  const thenTheFieldAndTheHandleStayUsable = (): void => {
+    expect(field('anomalie-resolution-instant-heure').disabled).toBe(false);
+    expect(element('anomalie-poignee').getAttribute('aria-disabled')).toBe('false');
+  };
+
+  const thenTheFocusStaysOnTheHour = (): void => {
+    expect(document.activeElement).toBe(element('anomalie-resolution-instant-heure'));
+  };
+
+  const thenTheResolutionViewIsShown = (): void => {
+    expect(present('anomalie-resolution')).toBe(true);
+    thenAbsent('anomalie-selection');
+    thenAbsent('anomalie-decision');
+  };
+
+  const thenTheFullViewIsShown = (): void => {
+    thenAbsent('anomalie-resolution');
+    expect(present('anomalie-decision')).toBe(true);
+  };
+
+  const thenTheResolutionViewShowsTheReceipt = (): void => {
+    expect(present('anomalie-resolution')).toBe(true);
+    thenTextContains('anomalie-resultat', 'Anomalie traitée');
+    thenAbsent('anomalie-resolution-valider');
+    thenAbsent('anomalie-decision');
+  };
 
   const givenTheDossierIsStillLoading = (): void => {
     read.pending = new PendingResponseFixture<LectureDossier>();

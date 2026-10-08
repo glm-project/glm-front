@@ -1,9 +1,11 @@
 import { components } from '@/app/generated/schema';
 import {
   activiteFinAutomatiqueFixture,
+  activiteSuivanteFixture,
   elementFinAutomatiqueFixture,
   operateurFinAutomatiqueFixture,
   ouvrantFinAutomatiqueFixture,
+  ouvrantSuivantFixture,
   posteFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from './FinAutomatiqueHttp.fixture';
@@ -22,6 +24,13 @@ export const finAutomatiqueLigneFixture: components['schemas']['RestFinAutomatiq
   poste: { id: posteFinAutomatiqueFixture, libelle: 'Fraiseuse 1' },
   debut: new Date(2026, 0, 1, 9, 26).toISOString(),
   echeance: new Date(2026, 0, 1, 22, 26).toISOString(),
+};
+
+export const finAutomatiqueSuivanteLigneFixture: components['schemas']['RestFinAutomatiqueEnListe'] = {
+  ...finAutomatiqueLigneFixture,
+  activite: activiteSuivanteFixture,
+  adresse: { suivi: suiviFinAutomatiqueFixture, pointage: ouvrantSuivantFixture },
+  designation: 'OF M24-0700',
 };
 
 export const pageFinsAutomatiquesFixture = (

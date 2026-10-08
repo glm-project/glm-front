@@ -1,0 +1,14 @@
+<header class="mb-6">
+  <h2 class="text-section">{{ dossier().ligne.designation }}</h2>
+  <p class="mt-1 text-body-sm text-ink-muted">
+    {{ operateurDe(dossier().ligne.operateur) }} · {{ posteDe(dossier().ligne.poste, dossier().ligne.posteId) }} · {{ dossier().ligne.date |
+    instantLongDay: now() }}
+  </p>
+  <p class="mt-2 text-body-sm" data-selector="anomalie-cloture">
+    {{ dossier().cloture ? libelles.cloture : libelles.ouvert }} @if (dossier().finCloture; as finCloture) { · {{ finCloture |
+    instantLongDay: now() }} } · {{ dossier().engagement | instantLongDay: now() }}
+  </p>
+  @for (phrase of problemes(dossier()); track $index) {
+  <p class="mt-4 text-body" data-selector="anomalie-probleme">{{ phrase }}</p>
+  }
+</header>

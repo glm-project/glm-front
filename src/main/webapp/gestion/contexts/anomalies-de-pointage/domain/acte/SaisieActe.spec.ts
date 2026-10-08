@@ -387,3 +387,71 @@ describe('Acte of an entry', () => {
     expect(saisie.acte()).toBe(acte);
   });
 });
+
+describe('Time entered on top of a starting entry', () => {
+  it('should be entered when a regularisation that started without time now carries one', () => {
+    const depart = SaisieActe.regularise({ ...faitFixture, instant: '' });
+
+    const saisie = depart.afterChange({ fait: { instant: '2026-09-14T17:00:00+02:00' } });
+
+    expect(saisie.heureDifferenteDe(depart)).toBe(true);
+  });
+
+  it('should not be entered while a regularisation still carries no time', () => {
+    const depart = SaisieActe.regularise({ ...faitFixture, instant: '' });
+
+    expect(depart.afterChange({ fait: { operateur: 'op-2' } }).heureDifferenteDe(depart)).toBe(false);
+  });
+
+  it('should be entered when a correction now carries another time than the received one', () => {
+    const depart = SaisieActe.correct('fin-23', faitFixture);
+
+    const saisie = depart.afterChange({ fait: { instant: '2026-09-14T16:55:00+02:00' } });
+
+    expect(saisie.heureDifferenteDe(depart)).toBe(true);
+  });
+
+  it('should not be entered when a correction carries the received time written with another offset', () => {
+    const depart = SaisieActe.correct('fin-23', { ...faitFixture, instant: '2026-09-14T15:00:00Z' });
+
+    const saisie = depart.afterChange({ fait: { instant: '2026-09-14T12:00:00-03:00' } });
+
+    expect(saisie.heureDifferenteDe(depart)).toBe(false);
+  });
+
+  it('should be entered when a correction now carries no readable time', () => {
+    const depart = SaisieActe.correct('fin-23', faitFixture);
+
+    expect(depart.afterChange({ fait: { instant: '' } }).heureDifferenteDe(depart)).toBe(true);
+  });
+
+  it('should not be entered while a correction keeps the received time, whatever its motif', () => {
+    const depart = SaisieActe.correct('fin-23', faitFixture);
+
+    expect(depart.afterChange({ motif: 'Vérifié' }).heureDifferenteDe(depart)).toBe(false);
+  });
+
+  it('should not be entered on a cancellation, which carries no time', () => {
+    const depart = SaisieActe.cancel('fin-17');
+
+    expect(depart.afterChange({ motif: 'Double appui' }).heureDifferenteDe(depart)).toBe(false);
+  });
+});
+
+describe('Instant of the fact of an entry', () => {
+  it('should be the instant the fact carries', () => {
+    expect(SaisieActe.correct('fin-23', faitFixture).instantDuFait()).toBe(faitFixture.instant);
+  });
+
+  it('should be empty while a regularisation carries no time', () => {
+    expect(SaisieActe.regularise().instantDuFait()).toBe('');
+  });
+
+  it('should be empty for a cancellation, which carries no fact', () => {
+    expect(SaisieActe.cancel('fin-17').instantDuFait()).toBe('');
+  });
+
+  it('should be empty before any act is chosen', () => {
+    expect(SaisieActe.empty().instantDuFait()).toBe('');
+  });
+});

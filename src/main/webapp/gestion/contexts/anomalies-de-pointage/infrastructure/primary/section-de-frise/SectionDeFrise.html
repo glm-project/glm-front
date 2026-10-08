@@ -1,0 +1,33 @@
+<section aria-labelledby="frise-heading">
+  <div class="mb-3 flex flex-wrap items-center justify-between gap-x-4">
+    <h2 id="frise-heading" class="text-section">{{ libelles.pointagesEtActivites }}</h2>
+    @if (jourDeLaJournee(dossier()); as jour) {
+    <a
+      class="lien-journee"
+      [routerLink]="['/operateurs', dossier().operateur.operateur, 'heures']"
+      [queryParams]="{ jour }"
+      data-selector="anomalie-frise-journee"
+      >{{ libelleDeLaJournee() }}</a
+    >
+    }
+  </div>
+  @if (phraseDeContexte(dossier(), now(), operateur()); as contexte) {
+  <p class="mb-3 text-body-sm text-ink-muted" data-selector="anomalie-frise-contexte">{{ contexte }}</p>
+  }
+  <glm-frise-dossier
+    [dossier]="dossier()"
+    [now]="now()"
+    [selection]="selection()"
+    [poignee]="poignee()"
+    [placement]="placement()"
+    [apercu]="apercu()"
+    [lectureSeule]="lectureSeule()"
+    (selectionDemandee)="selectionDemandee.emit($event)"
+    (deplacementDemande)="deplacementDemande.emit($event)"
+    (placementDemande)="placementDemande.emit($event)"
+    (poigneeRelachee)="poigneeRelachee.emit()"
+  />
+  @if (placement()) {
+  <p class="mt-2 text-body-sm text-ink-muted" data-selector="anomalie-frise-aide">{{ aideDePlacement() }}</p>
+  }
+</section>

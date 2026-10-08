@@ -1,0 +1,24 @@
+@let etat = operation(); @if (etat.kind !== 'REPOS' && etat.kind !== 'APERCU_EN_ARRIERE_PLAN') {
+<p class="mt-4 text-body-sm" role="status" data-selector="anomalie-operation">{{ libelles.operation[etat.kind] }}</p>
+@if (etat.kind === 'REFUS') {
+<p class="mt-2 text-body-sm text-danger" data-selector="anomalie-refus">{{ libelles.refus[etat.code] }}</p>
+} @if (etat.kind === 'ISSUE_INCONNUE') {
+<div class="mt-3 flex flex-wrap gap-3">
+  <button class="bouton" type="button" data-selector="anomalie-verifier" (click)="verificationDemandee.emit()">
+    {{ libelles.verifier }}
+  </button>
+  <button class="bouton" type="button" data-selector="anomalie-reprendre-confirmation" (click)="repriseDemandee.emit()">
+    {{ libelles.reprendreConfirmation }}
+  </button>
+</div>
+} } @if (etat.kind === 'APPLIQUE') { @let issue = issueDe(etat.origine, etat.dossier);
+<p class="mt-4 text-body font-semibold" role="status" data-selector="anomalie-resultat">{{ libelles.issue.recu[issue.kind] }}</p>
+@for (adresse of issue.finsAutomatiquesRestantes; track adresse.pointage.pointage; let indice = $index) {
+<a
+  class="bouton mt-2 text-accent underline"
+  data-selector="anomalie-fin-automatique-restante"
+  [routerLink]="['/anomalies', adresse.suivi.suivi]"
+  [queryParams]="{ ...retour(), pointage: adresse.pointage.pointage }"
+  >{{ libelles.traiterLaFinAutomatiqueRestante(indice + 1, issue.finsAutomatiquesRestantes.length) }}</a
+>
+} }

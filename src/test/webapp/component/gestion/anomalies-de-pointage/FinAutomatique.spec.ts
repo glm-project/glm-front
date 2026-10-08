@@ -8,6 +8,8 @@ import {
   confirmationFinAutomatiqueFixture,
   dossierApresCorrectionFixture,
   dossierApresRegularisationFixture,
+  dossierDeuxFinsAutomatiquesFixture,
+  dossierFinAutomatiqueEtConflitFixture,
   dossierFinAutomatiqueFixture,
   dossierFinTardiveFixture,
   dossierFinTardiveLeLendemainFixture,
@@ -17,16 +19,19 @@ import {
   givenTheReferentielFinAutomatique,
   instantRegulariseLocalFixture,
   motifFinAutomatiqueFixture,
+  operateurFinAutomatiqueFixture,
   ouvrantFinAutomatiqueFixture,
+  ouvrantSuivantFixture,
   suiviFinAutomatiqueFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
 import {
+  CHAMP_DE_LA_VUE_DE_RESOLUTION,
   thenTheInstantFieldsAreEmpty,
   thenTheInstantFieldsShow,
   whenTypingTheInstant,
 } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
-import { markerOf, thenPointageIsSelected, whenSelectingPointage } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
+import { markerOf, whenSelectingPointage } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
 const MARGE_DES_REPERES_PX = 22;
 const POINT_DE_PRISE_PX = 10;
@@ -54,7 +59,6 @@ describe('Automatic end dossier in Gestion', () => {
   [320, 1280].forEach(width => {
     it(`should keep the automatic end and the time to enter reachable at ${width} pixels`, () => {
       whenOpeningTheAutomaticEndAt(width);
-      whenChoosingTheEndRegularisation();
       whenReachingTheTimeField();
 
       thenTheTimeIsReachableWithoutHorizontalOverflow();
@@ -64,31 +68,356 @@ describe('Automatic end dossier in Gestion', () => {
   const whenOpeningTheAutomaticEndAt = (width: number): void => {
     cy.viewport(width, 900);
     cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
-  };
-
-  const whenChoosingTheEndRegularisation = (): void => {
     cy.get(dataSelector('anomalie-probleme')).should('be.visible');
-    cy.get(dataSelector('anomalie-choix')).click();
   };
 
   const whenReachingTheTimeField = (): void => {
-    cy.get(dataSelector('anomalie-instant-heure')).scrollIntoView();
+    cy.get(dataSelector('anomalie-resolution-instant-heure')).scrollIntoView();
   };
 
   const thenTheTimeIsReachableWithoutHorizontalOverflow = (): void => {
-    cy.get(dataSelector('anomalie-instant-date')).should('be.visible').and('have.value', '');
-    cy.get(dataSelector('anomalie-instant-heure')).should('be.visible').and('have.value', '');
-    cy.get(dataSelector('anomalie-instant-horloge')).should('be.visible');
+    cy.get(dataSelector('anomalie-resolution-instant-date')).should('be.visible').and('have.value', '');
+    cy.get(dataSelector('anomalie-resolution-instant-heure')).should('be.visible').and('have.value', '');
+    cy.get(dataSelector('anomalie-resolution-instant-horloge')).should('be.visible');
     cy.document().should(document => {
       expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth);
     });
   };
 });
 
+describe('Resolution view of an automatic end in Gestion', () => {
+  const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
+
+  beforeEach(() => {
+    cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
+    givenTheReferentielFinAutomatique();
+  });
+
+  it('should show the problem, the frise, the end field and the validation, and nothing of the full view', () => {
+    givenTheDossier(dossierFinAutomatiqueFixture());
+
+    whenOpeningTheResolutionView();
+
+    thenOnlyTheResolutionViewIsDrawn();
+  });
+
+  it('should fall back to the full view when the dossier carries a conflict choice beside the end', () => {
+    givenTheDossier(dossierFinAutomatiqueEtConflitFixture());
+
+    whenOpeningTheDossier();
+
+    thenTheFullViewIsDrawnWithItsTwoChoices();
+  });
+
+  it('should say the other automatic end of the element and lead to it, keeping the way back to the list', () => {
+    givenTheDossier(dossierDeuxFinsAutomatiquesFixture());
+
+    whenOpeningTheResolutionViewFromTheList();
+
+    thenTheOtherAutomaticEndIsLinked();
+  });
+
+  it('should draw the other automatic end on the frise beside the one the manager regularises', () => {
+    givenTheDossier(dossierDeuxFinsAutomatiquesFixture());
+
+    whenOpeningTheResolutionView();
+
+    thenTwoBarsAreDrawn();
+  });
+
+  it('should leave to the full view without any hour when the manager asks for another correction, then come back', () => {
+    givenTheDossier(dossierFinAutomatiqueFixture());
+    whenOpeningTheResolutionView();
+
+    whenAskingForAnotherCorrection();
+
+    thenTheFullViewIsDrawnWithAWayBack();
+  });
+
+  it('should come back to a fresh resolution view from the full view', () => {
+    givenTheDossier(dossierFinAutomatiqueFixture());
+    whenOpeningTheResolutionView();
+    whenAskingForAnotherCorrection();
+
+    whenComingBackToTheSimpleView();
+
+    thenOnlyTheResolutionViewIsDrawn();
+  });
+
+  it('should ask a confirmation before leaving to the full view once an hour was entered', () => {
+    givenTheDossier(dossierFinAutomatiqueFixture());
+    whenOpeningTheResolutionView();
+    whenTypingTheEnd();
+
+    whenAskingForAnotherCorrection();
+
+    thenAConfirmationIsAsked();
+  });
+
+  it('should say the outcome in one line and keep its detail folded, without any reason', () => {
+    givenTheDossier(dossierFinAutomatiqueFixture());
+    givenAPreviewOfTheRegularisation();
+    whenOpeningTheResolutionView();
+
+    whenTypingTheEnd();
+
+    thenTheOutcomeIsInOneLineWithAFoldedDetail();
+  });
+
+  it('should not offer the next anomaly while the end is not validated', () => {
+    givenTheDossier(dossierFinAutomatiqueFixture());
+    givenAPreviewOfTheRegularisation();
+    whenOpeningTheResolutionView();
+
+    whenTypingTheEnd();
+
+    thenTheNextAnomalyIsNotOffered();
+  });
+
+  it('should offer the next anomaly with the receipt once the end is validated', () => {
+    givenTheDossier(dossierFinAutomatiqueFixture());
+    givenAPreviewOfTheRegularisation();
+    givenAConfirmationOf(dossierApresRegularisationFixture());
+    whenOpeningTheResolutionView();
+
+    whenTypingTheEnd();
+    whenValidating();
+
+    thenTheNextAnomalyIsOfferedWithTheReceipt();
+  });
+
+  const givenTheDossier = (dossier: components['schemas']['RestDossierAnomalie']): void => {
+    cy.intercept('GET', suiviUrl, { body: dossier });
+  };
+
+  const givenAPreviewOfTheRegularisation = (): void => {
+    cy.intercept('POST', `${suiviUrl}/apercus`, request => {
+      const demande = request.body as components['schemas']['RestDemandeDApercu'];
+      request.reply({
+        body: apercuFixture(demande, dossierFinAutomatiqueFixture(), dossierApresRegularisationFixture(), finRegulariseeFixture),
+      });
+    });
+  };
+
+  const whenOpeningTheDossier = (): void => {
+    cy.viewport(1280, 900);
+    cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+  };
+
+  const whenOpeningTheResolutionViewFromTheList = (): void => {
+    cy.viewport(1280, 900);
+    cy.visit(
+      `/anomalies/${suiviFinAutomatiqueFixture}?nature=FIN_AUTOMATIQUE&operateur=${operateurFinAutomatiqueFixture}&page=2&pointage=${ouvrantFinAutomatiqueFixture}`,
+    );
+  };
+
+  const whenTypingTheEnd = (): void => {
+    whenTypingTheInstant(instantRegulariseLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+  };
+
+  const whenAskingForAnotherCorrection = (): void => {
+    cy.get(dataSelector('anomalie-resolution-autre-correction')).click();
+  };
+
+  const whenComingBackToTheSimpleView = (): void => {
+    cy.get(dataSelector('anomalie-resolution-retour-simple')).click();
+  };
+
+  const thenOnlyTheResolutionViewIsDrawn = (): void => {
+    cy.get(dataSelector('anomalie-probleme')).should('be.visible');
+    cy.get(dataSelector('anomalie-frise')).should('be.visible');
+    cy.get(dataSelector('anomalie-resolution-instant-date')).should('be.visible').and('have.value', '');
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
+    [
+      'anomalie-selection',
+      'anomalie-decision',
+      'anomalie-choix',
+      'anomalie-motif',
+      'anomalie-instant-moins-5',
+      'anomalie-instant-plus-5',
+      'anomalie-champs-detail',
+      'anomalie-previsualiser',
+    ].forEach(absent => {
+      cy.get(dataSelector(absent)).should('not.exist');
+    });
+  };
+
+  const thenTheFullViewIsDrawnWithItsTwoChoices = (): void => {
+    cy.get(dataSelector('anomalie-choix')).should('have.length', 2);
+    cy.get(dataSelector('anomalie-resolution')).should('not.exist');
+  };
+
+  const thenTheOtherAutomaticEndIsLinked = (): void => {
+    cy.get(dataSelector('anomalie-resolution-autre-fin'))
+      .should('contain.text', '1 autre fin automatique sur cet élément')
+      .and('have.attr', 'href')
+      .and('contain', `pointage=${ouvrantSuivantFixture}`)
+      .and('contain', 'nature=FIN_AUTOMATIQUE')
+      .and('contain', 'page=2');
+  };
+
+  const thenTwoBarsAreDrawn = (): void => {
+    cy.get(dataSelector('anomalie-frise')).find(dataSelector('anomalie-activite')).should('have.length', 2);
+  };
+
+  const thenTheFullViewIsDrawnWithAWayBack = (): void => {
+    cy.get(dataSelector('anomalie-choix')).should('have.length', 1).and('have.attr', 'aria-pressed', 'false');
+    cy.get(dataSelector('anomalie-acte')).should('not.exist');
+    cy.get(dataSelector('anomalie-resolution-retour-simple')).should('be.visible');
+  };
+
+  const thenAConfirmationIsAsked = (): void => {
+    cy.get(dataSelector('anomalie-resolution-sortie')).should('be.visible');
+    cy.get(dataSelector('anomalie-choix')).should('not.exist');
+  };
+
+  const thenTheOutcomeIsInOneLineWithAFoldedDetail = (): void => {
+    cy.get(dataSelector('anomalie-resolution-apercu')).should('have.text', 'Travail 13 h → 9 h · anomalie traitée');
+    cy.get(dataSelector('anomalie-resolution-detail')).should('not.have.attr', 'open');
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').and('contain.text', 'Valider la fin à 17:00');
+  };
+});
+
+describe('Resolution view of a pointage pointed after the deadline in Gestion', () => {
+  const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
+  const MOTIF_FIN_TARDIVE = 'Arrêt pointé après l’échéance : heure vérifiée en gestion';
+  const MOTIF_PASSAGE_TARDIF = 'Passage pointé après l’échéance : heure vérifiée en gestion';
+
+  beforeEach(() => {
+    cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
+    givenTheReferentielFinAutomatique();
+  });
+
+  it('should open a late end on its received hour and preview its correction by itself, with the reason fixed and hidden', () => {
+    givenALateGesture('CORRIGER_FIN_TARDIVE');
+
+    whenOpeningTheResolutionView();
+
+    whenUnfoldingTheDetailOfThePreview();
+
+    thenTheEndStandsOnTheReceivedHour();
+    thenThePreviewWasAskedWithTheReason(MOTIF_FIN_TARDIVE);
+    thenTheOutcomeIsInOneLineAndTheValidationIsOpen('Valider la fin à 23:00');
+    thenNoReasonIsShown(MOTIF_FIN_TARDIVE);
+  });
+
+  it('should label a late passage and say what its hour starts', () => {
+    givenALateGesture('CORRIGER_TRANSITION_TARDIVE');
+
+    whenOpeningTheResolutionView();
+
+    thenTheFieldIsLabelled('Heure du passage');
+    thenTheOpenActivityIsSaid('La non-conformité commencera à cette heure.');
+    thenThePreviewWasAskedWithTheReason(MOTIF_PASSAGE_TARDIF);
+    thenTheOutcomeIsInOneLineAndTheValidationIsOpen('Valider le passage à 23:00');
+  });
+
+  it('should leave to the full view with no act chosen when the manager asks for another correction', () => {
+    givenALateGesture('CORRIGER_FIN_TARDIVE');
+    whenOpeningTheResolutionView();
+
+    whenAskingForAnotherCorrection();
+
+    thenTheFullViewOffersTheCorrectionWithoutChoosingIt();
+  });
+
+  const whenAskingForAnotherCorrection = (): void => {
+    cy.get(dataSelector('anomalie-resolution-autre-correction')).click();
+  };
+
+  const whenUnfoldingTheDetailOfThePreview = (): void => {
+    cy.get(dataSelector('anomalie-resolution-detail-ouvrir')).click();
+  };
+
+  const thenTheFieldIsLabelled = (legende: string): void => {
+    cy.get(dataSelector('anomalie-resolution-instant-date')).closest('fieldset').find('legend').should('have.text', legende);
+  };
+
+  const thenTheOpenActivityIsSaid = (ligne: string): void => {
+    cy.get(dataSelector('anomalie-resolution-activite-ouverte')).should('have.text', ligne);
+  };
+
+  const thenTheFullViewOffersTheCorrectionWithoutChoosingIt = (): void => {
+    cy.get(dataSelector('anomalie-choix')).should('have.length', 1).and('have.attr', 'aria-pressed', 'false');
+    cy.get(dataSelector('anomalie-acte')).should('not.exist');
+  };
+
+  it('should offer the next anomaly with the receipt of the correction of a late pointage', () => {
+    givenALateGesture('CORRIGER_TRANSITION_TARDIVE');
+    givenAConfirmationOf(dossierApresCorrectionFixture());
+    whenOpeningTheResolutionView();
+
+    whenValidating();
+
+    thenTheNextAnomalyIsOfferedWithTheReceipt();
+  });
+
+  const givenALateGesture = (code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE'): void => {
+    cy.intercept('GET', suiviUrl, { body: dossierFinTardiveFixture(code) });
+    cy.intercept('POST', `${suiviUrl}/apercus`, request => {
+      const demande = request.body as components['schemas']['RestDemandeDApercu'];
+      request.reply({
+        body: apercuFixture(demande, dossierFinTardiveFixture(code), dossierApresCorrectionFixture(), finCorrigeeFixture),
+      });
+    }).as('apercu');
+  };
+
+  const thenTheEndStandsOnTheReceivedHour = (): void => {
+    thenTheInstantFieldsShow(new Date(2026, 8, 14, 23, 0), CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    abscisseDeLHeure(23).then(abscisse => {
+      cy.get(dataSelector('anomalie-poignee')).should(poignee => {
+        expect(centreDe(requiredFixture(poignee[0], 'poignée'))).to.be.closeTo(abscisse, 1);
+      });
+    });
+  };
+
+  const thenThePreviewWasAskedWithTheReason = (motif: string): void => {
+    cy.wait('@apercu').its('request.body.acte').should('include', { kind: 'CORRECTION', pointage: finTardiveFixture, motif });
+  };
+
+  const thenTheOutcomeIsInOneLineAndTheValidationIsOpen = (bouton: string): void => {
+    cy.get(dataSelector('anomalie-resolution-apercu')).should('have.text', 'Travail 13 h → 15 h · anomalie traitée');
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').and('contain.text', bouton);
+  };
+
+  const thenNoReasonIsShown = (motif: string): void => {
+    cy.get(dataSelector('anomalie-motif')).should('not.exist');
+    cy.get(dataSelector('anomalie-resolution')).should('not.contain.text', motif);
+    cy.get(dataSelector('anomalie-resolution')).should('not.contain.text', motifFinAutomatiqueFixture);
+  };
+});
+
 const whenOpeningTheDossierAndChoosing = (): void => {
   cy.viewport(1280, 900);
   cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+  cy.get(dataSelector('anomalie-resolution-autre-correction')).click();
   cy.get(dataSelector('anomalie-choix')).click();
+};
+
+const givenAConfirmationOf = (dossier: components['schemas']['RestDossierAnomalie']): void => {
+  cy.intercept('POST', `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/confirmations-de-resolution`, request => {
+    const demande = request.body as components['schemas']['RestConfirmationAEnregistrer'];
+    request.reply({ body: confirmationFinAutomatiqueFixture(demande, dossier) });
+  });
+};
+
+const whenValidating = (): void => {
+  cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').click();
+};
+
+const thenTheNextAnomalyIsNotOffered = (): void => {
+  cy.get(dataSelector('anomalie-resolution-suivante')).should('not.exist');
+};
+
+const thenTheNextAnomalyIsOfferedWithTheReceipt = (): void => {
+  cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
+  cy.get(dataSelector('anomalie-resolution-suivante')).should('be.visible').and('be.enabled').and('contain.text', 'Anomalie suivante');
+};
+
+const whenOpeningTheResolutionView = (): void => {
+  cy.viewport(1280, 900);
+  cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+  cy.get(dataSelector('anomalie-resolution')).should('be.visible');
 };
 
 const whenDraggingTheHandleTo = (hour: number): void => {
@@ -285,7 +614,7 @@ describe('End placement on the frise in Gestion', () => {
 
   it('should place the handle and the hour at the time clicked on the bar, rounded to five minutes', () => {
     whenOpeningTheAutomaticEndRegularisation();
-    whenClickingTheBarAt(17 + 2 / 60);
+    whenClickingTheRowOfTheBarAt(17 + 2 / 60);
 
     thenTheEndIsPlacedAt(new Date(2026, 8, 14, 17, 0));
   });
@@ -312,24 +641,14 @@ describe('End placement on the frise in Gestion', () => {
     thenTheEndIsPlacedAt(new Date(2026, 8, 14, 16, 0));
   });
 
-  it('should select the pointage of the start marker clicked on its bar instead of placing the end', () => {
+  it('should draw the start marker as an image that selects nothing and places no end', () => {
     whenOpeningTheAutomaticEndRegularisation();
-    whenSelectingPointage(ouvrantFinAutomatiqueFixture);
 
-    thenPointageIsSelected(ouvrantFinAutomatiqueFixture);
-    thenTheInstantFieldsAreEmpty();
+    thenTheStartMarkerIsAnImageThatCannotBePressed();
+    thenTheInstantFieldsAreEmpty(CHAMP_DE_LA_VUE_DE_RESOLUTION);
   });
 
-  const whenOpeningTheAutomaticEndRegularisation = whenOpeningTheDossierAndChoosing;
-
-  const whenClickingTheBarAt = (hour: number): void => {
-    barreDeLActivite().then(barre => {
-      const { left } = requiredFixture(barre[0], 'barre').getBoundingClientRect();
-      abscisseDeLHeure(hour).then(clientX => {
-        barreDeLActivite().click(clientX - left, 20);
-      });
-    });
-  };
+  const whenOpeningTheAutomaticEndRegularisation = whenOpeningTheResolutionView;
 
   const whenClickingTheRowOfTheBarAt = (hour: number): void => {
     cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
@@ -354,23 +673,27 @@ describe('End placement on the frise in Gestion', () => {
   };
 
   const thenNoHourIsInventedAndTheEndCanBePlaced = (): void => {
-    thenTheInstantFieldsAreEmpty();
+    thenTheInstantFieldsAreEmpty(CHAMP_DE_LA_VUE_DE_RESOLUTION);
     cy.get(dataSelector('anomalie-poignee')).should('have.attr', 'data-sans-heure');
     cy.get(dataSelector('anomalie-poignee')).should('not.have.attr', 'aria-valuenow');
     cy.get(dataSelector('anomalie-poignee'))
       .invoke('text')
       .should('match', /^\s*Heure \?\s*$/);
-    cy.get(dataSelector('anomalie-previsualiser')).should('be.disabled');
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
     cy.get(dataSelector('anomalie-frise-aide'))
       .should('be.visible')
-      .and('contain.text', 'Tirez le bout de la barre ou cliquez dessus pour placer l’heure du fait');
+      .and('contain.text', 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle');
   };
 
   const thenTheEndIsPlacedAt = (instant: Date): void => {
-    thenTheInstantFieldsShow(instant);
+    thenTheInstantFieldsShow(instant, CHAMP_DE_LA_VUE_DE_RESOLUTION);
     cy.get(dataSelector('anomalie-poignee')).should('be.visible');
     cy.get(dataSelector('anomalie-frise-placement')).should('not.exist');
     cy.get(dataSelector('anomalie-frise-aide')).should('not.exist');
+  };
+
+  const thenTheStartMarkerIsAnImageThatCannotBePressed = (): void => {
+    markerOf(ouvrantFinAutomatiqueFixture).should('have.attr', 'role', 'img').and('not.have.attr', 'aria-pressed');
   };
 });
 
@@ -415,7 +738,7 @@ describe('Automatic end read on one line in Gestion', () => {
       whenPlacingTheEndAt(17);
       whenDraggingTheHandleTo(hour);
 
-      thenTheInstantFieldsShow(new Date(2026, 8, 14, hour, 0));
+      thenTheInstantFieldsShow(new Date(2026, 8, 14, hour, 0), CHAMP_DE_LA_VUE_DE_RESOLUTION);
       thenTheBarEndsOnTheHour(hour);
       thenTheBarIsNamedWithTheProposedHour(`${hour}:00`);
     });
@@ -426,7 +749,7 @@ describe('Automatic end read on one line in Gestion', () => {
     whenPlacingTheEndAt(17);
     whenDraggingTheHandleTo(12);
 
-    thenTheInstantFieldsShow(new Date(2026, 8, 14, 12, 0));
+    thenTheInstantFieldsShow(new Date(2026, 8, 14, 12, 0), CHAMP_DE_LA_VUE_DE_RESOLUTION);
     thenTheBarEndsOnTheHour(12);
     thenTheBarIsNamedWithTheProposedHour('12:00');
   });
@@ -436,7 +759,7 @@ describe('Automatic end read on one line in Gestion', () => {
     whenPlacingTheEndAt(17);
     whenDraggingTheHandleGrabbedOffCentreTo(12);
 
-    thenTheInstantFieldsShow(new Date(2026, 8, 14, 12, 0));
+    thenTheInstantFieldsShow(new Date(2026, 8, 14, 12, 0), CHAMP_DE_LA_VUE_DE_RESOLUTION);
     thenTheBarEndsOnTheHour(12);
   });
 
@@ -445,7 +768,7 @@ describe('Automatic end read on one line in Gestion', () => {
     whenTypingTheEndAt(new Date(2026, 8, 14, 17, 0));
     whenDraggingTheHandleTo(12);
 
-    thenTheInstantFieldsShow(new Date(2026, 8, 14, 12, 0));
+    thenTheInstantFieldsShow(new Date(2026, 8, 14, 12, 0), CHAMP_DE_LA_VUE_DE_RESOLUTION);
     thenTheBarEndsOnTheHour(12);
   });
 
@@ -457,30 +780,27 @@ describe('Automatic end read on one line in Gestion', () => {
     thenTheHandleIsHeldOnItsBar();
   });
 
-  it('should say on the bar the state and the time the preview receives, and draw no state after the act', () => {
+  it('should say the outcome of the preview in one line and draw no state after the act under the frise', () => {
     whenOpeningTheFriseAt(1280);
     whenPlacingTheEndAt(17);
-    whenPreviewingTheEnd();
+    whenWaitingForThePreviewOfTheEnd();
 
-    thenTheBarSaysTheStateAndTheTimeTheActReceives();
     thenNoStateAfterTheActIsDrawn();
   });
 
   const whenPlacingTheEndAt = (hour: number): void => {
-    cy.get(dataSelector('anomalie-choix')).click();
-    barreDeLActivite().then(barre => {
-      const { left } = requiredFixture(barre[0], 'barre').getBoundingClientRect();
+    cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
+      const { left } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
       abscisseDeLHeure(hour).then(clientX => {
-        barreDeLActivite().click(clientX - left, 20);
+        cy.get(dataSelector('anomalie-frise-placement')).click(clientX - left, 20);
       });
     });
     cy.get(dataSelector('anomalie-poignee')).should('be.visible').and('not.have.attr', 'data-sans-heure');
   };
 
   const whenTypingTheEndAt = (instant: Date): void => {
-    cy.get(dataSelector('anomalie-choix')).click();
-    whenTypingTheInstant(instant);
-    cy.get(dataSelector('anomalie-instant-heure')).blur();
+    whenTypingTheInstant(instant, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    cy.get(dataSelector('anomalie-resolution-instant-heure')).blur();
     cy.get(dataSelector('anomalie-poignee')).should('be.visible').and('not.have.attr', 'data-sans-heure');
   };
 
@@ -499,14 +819,8 @@ describe('Automatic end read on one line in Gestion', () => {
     });
   };
 
-  const whenPreviewingTheEnd = (): void => {
-    cy.get(dataSelector('anomalie-previsualiser')).click();
-    cy.get(dataSelector('anomalie-apercu')).should('be.visible');
-  };
-
-  const thenTheBarSaysTheStateAndTheTimeTheActReceives = (): void => {
-    barreDeLActivite().should('contain.text', 'Terminée · 9 h').and('have.attr', 'data-modifiee', 'true');
-    barreDeLActivite().should('have.attr', 'aria-label').and('contain', 'Terminée · 9 h');
+  const whenWaitingForThePreviewOfTheEnd = (): void => {
+    cy.get(dataSelector('anomalie-resolution-apercu')).should('be.visible');
   };
 
   const thenNoStateAfterTheActIsDrawn = (): void => {
@@ -542,10 +856,8 @@ describe('Automatic end read on one line in Gestion', () => {
   };
 
   const whenRegularisingTheEndAndReadingTheReceipt = (): void => {
-    cy.get(dataSelector('anomalie-choix')).click();
-    whenTypingTheInstant(instantRegulariseLocalFixture);
-    cy.get(dataSelector('anomalie-previsualiser')).click();
-    cy.get(dataSelector('anomalie-confirmer')).click();
+    whenTypingTheInstant(instantRegulariseLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').click();
     cy.get(dataSelector('anomalie-resultat')).should('be.visible');
     markerOf(finRegulariseeFixture).should('exist');
   };
@@ -598,7 +910,7 @@ describe('Pointage pointed after the deadline on the frise in Gestion', () => {
     it(`should say in the selection that the pointage the ${code} choice corrects was pointed after the deadline`, () => {
       givenALateGestureCorrectedBy(code);
 
-      whenOpeningTheLateGesture();
+      whenOpeningTheFullViewOfTheLateGesture();
       whenSelectingPointage(finTardiveFixture);
 
       thenTheSelectionSaysTheGestureWasPointedAfterTheDeadline();
@@ -616,6 +928,11 @@ describe('Pointage pointed after the deadline on the frise in Gestion', () => {
   const whenOpeningTheLateGesture = (): void => {
     cy.viewport(1280, 900);
     cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+  };
+
+  const whenOpeningTheFullViewOfTheLateGesture = (): void => {
+    whenOpeningTheLateGesture();
+    cy.get(dataSelector('anomalie-resolution-autre-correction')).click();
   };
 
   const thenOnlyTheLatePointageIsMarkedOnTheFrise = (): void => {
@@ -649,7 +966,7 @@ describe('Geometry of the frise in Gestion', () => {
   it('should stretch the graduations from the left edge to the right edge of the frise', () => {
     givenTheDossier(dossierFinTardiveFixture());
 
-    whenOpeningTheFrise();
+    whenOpeningTheFullViewFrise();
 
     thenTheGraduationsSpanThePlan();
   });
@@ -722,6 +1039,12 @@ describe('Geometry of the frise in Gestion', () => {
   const whenOpeningTheFrise = (): void => {
     cy.viewport(1280, 900);
     cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+    cy.get(dataSelector('anomalie-frise')).should('be.visible');
+  };
+
+  const whenOpeningTheFullViewFrise = (): void => {
+    whenOpeningTheFrise();
+    cy.get(dataSelector('anomalie-resolution-autre-correction')).click();
     cy.get(dataSelector('anomalie-frise')).should('be.visible');
   };
 

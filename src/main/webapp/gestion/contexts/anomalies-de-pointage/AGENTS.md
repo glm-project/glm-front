@@ -16,11 +16,16 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   autre séquence. Trois identifiants restent distincts : l'adresse d'une fin automatique est
   l'événement ouvrant, que l'activité reçue porte en `activites[].ouvrant` (l'`evenement` du serveur) ; l'activité visée par un
   acte est l'`ActiviteId` d'origine (`activites[].activite`).
-- **Acte** : correction, annulation ou régularisation humaine. Aucun acte n'est choisi par défaut.
+- **Acte** : correction, annulation ou régularisation humaine. Dans la vue complète, aucun acte n'est choisi par défaut ;
+  une vue de résolution prend d'office la saisie de l'unique choix qu'elle affiche (voir « Vue de résolution »).
   Correction et annulation demandent un motif non vide d'au plus 255 caractères ; la régularisation
   ne porte aucun motif.
 - **Aperçu** : conséquences fournies par le port sans écriture, avec l'évaluation et les dossiers avant
   et après. Toute modification de la saisie l'invalide.
+- **Aperçu d'arrière-plan** : aperçu qu'une vue de résolution demande d'elle-même (`PreparationActe.previewInBackground`, état
+  `APERCU_EN_ARRIERE_PLAN`), distinct de la prévisualisation du gestionnaire (`PREVISUALISATION`). Il n'est pas une opération qui
+  occupe la saisie : le champ, la poignée et le clic sur la barre restent actifs, le focus ne bouge pas, et seules la confirmation
+  et l'issue inconnue bloquent la saisie. Une réponse périmée est écartée par le jeton `demande`, puis par `afterPreview`.
 - **Proposition confirmable** : adresse, commande, version attendue, acte exact, empreinte des conséquences
   et identité prospective de l'événement pour une correction ou une régularisation ; une annulation
   n'en crée aucun. Confirmation et reprise transmettent cette proposition immuable. Elle reste seulement
@@ -72,9 +77,29 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   restant), selon la nature du dossier d'origine : projection du domaine (`IssueDeLActe`).
 - **Fin automatique restante** : une activité `ECHUE` du dossier d'après, ailleurs que l'adresse d'origine ; le reçu y mène par
   un lien.
-- **Solutions** : « Votre décision » en présente trois sortes, dans cet ordre : les propositions du serveur, les actions
-  directes, puis les autres corrections. Une **proposition du serveur** est un choix guidé (`ChoixGuide`, `dossier.choix`), toutes
-  de même rang, aucune présélectionnée. « Proposition » ne dit jamais le `PropositionActe` que `SaisieActe` prépare : on dit
+- **Anomalie suivante** : le bouton « Anomalie suivante » du reçu d'une vue de résolution. Sa destination se décide dans l'ordre
+  (`AnomalieSuivante`, `domain/dossier/`, que `RechercheDeLAnomalieSuivante`, `application/`, déroule autour de la lecture) : 1. une
+  fin automatique restante du même dossier (`IssueDeLActe`) ; 2. sinon une autre ligne de la liste, lue au clic par
+  `AnomaliesReadPort.list` avec les filtres de l'adresse (`filtreAnomaliesDemande` : `nature`, `operateur`, `element`, `page`, `nature`
+  par défaut `FIN_AUTOMATIQUE`), l'adresse d'origine exclue (elle peut rester dans la liste), en reculant d'**une seule** page quand la
+  page demandée n'a aucune autre ligne ; 3. sinon la liste, qui dit « Plus aucune anomalie » (paramètre `plusAucune=1`, éphémère : tout
+  changement d'onglet, de filtre ou de page l'abandonne). Une erreur de lecture de la liste ramène à la liste, qui affiche sa propre erreur.
+- **Vue complète** : l'écran du dossier d'anomalie (`DossierAnomaliePage`) avec la frise sélectionnable, le panneau Sélection,
+  « Votre décision » et le formulaire du fait. Elle sert tous les dossiers, conflits compris, et de repli à toute vue de résolution.
+- **Vue de résolution** : écran minimal d'un dossier de fin automatique, un composant par code de choix du serveur
+  (`vues-de-resolution/`, registre `VuesDeResolution.ts`). Elle ne montre ni Sélection, ni carte de choix, ni actions directes, ni
+  formulaire détaillé, ni −5/+5, ni motif. Le gestionnaire place l'heure et valide. Dans une vue de résolution, le motif d'une
+  correction découle du cas : il est fixé par la vue, caché partout (« Voir le détail » compris) et envoyé avec l'acte.
+- **Aiguillage** : la page choisit la vue à l'ouverture d'une adresse et la **fige** jusqu'au changement d'adresse (le dossier du
+  reçu qui remplace le dossier lu ne la fait donc pas basculer). Une vue de résolution s'affiche si et seulement si le dossier
+  est une fin automatique (`finAutomatique`), n'a pas de conflit à expliquer (`conflitAExpliquer`), porte **exactement un** choix,
+  que ce choix vise l'activité dont l'`ouvrant` est le pointage de l'adresse, et que son code a une vue au registre
+  (`choixDeResolution`, `domain/dossier/`). Sinon la vue complète s'affiche, comme pour une adresse annulée, remplacée ou
+  résolue. Un dossier de fin automatique qui porte aussi un choix de conflit (`RATTACHER_FIN_A_ACTIVITE_REMPLACANTE`,
+  `ANNULER_TRANSITION`) retombe donc sur la vue complète.
+- **Solutions** : dans la vue complète, « Votre décision » en présente trois sortes, dans cet ordre : les propositions du serveur,
+  les actions directes, puis les autres corrections. Une **proposition du serveur** est un choix guidé (`ChoixGuide`, `dossier.choix`),
+  toutes de même rang, aucune présélectionnée (la vue de résolution, elle, prend l'unique choix d'office). « Proposition » ne dit jamais le `PropositionActe` que `SaisieActe` prépare : on dit
   « saisie d'acte ».
 - **Action directe** : une saisie d'acte de départ, comme un choix guidé, que le gestionnaire choisit puis complète (motif, heure) :
   pas encore un acte. Elle annule un pointage en cause ou corrige son heure, et le front la propose depuis les diagnostics, sans
@@ -254,7 +279,11 @@ l'activation de cette barre au clavier (Entrée, Espace : `detail === 0`) la sé
 (`selectionInitiale`), et un clic au pointeur la sélectionne quand le placement est désactivé (pendant une opération), sans rien placer ; les autres barres et les repères gardent leur sélection au clic. Une aide visible (`anomalie-frise-aide`) dit de
 tirer le bout de la barre ou de cliquer dessus pour placer l'heure du fait, ou de la saisir, sans nommer « la fin » : elle vaut pour un arrêt
 comme pour un passage ; le champ reste l'accès au clavier. Elle est inactive
-pendant une opération. La poignée est un `slider` : le pointeur la
+pendant une opération. La frise a un **mode lecture seule** (entrée `lectureSeule`, faux par défaut) : les repères et les barres y sont des images (`role="img"`, `div`),
+sans `aria-pressed`, hors de l'ordre de tabulation, et ne demandent jamais de sélection ; ils gardent leur nom, leur symbole, leur heure et leurs
+badges. Ils laissent passer le pointeur (`pointer-events: none`) : pendant le placement, un clic au pointeur sur la barre visée tombe sur la rangée
+de placement qui la couvre et place l'heure ; ailleurs il ne fait rien. La poignée garde son pointeur et son clavier.
+La poignée est un `slider` : le pointeur la
 capture (`touch-action: none`) et la déplace par pas de 5 minutes (le décalage de la prise est gardé), les flèches de 1 minute
 (Maj : 15), Origine et Fin vont aux bornes, `aria-valuetext` porte l'heure (avec son offset quand l'heure est répétée au
 changement d'heure d'automne). La frise ne décide pas de l'instant : elle émet une demande (`DemandeDeDeplacement` : `DE`
@@ -264,7 +293,8 @@ nanoseconde (`InstantPointage.firstWholeMinute` et `lastWholeMinute`), puis tran
 `change({ fait: { instant } })`, secondes à zéro : la
 fraction et l'aperçu disparaissent comme pour une saisie dans le champ, qui affiche la nouvelle valeur. « −5 min » et « +5 min »
 de « Votre décision » font la même demande et se désactivent à une borne. La poignée et ses boutons sont désactivés tant
-qu'une opération est en cours. Poignée active, l'échelle va jusqu'à trois heures après le dernier instant reçu (`finDeLaPortee`),
+qu'une opération est en cours (l'aperçu d'arrière-plan d'une vue de résolution n'en est pas une). La frise émet aussi `poigneeRelachee` quand le pointeur qui tenait la poignée la relâche ou est annulé
+(jamais pour une poignée désactivée ni un appui qui ne l'a pas saisie) : la vue de résolution y lance l'aperçu. Poignée active, l'échelle va jusqu'à trois heures après le dernier instant reçu (`finDeLaPortee`),
 sans dépasser l'heure courante des bornes (jamais en deçà de l'échelle normale) ; elle ne s'élargit jamais pour couvrir une heure
 saisie. La borne haute de la poignée et de la rangée de placement est la plus proche de l'heure courante et de cette portée : au-delà,
 l'heure se saisit au champ. Une heure saisie hors des bornes du fait (`INSTANT_AVANT_CIBLE`, `INSTANT_FUTUR`) ou hors de la portée garde
@@ -400,7 +430,7 @@ durée reçus dans le panneau Sélection, et la clôture dans l'en-tête, sans l
 un conflit. Trois choix guidés s'ajoutent, distingués par leur `code` et lus d'après le `fait` reçu :
 `REGULARISER_FIN` prérempli sans heure, que le gestionnaire saisit (aucune heure n'est inventée) ;
 `CORRIGER_FIN_TARDIVE` et `CORRIGER_TRANSITION_TARDIVE` reprenant l'heure du pointage tardif, le motif
-restant à saisir. Un fait reçu incohérent avec son code rejette l'acquisition. Aperçu, confirmation, reçu,
+restant à saisir dans la vue complète (une vue de résolution le fixe). Les trois choix ont une vue de résolution. Un fait reçu incohérent avec son code rejette l'acquisition. Aperçu, confirmation, reçu,
 reprise et obsolescence restent ceux de toute saisie.
 
 Le reçu fournit le dossier canonique courant depuis le périmètre reçu, même à une ancre annulée. Une lecture
@@ -409,8 +439,57 @@ fonctionne indépendamment de cette lecture. `NON_ATTESTE` et les erreurs techni
 inconnue : toute nouvelle décision reste bloquée. La reprise explicite réutilise la même commande et
 la même proposition ; seul un résultat canonique attesté conclut l'écriture.
 Après obsolescence, la saisie reste disponible et l'aperçu est retiré. La page réacquiert le dossier ;
-une acquisition échouée laisse la confirmation indisponible. Le gestionnaire demande ensuite un nouvel
-aperçu avant toute confirmation. Une adresse devenue obsolète conserve son résultat explicite.
+une acquisition échouée laisse la confirmation indisponible. Dans la vue complète, le gestionnaire demande ensuite un nouvel
+aperçu avant toute confirmation ; la vue de résolution relance elle-même l'aperçu après une réacquisition réussie. Une adresse
+devenue obsolète conserve son résultat explicite.
+
+## Vue de résolution
+
+La page affiche la vue de résolution que `aiguiller` (`vues-de-resolution/VuesDeResolution.ts`) retourne pour un dossier, par
+`NgComponentOutlet`, avec le dossier, l'unique choix, `now`, les paramètres de retour, le référentiel et la lecture du dossier
+(`LectureDuDossier` : `relire`, qui lit l'adresse sans repasser par l'état de chargement, et `remplacerPar`, qui installe le
+dossier d'un reçu). On étend le registre sans retoucher la page. Les trois vues (`ResolutionRegulariserFin`,
+`ResolutionCorrigerFinTardive`, `ResolutionCorrigerTransitionTardive`) habillent le composant commun `ResolutionDeFin`
+(`vues-de-resolution/resolution-de-fin/`, logique et gabarit) de leur `VarianteDeResolution` : libellés du champ et du bouton, motif
+fixé et ligne sur l'activité ouverte :
+
+| Code                          | Vue                                   | Poignée au départ         | Champ            | Bouton                         | Motif envoyé (caché)                                            |
+| ----------------------------- | ------------------------------------- | ------------------------- | ---------------- | ------------------------------ | --------------------------------------------------------------- |
+| `REGULARISER_FIN`             | `ResolutionRegulariserFin`            | « Heure ? », sans heure   | Fin réelle       | « Valider la fin à HH:MM »     | aucun                                                           |
+| `CORRIGER_FIN_TARDIVE`        | `ResolutionCorrigerFinTardive`        | l'heure reçue du pointage | Fin réelle       | « Valider la fin à HH:MM »     | « Arrêt pointé après l'échéance : heure vérifiée en gestion »   |
+| `CORRIGER_TRANSITION_TARDIVE` | `ResolutionCorrigerTransitionTardive` | l'heure reçue du pointage | Heure du passage | « Valider le passage à HH:MM » | « Passage pointé après l'échéance : heure vérifiée en gestion » |
+
+Pour la transition, une ligne de plus (`anomalie-resolution-activite-ouverte`) dit ce que l'heure ouvre : « La non-conformité
+commencera à cette heure. » (passage en NC) ou « Le travail reprendra à cette heure. » (retour en bon).
+
+À l'ouverture, la vue prend la saisie du choix (`choose(choix.saisie)`) : c'est l'exception assumée à « aucun acte n'est choisi par
+défaut ». Elle montre, dans l'ordre : l'en-tête et la phrase du problème ; la ligne « 1 autre fin automatique sur cet élément »
+(accordée au pluriel) qui fait lien vers l'adresse de la première autre activité échue (`activite.ouvrant`), avec les
+paramètres de liste conservés comme les liens de fin restante ; la frise en lecture seule (repères et barres en images, clic au
+pointeur sur la barre qui place l'heure, poignée qui se glisse et se pilote au clavier, aide « Tirez le bout de la barre ou
+cliquez dessus pour placer la fin réelle, ou saisissez-la ») ; le statut d'opération du socle (refus sous la frise, issue
+inconnue avec « Vérifier » et « Reprendre », puis le reçu) ; le champ « Fin réelle », toujours visible, chemin du clavier et des
+lecteurs d'écran, avec l'erreur d'une borne locale (`CadreDuFait`, heure future) ; l'aperçu en une ligne, par exemple « Travail 13 h →
+9 h · anomalie traitée » ou « … · 1 fin automatique restante » (`resumeDeLApercu`), dont « Voir le détail » déplie les conséquences et la
+comparaison des journaux sans aucun motif ; le bouton « Valider la fin à HH:MM » ; le lien discret « Autre correction… ». On ne
+pré-remplit jamais d'heure pour `REGULARISER_FIN`, et le motif n'existe pas pour une régularisation ; une correction pose aussitôt son
+motif fixé (`change({ motif })`) et son heure reçue, et lance son aperçu dès l'ouverture, puisqu'une heure existe. « Voir la journée de … » reste
+sur la frise. Une fois le reçu affiché, le champ, la poignée, « Valider » et « Autre correction… » disparaissent.
+
+L'aperçu part tout seul (`ApercuAutomatique`, fourni par la vue, minuterie en primaire) : à la **libération** de la poignée, **400 ms**
+après la dernière frappe du champ ou la dernière touche sur la poignée, ou après un clic sur la barre (même délai) ; « Réessayer
+l'aperçu » le relance aussitôt après une erreur réseau (`ERREUR`). Aucune requête ne part tant que les pré-contrôles locaux
+échouent. La minuterie est annulée au changement d'adresse, à la destruction de la vue et au clic sur « Valider ». Après `CONCURRENCE`
+(à l'aperçu comme à la confirmation), la vue relit le dossier (`relire`) et relance l'aperçu une fois par lancement ; si la relecture
+échoue, la page affiche sa lecture en erreur avec « Réessayer ». « Valider » n'est actif que si l'aperçu est reçu, à jour et sans refus.
+
+« Autre correction… » passe à la vue complète, avec un lien « Revenir à la vue simple », sans garder cet état dans l'URL. Le
+passage vide la saisie : la vue complète redémarre sans acte choisi ni motif. Une confirmation en ligne (« Passer à la vue
+complète » / « Rester ici ») n'est demandée que si une heure a été **saisie** (`SaisieActe.heureDifferenteDe` le choix de départ : une heure posée en régularisation,
+ou, en correction, un instant différent de l'instant reçu, comparé comme instant et non comme texte). Le
+lien est désactivé pendant la confirmation et l'issue inconnue. Revenir à la vue simple rouvre une vue neuve, aiguillée de nouveau sur
+le dossier courant (`aiguiller`), jamais sur le choix figé à l'ouverture : le lien n'est offert que si ce dossier a encore une vue de
+résolution, donc il disparaît dès qu'un autre acte a été enregistré depuis la vue complète.
 
 La composition utilise uniquement `HttpAnomalies`, y compris dans les parcours Cypress. Les réponses
 réseau des tests sont des données REST typées interceptées ; elles ne calculent aucune règle métier

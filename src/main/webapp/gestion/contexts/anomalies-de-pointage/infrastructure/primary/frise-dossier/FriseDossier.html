@@ -78,7 +78,24 @@
         >{{ finRecue.texte }}</span
       >
     </div>
-    } @for (element of disposition().elements; track element.cle) { @switch (element.kind) { @case ('BARRE') {
+    } @for (element of disposition().elements; track element.cle) { @switch (element.kind) { @case ('BARRE') { @if (lectureSeule()) {
+    <div
+      role="img"
+      class="barre cursor-default"
+      data-selector="anomalie-activite"
+      [attr.data-activite]="element.activite"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
+      [style.width.%]="element.largeur"
+      [attr.aria-label]="element.nom"
+      [attr.data-categorie]="element.categorie"
+      [attr.data-etat]="element.etat"
+      [attr.data-fin]="element.fin"
+      [attr.data-modifiee]="element.modifiee"
+    >
+      {{ element.texte }}
+    </div>
+    } @else {
     <button
       type="button"
       class="barre cursor-pointer"
@@ -97,7 +114,25 @@
     >
       {{ element.texte }}
     </button>
-    } @case ('REPERE') {
+    } } @case ('REPERE') { @if (lectureSeule()) {
+    <div
+      role="img"
+      class="repere cursor-default"
+      data-selector="anomalie-pointage"
+      [attr.data-pointage]="element.pointage"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
+      [attr.aria-label]="element.nom"
+      [attr.data-en-cause]="element.enCause"
+      [attr.data-annule]="element.annule"
+      [attr.data-tardif]="element.tardif"
+      [attr.data-deplace]="element.deplace"
+      [attr.data-non-conformite]="element.nonConformite"
+      [attr.data-ancrage]="element.ancrage"
+    >
+      <ng-container *ngTemplateOutlet="contenuDuRepere; context: { $implicit: element }" />
+    </div>
+    } @else {
     <button
       type="button"
       class="repere cursor-pointer"
@@ -115,23 +150,9 @@
       [attr.aria-pressed]="estSelectionne(element.selection)"
       (click)="selectionDemandee.emit(element.selection)"
     >
-      <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ element.symbole }}</span>
-      <time class="text-(length:--text-label) tabular-nums" data-selector="anomalie-pointage-heure">{{ element.heure }}</time>
-      @if (element.tardif) {
-      <span
-        class="absolute -right-2 -bottom-2 grid size-5 place-items-center rounded-[50%] border-2 border-warn bg-surface text-(length:--text-label) font-bold text-ink"
-        data-selector="anomalie-pointage-tardif"
-        >{{ libelles.frise.badgeTardif }}</span
-      >
-      } @if (element.regularise) {
-      <span
-        class="absolute -top-2 -right-2 grid size-5 place-items-center rounded-[50%] bg-ink text-(length:--text-label) font-bold text-surface"
-        data-selector="anomalie-pointage-regularise"
-        >{{ libelles.frise.badgeRegularise }}</span
-      >
-      }
+      <ng-container *ngTemplateOutlet="contenuDuRepere; context: { $implicit: element }" />
     </button>
-    } @case ('POIGNEE') { @let sansHeure = element.heure === 'SANS_HEURE';
+    } } @case ('POIGNEE') { @let sansHeure = element.heure === 'SANS_HEURE';
     <div
       role="slider"
       class="absolute z-2 flex h-touch min-w-touch cursor-grab touch-none items-center justify-center rounded-control border-2 border-ink bg-accent px-2 text-(length:--text-body-sm) font-semibold whitespace-nowrap text-on-accent tabular-nums select-none"
@@ -211,3 +232,21 @@
   </div>
 </div>
 }
+
+<ng-template #contenuDuRepere let-element>
+  <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ element.symbole }}</span>
+  <time class="text-(length:--text-label) tabular-nums" data-selector="anomalie-pointage-heure">{{ element.heure }}</time>
+  @if (element.tardif) {
+  <span
+    class="absolute -right-2 -bottom-2 grid size-5 place-items-center rounded-[50%] border-2 border-warn bg-surface text-(length:--text-label) font-bold text-ink"
+    data-selector="anomalie-pointage-tardif"
+    >{{ libelles.frise.badgeTardif }}</span
+  >
+  } @if (element.regularise) {
+  <span
+    class="absolute -top-2 -right-2 grid size-5 place-items-center rounded-[50%] bg-ink text-(length:--text-label) font-bold text-surface"
+    data-selector="anomalie-pointage-regularise"
+    >{{ libelles.frise.badgeRegularise }}</span
+  >
+  }
+</ng-template>
