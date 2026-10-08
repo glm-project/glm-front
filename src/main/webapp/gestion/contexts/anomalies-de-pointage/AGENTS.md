@@ -69,7 +69,7 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   choisir un acte.
 - **Poignée** : l'heure proposée d'un fait qui termine une activité, posée sur la frise et déplaçable ; c'est une saisie de
   plus, qui émet un instant comme le champ date et heure. En ligne, avant toute heure, elle se tient « sans heure » (« Heure ? ») sur
-  la fin reçue de la barre : elle ne porte alors aucune heure et n'est pas un `slider`.
+  la fin reçue de la barre : elle ne porte alors aucune heure, et la première touche lui en donne une.
 - **Cadre du fait** : Value Object du domaine (`CadreDuFait`) qui porte le début reçu de chaque activité et l'heure courante,
   et rend les bornes d'un fait. Ces bornes sont des pré-contrôles de saisie : le refus serveur `date-de-survenue-future` fait
   autorité, et `INSTANT_AVANT_CIBLE` est une règle de Gestion sans refus serveur connu.
@@ -268,12 +268,13 @@ résout comme un déplacement (`placer`, `instantDeplace` : horloge relue à l'a
 ramène à la plus proche), puis `change({ fait: { instant } })` ; la poignée prend la relève et la rangée disparaît. L'échelle s'élargit
 comme pour la poignée, jusqu'à la même portée, pour que le clic et la poignée partagent la même. En ligne, la rangée de placement est
 celle de la barre visée (`surLaBarreDe`), sans rangée propre, et trois gestes placent l'heure. **Poignée sans heure** : si la barre visée a
-une fin reçue, une poignée « Heure ? » se tient sur ce bout, bordure pointillée, décorative (`aria-hidden`, `tabindex="-1"`, ni
-`aria-valuenow` ni `aria-valuetext`) et marquée `data-sans-heure` ; c'est le même élément `POIGNEE` (clé `poignee`, même `@case`) que la
+une fin reçue, une poignée « Heure ? » se tient sur ce bout, bordure pointillée, marquée `data-sans-heure` : un `slider` dans
+l'ordre de tabulation, sans `aria-valuenow`, que `aria-valuetext` dit « Aucune heure posée » ; c'est le même élément `POIGNEE` (clé `poignee`, même `@case`) que la
 poignée, si bien que le nœud, donc la capture du pointeur, survit au premier mouvement qui donne une heure au fait. Appuyer puis glisser
 émet un `PlacementDemande` au premier mouvement (instant sous le pointeur, arrondi à 5 minutes), puis des déplacements `VERS` une fois
-l'heure posée ; un appui relâché sans mouvement n'émet rien ; elle est désactivée avec `placement.desactivee` et n'a aucun clavier (le
-champ). Sans fin reçue, pas de poignée sans heure. **Clic sur la barre** : un clic au pointeur (`MouseEvent.detail > 0`) sur la barre visée,
+l'heure posée ; un appui relâché sans mouvement n'émet rien. Au clavier, une flèche (avec ou sans Maj) émet un `PlacementDemande` à
+l'instant qu'elle tient, Origine et Fin aux bornes, puis la poignée, gardant le focus, se déplace comme toute poignée ; elle est
+désactivée avec `placement.desactivee`. Sans fin reçue, pas de poignée sans heure. **Clic sur la barre** : un clic au pointeur (`MouseEvent.detail > 0`) sur la barre visée,
 ou sur sa rangée hors des repères, place l'heure comme ci-dessus. C'est l'**exception documentée à la sélection** : pendant le placement,
 l'activation de cette barre au clavier (Entrée, Espace : `detail === 0`) la sélectionne toujours, comme à l'ouverture
 (`selectionInitiale`), et un clic au pointeur la sélectionne quand le placement est désactivé (pendant une opération), sans rien placer ; les autres barres et les repères gardent leur sélection au clic. Une aide visible (`anomalie-frise-aide`) dit de

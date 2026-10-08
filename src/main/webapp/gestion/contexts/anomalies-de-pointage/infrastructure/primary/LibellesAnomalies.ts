@@ -342,6 +342,7 @@ export const LIBELLES_ANOMALIES = {
     pointages: 'Pointages',
     poignee: 'Heure proposée du fait',
     heureInconnue: 'Heure ?',
+    aucuneHeure: 'Aucune heure posée',
     placerLHeure: 'Tirez le bout de la barre ou cliquez dessus pour placer l’heure du fait, ou saisissez-la.',
     placerLaFinReelle: 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle, ou saisissez-la.',
     badgeRegularise: 'R',

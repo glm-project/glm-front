@@ -6,18 +6,27 @@ import {
   ApercuDeFrise,
   BarreFrise,
   dispositionDeFrise,
-  PositionAvecHeure,
   PositionDePoignee,
+  PositionSansHeure,
   RangeeDePlacement,
   VueDeFrise,
 } from './DispositionFrise';
 import { instantSousLePointeur, positionSur } from './EchelleFrise';
-import { demandeDeLaTouche, DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
+import {
+  DemandeDeDeplacement,
+  demandeDeLaTouche,
+  DeplacementDemande,
+  PlacementDeLInstant,
+  PlacementDemande,
+  PoigneeDeFrise,
+} from './PoigneeDeFrise';
 
 const LARGEUR_DE_REFERENCE_PX = 1214;
 
-const sePlaceAuClavier = (position: PositionDePoignee): position is PositionAvecHeure =>
-  position.heure === 'AVEC_HEURE' && !position.desactivee;
+const instantPlaceAuClavier = (demande: DemandeDeDeplacement, position: PositionSansHeure): number => {
+  if (demande.kind !== 'BORNE') return position.instant;
+  return demande.borne === 'MIN' ? position.min : position.max;
+};
 
 @Component({
   selector: 'glm-frise-dossier',
@@ -108,10 +117,11 @@ export class FriseDossier {
   }
 
   protected touche(touche: KeyboardEvent, position: PositionDePoignee): void {
-    if (!sePlaceAuClavier(position)) return;
+    if (position.desactivee) return;
     const demande = demandeDeLaTouche(touche);
     if (demande === undefined) return;
     touche.preventDefault();
-    this.deplacementDemande.emit({ demande, poignee: position.source });
+    if (position.heure === 'AVEC_HEURE') this.deplacementDemande.emit({ demande, poignee: position.source });
+    else this.placementDemande.emit({ instant: instantPlaceAuClavier(demande, position), placement: position.source });
   }
 }

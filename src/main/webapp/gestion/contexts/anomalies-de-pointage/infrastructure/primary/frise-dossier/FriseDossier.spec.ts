@@ -2162,7 +2162,7 @@ describe('Frise of a dossier', () => {
       thenTheBarsStandOnRowsAt([36]);
     });
 
-    it('should stand an hourless handle at the received end of the bar it will terminate, out of the tab order and with no value', async () => {
+    it('should stand an hourless handle at the received end of the bar it will terminate, in the tab order and read as holding no hour', async () => {
       const dossier = {
         journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
         activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
@@ -2173,8 +2173,7 @@ describe('Frise of a dossier', () => {
 
       thenTheHandleStandsAt({ left: '62.5%', onTheRowOf: 'a-1' });
       thenTheHandleIsHourless('Heure ?');
-      thenTheHandleIsOutOfTheTabOrder();
-      thenTheHandleHoldsNoValue();
+      thenTheHandleIsASliderInTheTabOrderWithNoHour();
       thenTheAutomaticEndsDrawnAre([]);
       thenNoPartIsRemoved();
     });
@@ -2208,7 +2207,30 @@ describe('Frise of a dossier', () => {
       thenTheMovesAsked([]);
     });
 
-    it('should ask for nothing when a key is pressed on the hourless handle, the field being the access by keyboard', async () => {
+    it.each([
+      { touche: 'ArrowRight', maj: false, heure: new Date(2026, 8, 14, 12, 0) },
+      { touche: 'ArrowLeft', maj: true, heure: new Date(2026, 8, 14, 12, 0) },
+      { touche: 'Home', maj: false, heure: new Date(2026, 8, 14, 8, 0) },
+      { touche: 'End', maj: false, heure: new Date(2026, 9, 5, 10, 0) },
+    ])(
+      'should ask to place the instant at $heure when $touche is pressed on the hourless handle (shift: $maj)',
+      async ({ touche, maj, heure }) => {
+        const dossier = {
+          journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+          activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+          enConflit: false,
+        };
+        await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
+
+        const pressee = whenPressingKeyOnTheHandle(touche, maj);
+
+        thenThePlacementsAsked([heure.getTime()]);
+        thenTheMovesAsked([]);
+        expect(pressee.defaultPrevented).toBe(true);
+      },
+    );
+
+    it('should leave the other keys to the browser on the hourless handle', async () => {
       const dossier = {
         journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
         activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
@@ -2216,10 +2238,23 @@ describe('Frise of a dossier', () => {
       };
       await whenRenderingTheFrise(dossier, undefined, undefined, placementDeLaFixture('a-1'));
 
+      const touche = whenPressingKeyOnTheHandle('Tab');
+
+      thenThePlacementsAsked([]);
+      thenTheKeyIsLeftToTheBrowser(touche);
+    });
+
+    it('should not place the instant by keyboard from a disabled hourless handle', async () => {
+      const dossier = {
+        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
+        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
+        enConflit: false,
+      };
+      await whenRenderingTheFrise(dossier, undefined, undefined, { ...placementDeLaFixture('a-1'), desactivee: true });
+
       whenPressingKeyOnTheHandle('ArrowRight');
 
       thenThePlacementsAsked([]);
-      thenTheMovesAsked([]);
     });
 
     it('should keep the same element for the handle once its first move gave the fact an hour', async () => {
@@ -2938,12 +2973,15 @@ describe('Frise of a dossier', () => {
 
   const thenTheHandleIsHourless = (expectedText: string): void => {
     expect(handle().hasAttribute('data-sans-heure')).toBe(true);
-    expect(handle().getAttribute('aria-hidden')).toBe('true');
     expect(handle().textContent.trim()).toBe(expectedText);
   };
 
-  const thenTheHandleIsOutOfTheTabOrder = (): void => {
-    expect(handle().getAttribute('tabindex')).toBe('-1');
+  const thenTheHandleIsASliderInTheTabOrderWithNoHour = (): void => {
+    expect(handle().getAttribute('role')).toBe('slider');
+    expect(handle().hasAttribute('aria-hidden')).toBe(false);
+    expect(handle().getAttribute('tabindex')).toBe('0');
+    expect(handle().hasAttribute('aria-valuenow')).toBe(false);
+    expect(handle().getAttribute('aria-valuetext')).toBe('Aucune heure posée');
   };
 
   const givenTheNodesOfThePlanAreWatched = (): (() => readonly Node[]) => {
@@ -2961,11 +2999,6 @@ describe('Frise of a dossier', () => {
     expect(handle().hasAttribute('data-sans-heure')).toBe(false);
     expect(handle().hasAttribute('aria-hidden')).toBe(false);
     expect(handle().getAttribute('tabindex')).toBe('0');
-  };
-
-  const thenTheHandleHoldsNoValue = (): void => {
-    expect(handle().hasAttribute('aria-valuenow')).toBe(false);
-    expect(handle().hasAttribute('aria-valuetext')).toBe(false);
   };
 
   const thenTheHandleIsASlider = (): void => {

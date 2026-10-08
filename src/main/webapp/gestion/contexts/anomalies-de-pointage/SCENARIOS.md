@@ -336,8 +336,8 @@ champ déplace la poignée. Une heure saisie hors des bornes (avant le début de
 portée) garde sa poignée, tenue à la borne la plus proche : le champ dit pourquoi, l'aperçu reste indisponible, et le premier
 déplacement ramène l'heure dans les bornes. Un fait
 sans activité visée, un démarrage ou une annulation n'ont pas de poignée ; une régularisation sans heure n'en a pas en rangées, et en ligne
-n'a qu'une poignée « Heure ? » sans heure ni `slider` : la régularisation d'une fin sans heure reçoit son heure au clic sur la barre ou au
-glissé de cette poignée (« Fin automatique »). L'heure reçue du
+n'a qu'une poignée « Heure ? » sans heure, dans l'ordre de tabulation : la régularisation d'une fin sans heure reçoit son heure au clic sur la
+barre, au glissé de cette poignée ou à sa première touche, une flèche la posant sur la fin reçue, Origine et Fin aux bornes (« Fin automatique »). L'heure reçue du
 pointage corrigé reste barrée sur son repère quand la poignée s'en éloigne. La poignée et ses boutons sont désactivés tant
 qu'une opération est en cours. L'heure répétée d'automne se lit avec son offset (`aria-valuetext`) ; l'échelle élargie
 traverse minuit et l'heure répétée, sans jamais deux graduations à moins de 64 px.
