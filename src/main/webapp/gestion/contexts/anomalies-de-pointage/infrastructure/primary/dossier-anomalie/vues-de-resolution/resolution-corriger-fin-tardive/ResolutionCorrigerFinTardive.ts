@@ -28,7 +28,6 @@ export class ResolutionCorrigerFinTardive {
   readonly referentiel = input<ReferentielAnomalies | undefined>(undefined);
   readonly lecture = input.required<LectureDuDossier>();
   protected readonly variante: VarianteDeResolution = {
-    champ: LIBELLES_ANOMALIES.resolution.champFin,
     validerA: LIBELLES_ANOMALIES.resolution.validerLaFin,
     validerSansHeure: LIBELLES_ANOMALIES.resolution.validerLaFinSansHeure,
     motif: LIBELLES_ANOMALIES.resolution.motifs.finTardive,

@@ -13,6 +13,7 @@ import {
   dossierFinAutomatiqueFixture,
   dossierFinTardiveFixture,
   dossierFinTardiveLeLendemainFixture,
+  echeanceFinAutomatiqueLocalFixture,
   finCorrigeeFixture,
   finRegulariseeFixture,
   finTardiveFixture,
@@ -24,13 +25,13 @@ import {
   ouvrantSuivantFixture,
   suiviFinAutomatiqueFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
-import {
-  CHAMP_DE_LA_VUE_DE_RESOLUTION,
-  thenTheInstantFieldsAreEmpty,
-  thenTheInstantFieldsShow,
-  whenTypingTheInstant,
-} from '../../../utils/gestion/anomalies-de-pointage/InstantField';
+import { thenTheInstantFieldsShow } from '../../../utils/gestion/anomalies-de-pointage/InstantField';
 import { instantLocalFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
+import {
+  thenTheHandleHolds,
+  thenTheHandleHoldsNoHour,
+  whenPlacingTheHourWithTheHandleAt,
+} from '../../../utils/gestion/anomalies-de-pointage/PoigneeDeLaFrise';
 import { markerOf, whenSelectingPointage } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
 const MARGE_DES_REPERES_PX = 22;
@@ -57,11 +58,11 @@ describe('Automatic end dossier in Gestion', () => {
   });
 
   [320, 1280].forEach(width => {
-    it(`should keep the automatic end and the time to enter reachable at ${width} pixels`, () => {
+    it(`should keep the automatic end and the handle that places its hour reachable at ${width} pixels`, () => {
       whenOpeningTheAutomaticEndAt(width);
-      whenReachingTheTimeField();
+      whenReachingTheHandle();
 
-      thenTheTimeIsReachableWithoutHorizontalOverflow();
+      thenTheHandleIsReachableWithoutHorizontalOverflow();
     });
   });
 
@@ -71,14 +72,12 @@ describe('Automatic end dossier in Gestion', () => {
     cy.get(dataSelector('anomalie-probleme')).should('be.visible');
   };
 
-  const whenReachingTheTimeField = (): void => {
-    cy.get(dataSelector('anomalie-resolution-instant-heure')).scrollIntoView();
+  const whenReachingTheHandle = (): void => {
+    cy.get(dataSelector('anomalie-poignee')).scrollIntoView();
   };
 
-  const thenTheTimeIsReachableWithoutHorizontalOverflow = (): void => {
-    cy.get(dataSelector('anomalie-resolution-instant-date')).should('be.visible').and('have.value', '');
-    cy.get(dataSelector('anomalie-resolution-instant-heure')).should('be.visible').and('have.value', '');
-    cy.get(dataSelector('anomalie-resolution-instant-horloge')).should('be.visible');
+  const thenTheHandleIsReachableWithoutHorizontalOverflow = (): void => {
+    cy.get(dataSelector('anomalie-poignee')).should('be.visible').and('have.attr', 'data-sans-heure');
     cy.document().should(document => {
       expect(document.documentElement.scrollWidth).to.equal(document.documentElement.clientWidth);
     });
@@ -93,7 +92,7 @@ describe('Resolution view of an automatic end in Gestion', () => {
     givenTheReferentielFinAutomatique();
   });
 
-  it('should show the problem, the frise, the end field and the validation, and nothing of the full view', () => {
+  it('should show the problem, the frise with its hourless handle and the validation, and nothing of the full view', () => {
     givenTheDossier(dossierFinAutomatiqueFixture());
 
     whenOpeningTheResolutionView();
@@ -144,10 +143,10 @@ describe('Resolution view of an automatic end in Gestion', () => {
     thenOnlyTheResolutionViewIsDrawn();
   });
 
-  it('should ask a confirmation before leaving to the full view once an hour was entered', () => {
+  it('should ask a confirmation before leaving to the full view once an hour was placed', () => {
     givenTheDossier(dossierFinAutomatiqueFixture());
     whenOpeningTheResolutionView();
-    whenTypingTheEnd();
+    whenPlacingTheEnd();
 
     whenAskingForAnotherCorrection();
 
@@ -159,7 +158,7 @@ describe('Resolution view of an automatic end in Gestion', () => {
     givenAPreviewOfTheRegularisation();
     whenOpeningTheResolutionView();
 
-    whenTypingTheEnd();
+    whenPlacingTheEnd();
 
     thenTheOutcomeIsInOneLineWithAFoldedDetail();
   });
@@ -169,7 +168,7 @@ describe('Resolution view of an automatic end in Gestion', () => {
     givenAPreviewOfTheRegularisation();
     whenOpeningTheResolutionView();
 
-    whenTypingTheEnd();
+    whenPlacingTheEnd();
 
     thenTheNextAnomalyIsNotOffered();
   });
@@ -180,7 +179,7 @@ describe('Resolution view of an automatic end in Gestion', () => {
     givenAConfirmationOf(dossierApresRegularisationFixture());
     whenOpeningTheResolutionView();
 
-    whenTypingTheEnd();
+    whenPlacingTheEnd();
     whenValidating();
 
     thenTheNextAnomalyIsOfferedWithTheReceipt();
@@ -211,8 +210,8 @@ describe('Resolution view of an automatic end in Gestion', () => {
     );
   };
 
-  const whenTypingTheEnd = (): void => {
-    whenTypingTheInstant(instantRegulariseLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+  const whenPlacingTheEnd = (): void => {
+    whenPlacingTheHourWithTheHandleAt(instantRegulariseLocalFixture);
   };
 
   const whenAskingForAnotherCorrection = (): void => {
@@ -226,7 +225,7 @@ describe('Resolution view of an automatic end in Gestion', () => {
   const thenOnlyTheResolutionViewIsDrawn = (): void => {
     cy.get(dataSelector('anomalie-probleme')).should('be.visible');
     cy.get(dataSelector('anomalie-frise')).should('be.visible');
-    cy.get(dataSelector('anomalie-resolution-instant-date')).should('be.visible').and('have.value', '');
+    thenTheHandleHoldsNoHour();
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
     [
       'anomalie-selection',
@@ -301,12 +300,11 @@ describe('Resolution view of a pointage pointed after the deadline in Gestion', 
     thenNoReasonIsShown(MOTIF_FIN_TARDIVE);
   });
 
-  it('should label a late passage and say what its hour starts', () => {
+  it('should say what the hour of a late passage starts', () => {
     givenALateGesture('CORRIGER_TRANSITION_TARDIVE');
 
     whenOpeningTheResolutionView();
 
-    thenTheFieldIsLabelled('Heure du passage');
     thenTheOpenActivityIsSaid('La non-conformité commencera à cette heure.');
     thenThePreviewWasAskedWithTheReason(MOTIF_PASSAGE_TARDIF);
     thenTheOutcomeIsInOneLineAndTheValidationIsOpen('Valider le passage à 23:00');
@@ -327,10 +325,6 @@ describe('Resolution view of a pointage pointed after the deadline in Gestion', 
 
   const whenUnfoldingTheDetailOfThePreview = (): void => {
     cy.get(dataSelector('anomalie-resolution-detail-ouvrir')).click();
-  };
-
-  const thenTheFieldIsLabelled = (legende: string): void => {
-    cy.get(dataSelector('anomalie-resolution-instant-date')).closest('fieldset').find('legend').should('have.text', legende);
   };
 
   const thenTheOpenActivityIsSaid = (ligne: string): void => {
@@ -363,7 +357,7 @@ describe('Resolution view of a pointage pointed after the deadline in Gestion', 
   };
 
   const thenTheEndStandsOnTheReceivedHour = (): void => {
-    thenTheInstantFieldsShow(new Date(2026, 8, 14, 23, 0), CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    thenTheHandleHolds(new Date(2026, 8, 14, 23, 0));
     abscisseDeLHeure(23).then(abscisse => {
       cy.get(dataSelector('anomalie-poignee')).should(poignee => {
         expect(centreDe(requiredFixture(poignee[0], 'poignée'))).to.be.closeTo(abscisse, 1);
@@ -641,11 +635,20 @@ describe('End placement on the frise in Gestion', () => {
     thenTheEndIsPlacedAt(new Date(2026, 8, 14, 16, 0));
   });
 
+  it('should offer no field to type the hour and place it at the automatic end at the first key on the hourless handle', () => {
+    whenOpeningTheAutomaticEndRegularisation();
+    whenPressingAnArrowOnTheHourlessHandle();
+
+    thenNoHourFieldIsOffered();
+    thenTheEndIsPlacedAt(echeanceFinAutomatiqueLocalFixture);
+    thenTheHandleKeepsTheFocus();
+  });
+
   it('should draw the start marker as an image that selects nothing and places no end', () => {
     whenOpeningTheAutomaticEndRegularisation();
 
     thenTheStartMarkerIsAnImageThatCannotBePressed();
-    thenTheInstantFieldsAreEmpty(CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    thenTheHandleHoldsNoHour();
   });
 
   const whenOpeningTheAutomaticEndRegularisation = whenOpeningTheResolutionView;
@@ -666,6 +669,12 @@ describe('End placement on the frise in Gestion', () => {
     });
   };
 
+  const whenPressingAnArrowOnTheHourlessHandle = (): void => {
+    cy.get(dataSelector('anomalie-poignee')).should('have.attr', 'data-sans-heure');
+    cy.get(dataSelector('anomalie-poignee')).focus();
+    cy.get(dataSelector('anomalie-poignee')).type('{leftArrow}');
+  };
+
   const whenGoingOnDraggingTheHandleTo = (hour: number): void => {
     abscisseDeLHeure(hour).then(clientX => {
       cy.get(dataSelector('anomalie-poignee')).trigger('pointermove', { pointerId: 1, buttons: 1, clientX });
@@ -673,23 +682,29 @@ describe('End placement on the frise in Gestion', () => {
   };
 
   const thenNoHourIsInventedAndTheEndCanBePlaced = (): void => {
-    thenTheInstantFieldsAreEmpty(CHAMP_DE_LA_VUE_DE_RESOLUTION);
-    cy.get(dataSelector('anomalie-poignee')).should('have.attr', 'data-sans-heure');
-    cy.get(dataSelector('anomalie-poignee')).should('not.have.attr', 'aria-valuenow');
+    thenTheHandleHoldsNoHour();
     cy.get(dataSelector('anomalie-poignee'))
       .invoke('text')
       .should('match', /^\s*Heure \?\s*$/);
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
     cy.get(dataSelector('anomalie-frise-aide'))
       .should('be.visible')
-      .and('contain.text', 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle');
+      .and('contain.text', 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.');
   };
 
   const thenTheEndIsPlacedAt = (instant: Date): void => {
-    thenTheInstantFieldsShow(instant, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    thenTheHandleHolds(instant);
     cy.get(dataSelector('anomalie-poignee')).should('be.visible');
     cy.get(dataSelector('anomalie-frise-placement')).should('not.exist');
     cy.get(dataSelector('anomalie-frise-aide')).should('not.exist');
+  };
+
+  const thenNoHourFieldIsOffered = (): void => {
+    cy.get(dataSelector('anomalie-resolution')).find('input').should('not.exist');
+  };
+
+  const thenTheHandleKeepsTheFocus = (): void => {
+    cy.get(dataSelector('anomalie-poignee')).should('have.focus');
   };
 
   const thenTheStartMarkerIsAnImageThatCannotBePressed = (): void => {
@@ -738,7 +753,7 @@ describe('Automatic end read on one line in Gestion', () => {
       whenPlacingTheEndAt(17);
       whenDraggingTheHandleTo(hour);
 
-      thenTheInstantFieldsShow(new Date(2026, 8, 14, hour, 0), CHAMP_DE_LA_VUE_DE_RESOLUTION);
+      thenTheHandleHolds(new Date(2026, 8, 14, hour, 0));
       thenTheBarEndsOnTheHour(hour);
       thenTheBarIsNamedWithTheProposedHour(`${hour}:00`);
     });
@@ -749,7 +764,7 @@ describe('Automatic end read on one line in Gestion', () => {
     whenPlacingTheEndAt(17);
     whenDraggingTheHandleTo(12);
 
-    thenTheInstantFieldsShow(new Date(2026, 8, 14, 12, 0), CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    thenTheHandleHolds(new Date(2026, 8, 14, 12, 0));
     thenTheBarEndsOnTheHour(12);
     thenTheBarIsNamedWithTheProposedHour('12:00');
   });
@@ -759,16 +774,16 @@ describe('Automatic end read on one line in Gestion', () => {
     whenPlacingTheEndAt(17);
     whenDraggingTheHandleGrabbedOffCentreTo(12);
 
-    thenTheInstantFieldsShow(new Date(2026, 8, 14, 12, 0), CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    thenTheHandleHolds(new Date(2026, 8, 14, 12, 0));
     thenTheBarEndsOnTheHour(12);
   });
 
-  it('should move the hour typed in the field when its handle is then dragged earlier', () => {
+  it('should move the hour placed with the keyboard when its handle is then dragged earlier', () => {
     whenOpeningTheFriseAt(1280);
-    whenTypingTheEndAt(new Date(2026, 8, 14, 17, 0));
+    whenPlacingTheHourWithTheHandleAt(new Date(2026, 8, 14, 17, 0));
     whenDraggingTheHandleTo(12);
 
-    thenTheInstantFieldsShow(new Date(2026, 8, 14, 12, 0), CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    thenTheHandleHolds(new Date(2026, 8, 14, 12, 0));
     thenTheBarEndsOnTheHour(12);
   });
 
@@ -795,12 +810,6 @@ describe('Automatic end read on one line in Gestion', () => {
         cy.get(dataSelector('anomalie-frise-placement')).click(clientX - left, 20);
       });
     });
-    cy.get(dataSelector('anomalie-poignee')).should('be.visible').and('not.have.attr', 'data-sans-heure');
-  };
-
-  const whenTypingTheEndAt = (instant: Date): void => {
-    whenTypingTheInstant(instant, CHAMP_DE_LA_VUE_DE_RESOLUTION);
-    cy.get(dataSelector('anomalie-resolution-instant-heure')).blur();
     cy.get(dataSelector('anomalie-poignee')).should('be.visible').and('not.have.attr', 'data-sans-heure');
   };
 
@@ -856,7 +865,7 @@ describe('Automatic end read on one line in Gestion', () => {
   };
 
   const whenRegularisingTheEndAndReadingTheReceipt = (): void => {
-    whenTypingTheInstant(instantRegulariseLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    whenPlacingTheHourWithTheHandleAt(instantRegulariseLocalFixture);
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').click();
     cy.get(dataSelector('anomalie-resultat')).should('be.visible');
     markerOf(finRegulariseeFixture).should('exist');

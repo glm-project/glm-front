@@ -127,25 +127,24 @@ bougent pas. Corriger et Annuler du panneau préparent la proposition exactement
 ## Vue de résolution d'une fin automatique
 
 Un dossier de fin automatique sans conflit à expliquer, qui porte un seul choix (`REGULARISER_FIN`, `CORRIGER_FIN_TARDIVE` ou
-`CORRIGER_TRANSITION_TARDIVE`) visant l'activité que son adresse ouvre, s'ouvre dans une vue de résolution : la phrase du problème, la frise en lecture seule, le champ « Fin réelle », l'aperçu en
+`CORRIGER_TRANSITION_TARDIVE`) visant l'activité que son adresse ouvre, s'ouvre dans une vue de résolution : la phrase du problème, la frise en lecture seule et sa poignée, sans champ d'heure, l'aperçu en
 une ligne, « Valider la fin à HH:MM » et « Autre correction… ». La page choisit la vue à l'ouverture de l'adresse et la fige
 jusqu'au changement d'adresse : le reçu qui remplace le dossier ne la fait pas basculer. Tout autre dossier (un conflit, un choix de
 conflit en plus de la fin, un choix qui vise une autre activité) garde la vue complète.
 
 Pour une correction tardive (`CORRIGER_FIN_TARDIVE`, `CORRIGER_TRANSITION_TARDIVE`), la vue s'ouvre sur l'heure reçue du pointage
-tardif : le champ, la poignée et le bouton « Valider la fin à HH:MM » (« Valider le passage à HH:MM » pour une transition, avec
-le champ « Heure du passage » et une ligne « La non-conformité commencera à cette heure. » ou « Le travail reprendra à cette heure. »)
+tardif : la poignée et le bouton « Valider la fin à HH:MM » (« Valider le passage à HH:MM » pour une transition, avec
+une ligne « La non-conformité commencera à cette heure. » ou « Le travail reprendra à cette heure. »)
 la portent, et l'aperçu part dès l'ouverture, sans que le gestionnaire ait rien touché. Le motif découle du cas (« Arrêt pointé
 après l'échéance : heure vérifiée en gestion », « Passage pointé après l'échéance : heure vérifiée en gestion ») : il part avec
 l'acte et le journal le garde, mais la vue ne le montre nulle part, « Voir le détail » compris. Valider sans rien changer est
 légitime : l'activité se termine alors au-delà de l'échéance. « Autre correction… » ne demande de confirmation que si l'heure
 diffère de l'heure reçue.
 
-Pour `REGULARISER_FIN`, la vue ne pré-remplit aucune heure. Le gestionnaire la place en tirant la poignée « Heure ? », en cliquant sur la barre ou en la
-saisissant au champ. L'aperçu part seul : au relâcher de la poignée, 400 ms après la dernière frappe ou touche, ou après un clic
-sur la barre ; il ne désactive ni le champ, ni la poignée, ni le clic sur la barre, et ne déplace pas le focus. Une heure hors des
-bornes locales (future, avant le début de l'activité) ne part pas au serveur et se dit sous le champ ; un refus du serveur se dit sous
-la frise ; une erreur réseau offre « Réessayer l'aperçu » ; une réponse périmée est écartée. « Valider » n'est actif que sur un aperçu
+Pour `REGULARISER_FIN`, la vue ne pré-remplit aucune heure. Le gestionnaire la place en tirant la poignée « Heure ? », en cliquant sur la barre ou au
+clavier sur la poignée, dont la première touche la pose sur la fin automatique. L'aperçu part seul : au relâcher de la poignée, 400 ms
+après la dernière touche, ou après un clic sur la barre ; il ne désactive ni la poignée ni le clic sur la barre, et ne déplace pas le
+focus. La poignée reste dans les bornes locales (début de l'activité, heure courante) ; un refus du serveur se dit sous la frise ; une erreur réseau offre « Réessayer l'aperçu » ; une réponse périmée est écartée. « Valider » n'est actif que sur un aperçu
 reçu, à jour et sans refus. Après `CONCURRENCE`, la vue relit le dossier et relance l'aperçu avec la même heure.
 
 Le reçu s'affiche dans la vue (« Anomalie traitée », ou « Acte enregistré, anomalie restante » avec un lien par fin automatique

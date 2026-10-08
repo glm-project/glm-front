@@ -1,4 +1,3 @@
-import { DateTimeField, DateTimeFieldLabels } from '@/gestion/shared/design-system/infrastructure/primary/date-time-field/DateTimeField';
 import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
 import { convertToParamMap, Params, Router, RouterLink } from '@angular/router';
 import { EtatPreparationActe, PreparationActe } from '../../../../../application/PreparationActe';
@@ -34,7 +33,6 @@ import { LectureDuDossier } from '../LectureDuDossier';
 type RecuDeLActe = Extract<EtatPreparationActe, { readonly kind: 'APPLIQUE' }>;
 
 export interface VarianteDeResolution {
-  readonly champ: DateTimeFieldLabels;
   readonly validerA: (heure: string) => string;
   readonly validerSansHeure: string;
   readonly motif?: string;
@@ -43,7 +41,7 @@ export interface VarianteDeResolution {
 
 @Component({
   selector: 'glm-resolution-de-fin',
-  imports: [RouterLink, EnTeteDuDossier, SectionDeFrise, StatutDeLOperation, DateTimeField, ComparaisonDesJournaux],
+  imports: [RouterLink, EnTeteDuDossier, SectionDeFrise, StatutDeLOperation, ComparaisonDesJournaux],
   templateUrl: './ResolutionDeFin.html',
   styleUrls: ['../../../Boutons.css'],
   providers: [ApercuAutomatique, RechercheDeLAnomalieSuivante],
@@ -112,12 +110,6 @@ export class ResolutionDeFin implements OnInit {
     const motif = this.variante().motif;
     if (motif !== undefined) this.changer({ motif });
     if (new InstantPointage(this.instant()).isValid()) void this.apercuAutomatique.lancer(this.dossier(), this.relire);
-  }
-
-  protected saisirLInstant(instant: string): void {
-    this.lireLHorloge();
-    this.changer({ fait: { instant } });
-    this.apercuAutomatique.apresFrappe(this.dossier(), this.relire);
   }
 
   protected deplacer({ demande, poignee }: DeplacementDemande): void {
