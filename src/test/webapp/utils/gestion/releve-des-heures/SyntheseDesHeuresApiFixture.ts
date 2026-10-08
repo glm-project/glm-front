@@ -159,6 +159,7 @@ export const syntheseFixture = (annee: number, semaine: number): RestSynthese =>
   elements: [
     {
       id: 'element-1',
+      categorie: 'MOULE',
       type: 'PRODUIT',
       nom: 'Moule 1015',
       duree: { complete: true, valeur: 'PT2H' },

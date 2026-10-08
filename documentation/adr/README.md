@@ -138,3 +138,7 @@ something stays, with a status that says what died.
 - [0052 — Réserver les anomalies au gestionnaire par les rôles de la session](0052-reserve-anomalies-to-the-gestionnaire.md) —
   un `RolesPort` à promesse qui reste en attente si l'authentification échoue, un garde `canMatch` qui ne renvoie
   jamais `false`, un menu filtré par les mêmes rôles figés pour la session
+
+- [0053 — Remplacer le type d'élément par les catégories de l'entreprise](0053-replace-the-element-type-with-company-categories.md) —
+  un Value Object de catégorie par contexte affiché tel quel, aucune lecture de `type` déprécié, l'ordre lu au
+  back pour les boutons, les filtres et les zones du pupitre, le journal stocké traduit à la lecture

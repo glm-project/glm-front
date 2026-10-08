@@ -12,11 +12,12 @@ const referentielFixture: ReferentielDuPupitre = {
       id: 'piece-1',
       nom: '204',
       etat: 'EN_ATTENTE',
-      type: 'ORDRE_DE_FABRICATION',
+      categorie: 'OF',
       activites: [],
       evenements: [],
     },
   ],
+  categories: [],
 };
 
 const SEMAINE_EN_COURS = 38;
@@ -37,6 +38,7 @@ const syntheseFixture = (semaine: number, evaluation: string) => ({
   elements: [
     {
       id: 'of-1',
+      categorie: 'OF',
       type: 'ORDRE_DE_FABRICATION',
       nom: 'OF-2026-001240',
       reference: String(1202 + semaine),
@@ -150,7 +152,10 @@ describe('Pupitre my pointages journey', () => {
       body: {
         genereLe: '2026-09-17T05:00:00Z',
         operateurs: referentielFixture.operateurs,
-        suivis: [{ id: 'piece-1', nom: '204', etat: 'EN_ATTENTE', type: 'ORDRE_DE_FABRICATION', activites: [], conflits: [] }],
+        suivis: [
+          { id: 'piece-1', nom: '204', etat: 'EN_ATTENTE', categorie: 'OF', type: 'ORDRE_DE_FABRICATION', activites: [], conflits: [] },
+        ],
+        categories: ['OF'],
       },
     }).as('workshop');
     cy.intercept('GET', '/api/syntheses-des-heures/jean*', request => {

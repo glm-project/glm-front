@@ -1,4 +1,5 @@
 import { ActeDAtelier } from './ActeDAtelier';
+import { CategorieDElementEngage } from './CategorieDElementEngage';
 import { ElementALAtelier } from './ElementALAtelier';
 import { ElementEngageId } from './ElementEngageId';
 import { EtatALAtelier } from './EtatALAtelier';
@@ -25,11 +26,11 @@ describe('ElementALAtelier', () => {
     expect(element.suivi.value).toBe('suivi-1');
   });
 
-  it('should keep the name and type photographed at engagement', () => {
+  it('should keep the name and category photographed at engagement', () => {
     const element = elementFixture('EN_COURS', undefined);
 
     expect(element.nom.value).toBe('PRD-2026-000001');
-    expect(element.type).toBe('PRODUIT');
+    expect(element.categorie.value).toBe('MOULE');
     expect(element.engagement.auteur).toBe('gestionnaire.impeccmold');
     expect(element.cloture).toBeUndefined();
   });
@@ -40,7 +41,7 @@ describe('ElementALAtelier', () => {
     new ElementALAtelier(new SuiviId('suivi-1'), {
       element: new ElementEngageId('element-1'),
       nom: new NomDElementEngage('PRD-2026-000001'),
-      type: 'PRODUIT',
+      categorie: new CategorieDElementEngage('MOULE'),
       etat,
       engagement: new ActeDAtelier(new InstantDAtelier('2026-09-14T08:30:00Z'), 'gestionnaire.impeccmold'),
       cloture,

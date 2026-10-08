@@ -9,6 +9,8 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { ElementsDeFabricationFixture } from '@test/unit/fixtures/gestion/element-de-fabrication/ElementsDeFabricationFixture';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
+import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
+import { CategorieInconnue } from '../../domain/CategorieInconnue';
 import { ElementDeFabrication } from '../../domain/ElementDeFabrication';
 import { ElementDeFabricationId } from '../../domain/ElementDeFabricationId';
 import { ElementDeFabricationIntrouvable } from '../../domain/ElementDeFabricationIntrouvable';
@@ -17,6 +19,7 @@ import { LibelleDElement } from '../../domain/LibelleDElement';
 import { NomDElement } from '../../domain/NomDElement';
 import { ReferenceDElement } from '../../domain/ReferenceDElement';
 import { ReferenceDejaUtilisee } from '../../domain/ReferenceDejaUtilisee';
+import { RefusCreationElement } from '../../domain/RefusCreationElement';
 import { RefusModificationElement } from '../../domain/RefusModificationElement';
 import { RequeteElements } from '../../domain/RequeteElements';
 import { HttpElementsDeFabrication } from './HttpElementsDeFabrication';
@@ -29,27 +32,28 @@ interface CorpsDeFiche {
 
 interface ElementFixture {
   readonly id: string;
-  readonly type: NonNullable<RestElement['type']>;
+  readonly categorie: string;
   readonly nom: string;
   readonly reference?: string;
   readonly description?: string;
 }
 
 const ROUTE = '/api/elements-de-fabrication';
+const CATEGORIES = '/api/categories-de-produit';
 const NOM_ATTRIBUE = 'PRD-2026-000001';
 
 const mouleFixture: ElementFixture = {
   id: 'moule-1',
-  type: 'PRODUIT',
+  categorie: 'MOULE',
   nom: 'PRD-2026-000001',
   reference: '1015',
   description: 'Moule de capot',
 };
-const ofSansReferenceFixture: ElementFixture = { id: 'of-1', type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000042' };
+const ofSansReferenceFixture: ElementFixture = { id: 'of-1', categorie: 'OF', nom: 'OF-2026-000042' };
 
 interface ProjectionElement {
   readonly id: string;
-  readonly type: string;
+  readonly categorie: string;
   readonly nom: string;
   readonly reference: string | undefined;
   readonly libelle: string | undefined;
@@ -57,7 +61,7 @@ interface ProjectionElement {
 
 const projeter = (element: ElementDeFabrication): ProjectionElement => ({
   id: element.id.value,
-  type: element.type,
+  categorie: element.categorie.value,
   nom: element.nom.value,
   reference: element.reference?.value,
   libelle: element.libelle?.value,
@@ -65,6 +69,7 @@ const projeter = (element: ElementDeFabrication): ProjectionElement => ({
 
 class ElementsHttpBackendFixture implements HttpBackend {
   elements: ElementFixture[] = [];
+  categories: string[] = [];
 
   handle(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
     return defer(() => this.answer(request)).pipe(
@@ -80,7 +85,7 @@ class ElementsHttpBackendFixture implements HttpBackend {
       case 'GET':
         return this.handleGet(url.pathname, url.searchParams);
       case 'POST':
-        return this.handlePost(url.pathname, request.body as CorpsDeFiche & { type: ElementFixture['type'] });
+        return this.handlePost(url.pathname, request.body as CorpsDeFiche & { categorie: string });
       case 'PUT':
         return this.handlePut(url.pathname, request.body as CorpsDeFiche);
       default:
@@ -89,29 +94,29 @@ class ElementsHttpBackendFixture implements HttpBackend {
   }
 
   private handleGet(pathname: string, searchParams: URLSearchParams): HttpResponse<unknown> | HttpErrorResponse {
-    if (pathname !== ROUTE) {
-      return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
-    }
     const page = Number(searchParams.get('page') ?? '0');
     const size = Number(searchParams.get('size') ?? '20');
-    return new HttpResponse({
-      status: 200,
-      body: {
-        content: this.elements.slice(page * size, (page + 1) * size),
-        currentPage: page,
-        pageSize: size,
-        totalElementsCount: this.elements.length,
-      },
-    });
+    switch (pathname) {
+      case ROUTE:
+        return pageOf(this.elements.map(corpsDe), page, size);
+      case CATEGORIES:
+        return pageOf(
+          this.categories.map(code => ({ code })),
+          page,
+          size,
+        );
+      default:
+        return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
+    }
   }
 
-  private handlePost(pathname: string, body: CorpsDeFiche & { type: ElementFixture['type'] }): HttpResponse<unknown> | HttpErrorResponse {
+  private handlePost(pathname: string, body: CorpsDeFiche & { categorie: string }): HttpResponse<unknown> | HttpErrorResponse {
     if (pathname !== ROUTE) {
       return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
     }
-    const created: ElementFixture = { id: 'created-element', type: body.type, nom: NOM_ATTRIBUE, ...ficheOf(body) };
+    const created: ElementFixture = { id: 'created-element', categorie: body.categorie, nom: NOM_ATTRIBUE, ...ficheOf(body) };
     this.elements = [...this.elements, created];
-    return new HttpResponse({ status: 201, body: created });
+    return new HttpResponse({ status: 201, body: corpsDe(created) });
   }
 
   private handlePut(pathname: string, body: CorpsDeFiche): HttpResponse<unknown> | HttpErrorResponse {
@@ -120,11 +125,22 @@ class ElementsHttpBackendFixture implements HttpBackend {
     }
     const id = pathname.substring(`${ROUTE}/`.length);
     this.elements = this.elements.map(element =>
-      element.id === id ? { id, type: element.type, nom: element.nom, ...ficheOf(body) } : element,
+      element.id === id ? { id, categorie: element.categorie, nom: element.nom, ...ficheOf(body) } : element,
     );
-    return new HttpResponse({ status: 200, body: this.elements.find(element => element.id === id) });
+    return new HttpResponse({ status: 200, body: this.elements.filter(element => element.id === id).map(corpsDe)[0] ?? null });
   }
 }
+
+const pageOf = (entries: readonly object[], page: number, size: number): HttpResponse<unknown> =>
+  new HttpResponse({
+    status: 200,
+    body: { content: entries.slice(page * size, (page + 1) * size), currentPage: page, pageSize: size, totalElementsCount: entries.length },
+  });
+
+const corpsDe = (element: ElementFixture): RestElement => ({
+  ...element,
+  type: element.categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT',
+});
 
 const ficheOf = (body: CorpsDeFiche): CorpsDeFiche => ({
   ...(body.reference === undefined ? {} : { reference: body.reference }),
@@ -134,6 +150,7 @@ const ficheOf = (body: CorpsDeFiche): CorpsDeFiche => ({
 interface ElementsHarness {
   readonly port: ElementsDeFabricationPort;
   seed(elements: readonly ElementFixture[]): void;
+  declare(categories: readonly string[]): void;
 }
 
 const createHttpHarness = (): ElementsHarness => {
@@ -153,12 +170,15 @@ const createHttpHarness = (): ElementsHarness => {
     seed: (elements: readonly ElementFixture[]) => {
       backend.elements = [...elements];
     },
+    declare: (categories: readonly string[]) => {
+      backend.categories = [...categories];
+    },
   };
 };
 
 const toDomain = (element: ElementFixture): ElementDeFabrication =>
   new ElementDeFabrication(new ElementDeFabricationId(element.id), {
-    type: element.type,
+    categorie: new CategorieDeProduit(element.categorie),
     nom: new NomDElement(element.nom),
     reference: element.reference === undefined ? undefined : new ReferenceDElement(element.reference),
     libelle: element.description === undefined ? undefined : new LibelleDElement(element.description),
@@ -170,6 +190,9 @@ const createFixtureHarness = (): ElementsHarness => {
     port: fixture,
     seed: (elements: readonly ElementFixture[]) => {
       fixture.liste = elements.map(toDomain);
+    },
+    declare: (categories: readonly string[]) => {
+      fixture.categories = categories.map(code => new CategorieDeProduit(code));
     },
   };
 };
@@ -191,9 +214,34 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
   it('should return the complete referential across server pages', async () => {
     givenManyElements(125);
 
-    const entries = await port.referentiel();
+    const referentiel = await port.referentiel();
 
-    expect(entries).toHaveLength(125);
+    expect(referentiel.elements).toHaveLength(125);
+  });
+
+  it('should return the declared categories in the order the company chose, across server pages', async () => {
+    givenCategories([
+      'OF',
+      ...Array.from(
+        { length: 120 },
+        (_, index) => `C${String.fromCharCode(65 + (index % 26))}${String.fromCharCode(65 + Math.floor(index / 26))}`,
+      ),
+      'MOULE',
+    ]);
+
+    const referentiel = await port.referentiel();
+
+    expect(referentiel.categories).toHaveLength(122);
+    expect(referentiel.categories[0]?.value).toBe('OF');
+    expect(referentiel.categories.at(-1)?.value).toBe('MOULE');
+  });
+
+  it('should tell that the company has declared no category yet', async () => {
+    givenCategories([]);
+
+    const referentiel = await port.referentiel();
+
+    expect(referentiel.estSansCategorie()).toBe(true);
   });
 
   it('should return the requested page with domain values and the total count', async () => {
@@ -203,8 +251,8 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
 
     expect(page.totalCount).toBe(2);
     expect(page.elements.map(projeter)).toEqual([
-      { id: 'moule-1', type: 'PRODUIT', nom: 'PRD-2026-000001', reference: '1015', libelle: 'Moule de capot' },
-      { id: 'of-1', type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000042', reference: undefined, libelle: undefined },
+      { id: 'moule-1', categorie: 'MOULE', nom: 'PRD-2026-000001', reference: '1015', libelle: 'Moule de capot' },
+      { id: 'of-1', categorie: 'OF', nom: 'OF-2026-000042', reference: undefined, libelle: undefined },
     ]);
   });
 
@@ -232,18 +280,18 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
     ['with a company number and a label', '1015', 'Moule de capot'],
     ['reduced to its produced number', undefined, undefined],
   ] as const)('should create an element %s and list it', async (_scenario, reference, libelle) => {
-    const resultat = await whenCreating('PRODUIT', reference, libelle);
+    const resultat = await whenCreating('MOULE', reference, libelle);
 
     expect(resultat).toEqual({ ok: true, value: undefined });
-    expect(await whenListing()).toEqual([{ id: 'created-element', type: 'PRODUIT', nom: NOM_ATTRIBUE, reference, libelle }]);
+    expect(await whenListing()).toEqual([{ id: 'created-element', categorie: 'MOULE', nom: NOM_ATTRIBUE, reference, libelle }]);
   });
 
-  it('should create an ordre de fabrication carrying its own type', async () => {
-    const resultat = await whenCreating('ORDRE_DE_FABRICATION', '1016', undefined);
+  it('should create an ordre de fabrication carrying its own category', async () => {
+    const resultat = await whenCreating('OF', '1016', undefined);
 
     expect(resultat).toEqual({ ok: true, value: undefined });
     expect(await whenListing()).toEqual([
-      { id: 'created-element', type: 'ORDRE_DE_FABRICATION', nom: NOM_ATTRIBUE, reference: '1016', libelle: undefined },
+      { id: 'created-element', categorie: 'OF', nom: NOM_ATTRIBUE, reference: '1016', libelle: undefined },
     ]);
   });
 
@@ -254,7 +302,7 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
 
     expect(resultat).toEqual({ ok: true, value: undefined });
     expect(await whenListing()).toEqual([
-      { id: 'moule-1', type: 'PRODUIT', nom: 'PRD-2026-000001', reference: '1016', libelle: 'Moule de portière' },
+      { id: 'moule-1', categorie: 'MOULE', nom: 'PRD-2026-000001', reference: '1016', libelle: 'Moule de portière' },
     ]);
   });
 
@@ -265,7 +313,7 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
 
     expect(resultat).toEqual({ ok: true, value: undefined });
     expect(await whenListing()).toEqual([
-      { id: 'moule-1', type: 'PRODUIT', nom: 'PRD-2026-000001', reference: undefined, libelle: undefined },
+      { id: 'moule-1', categorie: 'MOULE', nom: 'PRD-2026-000001', reference: undefined, libelle: undefined },
     ]);
   });
 
@@ -273,11 +321,15 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
     harness.seed(elements);
   };
 
+  const givenCategories = (categories: readonly string[]): void => {
+    harness.declare(categories);
+  };
+
   const givenManyElements = (count: number): void => {
     harness.seed(
       Array.from({ length: count }, (_, index) => ({
         id: `e-${index}`,
-        type: 'PRODUIT' as const,
+        categorie: 'MOULE',
         nom: `PRD-2026-${String(index).padStart(6, '0')}`,
       })),
     );
@@ -292,13 +344,13 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
   };
 
   const whenCreating = (
-    type: 'PRODUIT' | 'ORDRE_DE_FABRICATION',
+    code: string,
     reference: string | undefined,
     libelle: string | undefined,
-  ): Promise<Result<void, ReferenceDejaUtilisee>> =>
+  ): Promise<Result<void, RefusCreationElement>> =>
     port.creer({
       kind: 'CREATION',
-      type,
+      categorie: new CategorieDeProduit(code),
       reference: reference === undefined ? undefined : new ReferenceDElement(reference),
       libelle: libelle === undefined ? undefined : new LibelleDElement(libelle),
     });
@@ -352,6 +404,14 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
     expect(request.request.params.get('size')).toBe('20');
   });
 
+  it('should report a failed category read once and reject the referential', async () => {
+    const result = port.referentiel().catch((failure: unknown) => failure);
+    await whenCategoryReadFails();
+
+    expect(await result).toBeInstanceOf(HttpErrorResponse);
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
   it('should report a technical read failure to ErrorHandlerPort and reject', async () => {
     const result = port.referentiel().catch((failure: unknown) => failure);
     await whenReadFails();
@@ -362,9 +422,9 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
   });
 
   it.each([
-    ['element.id', { type: 'PRODUIT' as const, nom: NOM_ATTRIBUE }],
-    ['element.nom', { id: 'moule-1', type: 'PRODUIT' as const }],
-    ['element.type', { id: 'moule-1', nom: NOM_ATTRIBUE }],
+    ['element.id', { categorie: 'MOULE', nom: NOM_ATTRIBUE }],
+    ['element.nom', { id: 'moule-1', categorie: 'MOULE' }],
+    ['element.categorie', { id: 'moule-1', nom: NOM_ATTRIBUE }],
   ])('should reject a server answer missing %s', async (champ, element) => {
     const result = port.elements(new RequeteElements(0, 20)).catch((failure: unknown) => failure);
     await whenReadAnswers([element]);
@@ -374,6 +434,7 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
 
   it.each([
     ['creer', ROUTE, 409, 'reference-deja-utilisee', new ReferenceDejaUtilisee()],
+    ['creer', ROUTE, 409, 'categorie-inconnue', new CategorieInconnue()],
     ['modifier', `${ROUTE}/moule-1`, 409, 'reference-deja-utilisee', new ReferenceDejaUtilisee()],
     ['modifier', `${ROUTE}/moule-1`, 404, 'element-de-fabrication-introuvable', new ElementDeFabricationIntrouvable()],
   ] as const)('should translate the %s refusal into the domain', async (action, url, status, code, refus) => {
@@ -411,11 +472,11 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
   });
 
   it('should send only the fields the manager filled in', async () => {
-    const result = port.creer({ kind: 'CREATION', type: 'ORDRE_DE_FABRICATION', reference: undefined, libelle: undefined });
+    const result = port.creer({ kind: 'CREATION', categorie: new CategorieDeProduit('OF'), reference: undefined, libelle: undefined });
     const request = await whenWriteAnswers(ROUTE, 201, {});
 
     await result;
-    expect(request.request.body).toEqual({ type: 'ORDRE_DE_FABRICATION' });
+    expect(request.request.body).toEqual({ categorie: 'OF' });
   });
 
   const whenCommandStarts = (action: 'creer' | 'modifier') => {
@@ -423,7 +484,7 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
       case 'creer':
         return port.creer({
           kind: 'CREATION',
-          type: 'PRODUIT',
+          categorie: new CategorieDeProduit('MOULE'),
           reference: new ReferenceDElement('1015'),
           libelle: new LibelleDElement('Moule de capot'),
         });
@@ -447,6 +508,15 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
   const whenReadFails = async (): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));
     server.expectOne(candidate => candidate.method === 'GET' && candidate.url === ROUTE).flush({}, { status: 500, statusText: 'Failure' });
+    server
+      .expectOne(candidate => candidate.url === CATEGORIES)
+      .flush({ content: [], currentPage: 0, pageSize: 100, totalElementsCount: 0 });
+  };
+
+  const whenCategoryReadFails = async (): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    server.expectOne(candidate => candidate.url === CATEGORIES).flush({}, { status: 500, statusText: 'Failure' });
+    server.expectOne(candidate => candidate.url === ROUTE).flush({ content: [], currentPage: 0, pageSize: 100, totalElementsCount: 0 });
   };
 
   const whenWriteAnswers = async (url: string, status: number, body: object | null): Promise<TestRequest> => {

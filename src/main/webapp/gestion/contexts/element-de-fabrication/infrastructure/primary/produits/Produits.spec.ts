@@ -10,33 +10,34 @@ import { ElementsDeFabricationFixture } from '@test/unit/fixtures/gestion/elemen
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
+import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementDeFabricationId } from '../../../domain/ElementDeFabricationId';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
 import { LibelleDElement } from '../../../domain/LibelleDElement';
 import { NomDElement } from '../../../domain/NomDElement';
 import { ReferenceDElement } from '../../../domain/ReferenceDElement';
-import { TypeDElementDeFabrication } from '../../../domain/TypeDElementDeFabrication';
-import { MoulesEtOf } from './MoulesEtOf';
+import { Produits } from './Produits';
 
 const mouleFixture = new ElementDeFabrication(new ElementDeFabricationId('moule-1'), {
-  type: 'PRODUIT',
+  categorie: new CategorieDeProduit('MOULE'),
   nom: new NomDElement('PRD-2026-000001'),
   reference: new ReferenceDElement('1015'),
   libelle: new LibelleDElement('Moule de capot'),
 });
 const ofSansReferenceFixture = new ElementDeFabrication(new ElementDeFabricationId('of-1'), {
-  type: 'ORDRE_DE_FABRICATION',
+  categorie: new CategorieDeProduit('OF'),
   nom: new NomDElement('OF-2026-000042'),
   reference: undefined,
   libelle: undefined,
 });
 
-describe('MoulesEtOf page', () => {
-  let fixture: ComponentFixture<MoulesEtOf>;
+describe('Produits page', () => {
+  let fixture: ComponentFixture<Produits>;
   let port: ElementsDeFabricationFixture;
   beforeEach(() => {
     port = new ElementsDeFabricationFixture();
+    port.categories = [new CategorieDeProduit('MOULE'), new CategorieDeProduit('OF')];
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -67,14 +68,14 @@ describe('MoulesEtOf page', () => {
   });
 
   it.each([
-    ['moule', 1],
-    ['of', 1],
+    ['MOULE', 1],
+    ['OF', 1],
     ['tous', 2],
-  ])('should filter the catalogue by %s', async (type, expected) => {
+  ])('should filter the catalogue by %s', async (categorie, expected) => {
     givenReferential();
     await whenOpening();
 
-    await whenClicking(`elements-type-${type}`);
+    await whenClicking(`elements-categorie-${categorie}`);
 
     expect(texts('element-row')).toHaveLength(expected);
   });
@@ -99,7 +100,7 @@ describe('MoulesEtOf page', () => {
     current.resolve(new Page([ofSansReferenceFixture], 1));
     await whenViewSettles();
 
-    expect(loading).toContain('Chargement des moules et OF');
+    expect(loading).toContain('Chargement des produits');
     expect(failure).toBe('');
     expect(texts('element-nom-cell')).toEqual(['OF-2026-000042']);
   });
@@ -142,24 +143,43 @@ describe('MoulesEtOf page', () => {
     deferred.resolve(new Page([], 0));
     await whenViewSettles();
 
-    expect(loading).toContain('Chargement des moules et OF');
+    expect(loading).toContain('Chargement des produits');
     expect(empty).toBe('');
   });
 
-  it('should offer both creations when the referential is empty', async () => {
+  it('should offer one creation per declared category when the referential is empty', async () => {
     await whenOpening();
 
-    expect(text('elements-empty')).toContain('Aucun moule ni OF');
-    expect(text('elements-empty-create-moule')).toContain('Nouveau moule');
-    expect(text('elements-empty-create-of')).toContain('Nouvel OF');
+    expect(text('elements-empty')).toContain('Aucun produit');
+    expect(text('elements-empty-create-MOULE')).toContain('MOULE');
+    expect(text('elements-empty-create-OF')).toContain('OF');
     expect(text('elements-pagination')).toContain('0 élément');
+  });
+
+  it('should invite to declare a category, and offer no creation, while the company has declared none', async () => {
+    givenNoCategory();
+
+    await whenOpening();
+
+    expect(text('elements-sans-categorie')).toContain('Aucune catégorie de produit');
+    expect(creations()).toEqual([]);
+  });
+
+  it('should offer the creations and the filters in the order the company chose for its categories', async () => {
+    givenCategories(['PIECE', 'OF', 'MOULE']);
+    givenReferential();
+
+    await whenOpening();
+
+    expect(creations()).toEqual(['PIECE', 'OF', 'MOULE']);
+    expect(buttonsIn('elements-filtres')).toEqual(['Tous', 'PIECE', 'OF', 'MOULE']);
   });
 
   it('should name each element by its screen words, its numbers and its label', async () => {
     givenReferential();
     await whenOpening();
 
-    expect(texts('element-type-cell')).toEqual(['Moule', 'OF']);
+    expect(texts('element-categorie-cell')).toEqual(['MOULE', 'OF']);
     expect(texts('element-reference-cell')).toEqual(['1015', '—']);
     expect(texts('element-nom-cell')).toEqual(['PRD-2026-000001', 'OF-2026-000042']);
     expect(texts('element-libelle-cell')).toEqual(['Moule de capot', '—']);
@@ -169,7 +189,7 @@ describe('MoulesEtOf page', () => {
     givenReferential();
     await whenOpening();
 
-    expect(editLabels()).toEqual(['Modifier le moule 1015', 'Modifier l’OF OF-2026-000042']);
+    expect(editLabels()).toEqual(['Modifier 1015', 'Modifier OF-2026-000042']);
   });
 
   it('should offer the cost of manufacture of every element, addressed by the element itself', async () => {
@@ -183,10 +203,7 @@ describe('MoulesEtOf page', () => {
     givenReferential();
     await whenOpening();
 
-    expect(labels('element-cout-de-revient')).toEqual([
-      'Voir le coût de revient du moule 1015',
-      'Voir le coût de revient de l’OF OF-2026-000042',
-    ]);
+    expect(labels('element-cout-de-revient')).toEqual(['Voir le coût de revient de 1015', 'Voir le coût de revient de OF-2026-000042']);
   });
 
   it('should never offer to delete an element', async () => {
@@ -206,16 +223,16 @@ describe('MoulesEtOf page', () => {
 
     await whenClicking('elements-retry');
 
-    expect(failure).toContain('Impossible de charger les moules et OF');
+    expect(failure).toContain('Impossible de charger les produits');
     expect(texts('element-row')).toHaveLength(2);
   });
 
   it.each([
-    ['elements-new-moule', 'Nouveau moule'],
-    ['elements-new-of', 'Nouvel OF'],
-    ['elements-empty-create-moule', 'Nouveau moule'],
-    ['elements-empty-create-of', 'Nouvel OF'],
-  ])('should open the creation form with the type carried by %s', async (selector, titre) => {
+    ['elements-new-MOULE', 'Nouveau produit MOULE'],
+    ['elements-new-OF', 'Nouveau produit OF'],
+    ['elements-empty-create-MOULE', 'Nouveau produit MOULE'],
+    ['elements-empty-create-OF', 'Nouveau produit OF'],
+  ])('should open the creation form with the category carried by %s', async (selector, titre) => {
     await whenOpening();
     await whenClicking(selector);
 
@@ -226,7 +243,7 @@ describe('MoulesEtOf page', () => {
   it('should reload the list after a creation succeeds', async () => {
     await whenOpening();
     givenReferential();
-    await whenClicking('elements-new-moule');
+    await whenClicking('elements-new-MOULE');
     await whenClosingDialog(true);
 
     expect(texts('element-reference-cell')).toEqual(['1015', '—']);
@@ -235,7 +252,7 @@ describe('MoulesEtOf page', () => {
   it('should keep the list unchanged when creation is cancelled', async () => {
     givenReferential();
     await whenOpening();
-    await whenClicking('elements-new-of');
+    await whenClicking('elements-new-OF');
     await whenClosingDialog(false);
 
     expect(texts('element-reference-cell')).toEqual(['1015', '—']);
@@ -248,7 +265,7 @@ describe('MoulesEtOf page', () => {
     const titre = text('element-form-title');
     port.liste = [
       new ElementDeFabrication(mouleFixture.id, {
-        type: mouleFixture.type,
+        categorie: mouleFixture.categorie,
         nom: mouleFixture.nom,
         reference: new ReferenceDElement('1016'),
         libelle: mouleFixture.libelle,
@@ -256,15 +273,24 @@ describe('MoulesEtOf page', () => {
     ];
     await whenClosingDialog(true);
 
-    expect(titre).toBe('Modifier le moule 1015');
+    expect(titre).toBe('Modifier 1015');
     expect(texts('element-reference-cell')).toEqual(['1016']);
   });
 
+  const givenNoCategory = (): void => {
+    port.categories = [];
+  };
+  const givenCategories = (codes: readonly string[]): void => {
+    port.categories = codes.map(code => new CategorieDeProduit(code));
+  };
+  const creations = (): string[] => buttonsIn('elements-creations');
+  const buttonsIn = (selector: string): string[] =>
+    Array.from(document.querySelector(dataSelector(selector))?.querySelectorAll('button') ?? [], button => button.textContent.trim());
   const givenReferential = (): void => {
     port.liste = [mouleFixture, ofSansReferenceFixture];
   };
   const givenManyElements = (count: number): void => {
-    port.liste = Array.from({ length: count }, (_, index) => elementNumerote(index + 1, 'PRODUIT'));
+    port.liste = Array.from({ length: count }, (_, index) => elementNumerote(index + 1));
   };
   const givenReadingIsPending = (deferred: DeferredFixture<Page<ElementDeFabrication>>): void => {
     port.lectureDifferee = deferred.promise;
@@ -276,15 +302,15 @@ describe('MoulesEtOf page', () => {
     port.lectureFailure = undefined;
     port.lectureDifferee = undefined;
   };
-  const elementNumerote = (numero: number, type: TypeDElementDeFabrication): ElementDeFabrication =>
+  const elementNumerote = (numero: number): ElementDeFabrication =>
     new ElementDeFabrication(new ElementDeFabricationId(String(numero)), {
-      type,
+      categorie: new CategorieDeProduit('MOULE'),
       nom: new NomDElement(`PRD-2026-${String(numero).padStart(6, '0')}`),
       reference: undefined,
       libelle: undefined,
     });
   const whenOpening = async (): Promise<void> => {
-    fixture = TestBed.createComponent(MoulesEtOf);
+    fixture = TestBed.createComponent(Produits);
     await fixture.whenStable();
   };
 

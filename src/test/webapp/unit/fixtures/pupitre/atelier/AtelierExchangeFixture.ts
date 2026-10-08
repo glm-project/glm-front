@@ -5,7 +5,7 @@ import { ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Re
 
 const scheduleOnTheRealClock = globalThis.setTimeout.bind(globalThis);
 
-const emptyReferentiel = (): ReferentielDuPupitre => ({ operateurs: [], suivis: [] });
+const emptyReferentiel = (): ReferentielDuPupitre => ({ operateurs: [], suivis: [], categories: [] });
 
 export class AtelierExchangeFixture extends AtelierExchangePort {
   private readonly suspended: (() => void)[] = [];

@@ -68,10 +68,10 @@ pour laquelle ils sont affichés séparément.
 - **CoutDeRevient** : agrégat racine. Il porte l'élément que le rapport a résolu, ses lignes, son temps
   total et son coût total, l’évaluation et les activités en cours exclues. `estSansTravail()` requiert aucune
   ligne et aucune activité exclue ; `lignesEnAnomalie()` rend les lignes dont un pointage porte une anomalie.
-- **ElementChiffre** : Value Object du nom et du type de l'élément que le rapport a résolus.
+- **ElementChiffre** : Value Object du nom et de la catégorie de l'élément que le rapport a résolus.
 - **ElementChiffreId** : Value Object de l'identifiant de l'élément, opaque à ce contexte.
-- **TypeDElementChiffre** : union des deux valeurs du type, structurellement compatible avec l'énum de
-  l'API.
+- **CategorieDElementChiffre** : Value Object du code de la catégorie de produit (`MOULE`, `OF`…), non vide.
+  Le code est son propre libellé.
 - **LigneDeCout** : Value Object d'une ligne — sa nature éventuelle, son temps passé, son coût et ses pointages.
   `estSansPoste()` distingue la ligne sans nature ; `anomalies()` compte ses pointages par anomalie, dans un ordre
   fixe (fin automatique, à résoudre, partage inconnu).
@@ -99,7 +99,7 @@ pour laquelle ils sont affichés séparément.
 - **ActivitesEnCoursExclues** : nombre reçu d’activités exclues du temps, du coût et du diviseur.
 - **PointageEnConflit** : un pointage contradictoire — son type (début, reprise en non-conformité, fin) et son
   instant.
-- **ElementDisponible** : projection immuable associant l’identité nom/type à son identifiant opaque pour le choix.
+- **ElementDisponible** : projection immuable associant l’identité nom/catégorie à son identifiant opaque pour le choix.
 - **CoutDeRevientPort** : port secondaire de lecture du rapport et des identités disponibles.
 
 ## Responsabilités et invariants
@@ -132,7 +132,7 @@ pour laquelle ils sont affichés séparément.
 ## Relations de contexte
 
 - `atelier` possède les suivis. **Ce contexte ne l'importe pas** : il déclare son propre identifiant
-  d'élément et reçoit du rapport lui-même le nom et le type à afficher. Le lien entre les deux écrans est
+  d'élément et reçoit du rapport lui-même le nom et la catégorie à afficher. Le lien entre les deux écrans est
   un `routerLink` vers `/couts-de-revient/<id>`, jamais un import.
 - `element-de-fabrication` possède le référentiel. Même règle : aucun import de son domaine ou de ses adaptateurs. La collection HTTP est traduite dans la projection de ce contexte.
 - Le back découpe ce rapport dans son propre bounded context `coutderevient`, qui rejoue les journaux de
@@ -180,5 +180,5 @@ pour laquelle ils sont affichés séparément.
 - **Les instants s'affichent dans le fuseau du navigateur.** Les périodes du rapport sont des
   `java.time.Instant` sérialisés en UTC ; aucune configuration de ce front ne porte le fuseau de
   l'entreprise. Même limite connue et même arbitrage que `releve-des-heures`.
-- Tous les mots affichés vivent dans `LibellesCoutDeRevient`, indexés par les valeurs du type. Aucun mot en
-  dur dans un template.
+- Tous les mots affichés vivent dans `LibellesCoutDeRevient`. Aucun mot en dur dans un template. La catégorie
+  fait exception : chaque entreprise déclare les siennes, et leur code s'affiche tel quel.

@@ -36,6 +36,7 @@ const suiviSansReferenceFixture = {
   etat: 'EN_ATTENTE',
   id: 'piece',
   nom: 'PR-2026-000001',
+  categorie: 'MOULE',
   type: 'PRODUIT',
 } satisfies RestSuiviDuPupitre;
 const suiviAvecReferenceFixture = {
@@ -69,6 +70,7 @@ const referentielFixture = {
   genereLe: '2026-09-05T08:05:00Z',
   operateurs: [operateurFixture, operateurSansIdentifiantFixture],
   suivis: [suiviSansReferenceFixture, suiviAvecReferenceFixture],
+  categories: ['MOULE', 'OF'],
 } satisfies RestReferentielDuPupitre;
 const suiviDetailleFixture = {
   conflits: [],
@@ -80,6 +82,7 @@ const suiviDetailleFixture = {
   id: 'piece',
   journal: [],
   nom: 'OF-1',
+  categorie: 'MOULE',
   type: 'PRODUIT',
 } satisfies RestSuiviDAtelier & RestSuiviDAtelierEnGrille;
 const ouvertureFixture: GesteDePointage = {
@@ -310,6 +313,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   };
   const thenReferenceIsComplete = async (operation: Promise<ReferentielDuPupitre>): Promise<void> => {
     const reference = await operation;
+    expect(reference.categories).toEqual(['MOULE', 'OF']);
     expect(reference.operateurs).toEqual([
       { id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] },
       { id: 'marie', nom: 'Martin', prenom: 'Marie', postes: [{ id: 'tour', libelle: 'Tour' }] },
@@ -319,7 +323,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       id: 'piece',
       nom: 'PR-2026-000001',
       etat: 'EN_ATTENTE',
-      type: 'PRODUIT',
+      categorie: 'MOULE',
       activites: [],
       evenements: [],
     });
@@ -332,7 +336,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       nom: 'PR-2026-000002',
       reference: 'M-1187',
       etat: 'EN_ATTENTE',
-      type: 'PRODUIT',
+      categorie: 'MOULE',
       activites: [
         {
           ouverture: 'activite-fixture-36',

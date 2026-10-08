@@ -66,7 +66,7 @@ describe('Gestion header', () => {
   it.each([
     ['gestion-navigation-supervision', '/', 'Supervision'],
     ['gestion-navigation-atelier', '/atelier', 'Atelier'],
-    ['gestion-navigation-elements', '/moules-et-of', 'Moules et OF'],
+    ['gestion-navigation-elements', '/produits', 'Produits'],
     ['gestion-navigation-postes', '/postes-de-travail', 'Postes de travail'],
     ['gestion-navigation-operateurs', '/operateurs', 'Opérateurs'],
   ])('should offer the %s destination in the navigation', (selector, href, label) => {

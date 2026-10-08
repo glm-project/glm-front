@@ -25,7 +25,8 @@ const operateurJeanFixture: OperateurDuPupitre = {
 };
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [operateurJeanFixture],
-  suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', type: 'PRODUIT', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
+  suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
+  categories: [],
 };
 const debutGesteFixture: GesteDePointage = {
   intention: 'OUVERTURE',

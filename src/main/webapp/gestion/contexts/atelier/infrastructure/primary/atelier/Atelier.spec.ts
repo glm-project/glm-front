@@ -13,6 +13,7 @@ import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
 import { ActeDAtelier } from '../../../domain/ActeDAtelier';
 import { AtelierPort } from '../../../domain/AtelierPort';
+import { CategorieDElementEngage } from '../../../domain/CategorieDElementEngage';
 import { DesignationDElement } from '../../../domain/DesignationDElement';
 import { ElementALAtelier } from '../../../domain/ElementALAtelier';
 import { ElementEngageable } from '../../../domain/ElementEngageable';
@@ -23,7 +24,6 @@ import { InstantDAtelier } from '../../../domain/InstantDAtelier';
 import { NomDElementEngage } from '../../../domain/NomDElementEngage';
 import { SuiviId } from '../../../domain/SuiviId';
 import { SuiviIntrouvable } from '../../../domain/SuiviIntrouvable';
-import { TypeDElementEngage } from '../../../domain/TypeDElementEngage';
 import { Atelier } from './Atelier';
 
 const engagementFixture = new ActeDAtelier(new InstantDAtelier(ENGAGEMENT_FIXTURE), AUTEUR_FIXTURE);
@@ -32,22 +32,22 @@ const clotureFixture = new ActeDAtelier(new InstantDAtelier(CLOTURE_FIXTURE), 'd
 const elementFixture = (
   suivi: string,
   nom: string,
-  type: TypeDElementEngage,
+  categorie: string,
   etat: EtatALAtelier,
   cloture: ActeDAtelier | undefined,
 ): ElementALAtelier =>
   new ElementALAtelier(new SuiviId(suivi), {
     element: new ElementEngageId(`element-de-${suivi}`),
     nom: new NomDElementEngage(nom),
-    type,
+    categorie: new CategorieDElementEngage(categorie),
     etat,
     engagement: engagementFixture,
     cloture,
   });
 
-const mouleEnCoursFixture = elementFixture('suivi-1', 'PRD-2026-000001', 'PRODUIT', 'EN_COURS', undefined);
-const ofEnAttenteFixture = elementFixture('suivi-2', 'OF-2026-000042', 'ORDRE_DE_FABRICATION', 'EN_ATTENTE', undefined);
-const mouleClotureFixture = elementFixture('suivi-3', 'PRD-2026-000002', 'PRODUIT', 'CLOTURE', clotureFixture);
+const mouleEnCoursFixture = elementFixture('suivi-1', 'PRD-2026-000001', 'MOULE', 'EN_COURS', undefined);
+const ofEnAttenteFixture = elementFixture('suivi-2', 'OF-2026-000042', 'OF', 'EN_ATTENTE', undefined);
+const mouleClotureFixture = elementFixture('suivi-3', 'PRD-2026-000002', 'MOULE', 'CLOTURE', clotureFixture);
 
 describe('Atelier page', () => {
   let fixture: ComponentFixture<Atelier>;
@@ -102,7 +102,7 @@ describe('Atelier page', () => {
     givenWorkshop();
     await whenOpening();
 
-    expect(texts('atelier-type-cell')).toEqual(['Moule', 'OF']);
+    expect(texts('atelier-categorie-cell')).toEqual(['MOULE', 'OF']);
     expect(texts('atelier-nom-cell')).toEqual(['PRD-2026-000001', 'OF-2026-000042']);
     expect(texts('atelier-etat-cell')).toEqual(['En cours', 'En attente']);
   });
@@ -302,23 +302,23 @@ describe('Atelier page', () => {
   };
   const givenManyElements = (count: number): void => {
     port.liste = Array.from({ length: count }, (_, index) =>
-      elementFixture(`suivi-${String(index)}`, `PRD-2026-${String(index)}`, 'PRODUIT', 'EN_ATTENTE', undefined),
+      elementFixture(`suivi-${String(index)}`, `PRD-2026-${String(index)}`, 'MOULE', 'EN_ATTENTE', undefined),
     );
   };
   const givenReferential = (): void => {
     referentiel.liste = [
       new ElementEngageable(new ElementEngageId('moule-1'), {
         designation: new DesignationDElement(undefined, 'PRD-2026-000001'),
-        type: 'PRODUIT',
+        categorie: new CategorieDElementEngage('MOULE'),
       }),
       new ElementEngageable(new ElementEngageId('of-1'), {
         designation: new DesignationDElement(undefined, 'OF-2026-000042'),
-        type: 'ORDRE_DE_FABRICATION',
+        categorie: new CategorieDElementEngage('OF'),
       }),
     ];
   };
   const givenPhotographs = (): void => {
-    port.photographies.set('moule-1', { nom: 'PRD-2026-000001', type: 'PRODUIT' });
+    port.photographies.set('moule-1', { nom: 'PRD-2026-000001', categorie: 'MOULE' });
   };
   const givenUrlTargets = (element: string): void => {
     parametres = { element };

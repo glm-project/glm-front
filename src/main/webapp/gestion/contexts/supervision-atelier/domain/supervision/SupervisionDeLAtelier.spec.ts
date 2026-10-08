@@ -1,5 +1,6 @@
 import { ActiviteDeSupervision } from '../activite/ActiviteDeSupervision';
 import { CategorieActivite, ValeurCategorieActivite } from '../activite/CategorieActivite';
+import { CategorieDElement } from '../activite/CategorieDElement';
 import { ElementTravaille } from '../activite/ElementTravaille';
 import { IdentifiantActivite } from '../activite/IdentifiantActivite';
 import { IdentifiantSequence } from '../activite/IdentifiantSequence';
@@ -539,7 +540,7 @@ describe('SupervisionDeLAtelier', () => {
     const ofPerso = new ActiviteDeSupervision({
       id: new IdentifiantActivite('act-perso'),
       operateurId: operateur.id,
-      objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
+      objet: new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF Perso' }),
       categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:30:00Z'),
     });
@@ -569,7 +570,11 @@ const MAINTENANT = new Instant('2026-09-13T09:00:00Z');
 const posteFixture = (libelle: string): PosteDeSupervision =>
   new PosteDeSupervision({ id: new IdentifiantPoste(`poste-${libelle}`), libelle });
 
-const MOULE_1015 = new ElementTravaille({ type: 'PRODUIT', nom: 'PRD-2026-000001', reference: new ReferenceDElement('1015') });
+const MOULE_1015 = new ElementTravaille({
+  categorie: new CategorieDElement('MOULE'),
+  nom: 'PRD-2026-000001',
+  reference: new ReferenceDElement('1015'),
+});
 
 const operateurFixture = (id: string, nom = 'Dupont', prenom = 'Jean'): OperateurDeclare =>
   new OperateurDeclare({ id: new IdentifiantOperateur(id), nom, prenom });

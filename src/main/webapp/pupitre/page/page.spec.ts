@@ -43,12 +43,12 @@ import { PupitrePage } from './page';
 const referentielFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
   suivis: [],
+  categories: [],
 };
 const operateurFixture: IdentiteOperateurDesigne = { id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049' };
 const pointageFixture: VueDePointage = {
   conflits: [],
-  moules: [],
-  ordresDeFabrication: [new ElementDePointage('of-1', NumeroDElement.assigned('204'), undefined)],
+  zones: [{ categorie: 'OF', elements: [new ElementDePointage('of-1', NumeroDElement.assigned('204'), undefined)] }],
 };
 
 class AtelierCoordinatorFixture {

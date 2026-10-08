@@ -18,7 +18,7 @@ const elementFixture = {
   id: 'piece-1',
   nom: '204',
   etat: 'EN_ATTENTE',
-  type: 'ORDRE_DE_FABRICATION',
+  categorie: 'OF',
   activites: [],
   evenements: [],
 } as const;
@@ -27,6 +27,7 @@ const troisiemeElementFixture = { ...elementFixture, id: 'piece-3', nom: '206' }
 const referentielFixture: ReferentielDuPupitre = {
   operateurs: [operateurFixture],
   suivis: [elementFixture, autreElementFixture, troisiemeElementFixture],
+  categories: [],
 };
 const activiteFixture = {
   ouverture: 'activite-fixture-7',
@@ -41,6 +42,7 @@ const referentielActifFixture: ReferentielDuPupitre = {
     { ...elementFixture, id: 'piece-active-1', nom: '301', etat: 'EN_COURS', activites: [activiteFixture], conflits: [] },
     { ...elementFixture, id: 'piece-active-2', nom: '302', etat: 'EN_COURS', activites: [activiteFixture], conflits: [] },
   ],
+  categories: [],
 };
 const operateurMultiPosteFixture = {
   ...operateurFixture,
@@ -52,6 +54,7 @@ const operateurMultiPosteFixture = {
 const referentielMultiPosteFixture: ReferentielDuPupitre = {
   operateurs: [operateurMultiPosteFixture],
   suivis: [elementFixture],
+  categories: [],
 };
 
 interface RequeteMetier {
@@ -201,7 +204,8 @@ describe('Pupitre workshop journey', () => {
           id: suivi.id,
           nom: suivi.nom,
           etat: suivi.etat,
-          type: suivi.type,
+          categorie: suivi.categorie,
+          type: suivi.categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT',
           ...(suivi.reference === undefined ? {} : { reference: suivi.reference }),
           activites: suivi.activites.map(activite => ({
             operateur: activite.operateurId,
@@ -213,6 +217,7 @@ describe('Pupitre workshop journey', () => {
           })),
           conflits: [],
         })),
+        categories: referentiel.categories,
       },
     }).as('workshop');
     observeWorkshopWrites();
@@ -235,6 +240,7 @@ describe('Pupitre workshop journey', () => {
       body: {
         id: new URL(request.url).pathname.split('/')[4],
         nom: 'OF-1',
+        categorie: 'OF',
         type: 'ORDRE_DE_FABRICATION',
         element: 'element',
         engageLe: '2026-09-05T07:00:00Z',

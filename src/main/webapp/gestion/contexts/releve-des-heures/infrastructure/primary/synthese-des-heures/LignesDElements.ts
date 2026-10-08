@@ -47,7 +47,7 @@ export interface LigneDeFrise {
   readonly cle: string;
   readonly cellules: readonly CelluleDeLigne[];
   readonly sousLignes: readonly SousLigneDeFrise[];
-  readonly type: string;
+  readonly categorie: string;
   readonly numero: string;
   readonly libelle: string;
   readonly postes: string;
@@ -165,7 +165,7 @@ export const ligneDeFrise = (element: ElementDuReleve, jours: readonly JourSurSo
   cle: element.id.value,
   cellules: cellulesDe(element, jours, () => !enParallele),
   sousLignes: enParallele ? sousLignesDe(element, jours) : [],
-  type: LIBELLES.typeDElement(element.type),
+  categorie: element.categorie.value,
   numero: element.numero(),
   libelle: element.description ?? '',
   postes: LIBELLES.postes(element.postes),

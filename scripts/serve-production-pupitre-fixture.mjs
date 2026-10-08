@@ -41,12 +41,14 @@ const workshopItem = {
   etat: 'EN_ATTENTE',
   id: 'workshop-item-1',
   nom: 'OF-1',
+  categorie: 'MOULE',
   type: 'PRODUIT',
 };
 
 const publication = {
   id: workshopItem.id,
   nom: workshopItem.nom,
+  categorie: workshopItem.categorie,
   type: workshopItem.type,
   etat: 'EN_ATTENTE',
   element: 'element-1',
@@ -205,7 +207,7 @@ const appServer = createServer(async (request, response) => {
   if (isReferentielRequest(url)) {
     state.referenceRequests += 1;
     recordEvidence();
-    json(response, 200, { genereLe: '2026-09-05T08:05:00Z', operateurs: [operator], suivis: [workshopItem] });
+    json(response, 200, { genereLe: '2026-09-05T08:05:00Z', operateurs: [operator], suivis: [workshopItem], categories: ['MOULE'] });
     return;
   }
   if (isPostTo(request, url, '/api/atelier/suivis/workshop-item-1/pointages')) {

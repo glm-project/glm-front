@@ -1,12 +1,12 @@
 import { TotalDeDuree } from '../duree/TotalDeDuree';
+import { CategorieDElement } from './CategorieDElement';
 import { ElementReleveId } from './ElementReleveId';
 import { PosteDeLElement } from './PosteDeLElement';
 import { PosteReleveId } from './PosteReleveId';
-import { TypeDElement } from './TypeDElement';
 
 export interface FicheDElement {
   readonly id: ElementReleveId;
-  readonly type: TypeDElement;
+  readonly categorie: CategorieDElement;
   readonly nom: string;
   readonly reference: string | undefined;
   readonly description: string | undefined;
@@ -17,7 +17,7 @@ export interface FicheDElement {
 
 export class ElementDuReleve {
   readonly id: ElementReleveId;
-  readonly type: TypeDElement;
+  readonly categorie: CategorieDElement;
   readonly description: string | undefined;
   readonly duree: TotalDeDuree;
   readonly dureeNonConformite: TotalDeDuree;
@@ -27,7 +27,7 @@ export class ElementDuReleve {
 
   constructor(fiche: FicheDElement) {
     this.id = fiche.id;
-    this.type = fiche.type;
+    this.categorie = fiche.categorie;
     this.nom = fiche.nom;
     this.reference = fiche.reference;
     this.description = fiche.description;

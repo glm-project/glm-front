@@ -2,6 +2,7 @@ import { TotalDeDuree } from '@/gestion/contexts/releve-des-heures/domain/duree/
 import { PointageReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageReleveId';
 import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { ActiviteDuReleve } from '../element/ActiviteDuReleve';
+import { CategorieDElement } from '../element/CategorieDElement';
 import { ElementDuReleve } from '../element/ElementDuReleve';
 import { ElementReleveId } from '../element/ElementReleveId';
 import { IntervalleDActivite } from '../element/IntervalleDActivite';
@@ -50,7 +51,7 @@ const instantDe = (heure: string): InstantDeReleve => new InstantDeReleve(`2026-
 const elementFixture = (id: string): ElementDuReleve =>
   new ElementDuReleve({
     id: new ElementReleveId(id),
-    type: 'PRODUIT',
+    categorie: new CategorieDElement('MOULE'),
     nom: id,
     reference: undefined,
     description: undefined,

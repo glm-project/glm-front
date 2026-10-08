@@ -1,12 +1,14 @@
 import { Page } from '@/app/shared/pagination/domain/Page';
 import { ok, Result } from '@/app/shared/result/domain/Result';
+import { CategorieDeProduit } from '@/gestion/contexts/element-de-fabrication/domain/CategorieDeProduit';
 import { CommandeCreationElement } from '@/gestion/contexts/element-de-fabrication/domain/CommandeCreationElement';
 import { CommandeModificationElement } from '@/gestion/contexts/element-de-fabrication/domain/CommandeModificationElement';
 import { ElementDeFabrication } from '@/gestion/contexts/element-de-fabrication/domain/ElementDeFabrication';
 import { ElementDeFabricationId } from '@/gestion/contexts/element-de-fabrication/domain/ElementDeFabricationId';
 import { ElementsDeFabricationPort } from '@/gestion/contexts/element-de-fabrication/domain/ElementsDeFabricationPort';
 import { NomDElement } from '@/gestion/contexts/element-de-fabrication/domain/NomDElement';
-import { ReferenceDejaUtilisee } from '@/gestion/contexts/element-de-fabrication/domain/ReferenceDejaUtilisee';
+import { ReferentielDesProduits } from '@/gestion/contexts/element-de-fabrication/domain/ReferentielDesProduits';
+import { RefusCreationElement } from '@/gestion/contexts/element-de-fabrication/domain/RefusCreationElement';
 import { RefusModificationElement } from '@/gestion/contexts/element-de-fabrication/domain/RefusModificationElement';
 import { RequeteElements } from '@/gestion/contexts/element-de-fabrication/domain/RequeteElements';
 
@@ -15,14 +17,15 @@ import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 const NOM_ATTRIBUE = 'PRD-2026-000001';
 
 export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
+  categories: readonly CategorieDeProduit[] = [];
   liste: readonly ElementDeFabrication[] = [];
   readonly enregistrements: (CommandeCreationElement | CommandeModificationElement)[] = [];
-  creation: Result<void, ReferenceDejaUtilisee> = ok(undefined);
+  creation: Result<void, RefusCreationElement> = ok(undefined);
   modification: Result<void, RefusModificationElement> = ok(undefined);
   lectureFailure: Error | undefined;
   ecritureFailure: Error | undefined;
   lectureDifferee: Promise<Page<ElementDeFabrication>> | undefined;
-  creationDifferee: Promise<Result<void, ReferenceDejaUtilisee>> | undefined;
+  creationDifferee: Promise<Result<void, RefusCreationElement>> | undefined;
   private lectureSignal: SignalFixture | undefined;
 
   signalLecture(): Promise<void> {
@@ -30,8 +33,9 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
     return this.lectureSignal.promise;
   }
 
-  override async referentiel(): Promise<readonly ElementDeFabrication[]> {
-    return (await this.elements(new RequeteElements(0, Number.MAX_SAFE_INTEGER))).elements;
+  override async referentiel(): Promise<ReferentielDesProduits> {
+    const page = await this.elements(new RequeteElements(0, Number.MAX_SAFE_INTEGER));
+    return new ReferentielDesProduits(this.categories, page.elements);
   }
 
   override elements(requete: RequeteElements): Promise<Page<ElementDeFabrication>> {
@@ -44,14 +48,14 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
     );
   }
 
-  override async creer(commande: CommandeCreationElement): Promise<Result<void, ReferenceDejaUtilisee>> {
+  override async creer(commande: CommandeCreationElement): Promise<Result<void, RefusCreationElement>> {
     this.enregistrements.push(commande);
     const resultat = await this.answerEnregistrement(this.creationDifferee ?? Promise.resolve(this.creation));
     if (resultat.ok) {
       this.liste = [
         ...this.liste,
         new ElementDeFabrication(new ElementDeFabricationId('created-element'), {
-          type: commande.type,
+          categorie: commande.categorie,
           nom: new NomDElement(NOM_ATTRIBUE),
           reference: commande.reference,
           libelle: commande.libelle,
@@ -72,7 +76,7 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
 
   private revise(element: ElementDeFabrication, commande: CommandeModificationElement): ElementDeFabrication {
     return new ElementDeFabrication(element.id, {
-      type: element.type,
+      categorie: element.categorie,
       nom: element.nom,
       reference: commande.reference,
       libelle: commande.libelle,

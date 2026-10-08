@@ -1,19 +1,19 @@
+import { CategorieDElement } from './CategorieDElement';
 import { ReferenceDElement } from './ReferenceDElement';
-import { TypeDElement } from './TypeDElement';
 
 export interface DescriptionElementTravaille {
-  readonly type: TypeDElement;
+  readonly categorie: CategorieDElement;
   readonly nom: string;
   readonly reference?: ReferenceDElement;
 }
 
 export class ElementTravaille {
-  readonly type: TypeDElement;
+  readonly categorie: CategorieDElement;
   readonly nom: string;
   readonly reference: ReferenceDElement | undefined;
 
   constructor(description: DescriptionElementTravaille) {
-    this.type = description.type;
+    this.categorie = description.categorie;
     this.nom = description.nom;
     this.reference = description.reference;
   }

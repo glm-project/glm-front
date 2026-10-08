@@ -19,8 +19,8 @@ const DESTINATIONS: readonly Destination[] = [
   { route: '/', libelle: 'Supervision', selecteur: 'gestion-navigation-supervision', exacte: true, reserveeAuGestionnaire: false },
   { route: '/atelier', libelle: 'Atelier', selecteur: 'gestion-navigation-atelier', exacte: false, reserveeAuGestionnaire: false },
   {
-    route: '/moules-et-of',
-    libelle: 'Moules et OF',
+    route: '/produits',
+    libelle: 'Produits',
     selecteur: 'gestion-navigation-elements',
     exacte: false,
     reserveeAuGestionnaire: false,

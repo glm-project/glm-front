@@ -121,7 +121,7 @@
                   <span class="flex min-w-0 flex-wrap items-center gap-x-1" data-selector="supervision-activite-element">
                     <span
                       class="inline-flex h-5 items-center rounded border border-border px-1.5 text-label whitespace-nowrap text-ink-muted"
-                      >{{ libelles.types[objet.type] }}</span
+                      >{{ objet.categorie.value }}</span
                     >&ngsp;@if (objet.reference; as reference) {
                     <span class="text-body font-semibold tabular-nums">{{ reference.value }}</span>
                     } @else {

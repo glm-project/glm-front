@@ -13,7 +13,7 @@ import { ElementEngageId } from '../../../domain/ElementEngageId';
 import { ElementsEngageablesPort } from '../../../domain/ElementsEngageablesPort';
 import { RefusMiseALAtelier } from '../../../domain/RefusMiseALAtelier';
 import { RequeteEngageables } from '../../../domain/RequeteEngageables';
-import { LIBELLES_ATELIER, LIBELLES_MISE_A_L_ATELIER } from '../LibellesAtelier';
+import { LIBELLES_MISE_A_L_ATELIER } from '../LibellesAtelier';
 
 export interface MiseALAtelierDialogData {
   readonly preselection: ElementEngageId | undefined;
@@ -57,7 +57,7 @@ export class MiseALAtelierDialog implements OnInit {
   private readonly errors = inject(ErrorHandlerPort);
 
   protected readonly libelles = LIBELLES_MISE_A_L_ATELIER;
-  protected readonly colonnes = ['type', 'designation', 'actions'];
+  protected readonly colonnes = ['categorie', 'designation', 'actions'];
   protected readonly vue = signal<VueMiseALAtelier>({ kind: 'CHARGEMENT' });
   protected readonly page = signal(0);
   protected readonly taille = signal(20);
@@ -85,10 +85,6 @@ export class MiseALAtelierDialog implements OnInit {
     this.page.set(event.pageIndex);
     this.taille.set(event.pageSize);
     this.reload();
-  }
-
-  protected libelleDuType(element: ElementEngageable): string {
-    return LIBELLES_ATELIER.types[element.type];
   }
 
   protected engager(element: ElementEngageable): void {

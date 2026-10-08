@@ -14,7 +14,7 @@ import { requiredFixture } from '../../../utils/RequiredFixture';
 const ROUTES = [
   ['heures', '/operateurs/op-1/heures?annee=2026&semaine=38&jour=2026-09-18', 'synthese-detail-jour'],
   ['supervision', '/', 'supervision-plateau'],
-  ['references', '/moules-et-of', 'element-row'],
+  ['references', '/produits', 'element-row'],
   ['operateurs', '/operateurs', 'operateur-row'],
   ['postes', '/postes-de-travail', 'poste-row'],
   ['couts', '/couts-de-revient/element-1', 'cout-total'],

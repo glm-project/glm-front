@@ -360,7 +360,7 @@ describe('Synthese des heures component', () => {
     expect(present('synthese-presence-libelle')).toBe(false);
     expect(texte('synthese-operationnel-total')).toBe('2 h 00');
     expect(textes('synthese-operationnel-jour')[0]).toBe('2 h 00');
-    expect(titresDe(barresDe('travail'))).toEqual(['Moule 1015, lundi 14, 08:00 à 10:00, travail']);
+    expect(titresDe(barresDe('travail'))).toEqual(['MOULE 1015, lundi 14, 08:00 à 10:00, travail']);
     expect(marquesDuJourOuvert()).toEqual([]);
   });
 
@@ -534,7 +534,7 @@ describe('Synthese des heures component', () => {
       await whenEcranAffiche();
 
       expect(texte('synthese-conflits-titre')).toBe('Séquences en conflit');
-      expect(textes('synthese-conflit-element')).toEqual(['Moule 1015 · DMU 50']);
+      expect(textes('synthese-conflit-element')).toEqual(['MOULE 1015 · DMU 50']);
       expect(textes('synthese-conflit-fait')).toEqual([
         'Non-conformité 12:00 · Transition de l’activité a · nc-b',
         'Fin 17:00 · Fin de l’activité a · fin-a',
@@ -716,7 +716,7 @@ describe('Synthese des heures component', () => {
     givenReleve(
       releveFixture(SEMAINE_EN_COURS, {}, {}, [
         elementFixture({
-          type: 'PRODUIT',
+          categorie: 'MOULE',
           reference: '1015',
           description: 'Carter de pompe',
           postes: [
@@ -724,19 +724,19 @@ describe('Synthese des heures component', () => {
             ['Mazak QT-200', undefined],
           ],
         }),
-        elementFixture({ id: 'element-2', type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000057' }),
+        elementFixture({ id: 'element-2', categorie: 'OF', nom: 'OF-2026-000057' }),
       ]),
     );
 
     await whenEcranAffiche();
 
     expect([
-      textes('synthese-element-type'),
+      textes('synthese-element-categorie'),
       textes('synthese-element-numero'),
       textes('synthese-element-libelle'),
       textes('synthese-element-postes'),
     ]).toEqual([
-      ['Moule', 'OF'],
+      ['MOULE', 'OF'],
       ['1015', 'OF-2026-000057'],
       ['Carter de pompe', ''],
       ['DMU 50 · Fraisage, Mazak QT-200', ''],
@@ -832,9 +832,9 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
 
     expect([textesDe(barresDe('travail')), titresDe(barresDe('travail')), textesDe(barresDe('nc'))]).toEqual([
-      ['Moule 1015, lundi 14, 08:00 à 12:00, travail'],
-      ['Moule 1015, lundi 14, 08:00 à 12:00, travail'],
-      ['Moule 1015, lundi 14, 12:00 à 14:00, non-conformité'],
+      ['MOULE 1015, lundi 14, 08:00 à 12:00, travail'],
+      ['MOULE 1015, lundi 14, 08:00 à 12:00, travail'],
+      ['MOULE 1015, lundi 14, 12:00 à 14:00, non-conformité'],
     ]);
   });
 
@@ -867,7 +867,7 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
 
     expect([textesDe(barresDe('travail')), marquesDuJourOuvert()]).toEqual([
-      ['Moule 1015, lundi 14, 08:00 à 10:00, travail'],
+      ['MOULE 1015, lundi 14, 08:00 à 10:00, travail'],
       ['Début 08:00'],
     ]);
   });
@@ -880,7 +880,7 @@ describe('Synthese des heures component', () => {
     await whenEcranAffiche();
 
     expect([textesDe(barresDe('en-cours')), barresDe('travail').length]).toEqual([
-      ['Moule 1015, lundi 14, depuis 10:20, travail, en cours'],
+      ['MOULE 1015, lundi 14, depuis 10:20, travail, en cours'],
       0,
     ]);
   });
@@ -1224,7 +1224,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(entreesDuJournal()).toEqual([['17:45', 'Fin', 'Moule PRD-2026-000015', '']]);
+    expect(entreesDuJournal()).toEqual([['17:45', 'Fin', 'MOULE PRD-2026-000015', '']]);
   });
 
   it('should put the marker of a clocking on the row of the workstation it names when the element is split', async () => {
@@ -1341,7 +1341,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(entreesDuJournal()).toEqual([['07:05', 'Début', 'Moule 1015', '']]);
+    expect(entreesDuJournal()).toEqual([['07:05', 'Début', 'MOULE 1015', '']]);
   });
 
   it('should title the journal with the day and the number of its clockings', async () => {
@@ -1427,7 +1427,7 @@ describe('Synthese des heures component', () => {
 
     await whenAnotherWeekIsOpened({ annee: '2026', semaine: '37', jour: '2026-09-07' });
 
-    expect([entreesDuJournal(), entreesPressees()]).toEqual([[['09:00', 'Début', 'Moule PRD-2026-000015', '']], []]);
+    expect([entreesDuJournal(), entreesPressees()]).toEqual([[['09:00', 'Début', 'MOULE PRD-2026-000015', '']], []]);
   });
 
   it('should choose no clocking at the opening of a day', async () => {
@@ -1801,7 +1801,7 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(textes('synthese-conflit-element')).toEqual(['Moule 1015']);
+    expect(textes('synthese-conflit-element')).toEqual(['MOULE 1015']);
     expect(textes('synthese-conflit-fait')).toEqual(['Début 08:00 · Ouverture · a']);
   });
 

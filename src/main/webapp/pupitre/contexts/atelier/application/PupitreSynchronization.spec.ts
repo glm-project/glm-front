@@ -21,7 +21,7 @@ import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionF
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
-const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
+const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [], categories: [] };
 const gesteFixture: GesteDePointage = {
   id: 'arrivee',
   dateDeSurvenue: '2026-09-05T08:00:00Z',
@@ -562,6 +562,7 @@ describe('PupitreSynchronization', () => {
       return {
         operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
         suivis: [],
+        categories: [],
       };
     };
   };
@@ -571,6 +572,7 @@ describe('PupitreSynchronization', () => {
       return {
         operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
         suivis: [],
+        categories: [],
       };
     };
   };
@@ -638,6 +640,7 @@ describe('PupitreSynchronization', () => {
     server.onReferentiel = (): ReferentielDuPupitre => ({
       operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
       suivis: [],
+      categories: [],
     });
   };
   const givenSessionTokenExpiresBeforePush = (): void => {

@@ -1,11 +1,5 @@
 import { EtatALAtelier } from '../../domain/EtatALAtelier';
 import { FiltreDAtelier } from '../../domain/FiltreDAtelier';
-import { TypeDElementEngage } from '../../domain/TypeDElementEngage';
-
-const TYPES: Record<TypeDElementEngage, string> = {
-  PRODUIT: 'Moule',
-  ORDRE_DE_FABRICATION: 'OF',
-};
 
 const ETATS: Record<EtatALAtelier, string> = {
   EN_ATTENTE: 'En attente',
@@ -25,14 +19,13 @@ const VIDES: Record<FiltreDAtelier, string> = {
 };
 
 const VIDES_DETAILS: Record<FiltreDAtelier, string> = {
-  ACTIFS: 'Mettez un moule ou un OF à l’atelier pour qu’il apparaisse sur les écrans des opérateurs.',
+  ACTIFS: 'Mettez un produit à l’atelier pour qu’il apparaisse sur les écrans des opérateurs.',
   CLOTURES: 'Les éléments que vous clôturerez se retrouveront ici, et resteront réouvrables.',
 };
 
 export const LIBELLES_ATELIER = {
   titre: 'Atelier',
-  sousTitre: 'Mettez les moules et les OF à l’atelier, puis clôturez-les quand ils sont terminés.',
-  types: TYPES,
+  sousTitre: 'Mettez les produits à l’atelier, puis clôturez-les quand ils sont terminés.',
   etats: ETATS,
   filtres: FILTRES,
   filtreAria: 'Ce que la liste montre',
@@ -44,7 +37,7 @@ export const LIBELLES_ATELIER = {
   coutDeRevient: 'Coût de revient',
   coutDeRevientDe: (nom: string): string => `Voir le coût de revient de ${nom}`,
   colonnes: {
-    type: 'Type',
+    categorie: 'Catégorie',
     nom: 'Nom',
     etat: 'État',
     engagement: 'Mis à l’atelier le',
@@ -79,13 +72,13 @@ export const LIBELLES_MISE_A_L_ATELIER = {
   erreur: 'Impossible de charger le référentiel. Vérifiez la connexion puis réessayez.',
   reessayer: 'Réessayer',
   introuvable: 'Cet élément n’existe plus dans le référentiel.',
-  vide: 'Aucun moule ni OF dans le référentiel.',
+  vide: 'Aucun produit dans le référentiel.',
   colonnes: {
-    type: 'Type',
+    categorie: 'Catégorie',
     designation: 'Désignation',
     actions: 'Actions',
   },
-  tableau: 'Moules et OF engageables',
+  tableau: 'Produits engageables',
   engager: 'Mettre à l’atelier',
   engagementDe: (designation: string): string => `Mettre ${designation} à l’atelier`,
   engagement: 'Mise à l’atelier…',

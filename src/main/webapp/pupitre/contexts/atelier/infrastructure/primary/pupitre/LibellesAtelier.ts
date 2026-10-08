@@ -1,18 +1,12 @@
 import { ContexteDeGesteDAtelier, IntentionGlobaleDAtelier } from '../../../domain/designation/fenetre-operateur/ContexteDeGesteDAtelier';
 import { ElementDePointage } from '../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../domain/designation/NumeroDElement';
-import { TypeDElement } from '../../../domain/journal-du-pupitre/JournalDuPupitre';
 import { RetardDePublication } from '../../../domain/journal-du-pupitre/RetardDePublication';
 
 const formatDuree = (dureeMs: number): string => {
   const minutes = Math.floor(dureeMs / 60_000);
   const heures = Math.floor(minutes / 60);
   return `${heures} h ${String(minutes % 60).padStart(2, '0')}`;
-};
-
-const ZONES: Record<TypeDElement, string> = {
-  PRODUIT: 'Moules',
-  ORDRE_DE_FABRICATION: 'OF',
 };
 
 const COMMANDES_GLOBALES: Record<IntentionGlobaleDAtelier, string> = {
@@ -25,7 +19,6 @@ export const toLibelleContexteAtelier = (contexte: ContexteDeGesteDAtelier): str
   contexte.kind === 'ELEMENT' ? contexte.numero.toString() : COMMANDES_GLOBALES[contexte.intention];
 
 export const LIBELLES_POINTAGE = {
-  zones: ZONES,
   nonConformite: 'NC',
   conflit: 'En conflit — nouvelle ouverture possible',
   actionPrincipale: (element: ElementDePointage): 'DÉMARRER' | 'ARRÊTER' => (element.isActive() ? 'ARRÊTER' : 'DÉMARRER'),

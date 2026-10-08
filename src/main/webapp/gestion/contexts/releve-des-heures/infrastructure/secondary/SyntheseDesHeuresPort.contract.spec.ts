@@ -58,6 +58,7 @@ const syntheseFixture = (): RestSynthese => ({
   elements: [
     {
       id: 'element-1',
+      categorie: 'MOULE',
       type: 'PRODUIT',
       nom: 'Moule',
       reference: '1015',

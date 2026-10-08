@@ -8,6 +8,7 @@ import { inject, Injectable } from '@angular/core';
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
 import { TotalDeDuree } from '../../domain/duree/TotalDeDuree';
 import { ActiviteDuReleve } from '../../domain/element/ActiviteDuReleve';
+import { CategorieDElement } from '../../domain/element/CategorieDElement';
 import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
 import { ElementReleveId } from '../../domain/element/ElementReleveId';
 import { IntervalleDActivite } from '../../domain/element/IntervalleDActivite';
@@ -78,7 +79,7 @@ const toPoste = ({ poste, nature }: RestPosteDeLElement): PosteDeLElement =>
 const toElement = (element: RestElement): ElementDuReleve =>
   new ElementDuReleve({
     id: new ElementReleveId(element.id),
-    type: element.type,
+    categorie: new CategorieDElement(element.categorie),
     nom: element.nom,
     reference: element.reference,
     description: element.description,
