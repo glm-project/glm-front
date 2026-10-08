@@ -4,18 +4,23 @@
       <h1 id="elements-heading" class="text-title">{{ libelles.titre }}</h1>
       <p class="mt-1 max-w-3xl text-body text-ink-muted">{{ libelles.sousTitre }}</p>
     </div>
-    <div class="flex flex-wrap gap-2" data-selector="elements-creations">
-      @for (categorie of etat().categories; track categorie.value) {
-      <button
-        mat-stroked-button
-        (click)="openCreation(categorie)"
-        [disabled]="etat().chargement"
-        [attr.aria-label]="libelles.creation(categorie)"
-        [attr.data-selector]="'elements-new-' + categorie.value"
-      >
-        <glm-icon name="plus" /> {{ categorie.value }}
+    <div class="flex flex-wrap items-center gap-2">
+      <button mat-button type="button" (click)="openCategories()" [disabled]="etat().chargement" data-selector="elements-categories">
+        {{ libellesCategories.ouvrir }}
       </button>
-      }
+      <div class="flex flex-wrap gap-2" data-selector="elements-creations">
+        @for (categorie of etat().categories; track categorie.value) {
+        <button
+          mat-stroked-button
+          (click)="openCreation(categorie)"
+          [disabled]="etat().chargement"
+          [attr.aria-label]="libelles.creation(categorie)"
+          [attr.data-selector]="'elements-new-' + categorie.value"
+        >
+          <glm-icon name="plus" /> {{ categorie.value }}
+        </button>
+        }
+      </div>
     </div>
   </header>
 
@@ -70,7 +75,10 @@
     } @else if (etat().sansCategorie) {
     <div class="px-6 py-16 text-center" data-selector="elements-sans-categorie">
       <h2 class="text-section">{{ libelles.sansCategorie }}</h2>
-      <p class="mx-auto mt-2 max-w-lg text-body text-ink-muted">{{ libelles.sansCategorieDetails }}</p>
+      <p class="mx-auto mb-6 mt-2 max-w-lg text-body text-ink-muted">{{ libelles.sansCategorieDetails }}</p>
+      <button mat-flat-button type="button" (click)="openCategories()" data-selector="elements-sans-categorie-declarer">
+        {{ libellesCategories.titre }}
+      </button>
     </div>
     } @else if (etat().totalElementsCount === 0) {
     <div class="px-6 py-16 text-center" data-selector="elements-empty">

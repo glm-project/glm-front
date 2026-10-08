@@ -1,0 +1,51 @@
+<h2 mat-dialog-title class="text-section" data-selector="categories-title">{{ libelles.titre }}</h2>
+<mat-dialog-content>
+  <p class="mb-4 text-body-sm text-ink-muted">{{ libelles.introduction }}</p>
+  @if (chargement()) {
+  <p role="status" class="py-6 text-center text-body text-ink-muted" data-selector="categories-loading">{{ libelles.chargement }}</p>
+  } @else if (echec()) {
+  <glm-error-message
+    class="py-6 text-center"
+    data-selector="categories-error"
+    [message]="libelles.erreur"
+    [retryLabel]="libelles.reessayer"
+    retrySelector="categories-retry"
+    (retryRequested)="reload()"
+  />
+  } @else if (categories().length === 0) {
+  <p class="py-6 text-center text-body text-ink-muted" data-selector="categories-empty">{{ libelles.vide }}</p>
+  } @else {
+  <ol class="mb-6 flex flex-col gap-2" [attr.aria-label]="libelles.liste" data-selector="categories-list">
+    @for (categorie of categories(); track categorie.value) {
+    <li class="flex items-center gap-2" data-selector="categorie-row">
+      <span class="gestion-type" data-selector="categorie-item">{{ categorie.value }}</span>
+    </li>
+    }
+  </ol>
+  }
+  <form novalidate (submit)="declarer($event)" data-selector="categorie-form">
+    <fieldset [disabled]="enregistrement()">
+      <glm-text-field
+        fieldId="categorie-code"
+        name="code"
+        [label]="libelles.nouvelle"
+        [labelComplement]="libelles.nouvelleComplement"
+        [required]="true"
+        [help]="libelles.aideCode"
+        [uppercase]="true"
+        [value]="formulaire().saisie"
+        [error]="soumis() ? formulaire().erreurCode() : undefined"
+        (valueChanged)="changeCode($event)"
+      />
+    </fieldset>
+    @if (erreurTechnique()) {
+    <p role="alert" class="mt-2 text-body-sm text-danger" data-selector="categorie-technical-error">{{ libelles.erreurTechnique }}</p>
+    }
+    <button mat-flat-button type="submit" class="mt-4" [disabled]="enregistrement()" data-selector="categorie-declare">
+      {{ enregistrement() ? libelles.declaration : libelles.declarer }}
+    </button>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" [mat-dialog-close]="true" data-selector="categories-close">{{ libelles.fermer }}</button>
+</mat-dialog-actions>

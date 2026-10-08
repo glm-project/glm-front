@@ -56,6 +56,15 @@ describe('Manufacturing element referential in gestion', () => {
     thenElementIsListed('1099', 'MOULE', '—');
   });
 
+  it('should create a product in a category declared from the category management', () => {
+    givenReferential();
+    whenVisitingReferential();
+    whenDeclaringCategory('piece');
+    whenCreating('elements-new-PIECE', '2001', 'Insert');
+
+    thenElementIsListed('2001', 'PIECE', 'Insert');
+  });
+
   it('should paginate the referential without asking for any period', () => {
     givenReferential(21);
     whenVisitingReferential();
@@ -69,6 +78,14 @@ const givenReferential = (nombre = 0): ElementsApiFixture => {
   const api = new ElementsApiFixture(elementsFixture(nombre));
   api.install();
   return api;
+};
+const whenDeclaringCategory = (code: string): void => {
+  cy.get(dataSelector('elements-categories')).click();
+  cy.get(dataSelector('categorie-item')).should('have.length', 2);
+  cy.get(dataSelector('categorie-code')).type(code);
+  cy.get(dataSelector('categorie-declare')).click();
+  cy.get(dataSelector('categorie-item')).should('contain.text', code.toUpperCase());
+  cy.get(dataSelector('categories-close')).click();
 };
 const whenVisitingReferential = (): void => {
   cy.viewport(1280, 900);

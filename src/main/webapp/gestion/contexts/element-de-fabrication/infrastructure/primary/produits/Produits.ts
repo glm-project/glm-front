@@ -10,8 +10,9 @@ import { RouterLink } from '@angular/router';
 import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
+import { CategoriesDeProduitDialog } from '../categories-de-produit-dialog/CategoriesDeProduitDialog';
 import { ElementFormDialog, ElementFormDialogData } from '../element-form-dialog/ElementFormDialog';
-import { LIBELLES_ELEMENTS_DE_FABRICATION } from '../LibellesElementsDeFabrication';
+import { LIBELLES_CATEGORIES_DE_PRODUIT, LIBELLES_ELEMENTS_DE_FABRICATION } from '../LibellesElementsDeFabrication';
 
 interface EtatElements {
   readonly categories: readonly CategorieDeProduit[];
@@ -54,6 +55,7 @@ export class Produits implements OnInit {
   private readonly viewContainerRef = inject(ViewContainerRef);
   private lecture = 0;
   protected readonly libelles = LIBELLES_ELEMENTS_DE_FABRICATION;
+  protected readonly libellesCategories = LIBELLES_CATEGORIES_DE_PRODUIT;
   protected readonly colonnes = ['categorie', 'reference', 'nom', 'libelle', 'actions'];
   protected readonly etat = signal<EtatElements>({
     categories: [],
@@ -124,6 +126,18 @@ export class Produits implements OnInit {
   private correspondAuFiltre(element: ElementDeFabrication): boolean {
     const filtre = this.filtre();
     return filtre === undefined || element.categorie.estLaMeme(filtre);
+  }
+
+  protected openCategories(): void {
+    const dialogRef = this.dialogs.open(CategoriesDeProduitDialog, {
+      viewContainerRef: this.viewContainerRef,
+      autoFocus: '#categorie-code',
+      width: '32rem',
+      maxWidth: 'calc(100vw - 2rem)',
+    });
+    dialogRef.afterClosed().subscribe(() => {
+      this.reload();
+    });
   }
 
   private openForm(data: ElementFormDialogData): void {

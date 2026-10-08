@@ -11,6 +11,25 @@ describe('Manufacturing element interactions and rendering', () => {
     thenCreationStartsEmpty(api);
   });
 
+  it('should open the category management on its code field and show the typing in capital letters', () => {
+    givenReferential();
+    whenVisitingReferential();
+    whenOpeningCategoryManagement();
+    whenTypingCategoryCode('piece');
+
+    thenCodeFieldShowsCapitalLetters('piece');
+  });
+
+  it('should show an existing category on the code field and keep the management open', () => {
+    givenReferential();
+    whenVisitingReferential();
+    whenOpeningCategoryManagement();
+    whenTypingCategoryCode('moule');
+    whenDeclaringCategory();
+
+    thenExistingCategoryIsRefused();
+  });
+
   it('should dismiss creation with Escape without writing', () => {
     const api = givenReferential();
     whenVisitingReferential();
@@ -107,6 +126,25 @@ const whenVisitingMobileReferential = (): void => {
   cy.visit('/produits');
   cy.get(dataSelector('element-row')).should('have.length', 2);
   cy.screenshot('elements-mobile', { capture: 'viewport' });
+};
+const whenOpeningCategoryManagement = (): void => {
+  cy.get(dataSelector('elements-categories')).click();
+  cy.get(dataSelector('categorie-item')).should('have.length', 2);
+};
+const whenTypingCategoryCode = (code: string): void => {
+  cy.focused().should('have.attr', 'data-selector', 'categorie-code');
+  cy.focused().type(code);
+};
+const whenDeclaringCategory = (): void => {
+  cy.get(dataSelector('categorie-declare')).click();
+  cy.wait('@categorieDeclare');
+};
+const thenCodeFieldShowsCapitalLetters = (code: string): void => {
+  cy.get(dataSelector('categorie-code')).should('have.value', code).and('have.css', 'text-transform', 'uppercase');
+};
+const thenExistingCategoryIsRefused = (): void => {
+  cy.get(dataSelector('categorie-code-error')).should('have.text', 'Cette catégorie existe déjà.');
+  cy.get(dataSelector('categories-title')).should('be.visible');
 };
 const whenOpeningCreation = (selector: string): void => {
   cy.get(dataSelector(selector)).should('be.enabled').click();

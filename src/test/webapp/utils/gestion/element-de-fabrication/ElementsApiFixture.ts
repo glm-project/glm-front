@@ -62,6 +62,15 @@ export class ElementsApiFixture {
         totalElementsCount: this.categories.length,
       });
     }).as('categoriesRead');
+    cy.intercept('POST', CATEGORIES, request => {
+      const { code } = request.body as { code: string };
+      if (this.categories.includes(code)) {
+        request.reply({ statusCode: 409, body: { type: 'urn:glm:erreur:categorie-de-produit:categorie-deja-existante' } });
+        return;
+      }
+      this.categories.push(code);
+      request.reply({ statusCode: 201, body: { code } });
+    }).as('categorieDeclare');
   }
 
   private installSingleRead(): void {

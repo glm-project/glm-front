@@ -1,3 +1,7 @@
 :host {
   display: block;
 }
+
+.field-input--uppercase {
+  text-transform: uppercase;
+}

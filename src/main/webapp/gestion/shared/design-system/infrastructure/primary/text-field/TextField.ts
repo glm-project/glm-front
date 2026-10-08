@@ -13,6 +13,7 @@ export class TextField {
   readonly value = input.required<string>();
   readonly required = input(false);
   readonly inputMode = input<'decimal'>();
+  readonly uppercase = input(false);
   readonly help = input<string>();
   readonly error = input<string>();
   readonly valueChanged = output<string>();

@@ -6,11 +6,13 @@ import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { CategoriesDeProduitFixture } from '@test/unit/fixtures/gestion/element-de-fabrication/CategoriesDeProduitFixture';
 import { ElementsDeFabricationFixture } from '@test/unit/fixtures/gestion/element-de-fabrication/ElementsDeFabricationFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
 import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
+import { CategoriesDeProduitPort } from '../../../domain/CategoriesDeProduitPort';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementDeFabricationId } from '../../../domain/ElementDeFabricationId';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
@@ -43,6 +45,7 @@ describe('Produits page', () => {
         provideRouter([]),
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: ElementsDeFabricationPort, useValue: port },
+        { provide: CategoriesDeProduitPort, useValue: new CategoriesDeProduitFixture() },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
       ],
     });
@@ -163,6 +166,26 @@ describe('Produits page', () => {
 
     expect(text('elements-sans-categorie')).toContain('Aucune catégorie de produit');
     expect(creations()).toEqual([]);
+  });
+
+  it.each(['elements-categories', 'elements-sans-categorie-declarer'])('should open the category management from %s', async selector => {
+    givenNoCategory();
+    await whenOpening();
+
+    await whenClicking(selector);
+
+    expect(text('categories-title')).toBe('Catégories de produit');
+  });
+
+  it('should offer the creation in a category declared from the management once it is closed', async () => {
+    givenCategories(['MOULE']);
+    await whenOpening();
+    await whenClicking('elements-categories');
+    givenCategories(['MOULE', 'PIECE']);
+
+    await whenClosingDialog(true);
+
+    expect(creations()).toEqual(['MOULE', 'PIECE']);
   });
 
   it('should offer the creations and the filters in the order the company chose for its categories', async () => {
