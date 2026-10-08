@@ -138,9 +138,6 @@ const etatsDemandes = (url: string): string[] => {
 
 const identifiantDans = (url: string): string => url.split('/').slice(-2)[0] ?? '';
 
-const typeDeLaCategorie = (categorie: string): 'ORDRE_DE_FABRICATION' | 'PRODUIT' =>
-  categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT';
-
 const corpsDe = (suivi: SuiviEnregistre): RestSuivi => ({
   activitesEnCours: [],
   element: suivi.element,
@@ -150,7 +147,6 @@ const corpsDe = (suivi: SuiviEnregistre): RestSuivi => ({
   id: suivi.id,
   nom: suivi.nom,
   categorie: suivi.categorie,
-  type: typeDeLaCategorie(suivi.categorie),
   ...(suivi.clotureLe === undefined ? {} : { clotureLe: suivi.clotureLe }),
   ...(suivi.cloturePar === undefined ? {} : { cloturePar: suivi.cloturePar }),
 });

@@ -42,14 +42,12 @@ const workshopItem = {
   id: 'workshop-item-1',
   nom: 'OF-1',
   categorie: 'MOULE',
-  type: 'PRODUIT',
 };
 
 const publication = {
   id: workshopItem.id,
   nom: workshopItem.nom,
   categorie: workshopItem.categorie,
-  type: workshopItem.type,
   etat: 'EN_ATTENTE',
   element: 'element-1',
   engageLe: '2026-09-05T07:00:00Z',

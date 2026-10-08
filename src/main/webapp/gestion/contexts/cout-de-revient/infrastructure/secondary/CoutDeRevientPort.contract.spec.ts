@@ -78,9 +78,6 @@ const PERIODE = { debut: '2026-05-11T09:00:00Z', fin: '2026-05-11T11:00:00Z' };
 const TOTAL = { travail: 'PT2H', nonConformite: 'PT30M', total: 'PT2H30M' };
 const COUT_TOTAL = { machine: 90, mainDOeuvre: 40, total: 130 };
 
-const typeDeLaCategorie = (categorie: CategorieDElementChiffre): 'ORDRE_DE_FABRICATION' | 'PRODUIT' =>
-  categorie.value === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT';
-
 const completFixture = <T>(valeur: T): { complete: true; valeur: T } => ({ complete: true, valeur });
 
 const toRestLigne = (ligne: LigneFixture): RestLigne => ({
@@ -102,7 +99,7 @@ const toRestLigne = (ligne: LigneFixture): RestLigne => ({
 });
 
 const toRest = (lignes: readonly LigneFixture[]): RestRapport => ({
-  element: { id: ELEMENT, nom: 'OF-2026-000001', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
+  element: { id: ELEMENT, nom: 'OF-2026-000001', categorie: 'OF' },
   lignes: lignes.map(toRestLigne),
   temps: { travail: completFixture(TOTAL.travail), nonConformite: completFixture(TOTAL.nonConformite), total: completFixture(TOTAL.total) },
   cout: {
@@ -191,7 +188,6 @@ class CoutDeRevientHttpBackendFixture implements HttpBackend {
               id: element.id.value,
               nom: element.identite.nom,
               categorie: element.identite.categorie.value,
-              type: typeDeLaCategorie(element.identite.categorie),
             })),
             currentPage: 0,
             pageSize: 100,
@@ -433,14 +429,14 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
   ])('should reject pagination changing between pages %j', async following => {
     const result = port.elementsDisponibles().catch((failure: unknown) => failure);
     whenCollectionAnswers({
-      content: [{ id: 'a', nom: 'OF A', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' }],
+      content: [{ id: 'a', nom: 'OF A', categorie: 'OF' }],
       currentPage: 0,
       pageSize: 1,
       totalElementsCount: 3,
     });
     await whenNextPageStarts();
     whenCollectionAnswers({
-      content: following.names.map(id => ({ id, nom: id, categorie: 'MOULE', type: 'PRODUIT' })),
+      content: following.names.map(id => ({ id, nom: id, categorie: 'MOULE' })),
       currentPage: 1,
       pageSize: following.pageSize,
       totalElementsCount: following.totalElementsCount,
@@ -456,8 +452,8 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     const result = port.elementsDisponibles();
     whenCollectionAnswers({
       content: [
-        { id: 'a', nom: 'A', categorie: 'MOULE', type: 'PRODUIT' },
-        { id: 'b', nom: 'B', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
+        { id: 'a', nom: 'A', categorie: 'MOULE' },
+        { id: 'b', nom: 'B', categorie: 'OF' },
       ],
       currentPage: 0,
       pageSize: 2,
@@ -465,7 +461,7 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     });
     await whenNextPageStarts();
     whenCollectionAnswers({
-      content: [{ id: 'c', nom: 'C', categorie: 'MOULE', type: 'PRODUIT' }],
+      content: [{ id: 'c', nom: 'C', categorie: 'MOULE' }],
       currentPage: 1,
       pageSize: 2,
       totalElementsCount: 3,
@@ -475,9 +471,7 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
   });
 
   it.each(['id', 'nom', 'categorie'])('should reject an unavailable identity field %s without dropping that choice', async field => {
-    const identity = Object.fromEntries(
-      Object.entries({ id: 'a', nom: 'A', categorie: 'MOULE', type: 'PRODUIT' }).filter(([name]) => name !== field),
-    );
+    const identity = Object.fromEntries(Object.entries({ id: 'a', nom: 'A', categorie: 'MOULE' }).filter(([name]) => name !== field));
     const result = port.elementsDisponibles().catch((failure: unknown) => failure);
     whenCollectionAnswers({ content: [identity], currentPage: 0, pageSize: 100, totalElementsCount: 1 });
 
@@ -496,7 +490,7 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
   it('should restart at the first page after a later page fails', async () => {
     const first = port.elementsDisponibles().catch((failure: unknown) => failure);
     whenCollectionAnswers({
-      content: [{ id: 'a', nom: 'A', categorie: 'MOULE', type: 'PRODUIT' }],
+      content: [{ id: 'a', nom: 'A', categorie: 'MOULE' }],
       currentPage: 0,
       pageSize: 1,
       totalElementsCount: 2,
@@ -506,14 +500,14 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     const failure = await first;
     const retry = port.elementsDisponibles();
     whenCollectionAnswers({
-      content: [{ id: 'a', nom: 'A', categorie: 'MOULE', type: 'PRODUIT' }],
+      content: [{ id: 'a', nom: 'A', categorie: 'MOULE' }],
       currentPage: 0,
       pageSize: 1,
       totalElementsCount: 2,
     });
     await whenNextPageStarts();
     whenCollectionAnswers({
-      content: [{ id: 'b', nom: 'B', categorie: 'MOULE', type: 'PRODUIT' }],
+      content: [{ id: 'b', nom: 'B', categorie: 'MOULE' }],
       currentPage: 1,
       pageSize: 1,
       totalElementsCount: 2,
@@ -532,7 +526,7 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
   it('should reject an unfilled nonfinal page without waiting for more choices', async () => {
     const result = port.elementsDisponibles().catch((failure: unknown) => failure);
     whenCollectionAnswers({
-      content: [{ id: 'a', nom: 'OF A', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' }],
+      content: [{ id: 'a', nom: 'OF A', categorie: 'OF' }],
       currentPage: 0,
       pageSize: 100,
       totalElementsCount: 101,
@@ -568,8 +562,8 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     whenCollectionAnswers(
       {
         content: [
-          { id: 'a', nom: 'OF A', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
-          { id: 'b', nom: 'Moule B', categorie: 'MOULE', type: 'PRODUIT' },
+          { id: 'a', nom: 'OF A', categorie: 'OF' },
+          { id: 'b', nom: 'Moule B', categorie: 'MOULE' },
         ],
         currentPage: 0,
         pageSize: 100,
@@ -587,8 +581,8 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     const result = port.elementsDisponibles().catch((failure: unknown) => failure);
     whenCollectionAnswers({
       content: [
-        { id: 'same', nom: 'OF A', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
-        { id: 'same', nom: 'Moule B', categorie: 'MOULE', type: 'PRODUIT' },
+        { id: 'same', nom: 'OF A', categorie: 'OF' },
+        { id: 'same', nom: 'Moule B', categorie: 'MOULE' },
       ],
       currentPage: 0,
       pageSize: 100,
@@ -604,13 +598,12 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
       id: `element-${String(index)}`,
       nom: `OF ${String(index)}`,
       categorie: 'OF',
-      type: 'ORDRE_DE_FABRICATION' as const,
     }));
     const result = port.elementsDisponibles();
     whenCollectionAnswers({ content: firstPage, currentPage: 0, pageSize: 100, totalElementsCount: 101 });
     await whenNextPageStarts();
     whenCollectionAnswers({
-      content: [{ id: 'last', nom: 'Dernier moule', categorie: 'MOULE', type: 'PRODUIT' }],
+      content: [{ id: 'last', nom: 'Dernier moule', categorie: 'MOULE' }],
       currentPage: 1,
       pageSize: 100,
       totalElementsCount: 101,
@@ -726,7 +719,7 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
                   mainDOeuvre: completFixture(26.25),
                   paralleles: [
                     {
-                      element: { id: 'element-2', nom: 'OF-2026-000192', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
+                      element: { id: 'element-2', nom: 'OF-2026-000192', categorie: 'OF' },
                       poste: { id: 'poste-haas', libelle: 'Haas VF-2' },
                       nature: 'Fraisage',
                     },
@@ -897,7 +890,7 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
 
   it('should reject a server answer missing the element name', async () => {
     const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
-    await whenServerAnswers({ ...toRest([fraisageFixture]), element: { id: ELEMENT, categorie: 'OF', type: 'ORDRE_DE_FABRICATION' } });
+    await whenServerAnswers({ ...toRest([fraisageFixture]), element: { id: ELEMENT, categorie: 'OF' } });
 
     expect(await result).toEqual(new Error('rapport.element.nom manque dans la réponse du serveur'));
   });

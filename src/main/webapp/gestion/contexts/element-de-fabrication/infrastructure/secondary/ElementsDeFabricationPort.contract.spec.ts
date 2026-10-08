@@ -139,7 +139,6 @@ const pageOf = (entries: readonly object[], page: number, size: number): HttpRes
 
 const corpsDe = (element: ElementFixture): RestElement => ({
   ...element,
-  type: element.categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT',
 });
 
 const ficheOf = (body: CorpsDeFiche): CorpsDeFiche => ({

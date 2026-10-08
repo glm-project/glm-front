@@ -89,7 +89,6 @@ const dossierFixture = (
     element: 'moule-42',
     nom: 'M-042',
     categorie: 'MOULE',
-    type: 'PRODUIT',
     engageLe: '2026-09-14T06:00:00Z',
     engagePar: 'gestionnaire',
     etat: 'EN_ATTENTE',

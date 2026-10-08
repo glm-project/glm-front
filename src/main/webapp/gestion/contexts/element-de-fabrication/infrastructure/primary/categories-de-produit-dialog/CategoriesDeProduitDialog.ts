@@ -2,41 +2,55 @@ import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/ico
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
 import { TextField } from '@/gestion/shared/design-system/infrastructure/primary/text-field/TextField';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { afterNextRender, Component, ElementRef, inject, Injector, OnInit, signal, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
 import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { CategoriesDeProduitPort } from '../../../domain/CategoriesDeProduitPort';
 import { FormulaireCategorieDeProduit } from '../../../domain/FormulaireCategorieDeProduit';
 import { OrdreDesCategories } from '../../../domain/OrdreDesCategories';
 import { OrdreIncomplet } from '../../../domain/OrdreIncomplet';
-import {
-  ConfirmationSuppressionCategorieDialog,
-  ConfirmationSuppressionCategorieDialogData,
-} from '../confirmation-suppression-categorie-dialog/ConfirmationSuppressionCategorieDialog';
-import { LIBELLES_CATEGORIES_DE_PRODUIT } from '../LibellesElementsDeFabrication';
+import { RefusSuppressionCategorie } from '../../../domain/RefusSuppressionCategorie';
+import { LIBELLES_CATEGORIES_DE_PRODUIT, LIBELLES_SUPPRESSION_CATEGORIE } from '../LibellesElementsDeFabrication';
+
+interface RefusDeSuppression {
+  readonly categorie: CategorieDeProduit;
+  readonly refus: RefusSuppressionCategorie;
+}
 
 @Component({
   selector: 'glm-categories-de-produit-dialog',
   templateUrl: './CategoriesDeProduitDialog.html',
+  styleUrl: './CategoriesDeProduitDialog.css',
   imports: [ErrorMessage, Icon, TextField, MatDialogModule, MatButtonModule],
 })
 export class CategoriesDeProduitDialog implements OnInit {
   private readonly port = inject(CategoriesDeProduitPort);
   private readonly errors = inject(ErrorHandlerPort);
-  private readonly dialogs = inject(MatDialog);
+  private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly libelles = LIBELLES_CATEGORIES_DE_PRODUIT;
+  protected readonly libellesSuppression = LIBELLES_SUPPRESSION_CATEGORIE;
   protected readonly ordre = signal(new OrdreDesCategories([]));
+  private readonly supprimables = signal<readonly CategorieDeProduit[]>([]);
   protected readonly deplacement = signal(false);
   protected readonly refusDeplacement = signal<OrdreIncomplet | undefined>(undefined);
   protected readonly erreurDeplacement = signal(false);
   protected readonly chargement = signal(true);
   protected readonly echec = signal(false);
+  protected readonly ajout = signal(false);
   protected readonly formulaire = signal(FormulaireCategorieDeProduit.vide());
   protected readonly soumis = signal(false);
   protected readonly enregistrement = signal(false);
   protected readonly erreurTechnique = signal(false);
+  protected readonly confirmation = signal<CategorieDeProduit | undefined>(undefined);
+  protected readonly suppression = signal(false);
+  protected readonly refusSuppression = signal<RefusDeSuppression | undefined>(undefined);
+  protected readonly erreurSuppression = signal(false);
+  private readonly annulationDeSuppression = viewChild<string, ElementRef<HTMLButtonElement>>('annulationDeSuppression', {
+    read: ElementRef,
+  });
 
   ngOnInit(): void {
     this.reload();
@@ -44,6 +58,21 @@ export class CategoriesDeProduitDialog implements OnInit {
 
   protected reload(): void {
     this.errors.observe(this.load());
+  }
+
+  protected ouvrirAjout(): void {
+    this.ajout.set(true);
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLInputElement>('#categorie-code')?.focus(), {
+      injector: this.injector,
+    });
+  }
+
+  protected fermerAjout(event?: Event): void {
+    event?.stopPropagation();
+    this.ajout.set(false);
+    this.formulaire.set(FormulaireCategorieDeProduit.vide());
+    this.soumis.set(false);
+    this.erreurTechnique.set(false);
   }
 
   protected changeCode(code: string): void {
@@ -58,16 +87,33 @@ export class CategoriesDeProduitDialog implements OnInit {
     this.errors.observe(this.reorder(this.ordre().apresDescente(categorie)));
   }
 
+  protected estSupprimable(categorie: CategorieDeProduit): boolean {
+    return this.supprimables().some(supprimable => supprimable.estLaMeme(categorie));
+  }
+
   protected supprimer(categorie: CategorieDeProduit): void {
-    const dialogRef = this.dialogs.open<ConfirmationSuppressionCategorieDialog, ConfirmationSuppressionCategorieDialogData, boolean>(
-      ConfirmationSuppressionCategorieDialog,
-      { data: { categorie }, width: '28rem', maxWidth: 'calc(100vw - 2rem)' },
-    );
-    dialogRef.afterClosed().subscribe(supprimee => {
-      if (supprimee === true) {
-        this.reload();
-      }
-    });
+    this.confirmation.set(categorie);
+    this.refusSuppression.set(undefined);
+    this.erreurSuppression.set(false);
+    afterNextRender(() => this.annulationDeSuppression()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  protected annulerSuppression(): void {
+    this.confirmation.set(undefined);
+    this.erreurSuppression.set(false);
+  }
+
+  protected confirmerSuppression(categorie: CategorieDeProduit): void {
+    this.errors.observe(this.remove(categorie));
+  }
+
+  protected estEnConfirmation(categorie: CategorieDeProduit): boolean {
+    return this.confirmation()?.estLaMeme(categorie) ?? false;
+  }
+
+  protected refusDe(categorie: CategorieDeProduit): RefusSuppressionCategorie | undefined {
+    const refus = this.refusSuppression();
+    return refus?.categorie.estLaMeme(categorie) === true ? refus.refus : undefined;
   }
 
   protected declarer(event: Event): void {
@@ -79,11 +125,31 @@ export class CategoriesDeProduitDialog implements OnInit {
     this.chargement.set(true);
     this.echec.set(false);
     try {
-      this.ordre.set(new OrdreDesCategories(await this.port.categories()));
+      const categories = await this.port.categories();
+      this.ordre.set(new OrdreDesCategories(categories.map(geree => geree.categorie)));
+      this.supprimables.set(categories.filter(geree => geree.supprimable).map(geree => geree.categorie));
     } catch {
       this.echec.set(true);
     } finally {
       this.chargement.set(false);
+    }
+  }
+
+  private async remove(categorie: CategorieDeProduit): Promise<void> {
+    this.suppression.set(true);
+    this.erreurSuppression.set(false);
+    try {
+      const resultat = await this.port.supprimer(categorie);
+      this.confirmation.set(undefined);
+      if (!resultat.ok) {
+        this.refusSuppression.set({ categorie, refus: resultat.error });
+      }
+      await this.load();
+    } catch (failure) {
+      this.erreurSuppression.set(true);
+      this.errors.handleError(failure);
+    } finally {
+      this.suppression.set(false);
     }
   }
 
@@ -117,8 +183,7 @@ export class CategoriesDeProduitDialog implements OnInit {
     try {
       const resultat = await this.port.declarer(categorie.value);
       if (resultat.ok) {
-        this.formulaire.set(FormulaireCategorieDeProduit.vide());
-        this.soumis.set(false);
+        this.fermerAjout();
         await this.load();
       } else {
         this.formulaire.update(formulaire => formulaire.avecRefus(resultat.error));

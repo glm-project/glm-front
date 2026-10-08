@@ -132,9 +132,9 @@ describe('Navigation between cost reports', () => {
     cy.intercept('GET', '/api/elements-de-fabrication*', {
       body: {
         content: [
-          { id: 'element-1', nom: 'OF Alpha', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
-          { id: 'element-2', nom: 'Ébauche', categorie: 'MOULE', type: 'PRODUIT' },
-          { id: 'element-3', nom: 'OF Gamma', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
+          { id: 'element-1', nom: 'OF Alpha', categorie: 'OF' },
+          { id: 'element-2', nom: 'Ébauche', categorie: 'MOULE' },
+          { id: 'element-3', nom: 'OF Gamma', categorie: 'OF' },
         ],
         currentPage: 0,
         pageSize: 100,
@@ -142,7 +142,7 @@ describe('Navigation between cost reports', () => {
       },
     });
     cy.intercept('GET', '/api/couts-de-revient/element-3', {
-      body: { ...coutDeRevientFixture(), element: { id: 'element-3', nom: 'OF Gamma', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' } },
+      body: { ...coutDeRevientFixture(), element: { id: 'element-3', nom: 'OF Gamma', categorie: 'OF' } },
     }).as('thirdReportRead');
   };
   const whenChoosingTwoElementsInTheSameBrowserTurn = (): void => {
@@ -243,12 +243,10 @@ describe('Navigation between cost reports', () => {
       id: index === 0 ? 'element-1' : `filler-${String(index)}`,
       nom: `OF ${String(index)}`,
       categorie: 'OF',
-      type: 'ORDRE_DE_FABRICATION',
     }));
     cy.intercept('GET', '/api/elements-de-fabrication*', request => {
       request.reply({
-        content:
-          Number(request.query['page']) === 0 ? firstPage : [{ id: 'element-2', nom: 'Ébauche', categorie: 'MOULE', type: 'PRODUIT' }],
+        content: Number(request.query['page']) === 0 ? firstPage : [{ id: 'element-2', nom: 'Ébauche', categorie: 'MOULE' }],
         currentPage: Number(request.query['page']),
         pageSize: 100,
         totalElementsCount: 101,
@@ -326,7 +324,7 @@ describe('Navigation between cost reports', () => {
   };
   const givenAnUnlistedReport = (): void => {
     cy.intercept('GET', '/api/couts-de-revient/inconnu', {
-      body: { ...coutDeRevientFixture(), element: { id: 'inconnu', nom: 'OF Hors liste', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' } },
+      body: { ...coutDeRevientFixture(), element: { id: 'inconnu', nom: 'OF Hors liste', categorie: 'OF' } },
     }).as('unlistedReportRead');
   };
   const givenADeletedMould = (): void => {
@@ -334,7 +332,7 @@ describe('Navigation between cost reports', () => {
   };
   const givenAMouldWithoutWork = (): void => {
     cy.intercept('GET', '/api/couts-de-revient/element-2', {
-      body: { ...rapportVideFixture(), element: { id: 'element-2', nom: 'Moule sans travail', categorie: 'MOULE', type: 'PRODUIT' } },
+      body: { ...rapportVideFixture(), element: { id: 'element-2', nom: 'Moule sans travail', categorie: 'MOULE' } },
     });
   };
   const whenRetryingTheRejectedChoice = (): void => {
@@ -403,8 +401,8 @@ describe('Navigation between cost reports', () => {
     cy.intercept('GET', '/api/elements-de-fabrication*', {
       body: {
         content: [
-          { id: 'element-1', nom: 'OF Alpha', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
-          { id: 'element-2', nom: 'Ébauche', categorie: 'MOULE', type: 'PRODUIT' },
+          { id: 'element-1', nom: 'OF Alpha', categorie: 'OF' },
+          { id: 'element-2', nom: 'Ébauche', categorie: 'MOULE' },
         ],
         currentPage: 0,
         pageSize: 100,
@@ -417,7 +415,7 @@ describe('Navigation between cost reports', () => {
         mouldReads += 1;
         request.reply({
           ...mouldReportFixture(),
-          element: { id: 'element-2', nom: 'Moule Beta', categorie: 'MOULE', type: 'PRODUIT' },
+          element: { id: 'element-2', nom: 'Moule Beta', categorie: 'MOULE' },
           ...mouldEvaluationFixture(mouldReads),
           activitesEnCours: 2,
         });

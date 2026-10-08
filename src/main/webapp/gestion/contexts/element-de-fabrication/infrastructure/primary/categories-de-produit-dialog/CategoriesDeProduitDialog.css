@@ -1,0 +1,4 @@
+.confirmation-destructive {
+  --mat-button-filled-container-color: var(--color-danger);
+  --mat-button-filled-label-text-color: var(--color-on-accent);
+}

@@ -59,17 +59,16 @@ export const LIBELLES_CATEGORIES_DE_PRODUIT = {
   erreurDeplacement: 'Le déplacement a échoué. Vérifiez la connexion puis réessayez.',
   nouvelle: 'Nouvelle catégorie',
   nouvelleComplement: '(code de 1 à 10 lettres)',
-  aideCode: 'Le code ne pourra plus être modifié : il préfixe le nom des produits de la catégorie.',
+  aideCode: 'Le code ne pourra plus être modifié : il préfixe le nom des produits. Entrée pour déclarer, Échap pour annuler.',
   declarer: 'Déclarer',
   declaration: 'Déclaration…',
+  annulerAjout: 'Annuler',
   erreurTechnique: 'La déclaration a échoué. Vérifiez la connexion puis réessayez.',
   fermer: 'Fermer',
 } as const;
 
 export const LIBELLES_SUPPRESSION_CATEGORIE = {
-  titre: 'Supprimer la catégorie ?',
-  description: (categorie: CategorieDeProduit): string =>
-    `La catégorie ${categorie.value} sera retirée des boutons de création, des filtres et du pupitre. Cette action est définitive.`,
+  question: (categorie: CategorieDeProduit): string => `Supprimer ${categorie.value} ?`,
   annuler: 'Annuler',
   confirmer: 'Supprimer',
   encours: 'Suppression…',

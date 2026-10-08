@@ -18,7 +18,6 @@ const URN = 'urn:glm:erreur:element-de-fabrication:';
 export class ElementsApiFixture {
   elements: ElementEnregistre[];
   categories: string[] = ['MOULE', 'OF'];
-  categoriesUtilisees: string[] = [];
   failRead = false;
   failWrite = false;
   readonly writes: (Creation | Modification)[] = [];
@@ -57,7 +56,7 @@ export class ElementsApiFixture {
       const page = Number(request.query['page'] ?? 0);
       const size = Number(request.query['size'] ?? 20);
       request.reply({
-        content: this.categories.slice(page * size, (page + 1) * size).map(code => ({ code })),
+        content: this.categories.slice(page * size, (page + 1) * size).map(code => ({ code, utilisee: this.estUtilisee(code) })),
         currentPage: page,
         pageSize: size,
         totalElementsCount: this.categories.length,
@@ -70,7 +69,7 @@ export class ElementsApiFixture {
         return;
       }
       this.categories.push(code);
-      request.reply({ statusCode: 201, body: { code } });
+      request.reply({ statusCode: 201, body: { code, utilisee: false } });
     }).as('categorieDeclare');
     cy.intercept('PUT', `${CATEGORIES}/ordre`, request => {
       this.categories = [...(request.body as { codes: string[] }).codes];
@@ -78,13 +77,17 @@ export class ElementsApiFixture {
     }).as('categoriesReorder');
     cy.intercept('DELETE', `${CATEGORIES}/*`, request => {
       const code = request.url.split('/').slice(-1)[0] ?? '';
-      if (this.categoriesUtilisees.includes(code)) {
+      if (this.estUtilisee(code)) {
         request.reply({ statusCode: 409, body: { type: 'urn:glm:erreur:categorie-de-produit:categorie-utilisee' } });
         return;
       }
       this.categories = this.categories.filter(candidate => candidate !== code);
       request.reply({ statusCode: 204 });
     }).as('categorieDelete');
+  }
+
+  private estUtilisee(code: string): boolean {
+    return this.elements.some(element => element.categorie === code);
   }
 
   private installSingleRead(): void {
@@ -147,10 +150,7 @@ export class ElementsApiFixture {
   }
 }
 
-const typeDeLaCategorie = (categorie: string): 'ORDRE_DE_FABRICATION' | 'PRODUIT' =>
-  categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT';
-
-const corpsDe = (element: ElementEnregistre): RestElement => ({ ...element, type: typeDeLaCategorie(element.categorie) });
+const corpsDe = (element: ElementEnregistre): RestElement => ({ ...element });
 
 const numeroteSur6 = (rang: number): string => ('000000' + String(rang)).slice(-6);
 

@@ -20,6 +20,16 @@ describe('Manufacturing element interactions and rendering', () => {
     thenCodeFieldShowsCapitalLetters('piece');
   });
 
+  it('should close the category declaration on Escape and keep the management open', () => {
+    givenReferential();
+    whenVisitingReferential();
+    whenOpeningCategoryManagement();
+    whenTypingCategoryCode('piece');
+    whenPressingEscapeOnCategoryCode();
+
+    thenDeclarationIsClosedInsideManagement();
+  });
+
   it('should show an existing category on the code field and keep the management open', () => {
     givenReferential();
     whenVisitingReferential();
@@ -114,7 +124,7 @@ const givenFailedWrite = (): void => {
 const givenPendingCreation = (): ReturnType<typeof interceptForever> =>
   interceptForever(
     { method: 'POST', pathname: '/api/elements-de-fabrication' },
-    { statusCode: 201, body: { id: 'created-element', categorie: 'MOULE', type: 'PRODUIT', nom: 'PRD-2026-000009', reference: '1015' } },
+    { statusCode: 201, body: { id: 'created-element', categorie: 'MOULE', nom: 'PRD-2026-000009', reference: '1015' } },
     'pendingCreation',
   );
 const whenVisitingReferential = (): void => {
@@ -132,12 +142,21 @@ const whenOpeningCategoryManagement = (): void => {
   cy.get(dataSelector('categorie-item')).should('have.length', 2);
 };
 const whenTypingCategoryCode = (code: string): void => {
+  cy.get(dataSelector('categorie-new')).click();
   cy.focused().should('have.attr', 'data-selector', 'categorie-code');
   cy.focused().type(code);
 };
 const whenDeclaringCategory = (): void => {
   cy.get(dataSelector('categorie-declare')).click();
   cy.wait('@categorieDeclare');
+};
+const whenPressingEscapeOnCategoryCode = (): void => {
+  cy.get(dataSelector('categorie-code')).type('{esc}');
+};
+const thenDeclarationIsClosedInsideManagement = (): void => {
+  cy.get(dataSelector('categorie-code')).should('not.exist');
+  cy.get(dataSelector('categorie-new')).should('be.visible');
+  cy.get(dataSelector('categories-title')).should('be.visible');
 };
 const thenCodeFieldShowsCapitalLetters = (code: string): void => {
   cy.get(dataSelector('categorie-code')).should('have.value', code).and('have.css', 'text-transform', 'uppercase');

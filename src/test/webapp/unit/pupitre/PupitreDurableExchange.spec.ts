@@ -99,7 +99,6 @@ const publicationFixture = {
   id: 'piece',
   nom: 'OF-1',
   categorie: 'MOULE',
-  type: 'PRODUIT',
   etat: 'EN_COURS',
   element: 'element',
   engageLe: '2026-09-05T07:00:00Z',
@@ -150,7 +149,6 @@ const resolvedReferenceFixture = {
       id: 'piece',
       nom: 'OF-1',
       categorie: 'MOULE',
-      type: 'PRODUIT',
       etat: 'EN_COURS',
       activites: [
         {
@@ -168,7 +166,6 @@ const resolvedReferenceFixture = {
       id: 'piece-independante',
       nom: 'OF-2',
       categorie: 'MOULE',
-      type: 'PRODUIT',
       etat: 'EN_COURS',
       activites: [
         {
@@ -185,7 +182,6 @@ const resolvedReferenceFixture = {
       id: 'conflit-independant',
       nom: 'OF-3',
       categorie: 'MOULE',
-      type: 'PRODUIT',
       etat: 'EN_ATTENTE',
       activites: [],
       conflits: [{ operateur: 'jean', activites: [], pointages: ['contradiction-independante'] }],

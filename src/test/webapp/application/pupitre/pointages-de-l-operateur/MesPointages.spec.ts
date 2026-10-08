@@ -39,7 +39,6 @@ const syntheseFixture = (semaine: number, evaluation: string) => ({
     {
       id: 'of-1',
       categorie: 'OF',
-      type: 'ORDRE_DE_FABRICATION',
       nom: 'OF-2026-001240',
       reference: String(1202 + semaine),
       duree: { complete: true, valeur: 'PT7H45M' },
@@ -152,9 +151,7 @@ describe('Pupitre my pointages journey', () => {
       body: {
         genereLe: '2026-09-17T05:00:00Z',
         operateurs: referentielFixture.operateurs,
-        suivis: [
-          { id: 'piece-1', nom: '204', etat: 'EN_ATTENTE', categorie: 'OF', type: 'ORDRE_DE_FABRICATION', activites: [], conflits: [] },
-        ],
+        suivis: [{ id: 'piece-1', nom: '204', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], conflits: [] }],
         categories: ['OF'],
       },
     }).as('workshop');

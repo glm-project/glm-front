@@ -55,27 +55,63 @@ describe('CategoriesDeProduitDialog', () => {
     expect(text('categories-empty')).toBe('Aucune catégorie déclarée.');
   });
 
-  it('should remind that the code can no longer be changed', async () => {
+  it('should offer the declaration at the bottom of the list, without showing the field yet', async () => {
+    givenCategories(['MOULE']);
+
     await whenOpening();
 
+    expect(text('categorie-new')).toContain('Nouvelle catégorie');
+    expect(text('categorie-form')).toBe('');
+  });
+
+  it('should open the field with the focus, reminding that the code can no longer be changed', async () => {
+    await whenOpening();
+
+    await whenOpeningDeclaration();
+
+    expect(focused()).toBe('categorie-code');
     expect(text('categorie-form')).toContain('Le code ne pourra plus être modifié');
+  });
+
+  it('should close the field and forget the typing when the declaration is cancelled', async () => {
+    await whenOpening();
+    await whenOpeningDeclaration();
+    await whenEntering('categorie-code', 'piece');
+
+    await whenClicking('categorie-cancel');
+    await whenOpeningDeclaration();
+
+    expect(input('categorie-code').value).toBe('');
+    expect(port.declarations).toEqual([]);
+  });
+
+  it('should close the field on Escape without closing the category management', async () => {
+    await whenOpening();
+    await whenOpeningDeclaration();
+
+    await whenPressingEscape('categorie-code');
+
+    expect(text('categorie-form')).toBe('');
+    expect(openDialogs()).toBe(1);
   });
 
   it('should declare the typed code in capital letters and list it last', async () => {
     givenCategories(['MOULE']);
     await whenOpening();
 
+    await whenOpeningDeclaration();
     await whenEntering('categorie-code', 'piece');
     await whenSubmitting();
 
     expect(port.declarations).toEqual([new CategorieDeProduit('PIECE')]);
     expect(texts('categorie-item')).toEqual(['MOULE', 'PIECE']);
-    expect(input('categorie-code').value).toBe('');
+    expect(text('categorie-form')).toBe('');
   });
 
   it('should refuse a code outside the pattern on the field, without declaring it', async () => {
     await whenOpening();
 
+    await whenOpeningDeclaration();
     await whenEntering('categorie-code', 'pièce');
     await whenSubmitting();
 
@@ -87,6 +123,7 @@ describe('CategoriesDeProduitDialog', () => {
     givenCategories(['MOULE']);
     await whenOpening();
 
+    await whenOpeningDeclaration();
     await whenEntering('categorie-code', 'moule');
     await whenSubmitting();
 
@@ -97,6 +134,7 @@ describe('CategoriesDeProduitDialog', () => {
     const pending = new DeferredFixture<Result<void, CategorieDejaExistante>>();
     givenDeclarationIsPending(pending);
     await whenOpening();
+    await whenOpeningDeclaration();
     await whenEntering('categorie-code', 'piece');
 
     await whenSubmitting();
@@ -110,6 +148,7 @@ describe('CategoriesDeProduitDialog', () => {
     givenWritingFails();
     await whenOpening();
 
+    await whenOpeningDeclaration();
     await whenEntering('categorie-code', 'piece');
     await whenSubmitting();
 
@@ -169,24 +208,95 @@ describe('CategoriesDeProduitDialog', () => {
     expect(errors.errors).toHaveLength(1);
   });
 
+  it('should offer to remove only a category no product uses', async () => {
+    givenCategories(['MOULE', 'OF']);
+    givenProductsUse('MOULE');
+
+    await whenOpening();
+
+    expect(removals()).toEqual(['categorie-supprimer-OF']);
+  });
+
+  it('should ask for the removal in the row, without opening another dialog', async () => {
+    givenCategories(['MOULE', 'OF']);
+    await whenOpening();
+
+    await whenClicking('categorie-supprimer-MOULE');
+
+    expect(text('categorie-delete-question')).toBe('Supprimer MOULE ?');
+    expect(texts('categorie-item')).toEqual(['OF']);
+    expect(openDialogs()).toBe(1);
+  });
+
+  it('should move the focus to the cancellation of the removal', async () => {
+    givenCategories(['MOULE']);
+    await whenOpening();
+
+    await whenClicking('categorie-supprimer-MOULE');
+
+    expect(focused()).toBe('categorie-delete-cancel');
+  });
+
   it('should list the categories again once one is removed', async () => {
     givenCategories(['MOULE', 'OF']);
     await whenOpening();
     await whenClicking('categorie-supprimer-MOULE');
 
-    await whenAnsweringConfirmation('categorie-delete-confirm');
+    await whenClicking('categorie-delete-confirm');
 
+    expect(port.suppressions).toEqual([new CategorieDeProduit('MOULE')]);
     expect(texts('categorie-item')).toEqual(['OF']);
+    expect(text('categorie-delete')).toBe('');
   });
 
-  it('should keep the list when the removal is cancelled', async () => {
+  it('should restore the row when the removal is cancelled', async () => {
     givenCategories(['MOULE', 'OF']);
     await whenOpening();
     await whenClicking('categorie-supprimer-MOULE');
 
-    await whenAnsweringConfirmation('categorie-delete-cancel');
+    await whenClicking('categorie-delete-cancel');
 
+    expect(port.suppressions).toEqual([]);
     expect(texts('categorie-item')).toEqual(['MOULE', 'OF']);
+    expect(removals()).toEqual(['categorie-supprimer-MOULE', 'categorie-supprimer-OF']);
+  });
+
+  it('should explain under the row a removal refused because a product arrived meanwhile, then hide the trash', async () => {
+    givenCategories(['MOULE', 'OF']);
+    await whenOpening();
+    await whenClicking('categorie-supprimer-MOULE');
+    givenProductsUse('MOULE');
+
+    await whenClicking('categorie-delete-confirm');
+
+    expect(text('categorie-delete-refusal')).toBe('Des produits sont rangés dans cette catégorie : elle ne peut pas être supprimée.');
+    expect(texts('categorie-item')).toEqual(['MOULE', 'OF']);
+    expect(removals()).toEqual(['categorie-supprimer-OF']);
+  });
+
+  it('should forget a removal refusal when another removal is asked', async () => {
+    givenCategories(['MOULE', 'OF']);
+    await whenOpening();
+    await whenClicking('categorie-supprimer-MOULE');
+    givenProductsUse('MOULE');
+    await whenClicking('categorie-delete-confirm');
+
+    await whenClicking('categorie-supprimer-OF');
+
+    expect(text('categorie-delete-refusal')).toBe('');
+  });
+
+  it('should report a technical removal failure and keep the question open', async () => {
+    givenCategories(['MOULE']);
+    await whenOpening();
+    await whenClicking('categorie-supprimer-MOULE');
+    givenWritingFails();
+
+    await whenClicking('categorie-delete-confirm');
+
+    expect(text('categorie-delete-technical-error')).toContain('La suppression a échoué');
+    expect(text('categorie-delete-question')).toBe('Supprimer MOULE ?');
+    expect(errors.errors).toHaveLength(1);
   });
 
   it('should offer a retry after a failed read', async () => {
@@ -203,6 +313,9 @@ describe('CategoriesDeProduitDialog', () => {
 
   const givenCategories = (codes: readonly string[]): void => {
     port.liste = codes.map(code => new CategorieDeProduit(code));
+  };
+  const givenProductsUse = (code: string): void => {
+    port.utilisees = [code];
   };
   const givenAnotherManagerDeclared = (code: string): void => {
     port.liste = [...port.liste, new CategorieDeProduit(code)];
@@ -226,6 +339,13 @@ describe('CategoriesDeProduitDialog', () => {
     fermeture = firstValueFrom(dialog.afterClosed());
     await fixture.whenStable();
   };
+  const whenOpeningDeclaration = async (): Promise<void> => {
+    await whenClicking('categorie-new');
+  };
+  const whenPressingEscape = async (selector: string): Promise<void> => {
+    input(selector).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+  };
   const whenEntering = async (selector: string, value: string): Promise<void> => {
     const field = input(selector);
     field.value = value;
@@ -238,13 +358,6 @@ describe('CategoriesDeProduitDialog', () => {
     );
     await fixture.whenStable();
   };
-  const whenAnsweringConfirmation = async (selector: string): Promise<void> => {
-    const confirmation = requiredFixture(TestBed.inject(MatDialog).openDialogs.at(-1), 'confirmation dialog');
-    const fermee = firstValueFrom(confirmation.afterClosed());
-    await whenClicking(selector);
-    await fermee;
-    await fixture.whenStable();
-  };
   const whenClicking = async (selector: string): Promise<void> => {
     requiredFixture(document.querySelector<HTMLElement>(dataSelector(selector)), selector).click();
     await fixture.whenStable();
@@ -254,6 +367,13 @@ describe('CategoriesDeProduitDialog', () => {
   const button = (selector: string): HTMLButtonElement =>
     requiredFixture(document.querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';
+  const openDialogs = (): number => TestBed.inject(MatDialog).openDialogs.length;
+  const focused = (): string | null | undefined => document.activeElement?.getAttribute('data-selector');
+  const removals = (): string[] =>
+    Array.from(
+      document.querySelectorAll('[data-selector^="categorie-supprimer-"]'),
+      element => element.getAttribute('data-selector') ?? '',
+    );
   const texts = (selector: string): string[] =>
     Array.from(document.querySelectorAll(dataSelector(selector)), element => element.textContent.trim());
 });

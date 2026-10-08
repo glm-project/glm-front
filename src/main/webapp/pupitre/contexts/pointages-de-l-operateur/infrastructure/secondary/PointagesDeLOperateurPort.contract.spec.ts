@@ -36,7 +36,6 @@ const syntheseFixture = (): RestSynthese => ({
     {
       id: 'of-1',
       categorie: 'OF',
-      type: 'ORDRE_DE_FABRICATION',
       nom: 'OF-2026-000204',
       reference: '204',
       duree: { complete: true, valeur: 'PT15H25M' },
@@ -46,7 +45,6 @@ const syntheseFixture = (): RestSynthese => ({
     {
       id: 'of-2',
       categorie: 'OF',
-      type: 'ORDRE_DE_FABRICATION',
       nom: 'OF-2026-000205',
       duree: { complete: true, valeur: 'PT0S' },
       dureeNonConformite: { complete: true, valeur: 'PT0S' },

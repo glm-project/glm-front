@@ -37,7 +37,6 @@ const suiviSansReferenceFixture = {
   id: 'piece',
   nom: 'PR-2026-000001',
   categorie: 'MOULE',
-  type: 'PRODUIT',
 } satisfies RestSuiviDuPupitre;
 const suiviAvecReferenceFixture = {
   ...suiviSansReferenceFixture,
@@ -83,7 +82,6 @@ const suiviDetailleFixture = {
   journal: [],
   nom: 'OF-1',
   categorie: 'MOULE',
-  type: 'PRODUIT',
 } satisfies RestSuiviDAtelier & RestSuiviDAtelierEnGrille;
 const ouvertureFixture: GesteDePointage = {
   nature: 'POINTAGE',
