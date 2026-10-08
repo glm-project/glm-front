@@ -172,12 +172,12 @@ describe('Preparation of an acte through asynchronous ports', () => {
   it('should ignore a refusal from an older proposition while the new preview is still pending', async () => {
     const ancienne = givenPreviewWaits();
     preparation.choose(cancellationFixture());
-    const premier = preparation.preview(dossierFixture);
+    const premier = preparation.previewInBackground(dossierFixture);
     await ancienne.arrival;
     const courante = givenPreviewWaits();
     const nouvelleSaisie = cancellationFixture('fin-18');
     preparation.choose(nouvelleSaisie);
-    const second = preparation.preview(dossierFixture);
+    const second = preparation.previewInBackground(dossierFixture);
     await courante.arrival;
 
     ancienne.release({ kind: 'REFUS', code: 'activite-visee-introuvable' });
@@ -186,7 +186,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     courante.release({ kind: 'APERCU', apercu: previewFixture(nouvelleSaisie) });
     await second;
 
-    expect(etatPendantLeNouvelApercu).toBe('PREVISUALISATION');
+    expect(etatPendantLeNouvelApercu).toBe('APERCU_EN_ARRIERE_PLAN');
     expect(preparation.resolution().confirmation()).toEqual(propositionFixture(nouvelleSaisie));
     expect(preparation.operation().kind).toBe('REPOS');
   });
@@ -194,7 +194,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
   it('should discard a response from the dossier left during previewing', async () => {
     const attente = givenPreviewWaits();
     preparation.choose(cancellationFixture());
-    const lecture = preparation.preview(dossierFixture);
+    const lecture = preparation.previewInBackground(dossierFixture);
     await attente.arrival;
 
     preparation.contextChanged();
@@ -252,7 +252,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
   it('should preserve an edited proposition without showing the old preview failure', async () => {
     const attente = givenPreviewWaits();
     preparation.choose(cancellationFixture());
-    const ancienne = preparation.preview(dossierFixture);
+    const ancienne = preparation.previewInBackground(dossierFixture);
     await attente.arrival;
 
     preparation.change({ motif: 'Autre décision' });
@@ -292,7 +292,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await confirmation;
     await preparation.confirm();
     preparation.change({ motif: 'Autre décision' });
-    await preparation.preview(dossierFixture);
+    await preparation.previewInBackground(dossierFixture);
 
     expect(applications.requests).toHaveLength(1);
     expect(previews.requests).toHaveLength(1);
@@ -303,7 +303,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
   it('should block confirmation while refreshing the consequences of its proposition', async () => {
     await givenValidPreview();
     const attente = givenPreviewWaits();
-    const miseAJour = preparation.preview(dossierFixture);
+    const miseAJour = preparation.previewInBackground(dossierFixture);
     await attente.arrival;
 
     await preparation.confirm();
@@ -324,7 +324,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
 
     preparation.choose(cancellationFixture('autre-fin'));
     preparation.change({ motif: 'Nouvelle décision' });
-    await preparation.preview(dossierFixture);
+    await preparation.previewInBackground(dossierFixture);
     const acteEnAttente = preparation.resolution().saisie.command(cadreOuvert);
     attente.release({ kind: 'APPLIQUE', dossier: { ...dossierFixture, version: 2 } });
     await confirmation;
@@ -385,7 +385,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
   it('should refuse to preview an incomplete acte without starting any port request', async () => {
     preparation.choose(SaisieActe.regularise());
 
-    await preparation.preview(dossierFixture);
+    await preparation.previewInBackground(dossierFixture);
     await preparation.confirm();
 
     expect(preparation.operation().kind).toBe('REPOS');
@@ -398,7 +398,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     async resultat => {
       const attente = givenPreviewWaits();
       preparation.choose(cancellationFixture());
-      const previsualisation = preparation.preview(dossierFixture);
+      const previsualisation = preparation.previewInBackground(dossierFixture);
       await attente.arrival;
 
       attente.release(resultat);
@@ -418,7 +418,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     const attente = givenPreviewWaits();
     const panne = new Error('Lecture impossible');
     preparation.choose(cancellationFixture());
-    const previsualisation = preparation.preview(dossierFixture);
+    const previsualisation = preparation.previewInBackground(dossierFixture);
     await attente.arrival;
 
     attente.fail(panne);
@@ -448,7 +448,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     const attente = givenPreviewWaits();
     const saisie = cancellationFixture();
     preparation.choose(saisie);
-    const previsualisation = preparation.preview(dossierFixture);
+    const previsualisation = preparation.previewInBackground(dossierFixture);
     await attente.arrival;
 
     attente.release({ kind: 'APERCU', apercu: { ...previewFixture(saisie), version: 2, avant: { ...dossierFixture, version: 2 } } });
@@ -463,7 +463,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     await givenUnknownOutcome();
 
     preparation.choose(cancellationFixture('fin-18'));
-    await preparation.preview(dossierFixture);
+    await preparation.previewInBackground(dossierFixture);
 
     expect(preparation.operation().kind).toBe('ISSUE_INCONNUE');
     expect(previews.requests).toHaveLength(1);
@@ -475,7 +475,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     applications.verification = { kind: 'NON_ATTESTE' };
 
     await preparation.verify();
-    await preparation.preview(dossierFixture);
+    await preparation.previewInBackground(dossierFixture);
 
     expect(preparation.operation().kind).toBe('ISSUE_INCONNUE');
     expect(preparation.resolution().saisie.command(cadreOuvert)).toEqual({ kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui' });
@@ -601,7 +601,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
 
     await preparation.verify();
     preparation.choose(saisie);
-    const previsualisation = preparation.preview({ ...dossierFixture, version: 2 });
+    const previsualisation = preparation.previewInBackground({ ...dossierFixture, version: 2 });
     await attente.arrival;
     const apercu = { ...previewFixture(saisie), version: 2, avant: { ...dossierFixture, version: 2 } };
     attente.release({ kind: 'APERCU', apercu });
@@ -615,7 +615,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
   it('should not preview an end regularisation before the manager dates it', async () => {
     preparation.choose(finARegulariserFixture);
 
-    await preparation.preview(dossierFinAutomatiqueFixture);
+    await preparation.previewInBackground(dossierFinAutomatiqueFixture);
 
     expect(previews.requests).toEqual([]);
     expect(preparation.operation().kind).toBe('REPOS');
@@ -627,7 +627,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     preparation.choose(finARegulariserFixture);
     preparation.change({ fait: { instant: '2026-09-14T17:00:00+02:00' } });
 
-    const demande = preparation.preview({ ...dossierFinAutomatiqueFixture, version: 4 });
+    const demande = preparation.previewInBackground({ ...dossierFinAutomatiqueFixture, version: 4 });
     await attente.arrival;
     attente.release({ kind: 'REFUS', code: 'suivi-d-atelier-cloture' });
     await demande;
@@ -664,7 +664,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
       }),
     );
 
-    await preparation.preview(dossierFinAutomatiqueFixture);
+    await preparation.previewInBackground(dossierFinAutomatiqueFixture);
 
     expect(previews.requests).toEqual([]);
     expect(preparation.operation().kind).toBe('REPOS');
@@ -681,7 +681,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     };
     preparation.choose(finARegulariserFixture.afterChange({ fait: { instant: '2026-09-14T10:59:59Z' } }));
 
-    await preparation.preview({ ...dossierFinAutomatiqueFixture, activites: [travail] });
+    await preparation.previewInBackground({ ...dossierFinAutomatiqueFixture, activites: [travail] });
 
     expect(previews.requests).toEqual([]);
   });
@@ -691,7 +691,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     preparation.choose(finARegulariserFixture.afterChange({ fait: { instant: '2026-09-14T18:30:00Z' } }));
     whenTheClockIs('2026-09-14T18:30:00Z');
 
-    const demande = preparation.preview(dossierFinAutomatiqueFixture);
+    const demande = preparation.previewInBackground(dossierFinAutomatiqueFixture);
     await attente.arrival;
     attente.release({ kind: 'REFUS', code: 'suivi-d-atelier-cloture' });
     await demande;
@@ -791,7 +791,7 @@ describe('Preparation of an acte through asynchronous ports', () => {
     const pending = givenPreviewWaits();
     const saisie = cancellationFixture();
     preparation.choose(saisie);
-    const operation = preparation.preview(dossierFixture);
+    const operation = preparation.previewInBackground(dossierFixture);
     await pending.arrival;
     pending.release({ kind: 'APERCU', apercu: previewFixture(saisie) });
     await operation;

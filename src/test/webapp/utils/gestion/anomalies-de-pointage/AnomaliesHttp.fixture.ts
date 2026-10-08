@@ -7,27 +7,27 @@ export const finFixture = '70000000-0000-0000-0000-000000000002';
 export const operateurFixture = '70000000-0000-0000-0000-000000000003';
 export const elementFixture = '70000000-0000-0000-0000-000000000004';
 export const debutFixture = '70000000-0000-0000-0000-000000000005';
-export const ncFixture = '70000000-0000-0000-0000-000000000006';
-export const remplacementFixture = '70000000-0000-0000-0000-000000000007';
+const ncFixture = '70000000-0000-0000-0000-000000000006';
+const remplacementFixture = '70000000-0000-0000-0000-000000000007';
 export const posteFixture = '70000000-0000-0000-0000-000000000008';
 export const autreOperateurFixture = '70000000-0000-0000-0000-000000000009';
-export const autrePosteFixture = '70000000-0000-0000-0000-000000000010';
+const autrePosteFixture = '70000000-0000-0000-0000-000000000010';
 export const operateurNomFixture = 'Camille Martin';
-export const operateurCodeFixture = '007';
+const operateurCodeFixture = '007';
 export const autreOperateurNomFixture = 'Alex Durand';
-export const posteLibelleFixture = 'Fraiseuse 1';
-export const autrePosteLibelleFixture = 'Tour 1';
+const posteLibelleFixture = 'Fraiseuse 1';
+const autrePosteLibelleFixture = 'Tour 1';
 export const autreElementFixture = '70000000-0000-0000-0000-000000000011';
 export const elementNomFixture = 'Moule M-042';
 export const elementReferenceFixture = 'M-042';
 export const autreElementNomFixture = 'Bielle';
-export const instantDebutFixture = instantLocalFixture(new Date(2026, 8, 14, 8, 0), '123456789');
-export const instantNonConformiteFixture = instantLocalFixture(new Date(2026, 8, 14, 12, 0), '123456789');
-export const instantFinLocalFixture = new Date(2026, 8, 14, 17, 0);
-export const instantFinFixture = instantLocalFixture(instantFinLocalFixture, '123456789');
-export const instantCorrigeLocalFixture = new Date(2026, 8, 14, 17, 1);
-export const instantCorrigeFixture = instantLocalWithOffsetFixture(instantCorrigeLocalFixture);
-export const motifFixture = 'Heure et cible vérifiées avec l’opérateur';
+const instantDebutFixture = instantLocalFixture(new Date(2026, 8, 14, 8, 0), '123456789');
+const instantNonConformiteFixture = instantLocalFixture(new Date(2026, 8, 14, 12, 0), '123456789');
+const instantFinLocalFixture = new Date(2026, 8, 14, 17, 0);
+const instantFinFixture = instantLocalFixture(instantFinLocalFixture, '123456789');
+const instantCorrigeLocalFixture = new Date(2026, 8, 14, 17, 1);
+const instantCorrigeFixture = instantLocalWithOffsetFixture(instantCorrigeLocalFixture);
+const motifFixture = 'Heure et cible vérifiées avec l’opérateur';
 export const correctionFixture: components['schemas']['RestActeCorrection'] = {
   kind: 'CORRECTION',
   pointage: finFixture,
@@ -90,7 +90,7 @@ export const perimetreFixture = (corrige: boolean): components['schemas']['RestS
   nombrePointages: corrige ? 4 : 3,
 });
 
-export const journalCorrigeFixture = (): components['schemas']['RestEvenementDAtelier'][] => [
+const journalCorrigeFixture = (): components['schemas']['RestEvenementDAtelier'][] => [
   ...journalFixture.map(fait =>
     fait.id === finFixture ? { ...fait, annulation: { motif: motifFixture, auteur: 'gestionnaire', date: '2026-10-04T10:00:00Z' } } : fait,
   ),
@@ -108,7 +108,7 @@ export const journalCorrigeFixture = (): components['schemas']['RestEvenementDAt
   },
 ];
 
-export const activitesFixture = (corrige: boolean): components['schemas']['RestActiviteDuDossier'][] => [
+const activitesFixture = (corrige: boolean): components['schemas']['RestActiviteDuDossier'][] => [
   {
     activite: debutFixture,
     evenement: debutFixture,

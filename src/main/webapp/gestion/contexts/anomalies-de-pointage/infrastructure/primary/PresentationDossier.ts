@@ -1,13 +1,9 @@
-import { formatInstantTime, formatInstantTimeWithSeconds } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
+import { formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { InstantLongDayPipe, InstantLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
-import { COMBINAISONS_VALIDES, IntentionPointage, TypePointage } from '../../domain/acte/ActeResolution';
 import { ErreurSaisieActe, SaisieFait } from '../../domain/acte/SaisieActe';
-import { ActionDirecte } from '../../domain/dossier/ActionsDirectes';
-import { ChronologiePointages } from '../../domain/dossier/ChronologiePointages';
-import { ActiviteAnomalie, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
+import { ActiviteAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
 import { operateurPresente } from './PresentationIdentites';
-import { SelectionDuDossier } from './SelectionDuDossier';
 
 export type VueDActivites = Readonly<{ journal: readonly PointageAnomalie[]; activites?: readonly ActiviteAnomalie[] }>;
 
@@ -38,40 +34,14 @@ export const libelleDuGeste = (fait: Pick<SaisieFait, 'type' | 'intention'>): st
   return [...type, ...intention].join(' · ');
 };
 
-export interface GesteProposable {
-  readonly valeur: string;
-  readonly type: TypePointage;
-  readonly intention: IntentionPointage;
-  readonly libelle: string;
-}
-
-export const GESTES_PROPOSES: readonly GesteProposable[] = COMBINAISONS_VALIDES.map(({ type, intention }) => ({
-  valeur: `${type}·${intention}`,
-  type,
-  intention,
-  libelle: libelleDuGeste({ type, intention }),
-}));
-
-export const gesteDuFait = (fait: Pick<SaisieFait, 'type' | 'intention'>): string =>
-  GESTES_PROPOSES.find(geste => geste.type === fait.type && geste.intention === fait.intention)?.valeur ?? '';
-
-const SANS_GESTE: Pick<SaisieFait, 'type' | 'intention'> = { type: '', intention: '' };
-
-export const faitDuGeste = (valeur: string): Pick<SaisieFait, 'type' | 'intention'> => {
-  const geste = GESTES_PROPOSES.find(candidat => candidat.valeur === valeur);
-  return geste === undefined ? SANS_GESTE : { type: geste.type, intention: geste.intention };
-};
-
 export const erreursALire = (erreurs: readonly ErreurSaisieActe[]): readonly ErreurSaisieActe[] =>
   erreurs.filter(erreur => erreur !== 'INTENTION_REQUISE' || !erreurs.includes('TYPE_REQUIS'));
 
-export const minuscule = (texte: string): string => texte.charAt(0).toLowerCase() + texte.slice(1);
+const minuscule = (texte: string): string => texte.charAt(0).toLowerCase() + texte.slice(1);
 
 const commenceParUneVoyelle = (geste: string): boolean => /^[aeiou]/i.test(geste);
 
 export const defini = (geste: string): string => (commenceParUneVoyelle(geste) ? `l’${minuscule(geste)}` : `le ${minuscule(geste)}`);
-
-const deDefini = (geste: string): string => (commenceParUneVoyelle(geste) ? `de l’${minuscule(geste)}` : `du ${minuscule(geste)}`);
 
 export const gesteDuPointage = (pointage: PointageAnomalie): string =>
   pointage.regularisation ? `${libelleDuGeste(pointage.fait)} ${LIBELLES_ANOMALIES.problemes.regularise}` : libelleDuGeste(pointage.fait);
@@ -90,7 +60,7 @@ export const libelleActivite = (activite: ActiviteAnomalie, now: Date): string =
   return `${categorie} · ${instantLongDay.transform(periode.debut, now)}${fin}`;
 };
 
-export const labelForActivite = (id: string, vue: VueDActivites, now: Date): string => {
+const labelForActivite = (id: string, vue: VueDActivites, now: Date): string => {
   const activite = vue.activites?.find(activite => activite.id.activite === id);
   if (activite !== undefined) return libelleActivite(activite, now);
   const origine = vue.journal.find(pointage => pointage.activiteCreee?.activite === id);
@@ -98,7 +68,7 @@ export const labelForActivite = (id: string, vue: VueDActivites, now: Date): str
   return LIBELLES_ANOMALIES.activiteNonResolue;
 };
 
-export const referencePointage = (journal: readonly PointageAnomalie[], identifiant: string, now: Date): ReferencePointage => {
+const referencePointage = (journal: readonly PointageAnomalie[], identifiant: string, now: Date): ReferencePointage => {
   const pointage = journal.find(pointage => pointage.id.pointage === identifiant);
   if (pointage === undefined) return { libelle: LIBELLES_ANOMALIES.pointageNonResolu };
   const fait = pointage.fait;
@@ -137,39 +107,4 @@ export const tempsActivite = (activite: ActiviteAnomalie): string => {
   ]
     .filter(Boolean)
     .join(' ');
-};
-
-const premierPointageEnCause = (dossier: DossierAnomalie): string | undefined => {
-  const enCause = new Set(dossier.diagnostics?.map(diagnostic => diagnostic.pointage.pointage));
-  return new ChronologiePointages(dossier.perimetre.pointagesDe(dossier)).pointages.find(pointage => enCause.has(pointage.id.pointage))?.id
-    .pointage;
-};
-
-const activiteEchueDUneFinAutomatique = (dossier: DossierAnomalie): string | undefined =>
-  dossier.finAutomatique ? dossier.activites.find(activite => activite.etat === 'ECHUE')?.id.activite : undefined;
-
-export const selectionInitiale = (dossier: DossierAnomalie | undefined): SelectionDuDossier | undefined => {
-  if (dossier === undefined) return undefined;
-  const pointage = premierPointageEnCause(dossier);
-  if (pointage !== undefined) return { kind: 'POINTAGE', id: pointage };
-  const activite = activiteEchueDUneFinAutomatique(dossier);
-  return activite === undefined ? undefined : { kind: 'ACTIVITE', id: activite };
-};
-
-const MILLISECONDES_PAR_MINUTE = 60_000;
-
-const minuteDe = (pointage: PointageAnomalie): number => Math.floor(Date.parse(pointage.fait.instant) / MILLISECONDES_PAR_MINUTE);
-
-const partageSaMinute = (pointage: PointageAnomalie, journal: readonly PointageAnomalie[]): boolean =>
-  journal.some(autre => !autre.id.equals(pointage.id) && minuteDe(autre) === minuteDe(pointage));
-
-const heureDuPointage = (pointage: PointageAnomalie, journal: readonly PointageAnomalie[]): string =>
-  partageSaMinute(pointage, journal) ? formatInstantTimeWithSeconds(new Date(pointage.fait.instant)) : heureDe(pointage.fait.instant);
-
-export const libelleDeLAction = (action: ActionDirecte, journal: readonly PointageAnomalie[]): string => {
-  const geste = gesteDuPointage(action.pointage);
-  const heure = heureDuPointage(action.pointage, journal);
-  return action.saisie.acte() === 'ANNULATION'
-    ? LIBELLES_ANOMALIES.actionsDirectes.annuler(`${defini(geste)} de ${heure}`)
-    : LIBELLES_ANOMALIES.actionsDirectes.corrigerLHeure(`${deDefini(geste)} de ${heure}`);
 };

@@ -22,20 +22,4 @@ export class ReferentielAnomalies {
   operateur(id: OperateurAnomalieId): OperateurAnomalie | undefined {
     return this.operateurs.find(operateur => operateur.id.equals(id));
   }
-
-  poste(id: PosteAnomalieId): PosteAnomalie | undefined {
-    return this.postes.find(poste => poste.id.equals(id));
-  }
-
-  postesHabilites(operateur: OperateurAnomalieId): readonly PosteAnomalie[] {
-    return this.postes.filter(poste => this.estHabilite(operateur, poste));
-  }
-
-  autresPostes(operateur: OperateurAnomalieId): readonly PosteAnomalie[] {
-    return this.postes.filter(poste => !this.estHabilite(operateur, poste));
-  }
-
-  private estHabilite(operateur: OperateurAnomalieId, poste: PosteAnomalie): boolean {
-    return this.operateur(operateur)?.postesHabilites.some(habilite => habilite.equals(poste.id)) ?? false;
-  }
 }

@@ -1,6 +1,6 @@
 import { toOffsetIsoString } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { InstantPointage } from '../../../domain/acte/InstantPointage';
-import { BornesDePoignee, DemandeDeDeplacement, PoigneeDeFrise } from './PoigneeDeFrise';
+import { BornesDePoignee, DemandeDeDeplacement } from './PoigneeDeFrise';
 
 const UNE_MINUTE = 60_000;
 
@@ -24,7 +24,3 @@ export const instantDeplace = (demande: DemandeDeDeplacement, courant: string, b
   const cible = cibleDe(demande, courant, plancher, plafond);
   return toOffsetIsoString(new Date(Math.min(Math.max(cible, plancher), plafond)));
 };
-
-export const peutDeplacer = (minutes: number, poignee: PoigneeDeFrise): boolean =>
-  !poignee.desactivee
-  && Date.parse(instantDeplace({ kind: 'DE', minutes }, poignee.instant, poignee.bornes)) !== Date.parse(poignee.instant);

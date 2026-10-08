@@ -70,10 +70,6 @@ export class SaisieActe {
     return new SaisieActe({ ...proposition, fait, motif: changement.motif ?? proposition.motif });
   }
 
-  awaitsDating(): boolean {
-    return this.proposition?.kind === 'REGULARISATION';
-  }
-
   acte(): PropositionActe['kind'] | undefined {
     return this.proposition?.kind;
   }
@@ -90,18 +86,6 @@ export class SaisieActe {
 
   instantDuFait(): string {
     return this.fait()?.instant ?? '';
-  }
-
-  heureDifferenteDe(depart: SaisieActe): boolean {
-    const saisi = this.instantDuFait();
-    const initial = depart.instantDuFait();
-    return saisi !== initial && !this.memeInstant(saisi, initial);
-  }
-
-  changesGuidedFact(changement: ChangementSaisie): boolean {
-    if (changement.fait === undefined) return false;
-    const champs = Object.keys(changement.fait);
-    return !(this.awaitsDating() && champs.length === 1 && champs[0] === 'instant');
   }
 
   command(cadre: CadreDuFait): ActeResolution | undefined {
@@ -178,12 +162,6 @@ export class SaisieActe {
 
   private targetIsMissing(fait: SaisieFait): boolean {
     return termineUneActivite(fait) && fait.activiteVisee.trim() === '';
-  }
-
-  private memeInstant(left: string, right: string): boolean {
-    const gauche = new InstantPointage(left);
-    const droite = new InstantPointage(right);
-    return gauche.isValid() && droite.isValid() && gauche.compareTo(droite) === 0;
   }
 
   private sameFact(left: FaitPropose, right: FaitPropose): boolean {

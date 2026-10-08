@@ -83,6 +83,10 @@ describe('Conflict list addresses in Gestion', () => {
         pointage: finFixture,
       });
     });
-    cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
+    cy.get(dataSelector('anomalie-resolution')).should('not.exist');
+    cy.get(dataSelector('anomalie-retour'))
+      .should('be.visible')
+      .and('have.attr', 'href')
+      .and('contain', `nature=CONFLIT&operateur=${operateurFixture}&element=${elementFixture}&page=1`);
   };
 });

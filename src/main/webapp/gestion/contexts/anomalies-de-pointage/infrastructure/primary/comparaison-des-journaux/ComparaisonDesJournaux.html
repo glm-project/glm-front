@@ -8,14 +8,9 @@
       <ol class="mt-4 list-none p-0">
         @for (pointage of avant().journal | chronologiePointages; track pointage.id.pointage) {
         <li class="border-t border-border py-3 text-body-sm" [attr.data-selector]="'anomalie-apercu-fait-avant-' + pointage.id.pointage">
-          <glm-detail-du-pointage
-            [detail]="detailDuPointage(pointage, avant(), now())"
-            classeEntete="font-semibold"
-            classeLigne=""
-            [avecGeste]="true"
-          />
-          @if (pointage.annulation; as annulation) {
-          <p class="text-danger">{{ libelles.annule }} @if (avecMotif()) { · {{ annulation.motif }} }</p>
+          <glm-detail-du-pointage [detail]="detailDuPointage(pointage, avant(), now())" classeEntete="font-semibold" classeLigne="" />
+          @if (pointage.annulation) {
+          <p class="text-danger">{{ libelles.annule }}</p>
           } @if (pointage.regularisation) {
           <p>{{ libelles.regularisation }}</p>
           }
@@ -28,14 +23,9 @@
       <ol class="mt-4 list-none p-0">
         @for (pointage of apres().journal | chronologiePointages; track pointage.id.pointage) {
         <li class="border-t border-border py-3 text-body-sm" [attr.data-selector]="'anomalie-apercu-fait-apres-' + pointage.id.pointage">
-          <glm-detail-du-pointage
-            [detail]="detailDuPointage(pointage, apres(), now())"
-            classeEntete="font-semibold"
-            classeLigne=""
-            [avecGeste]="true"
-          />
-          @if (pointage.annulation; as annulation) {
-          <p class="text-danger">{{ libelles.annule }} @if (avecMotif()) { · {{ annulation.motif }} }</p>
+          <glm-detail-du-pointage [detail]="detailDuPointage(pointage, apres(), now())" classeEntete="font-semibold" classeLigne="" />
+          @if (pointage.annulation) {
+          <p class="text-danger">{{ libelles.annule }}</p>
           } @if (pointage.remplace; as original) {
           <p>{{ remplacementDe(apres().journal, original.pointage, now()) }}</p>
           } @if (pointage.regularisation) {

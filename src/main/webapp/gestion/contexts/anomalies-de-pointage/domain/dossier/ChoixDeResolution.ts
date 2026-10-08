@@ -1,4 +1,3 @@
-import { conflitAExpliquer } from './ConflitAExpliquer';
 import { ChoixGuide, DossierAnomalie } from './DossierAnomalie';
 
 type DossierDeResolution = Pick<DossierAnomalie, 'enConflit' | 'finAutomatique' | 'activites' | 'choix'> & {
@@ -16,8 +15,7 @@ const viseLActiviteDeLAdresse = (dossier: DossierDeResolution, choix: ChoixGuide
   return activite?.ouvrant.equals(dossier.ligne.adresse.pointage) === true;
 };
 
-const estUnDossierDeFinAutomatiqueSansConflit = (dossier: DossierDeResolution): boolean =>
-  dossier.finAutomatique && !conflitAExpliquer(dossier);
+const estUnDossierDeFinAutomatiqueSansConflit = (dossier: DossierDeResolution): boolean => dossier.finAutomatique && !dossier.enConflit;
 
 const choixUnique = (choix: readonly ChoixGuide[]): ChoixGuide | undefined => (choix.length === 1 ? choix[0] : undefined);
 

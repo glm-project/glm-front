@@ -221,7 +221,7 @@ describe('Real conflict resolution composition', () => {
     if (dossier.kind !== 'DOSSIER') throw new Error('Dossier de préparation fixture absent');
     const preparation = TestBed.inject(PreparationActe);
     preparation.choose(SaisieActe.cancel('fin-17').afterChange({ motif: acteFixture.motif }));
-    const demande = preparation.preview(dossier.dossier);
+    const demande = preparation.previewInBackground(dossier.dossier);
     const commande = whenPreviewAnswers();
     await demande;
     return { preparation, commande };

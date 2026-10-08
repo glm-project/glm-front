@@ -1,10 +1,5 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import {
-  formatInstantLongDay,
-  formatInstantLongDayWithSeconds,
-  formatInstantTimeAndLongDayWithSeconds,
-  toHtmlDatetime,
-} from './DateFormats';
+import { formatInstantLongDay, formatInstantLongDayWithSeconds, formatInstantTimeAndLongDayWithSeconds } from './DateFormats';
 
 const instantOf = (text: string): Date | undefined => {
   const instant = new Date(text);
@@ -32,13 +27,5 @@ export class InstantTimeAndLongDayWithSecondsPipe implements PipeTransform {
   transform(text: string, now: Date): Readonly<{ time: string; day: string }> {
     const instant = instantOf(text);
     return instant === undefined ? { time: text, day: '' } : formatInstantTimeAndLongDayWithSeconds(instant, now);
-  }
-}
-
-@Pipe({ name: 'instantDatetime', pure: true })
-export class InstantDatetimePipe implements PipeTransform {
-  transform(text: string): string | null {
-    const instant = instantOf(text);
-    return instant === undefined ? null : toHtmlDatetime(instant);
   }
 }

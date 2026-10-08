@@ -129,7 +129,6 @@ const thenTheHeaderIsVisibleAndTheDossierAbsent = (): void => {
 
 const thenTheDossierIsDisplayed = (): void => {
   cy.get(dataSelector('anomalie-retour')).should('be.visible');
-  cy.get(dataSelector('anomalie-pointage')).should('have.length', 3);
   cy.location('pathname').should('eq', `/anomalies/${suiviFixture}`);
 };
 

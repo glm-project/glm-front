@@ -11,6 +11,5 @@ export class DetailDuPointage {
   readonly detail = input.required<DetailPointage>();
   readonly classeEntete = input.required<string>();
   readonly classeLigne = input.required<string>();
-  readonly avecGeste = input.required<boolean>();
   protected readonly libelles = LIBELLES_ANOMALIES;
 }

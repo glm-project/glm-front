@@ -206,35 +206,6 @@ describe('Preparation of a resolution acte', () => {
     expect(acte).toBeUndefined();
     expect(saisie.errors(cadreOuvert)).toEqual(['MOTIF_REQUIS']);
   });
-  it('should await the dating of a regularisation but not of a correction or a cancellation', () => {
-    expect(SaisieActe.regularise().awaitsDating()).toBe(true);
-    expect(SaisieActe.correct('fin-18', faitFixture).awaitsDating()).toBe(false);
-    expect(SaisieActe.cancel('fin-18').awaitsDating()).toBe(false);
-    expect(SaisieActe.empty().awaitsDating()).toBe(false);
-  });
-  it('should keep the guided choice when the manager only dates a regularisation', () => {
-    const saisie = SaisieActe.regularise({ ...faitFixture, instant: '' });
-
-    expect(saisie.changesGuidedFact({ fait: { instant: '2026-09-14T17:00:00+02:00' } })).toBe(false);
-  });
-  it.each([{ fait: { operateur: 'op-2' } }, { fait: { instant: '2026-09-14T17:00:00+02:00', poste: 'poste-3' } }, { fait: {} }])(
-    'should drop the guided choice when a regularisation changes more than its date: %j',
-    changement => {
-      const saisie = SaisieActe.regularise({ ...faitFixture, instant: '' });
-
-      expect(saisie.changesGuidedFact(changement)).toBe(true);
-    },
-  );
-  it('should drop the guided choice when a correction changes only its time', () => {
-    const saisie = SaisieActe.correct('fin-18', faitFixture);
-
-    expect(saisie.changesGuidedFact({ fait: { instant: '2026-09-14T18:00:00+02:00' } })).toBe(true);
-  });
-  it('should keep the guided choice when only the motif changes', () => {
-    const saisie = SaisieActe.correct('fin-18', faitFixture);
-
-    expect(saisie.changesGuidedFact({ motif: 'Fin confirmée' })).toBe(false);
-  });
 });
 
 const DEBUT_DU_TRAVAIL = '2026-09-14T08:00:00-03:00';
@@ -385,56 +356,6 @@ describe('Acte of an entry', () => {
     { saisie: SaisieActe.empty(), acte: undefined },
   ])('should name the acte the manager chose, $acte', ({ saisie, acte }) => {
     expect(saisie.acte()).toBe(acte);
-  });
-});
-
-describe('Time entered on top of a starting entry', () => {
-  it('should be entered when a regularisation that started without time now carries one', () => {
-    const depart = SaisieActe.regularise({ ...faitFixture, instant: '' });
-
-    const saisie = depart.afterChange({ fait: { instant: '2026-09-14T17:00:00+02:00' } });
-
-    expect(saisie.heureDifferenteDe(depart)).toBe(true);
-  });
-
-  it('should not be entered while a regularisation still carries no time', () => {
-    const depart = SaisieActe.regularise({ ...faitFixture, instant: '' });
-
-    expect(depart.afterChange({ fait: { operateur: 'op-2' } }).heureDifferenteDe(depart)).toBe(false);
-  });
-
-  it('should be entered when a correction now carries another time than the received one', () => {
-    const depart = SaisieActe.correct('fin-23', faitFixture);
-
-    const saisie = depart.afterChange({ fait: { instant: '2026-09-14T16:55:00+02:00' } });
-
-    expect(saisie.heureDifferenteDe(depart)).toBe(true);
-  });
-
-  it('should not be entered when a correction carries the received time written with another offset', () => {
-    const depart = SaisieActe.correct('fin-23', { ...faitFixture, instant: '2026-09-14T15:00:00Z' });
-
-    const saisie = depart.afterChange({ fait: { instant: '2026-09-14T12:00:00-03:00' } });
-
-    expect(saisie.heureDifferenteDe(depart)).toBe(false);
-  });
-
-  it('should be entered when a correction now carries no readable time', () => {
-    const depart = SaisieActe.correct('fin-23', faitFixture);
-
-    expect(depart.afterChange({ fait: { instant: '' } }).heureDifferenteDe(depart)).toBe(true);
-  });
-
-  it('should not be entered while a correction keeps the received time, whatever its motif', () => {
-    const depart = SaisieActe.correct('fin-23', faitFixture);
-
-    expect(depart.afterChange({ motif: 'Vérifié' }).heureDifferenteDe(depart)).toBe(false);
-  });
-
-  it('should not be entered on a cancellation, which carries no time', () => {
-    const depart = SaisieActe.cancel('fin-17');
-
-    expect(depart.afterChange({ motif: 'Double appui' }).heureDifferenteDe(depart)).toBe(false);
   });
 });
 

@@ -1,9 +1,15 @@
-import {
-  InstantDatetimePipe,
-  InstantLongDayPipe,
-  InstantLongDayWithSecondsPipe,
-  InstantTimeAndLongDayWithSecondsPipe,
-} from './InstantPipes';
+import { Component } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { InstantLongDayPipe, InstantLongDayWithSecondsPipe, InstantTimeAndLongDayWithSecondsPipe } from './InstantPipes';
+
+@Component({
+  imports: [InstantLongDayWithSecondsPipe, InstantTimeAndLongDayWithSecondsPipe],
+  template: '<p>{{ received | instantLongDayWithSeconds: now }}</p><p>{{ (received | instantTimeAndLongDayWithSeconds: now).time }}</p>',
+})
+class HostFixture {
+  readonly received = new Date(2026, 9, 1, 9, 41, 22).toISOString();
+  readonly now = new Date(2026, 9, 5, 10, 0);
+}
 
 describe('Instant pipes', () => {
   const now = new Date(2026, 9, 5, 10, 0);
@@ -80,19 +86,20 @@ describe('Instant pipes', () => {
     expect(parts).toEqual({ time: 'pas un instant', day: '' });
   });
 
-  it('should write an instant received with nanoseconds as a datetime attribute with at most three decimals', () => {
-    const received = '2026-10-01T12:41:22.123456789Z';
+  it('should be usable from a template by their names', () => {
+    const fixture = whenRenderingTheHostOfThePipes();
 
-    const text = new InstantDatetimePipe().transform(received);
-
-    expect(text).toBe('2026-10-01T12:41:22.123Z');
-  });
-
-  it('should write no datetime attribute for a text that is not an instant', () => {
-    const typed = 'pas un instant';
-
-    const text = new InstantDatetimePipe().transform(typed);
-
-    expect(text).toBeNull();
+    thenTheParagraphsRead(fixture, ['jeudi 1 octobre à 09:41:22', '09:41:22']);
   });
 });
+
+const whenRenderingTheHostOfThePipes = (): ComponentFixture<HostFixture> => {
+  const fixture = TestBed.createComponent(HostFixture);
+  fixture.detectChanges();
+  return fixture;
+};
+
+const thenTheParagraphsRead = (fixture: ComponentFixture<HostFixture>, expected: readonly string[]): void => {
+  const paragraphs = [...(fixture.nativeElement as HTMLElement).querySelectorAll('p')].map(paragraph => paragraph.textContent);
+  expect(paragraphs).toEqual(expected);
+};

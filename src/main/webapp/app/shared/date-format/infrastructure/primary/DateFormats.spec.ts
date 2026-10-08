@@ -1,9 +1,4 @@
 import {
-  DATE_INPUT_OPTIONS,
-  LOCALE,
-  TIME_INPUT_OPTIONS,
-  TIME_OPTION_LABEL_OPTIONS,
-  combineLocalDayAndTime,
   formatCalendarDayFull,
   formatCalendarDayFullWithYear,
   formatCalendarDayLong,
@@ -25,10 +20,8 @@ import {
   formatInstantTimeAndLongDayWithSeconds,
   formatInstantTimeUnambiguous,
   formatInstantTimeWithOffset,
-  formatInstantTimeWithSeconds,
   formatInstantWeekdayDay,
   localCalendarDay,
-  toHtmlDatetime,
   toOffsetIsoString,
 } from './DateFormats';
 
@@ -63,14 +56,6 @@ describe('DateFormats', () => {
     const text = formatInstantTime(instant);
 
     expect(text).toBe('00:05');
-  });
-
-  it('should write the local time of an instant with its seconds', () => {
-    const instant = new Date(2026, 8, 14, 8, 2, 7);
-
-    const text = formatInstantTimeWithSeconds(instant);
-
-    expect(text).toBe('08:02:07');
   });
 
   it('should format an instant as its local day and month', () => {
@@ -326,38 +311,6 @@ describe('DateFormats', () => {
     expect(parts).toEqual({ time: '22:30:05', day: 'jeudi 1 octobre' });
   });
 
-  it('should write an instant as a UTC date-time with milliseconds, valid for an HTML datetime attribute', () => {
-    const instant = new Date(Date.UTC(2026, 9, 1, 12, 41, 22, 123));
-
-    const text = toHtmlDatetime(instant);
-
-    expect(text).toBe('2026-10-01T12:41:22.123Z');
-  });
-
-  it('should write the local date of a date field as day, month and year', () => {
-    const day = new Date(2026, 9, 5);
-
-    const text = new Intl.DateTimeFormat(LOCALE, DATE_INPUT_OPTIONS).format(day);
-
-    expect(text).toBe('05/10/2026');
-  });
-
-  it('should write the local time of a time field with its seconds on a 24-hour clock', () => {
-    const time = new Date(2026, 9, 5, 0, 5, 9);
-
-    const text = new Intl.DateTimeFormat(LOCALE, TIME_INPUT_OPTIONS).format(time);
-
-    expect(text).toBe('00:05:09');
-  });
-
-  it('should write a time option of the time panel as hour and minute on a 24-hour clock', () => {
-    const time = new Date(2026, 9, 5, 9, 30, 15);
-
-    const text = new Intl.DateTimeFormat(LOCALE, TIME_OPTION_LABEL_OPTIONS).format(time);
-
-    expect(text).toBe('09:30');
-  });
-
   it('should write an instant with its local offset and without fraction', () => {
     const instant = new Date(2026, 9, 1, 9, 41, 22, 987);
 
@@ -388,15 +341,6 @@ describe('DateFormats', () => {
     const text = formatInstantTimeUnambiguous(instant);
 
     expect(text).toBe('08:02');
-  });
-
-  it('should join the local day of a date and the local time of another into one instant', () => {
-    const day = new Date(2026, 9, 5);
-    const time = new Date(2030, 0, 1, 17, 1, 9, 500);
-
-    const instant = combineLocalDayAndTime(day, time);
-
-    expect(instant).toEqual(new Date(2026, 9, 5, 17, 1, 9));
   });
 
   describe('in a time zone that changes hour', () => {
@@ -446,33 +390,6 @@ describe('DateFormats', () => {
       { cas: 'before the hour is repeated', instant: new Date(Date.UTC(2026, 9, 24, 21, 0)) },
     ])('should write only the hour and minute of an instant $cas', ({ instant }) => {
       expect(formatInstantTimeUnambiguous(instant)).toMatch(/^\d{2}:\d{2}$/);
-    });
-
-    it('should join a day and an ambiguous hour into the first occurrence', () => {
-      const day = new Date(2026, 9, 25);
-      const time = new Date(2026, 0, 1, 2, 30);
-
-      const instant = combineLocalDayAndTime(day, time);
-
-      expect(instant && toOffsetIsoString(instant)).toBe('2026-10-25T02:30:00+02:00');
-    });
-
-    it('should refuse a day and an hour that does not exist because the clock went forward', () => {
-      const day = new Date(2026, 2, 29);
-      const time = new Date(2026, 0, 1, 2, 30);
-
-      const instant = combineLocalDayAndTime(day, time);
-
-      expect(instant).toBeUndefined();
-    });
-
-    it('should accept the hour right after the clock went forward', () => {
-      const day = new Date(2026, 2, 29);
-      const time = new Date(2026, 0, 1, 3, 0);
-
-      const instant = combineLocalDayAndTime(day, time);
-
-      expect(instant && toOffsetIsoString(instant)).toBe('2026-03-29T03:00:00+02:00');
     });
   });
 });

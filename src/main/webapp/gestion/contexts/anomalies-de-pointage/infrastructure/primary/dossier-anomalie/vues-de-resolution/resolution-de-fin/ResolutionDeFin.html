@@ -62,7 +62,7 @@
       }
     </div>
     }
-    <glm-comparaison-des-journaux [avant]="apercu.avant" [apres]="apercu.apres" [now]="now()" [avecMotif]="false" />
+    <glm-comparaison-des-journaux [avant]="apercu.avant" [apres]="apercu.apres" [now]="now()" />
   </details>
   } @if (echec()) {
   <button type="button" class="bouton mt-4" data-selector="anomalie-resolution-reessayer" (click)="reessayer()">

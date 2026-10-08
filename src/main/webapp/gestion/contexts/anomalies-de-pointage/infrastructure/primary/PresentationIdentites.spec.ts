@@ -1,33 +1,14 @@
+import {
+  ARRET_FIXTURE,
+  dossierDeFinAutomatiqueFixture,
+  faitFixture,
+  pointageFixture,
+} from '@test/unit/fixtures/gestion/anomalies-de-pointage/DossierAnomalie.fixture';
 import { describe, expect, it } from 'vitest';
-import { PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
+import { DossierAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
-import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
-import { PosteAnomalieId } from '../../domain/dossier/PosteAnomalieId';
 import { ReferentielAnomalies } from '../../domain/dossier/ReferentielAnomalies';
-import { operateurDeLActe, operateurNomme, operateurPresente, posteDeLActe, postePresente } from './PresentationIdentites';
-
-const referentielFixture = new ReferentielAnomalies(
-  [{ id: new OperateurAnomalieId('op-1'), nom: 'Ada Lovelace', postesHabilites: [] }],
-  [{ id: new PosteAnomalieId('poste-1'), libelle: 'Fraiseuse 1' }],
-);
-const journalFixture: readonly PointageAnomalie[] = [
-  {
-    id: new PointageAnomalieId('p-1'),
-    fait: {
-      type: 'DEBUT',
-      intention: 'OUVERTURE',
-      activiteVisee: '',
-      operateur: 'op-2',
-      poste: 'poste-2',
-      instant: '2026-09-14T08:00:00Z',
-    },
-    operateurNom: 'Alan Turing',
-    posteLibelle: 'Tour 2',
-    auteur: 'alan',
-    enregistre: '2026-09-14T08:00:01Z',
-    regularisation: false,
-  },
-];
+import { operateurDuDossier, operateurNomme, operateurPresente, postePresente } from './PresentationIdentites';
 
 describe('Operator and workstation presentation', () => {
   it('should present the resolved operator name', () => {
@@ -60,56 +41,35 @@ describe('Operator and workstation presentation', () => {
     expect(operateurNomme({ id: new OperateurAnomalieId('op-1'), nom: 'Ada Lovelace', postesHabilites: [] })).toBe('Ada Lovelace');
   });
 
-  it('should name the operator of an act from the referential before the journal', () => {
-    const journal = [{ ...requiredJournal(), operateurNom: 'Autre nom', fait: { ...requiredJournal().fait, operateur: 'op-1' } }];
+  describe('operator of a dossier', () => {
+    const referentielFixture = new ReferentielAnomalies(
+      [{ id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin', postesHabilites: [] }],
+      [],
+    );
+    const dossierFixture = (ligne: string, journal: string): DossierAnomalie =>
+      dossierDeFinAutomatiqueFixture({
+        ligne: { ...dossierDeFinAutomatiqueFixture().ligne, operateur: ligne },
+        journal: [pointageFixture('debut-8', faitFixture(ARRET_FIXTURE, '2026-09-14T08:00:00Z'), { operateurNom: journal })],
+      });
 
-    expect(operateurDeLActe('op-1', referentielFixture, journal)).toBe('Ada Lovelace');
+    it('should be the name the line of the dossier carries, before the referential and the journal', () => {
+      expect(operateurDuDossier(dossierFixture('Camille Durand', 'Camille Journal'), referentielFixture)).toBe('Camille Durand');
+    });
+
+    it('should be the name of the referential, before the one of the journal, when the line carries none', () => {
+      expect(operateurDuDossier(dossierFixture('', 'Camille Journal'), referentielFixture)).toBe('Camille Martin');
+    });
+
+    it('should be the name of the journal when neither the line nor the referential carries one', () => {
+      expect(operateurDuDossier(dossierFixture('', 'Camille Journal'), new ReferentielAnomalies([], []))).toBe('Camille Journal');
+    });
+
+    it('should be none when no source carries a name', () => {
+      expect(operateurDuDossier(dossierFixture('', ''), new ReferentielAnomalies([], []))).toBeUndefined();
+    });
+
+    it('should still be the name of the journal when the referential could not be read', () => {
+      expect(operateurDuDossier(dossierFixture('', 'Camille Journal'), undefined)).toBe('Camille Journal');
+    });
   });
-
-  it('should name the operator of an act from the journal when the referential does not hold it', () => {
-    expect(operateurDeLActe('op-2', referentielFixture, journalFixture)).toBe('Alan Turing');
-  });
-
-  it('should ignore a journal fact whose operator has no name', () => {
-    const journal = [{ ...requiredJournal(), operateurNom: '' }];
-
-    expect(operateurDeLActe('op-2', referentielFixture, journal)).toBe('Opérateur non résolu');
-  });
-
-  it('should keep the operator of an act without calling it unresolved when the referential could not be read', () => {
-    expect(operateurDeLActe('op-3', undefined, journalFixture)).toBe('Opérateur actuel conservé');
-  });
-
-  it('should still name the operator of an act from the journal when the referential could not be read', () => {
-    expect(operateurDeLActe('op-2', undefined, journalFixture)).toBe('Alan Turing');
-  });
-
-  it('should keep the workstation of an act without calling it unresolved when the referential could not be read', () => {
-    expect(posteDeLActe('poste-3', undefined, journalFixture)).toBe('Poste actuel conservé');
-  });
-
-  it('should still present an act without workstation as having none when the referential could not be read', () => {
-    expect(posteDeLActe('', undefined, journalFixture)).toBe('Sans poste');
-  });
-
-  it('should name the workstation of an act from the referential before the journal', () => {
-    const journal = [{ ...requiredJournal(), posteLibelle: 'Autre poste', fait: { ...requiredJournal().fait, poste: 'poste-1' } }];
-
-    expect(posteDeLActe('poste-1', referentielFixture, journal)).toBe('Fraiseuse 1');
-  });
-
-  it('should name the workstation of an act from the journal when the referential does not hold it', () => {
-    expect(posteDeLActe('poste-2', referentielFixture, journalFixture)).toBe('Tour 2');
-  });
-
-  it('should present an act without workstation as having none and an unknown workstation as unresolved', () => {
-    expect(posteDeLActe('', referentielFixture, journalFixture)).toBe('Sans poste');
-    expect(posteDeLActe('poste-inconnu', referentielFixture, journalFixture)).toBe('Poste non résolu');
-  });
-
-  const requiredJournal = (): PointageAnomalie => {
-    const [pointage] = journalFixture;
-    if (pointage === undefined) throw new Error('Missing journal fixture');
-    return pointage;
-  };
 });

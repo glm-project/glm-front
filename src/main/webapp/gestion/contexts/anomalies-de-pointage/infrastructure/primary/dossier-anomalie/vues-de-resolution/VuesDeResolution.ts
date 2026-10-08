@@ -15,12 +15,9 @@ const VUES_DE_RESOLUTION: Readonly<Partial<Record<CodeDeChoix, Type<unknown>>>> 
 };
 
 export interface AiguillageSimple {
-  readonly kind: 'SIMPLE';
   readonly vue: Type<unknown>;
   readonly choix: ChoixGuide;
 }
-
-export type Aiguillage = AiguillageSimple | { readonly kind: 'COMPLETE'; readonly vueSimple?: AiguillageSimple };
 
 const vueDuChoix = (choix: ChoixGuide): Type<unknown> | undefined =>
   choix.code === undefined ? undefined : VUES_DE_RESOLUTION[choix.code];
@@ -28,8 +25,8 @@ const vueDuChoix = (choix: ChoixGuide): Type<unknown> | undefined =>
 const heureAtteignableAuClavier = (dossier: DossierAnomalie, choix: ChoixGuide): boolean =>
   choix.code !== 'REGULARISER_FIN' || seLitEnLigne(dossier);
 
-export const aiguiller = (dossier: DossierAnomalie): Aiguillage => {
+export const aiguiller = (dossier: DossierAnomalie): AiguillageSimple | undefined => {
   const choix = choixDeResolution(dossier);
   const vue = choix === undefined || !heureAtteignableAuClavier(dossier, choix) ? undefined : vueDuChoix(choix);
-  return choix === undefined || vue === undefined ? { kind: 'COMPLETE' } : { kind: 'SIMPLE', vue, choix };
+  return choix === undefined || vue === undefined ? undefined : { vue, choix };
 };

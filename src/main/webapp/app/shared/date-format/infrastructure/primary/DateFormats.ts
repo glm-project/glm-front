@@ -1,11 +1,9 @@
-export const LOCALE = 'fr-FR';
+const LOCALE = 'fr-FR';
 const HOUR_CYCLE = 'h23';
 
-export const DATE_INPUT_OPTIONS: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' };
+const TIME_OPTION_LABEL_OPTIONS: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hourCycle: HOUR_CYCLE };
 
-export const TIME_OPTION_LABEL_OPTIONS: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hourCycle: HOUR_CYCLE };
-
-export const TIME_INPUT_OPTIONS: Intl.DateTimeFormatOptions = { ...TIME_OPTION_LABEL_OPTIONS, second: '2-digit' };
+const TIME_INPUT_OPTIONS: Intl.DateTimeFormatOptions = { ...TIME_OPTION_LABEL_OPTIONS, second: '2-digit' };
 
 const NUMERIC_DATE_TIME = new Intl.DateTimeFormat(LOCALE, {
   day: '2-digit',
@@ -81,8 +79,6 @@ export const formatInstantNumericDateTime = (instant: Date): string => NUMERIC_D
 
 export const formatInstantTime = (instant: Date): string => TIME.format(instant);
 
-export const formatInstantTimeWithSeconds = (instant: Date): string => TIME_WITH_SECONDS.format(instant);
-
 export const formatInstantNumericDayMonth = (instant: Date): string => NUMERIC_DAY_MONTH.format(instant);
 
 export const formatInstantShortDateTime = (instant: Date): string => SHORT_DATE_TIME.format(instant);
@@ -107,8 +103,6 @@ export const formatInstantTimeAndLongDayWithSeconds = (instant: Date, now: Date)
   time: TIME_WITH_SECONDS.format(instant),
   day: longDayOf(instant, now),
 });
-
-export const toHtmlDatetime = (instant: Date): string => instant.toISOString();
 
 export const formatCalendarDayRange = (first: string, last: string): string =>
   CALENDAR_DAY_SHORT_DAY_MONTH_YEAR.formatRange(utcMidnightOf(first), utcMidnightOf(last));
@@ -161,8 +155,3 @@ export const formatInstantTimeUnambiguous = (instant: Date): string =>
 
 export const toOffsetIsoString = (date: Date): string =>
   `${localCalendarDay(date)}T${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}:${twoDigits(date.getSeconds())}${offsetOf(date)}`;
-
-export const combineLocalDayAndTime = (day: Date, time: Date): Date | undefined => {
-  const combined = new Date(day.getFullYear(), day.getMonth(), day.getDate(), time.getHours(), time.getMinutes(), time.getSeconds());
-  return combined.getHours() === time.getHours() && combined.getMinutes() === time.getMinutes() ? combined : undefined;
-};

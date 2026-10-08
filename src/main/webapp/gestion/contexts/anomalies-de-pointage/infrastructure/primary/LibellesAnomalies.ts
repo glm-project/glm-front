@@ -3,7 +3,6 @@ import { CodeRefusActe } from '../../domain/acte/AnomaliesActesPorts';
 
 export interface ActiviteDansUnePhrase {
   readonly defini: string;
-  readonly indefini: string;
   readonly accord: string;
 }
 
@@ -55,9 +54,8 @@ const SYMBOLES_DES_GESTES: Readonly<Record<TypePointage, Readonly<Partial<Record
 };
 
 const ACTIVITES_DE_PHRASE = {
-  TRAVAIL: { defini: 'le travail', indefini: 'un travail', accord: '' },
-  NON_CONFORMITE: { defini: 'la non-conformité', indefini: 'une non-conformité', accord: 'e' },
-  INCONNUE: { defini: 'l’activité', indefini: 'une activité', accord: 'e' },
+  TRAVAIL: { defini: 'le travail', accord: '' },
+  NON_CONFORMITE: { defini: 'la non-conformité', accord: 'e' },
 } as const satisfies Readonly<Record<string, ActiviteDansUnePhrase>>;
 
 type Activite = ActiviteDansUnePhrase;
@@ -66,42 +64,6 @@ const PROBLEMES = {
   activites: ACTIVITES_DE_PHRASE,
   pointageNonResolu: 'Un pointage non résolu',
   regularise: 'régularisé',
-  memeCategorie: 'de même catégorie',
-  categories: { TRAVAIL: 'en bon', NON_CONFORMITE: 'en NC' },
-  conflit: {
-    CIBLE_REMPLACEE: {
-      avec: (sujet: string, cible: Activite, heure: string, terminant: string) =>
-        `${sujet} vise ${cible.defini}, remplacé${cible.accord} à ${heure} par ${terminant}.`,
-      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} qui n’est plus en cours.`,
-    },
-    CIBLE_DEJA_TERMINEE: {
-      avec: (sujet: string, cible: Activite, heure: string) => `${sujet} vise ${cible.defini}, déjà arrêté${cible.accord} à ${heure}.`,
-      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} déjà arrêté${cible.accord}.`,
-    },
-    GESTE_AVANT_OUVERTURE: {
-      avec: (sujet: string, cible: Activite, heure: string) => `${sujet} vise ${cible.indefini} démarré${cible.accord} à ${heure}.`,
-      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} pas encore démarré${cible.accord}.`,
-    },
-    OUVRANT_ANNULE: {
-      avec: (sujet: string, cible: Activite, ouvrant: string) => `${sujet} vise ${cible.indefini} dont ${ouvrant} est annulé.`,
-      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} dont le démarrage est annulé.`,
-    },
-    TRANSITION_MEME_CATEGORIE: {
-      avec: (sujet: string, cible: Activite, heure: string, categorie: string) =>
-        `${sujet} vise ${cible.defini} démarré${cible.accord} à ${heure}, déjà ${categorie}.`,
-      sans: (sujet: string, cible: Activite, categorie: string) => `${sujet} vise ${cible.indefini} déjà ${categorie}.`,
-    },
-    CIBLE_ECHUE_AVEC_AUTRE_ACTIVITE: {
-      avec: (sujet: string, cible: Activite, heure: string) =>
-        `${sujet} vise ${cible.defini} de ${heure}, déjà terminé${cible.accord} automatiquement, alors qu’une autre activité est en cours.`,
-      sans: (sujet: string, cible: Activite) =>
-        `${sujet} vise ${cible.indefini} déjà terminé${cible.accord} automatiquement, alors qu’une autre activité est en cours.`,
-    },
-    CONTRADICTION_REGULARISATION: {
-      avec: (sujet: string, cible: Activite, heure: string) => `${sujet} vise ${cible.indefini} déjà arrêté${cible.accord} à ${heure}.`,
-      sans: (sujet: string, cible: Activite) => `${sujet} vise ${cible.indefini} prolongé${cible.accord} par une régularisation.`,
-    },
-  },
   finAutomatique: {
     pointageTardif: (sujet: string, cible: Activite, fin: string) =>
       `${sujet} vise ${cible.defini}, déjà terminé${cible.accord} automatiquement à ${fin}.`,
@@ -110,17 +72,6 @@ const PROBLEMES = {
     terminee: (cible: Activite, debut: string, fin: string) =>
       `${cible.defini} démarré${cible.accord} à ${debut} a été terminé${cible.accord} automatiquement à ${fin}.`,
   },
-} as const;
-
-const CHAMP_INSTANT = {
-  legend: 'Date et heure du fait',
-  date: 'Date',
-  datePlaceholder: 'JJ/MM/AAAA',
-  time: 'Heure',
-  timePlaceholder: 'HH:MM:SS',
-  openTimeList: 'Ouvrir la liste des heures',
-  timeList: 'Heures proposées',
-  skippedHour: 'Cette heure n’existe pas ce jour-là, à cause du changement d’heure.',
 } as const;
 
 const RESOLUTION = {
@@ -138,14 +89,7 @@ const RESOLUTION = {
   },
   autresFinsAutomatiques: (nombre: number) =>
     nombre === 1 ? '1 autre fin automatique sur cet élément' : `${nombre} autres fins automatiques sur cet élément`,
-  autreCorrection: 'Autre correction…',
   anomalieSuivante: 'Anomalie suivante',
-  revenirALaVueSimple: 'Revenir à la vue simple',
-  sortie: {
-    avertissement: 'L’heure saisie sera perdue si vous passez à la vue complète.',
-    continuer: 'Passer à la vue complète',
-    rester: 'Rester ici',
-  },
   verification: 'Vérification des conséquences…',
   reessayerLApercu: 'Réessayer l’aperçu',
   voirLeDetail: 'Voir le détail',
@@ -159,34 +103,12 @@ const RESOLUTION = {
   },
 } as const;
 
-const ACTIONS_DIRECTES = {
-  titre: 'Actions directes',
-  annuler: (pointage: string) => `Annuler ${pointage}`,
-  corrigerLHeure: (pointage: string) => `Corriger l’heure ${pointage}`,
-} as const;
-
 export const LIBELLES_ANOMALIES = {
   resolution: RESOLUTION,
-  actionsDirectes: ACTIONS_DIRECTES,
-  autresCorrections: 'Autres corrections',
-  autresCorrectionsAide:
-    'Pour corriger ou annuler un autre pointage de cette anomalie, sélectionnez-le sur la frise : les boutons sont dans le panneau Sélection.',
-  debut: 'Début',
-  fin: 'Fin',
-  corriger: 'Corriger ce pointage',
-  regulariser: 'Ajouter un pointage manquant',
-  annuler: 'Annuler ce pointage',
   verifier: 'Vérifier le reçu de confirmation',
   reprendreConfirmation: 'Reprendre la même confirmation',
-  modifier: 'Modifier',
-  modifierIdentite: 'Modifier l’opérateur et le poste',
-  modifierFait: 'Consulter ou modifier le fait proposé',
-  decalerInstant: 'Décaler l’heure du fait',
-  moinsCinqMinutes: '−5 min',
-  plusCinqMinutes: '+5 min',
   cloture: 'Clôturé',
   ouvert: 'Ouvert',
-  continuation: 'Autres conflits du suivi',
   traiterLaFinAutomatiqueRestante: (rang: number, total: number) =>
     total === 1 ? 'Traiter la fin automatique restante' : `Traiter la fin automatique restante (${rang} sur ${total})`,
   issue: {
@@ -211,16 +133,6 @@ export const LIBELLES_ANOMALIES = {
     REMPLACEE: 'Remplacée',
     ECHUE: 'Fin automatique',
   },
-  actes: {
-    CORRECTION: 'Correction du pointage',
-    ANNULATION: 'Annulation du pointage',
-    REGULARISATION: 'Régularisation d’un fait manquant',
-  },
-  gesteSignale: 'Ce que signale le pointage',
-  activiteTerminee: 'Activité qu’il termine',
-  gesteAChoisir: 'Choisissez ce que signale le pointage',
-  operateurConcerne: 'Opérateur concerné',
-  posteConcerne: 'Poste (facultatif)',
   choisirOperateur: 'Choisissez l’opérateur',
   tousLesOperateurs: 'Tous les opérateurs',
   rechercherOperateur: 'Rechercher un opérateur',
@@ -235,18 +147,7 @@ export const LIBELLES_ANOMALIES = {
   aucunResultatElement: 'Aucun élément ne correspond à cette recherche',
   elementNonResoluActuel: 'Élément non résolu (référence actuelle)',
   elementActuelConserve: 'Élément actuel conservé',
-  posteNonResoluActuel: 'Poste non résolu (référence actuelle)',
   posteActuelConserve: 'Poste actuel conservé',
-  postesHabilites: 'Postes habilités',
-  autresPostes: 'Autres postes',
-  chargementReferentiel: 'Chargement des opérateurs et des postes…',
-  referentielIndisponible: 'Liste des opérateurs et des postes indisponible',
-  champInstant: CHAMP_INSTANT,
-  motif: 'Motif de la correction ou de l’annulation',
-  motifAide: 'Obligatoire, 255 caractères au maximum.',
-  previsualiser: 'Vérifier les conséquences',
-  confirmer: 'Enregistrer cette décision',
-  apercu: 'Vérifier avant d’enregistrer',
   comparerJournal: 'Comparer tous les pointages avant et après',
   avant: 'Avant',
   apres: 'Après cet acte',
@@ -254,7 +155,6 @@ export const LIBELLES_ANOMALIES = {
   remplace: 'Remplace le pointage',
   remplaceNonResolu: 'Remplace un pointage non résolu',
   regularisation: 'Régularisation',
-  pointeApresLEcheance: 'Pointé après l’échéance',
   erreurLecture: 'Le dossier n’a pas pu être chargé.',
   reessayer: 'Réessayer',
   adresseInvalide: 'L’adresse doit préciser un suivi et un pointage.',
@@ -265,7 +165,6 @@ export const LIBELLES_ANOMALIES = {
   },
   operation: {
     REPOS: '',
-    PREVISUALISATION: 'Prévisualisation en cours…',
     CONFIRMATION: 'Enregistrement en cours…',
     CONCURRENCE: 'Les données ont changé. Vérifiez un nouvel aperçu avant de confirmer.',
     ISSUE_INCONNUE: 'L’issue de l’écriture est inconnue. Vérifiez le journal avant toute nouvelle décision.',
@@ -278,45 +177,15 @@ export const LIBELLES_ANOMALIES = {
   retour: 'Retour aux anomalies',
   dossier: 'Dossier d’anomalie de pointage',
   chargementDossier: 'Chargement du dossier…',
-  chronologie: 'Pointages et rattachements',
   cible: 'Vise l’activité',
   creee: 'Crée l’activité',
-  enregistrement: 'Enregistré le',
-  decision: 'Votre décision',
-  selection: 'Sélection',
-  selectionVide: 'Sélectionnez un pointage ou une activité sur la frise pour voir ses détails.',
   voirLaJournee: (operateur: string) => `Voir la journée de ${operateur}`,
   pointagesEtActivites: 'Pointages et activités',
-  choisir:
-    'Choisissez ce qui correspond aux faits vérifiés. Ce choix prépare un acte ; vous vérifierez ses conséquences avant de l’enregistrer.',
-  choix: {
-    ANNULER_TRANSITION: {
-      libelle: 'Annuler la transition',
-      explication: 'Le pointage restera dans le journal avec votre motif d’annulation. Vérifiez ses conséquences dans l’aperçu.',
-    },
-    RATTACHER_FIN_A_ACTIVITE_REMPLACANTE: {
-      libelle: 'Rattacher la fin à l’activité remplaçante',
-      explication: 'La fin proposée visera l’activité indiquée dans les faits. Renseignez un motif, puis vérifiez l’aperçu.',
-    },
-    REGULARISER_FIN: {
-      libelle: 'Régulariser la fin',
-      explication: 'Aucune heure n’est proposée : saisissez l’heure réelle de fin, puis vérifiez l’aperçu avant d’enregistrer.',
-    },
-    CORRIGER_FIN_TARDIVE: {
-      libelle: 'Corriger la fin pointée après l’échéance',
-      explication: 'La fin pointée après l’échéance est reprise avec son heure. Renseignez un motif, puis vérifiez l’aperçu.',
-    },
-    CORRIGER_TRANSITION_TARDIVE: {
-      libelle: 'Corriger la transition pointée après l’échéance',
-      explication: 'La transition pointée après l’échéance est reprise avec son heure. Renseignez un motif, puis vérifiez l’aperçu.',
-    },
-  },
   gestes: GESTES,
   types: { DEBUT: 'Travail', NON_CONFORMITE: 'Non-conformité', FIN: 'Fin' },
   intentions: { OUVERTURE: 'Ouverture', TRANSITION: 'Transition', FIN: 'Fin ciblée' },
   titre: 'Anomalies de pointage',
   sousTitre: 'Comprendre les faits, choisir une correction et vérifier ses conséquences avant de l’enregistrer.',
-  ouvrir: 'Examiner le dossier',
   element: 'Élément',
   operateur: 'Opérateur',
   poste: 'Poste',
