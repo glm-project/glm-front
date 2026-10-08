@@ -67,9 +67,10 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   elle n'invente aucune fin ni aucune heure (la fin proposée est la saisie du gestionnaire, pas une déduction).
 - **Sélection** : le pointage ou l'activité choisi sur la frise, détaillé dans le panneau du même nom ; sélectionner n'est pas
   choisir un acte.
-- **Poignée** : l'heure proposée d'un fait qui termine une activité, posée sur la frise et déplaçable ; c'est une saisie de
-  plus, qui émet un instant comme le champ date et heure. En ligne, avant toute heure, elle se tient « sans heure » (« Heure ? ») sur
-  la fin reçue de la barre : elle ne porte alors aucune heure, et la première touche lui en donne une.
+- **Poignée** : l'heure proposée d'un fait qui termine une activité, posée sur la frise et déplaçable ; c'est une saisie qui
+  émet un instant, à côté du champ date et heure dans la vue complète, seule saisie de l'heure dans la vue de résolution. En ligne,
+  avant toute heure, elle se tient « sans heure » (« Heure ? ») sur la fin reçue de la barre : elle ne porte alors aucune heure ;
+  une flèche la pose sur cette fin reçue, Origine et Fin aux bornes.
 - **Cadre du fait** : Value Object du domaine (`CadreDuFait`) qui porte le début reçu de chaque activité et l'heure courante,
   et rend les bornes d'un fait. Ces bornes sont des pré-contrôles de saisie : le refus serveur `date-de-survenue-future` fait
   autorité, et `INSTANT_AVANT_CIBLE` est une règle de Gestion sans refus serveur connu.
@@ -261,8 +262,8 @@ ouvrant, activité absente de l'après, autre activité modifiée, aucune poign�
 des rangées, inchangé. Déplacer la poignée retire l'aperçu, donc l'état reçu de la barre.
 Une saisie de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
 avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
-`PoigneeDeFrise.ts`), sur sa propre rangée sous les repères (en ligne, sur la rangée de la barre qu'elle termine) : c'est une seconde saisie qui émet un instant, avec le champ
-date et heure. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas en rangées, et une poignée « sans heure » en ligne (plus bas) : le front
+`PoigneeDeFrise.ts`), sur sa propre rangée sous les repères (en ligne, sur la rangée de la barre qu'elle termine) : c'est une saisie qui émet un instant, avec le champ date et
+heure de la vue complète. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas en rangées, et une poignée « sans heure » en ligne (plus bas) : le front
 n'invente aucune heure et l'aperçu reste indisponible tant qu'elle manque. Pendant cette saisie (fait terminant une activité avec une borne basse, instant vide ou illisible,
 `placementDuDossier`), un clic sur la rangée des pointages (`anomalie-frise-placement`, décorative, `aria-hidden`, sous les repères
 qui gardent leur sélection) place l'heure : la frise émet un `PlacementDemande` (instant sous le clic arrondi à 5 minutes), que la page
@@ -282,7 +283,8 @@ ou sur sa rangée hors des repères, place l'heure comme ci-dessus. C'est l'**ex
 l'activation de cette barre au clavier (Entrée, Espace : `detail === 0`) la sélectionne toujours, comme à l'ouverture
 (`selectionInitiale`), et un clic au pointeur la sélectionne quand le placement est désactivé (pendant une opération), sans rien placer ; les autres barres et les repères gardent leur sélection au clic. Une aide visible (`anomalie-frise-aide`) dit de
 tirer le bout de la barre ou de cliquer dessus pour placer l'heure du fait, ou de la saisir, sans nommer « la fin » : elle vaut pour un arrêt
-comme pour un passage ; le champ reste l'accès au clavier. Elle est inactive
+comme pour un passage. Au clavier, la poignée, « Heure ? » comprise, place l'heure ; dans la vue complète, le champ en est un second
+accès, et dans la vue de résolution, qui n'a pas de champ, la poignée et le clic sur la barre sont les seuls. Elle est inactive
 pendant une opération. La frise a un **mode lecture seule** (entrée `lectureSeule`, faux par défaut) : les repères et les barres y sont des images (`role="img"`, `div`),
 sans `aria-pressed`, hors de l'ordre de tabulation, et ne demandent jamais de sélection ; ils gardent leur nom, leur symbole, leur heure et leurs
 badges. Ils laissent passer le pointeur (`pointer-events: none`) : pendant le placement, un clic au pointeur sur la barre visée tombe sur la rangée

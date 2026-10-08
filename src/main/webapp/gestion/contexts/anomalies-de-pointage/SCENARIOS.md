@@ -143,9 +143,10 @@ légitime : l'activité se termine alors au-delà de l'échéance. « Autre corr
 diffère de l'heure reçue.
 
 Pour `REGULARISER_FIN`, la vue ne pré-remplit aucune heure. Le gestionnaire la place en tirant la poignée « Heure ? », en cliquant sur la barre ou au
-clavier sur la poignée, dont la première touche la pose sur la fin automatique. L'aperçu part seul : au relâcher de la poignée, 400 ms
+clavier sur la poignée : une flèche la pose sur la fin reçue, Origine et Fin aux bornes. L'aperçu part seul : au relâcher de la poignée, 400 ms
 après la dernière touche, ou après un clic sur la barre ; il ne désactive ni la poignée ni le clic sur la barre, et ne déplace pas le
-focus. La poignée reste dans les bornes locales (début de l'activité, heure courante) ; un refus du serveur se dit sous la frise ; une erreur réseau offre « Réessayer l'aperçu » ; une réponse périmée est écartée. « Valider » n'est actif que sur un aperçu
+focus. La poignée reste dans les bornes locales (début de l'activité, et la plus proche de l'heure courante et de trois heures
+après le dernier instant reçu) : une heure plus lointaine passe par « Autre correction… » et le champ de la vue complète ; un refus du serveur se dit sous la frise ; une erreur réseau offre « Réessayer l'aperçu » ; une réponse périmée est écartée. « Valider » n'est actif que sur un aperçu
 reçu, à jour et sans refus. Après `CONCURRENCE`, la vue relit le dossier et relance l'aperçu avec la même heure.
 
 Le reçu s'affiche dans la vue (« Anomalie traitée », ou « Acte enregistré, anomalie restante » avec un lien par fin automatique
@@ -330,7 +331,7 @@ l'heure proposée. Au pointeur, elle suit le glisser par pas de 5 minutes sans s
 flèches la bougent d'une minute (Maj : quinze), Origine et Fin la portent aux bornes ; « −5 min » et « +5 min » de la
 décision font de même sans glisser. Elle ne sort jamais des bornes (début de l'activité visée, et la plus proche de l'heure
 courante lue à l'action et de trois heures après le dernier instant reçu, en minutes entières à la nanoseconde près) ; un bouton
-est désactivé à la borne. L'échelle ne va pas au-delà de ces trois heures : une heure plus lointaine se saisit au champ. Chaque
+est désactivé à la borne. L'échelle ne va pas au-delà de ces trois heures : une heure plus lointaine se saisit au champ de la vue complète. Chaque
 déplacement transmet l'instant avec l'offset local et sans seconde, retire l'aperçu et met le champ à jour ; saisir une heure au
 champ déplace la poignée. Une heure saisie hors des bornes (avant le début de l'activité visée, dans le futur ou au-delà de la
 portée) garde sa poignée, tenue à la borne la plus proche : le champ dit pourquoi, l'aperçu reste indisponible, et le premier
