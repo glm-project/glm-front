@@ -17,7 +17,7 @@ import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabrication
 import { LibelleDElement } from '../../../domain/LibelleDElement';
 import { NomDElement } from '../../../domain/NomDElement';
 import { ReferenceDElement } from '../../../domain/ReferenceDElement';
-import { MoulesEtOf } from './MoulesEtOf';
+import { Produits } from './Produits';
 
 const mouleFixture = new ElementDeFabrication(new ElementDeFabricationId('moule-1'), {
   categorie: new CategorieDeProduit('MOULE'),
@@ -32,8 +32,8 @@ const ofSansReferenceFixture = new ElementDeFabrication(new ElementDeFabrication
   libelle: undefined,
 });
 
-describe('MoulesEtOf page', () => {
-  let fixture: ComponentFixture<MoulesEtOf>;
+describe('Produits page', () => {
+  let fixture: ComponentFixture<Produits>;
   let port: ElementsDeFabricationFixture;
   beforeEach(() => {
     port = new ElementsDeFabricationFixture();
@@ -281,7 +281,7 @@ describe('MoulesEtOf page', () => {
       libelle: undefined,
     });
   const whenOpening = async (): Promise<void> => {
-    fixture = TestBed.createComponent(MoulesEtOf);
+    fixture = TestBed.createComponent(Produits);
     await fixture.whenStable();
   };
 

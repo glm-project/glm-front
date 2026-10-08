@@ -25,10 +25,10 @@ interface EtatElements {
 const PAGINATION = LIBELLES_ELEMENTS_DE_FABRICATION.pagination;
 
 @Component({
-  selector: 'glm-moules-et-of',
+  selector: 'glm-produits',
   host: { 'data-selector': 'elements-page' },
-  templateUrl: './MoulesEtOf.html',
-  styleUrl: './MoulesEtOf.css',
+  templateUrl: './Produits.html',
+  styleUrl: './Produits.css',
   imports: [ErrorMessage, Icon, MatButtonModule, MatTableModule, MatPaginatorModule, RouterLink],
   providers: [
     {
@@ -46,7 +46,7 @@ const PAGINATION = LIBELLES_ELEMENTS_DE_FABRICATION.pagination;
     },
   ],
 })
-export class MoulesEtOf implements OnInit {
+export class Produits implements OnInit {
   private readonly port = inject(ElementsDeFabricationPort);
   private readonly dialogs = inject(MatDialog);
   private readonly viewContainerRef = inject(ViewContainerRef);
