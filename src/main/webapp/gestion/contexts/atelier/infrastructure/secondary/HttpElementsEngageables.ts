@@ -15,8 +15,6 @@ import { RequeteEngageables } from '../../domain/RequeteEngageables';
 
 type RestElement = components['schemas']['RestElementDeFabrication'];
 
-const CATEGORIE_DU_TYPE = { ORDRE_DE_FABRICATION: 'OF', PRODUIT: 'MOULE' } as const;
-
 const PERIODE_DEPUIS_TOUJOURS = { debut: '1970-01-01T00:00:00Z', fin: '2999-12-31T23:59:59Z' };
 
 const ELEMENT_INTROUVABLE = 'urn:glm:erreur:element-de-fabrication:element-de-fabrication-introuvable';
@@ -24,7 +22,7 @@ const ELEMENT_INTROUVABLE = 'urn:glm:erreur:element-de-fabrication:element-de-fa
 const toEngageable = (element: RestElement): ElementEngageable =>
   new ElementEngageable(new ElementEngageId(required(element.id, 'element.id')), {
     designation: new DesignationDElement(element.reference, required(element.nom, 'element.nom')),
-    categorie: new CategorieDElementEngage(CATEGORIE_DU_TYPE[required(element.type, 'element.type')]),
+    categorie: new CategorieDElementEngage(required(element.categorie, 'element.categorie')),
   });
 
 @Injectable()

@@ -5,7 +5,7 @@ type Modification = components['schemas']['RestModificationElementDeFabrication'
 
 interface ElementEnregistre {
   id: string;
-  type: NonNullable<RestElement['type']>;
+  categorie: string;
   nom: string;
   reference?: string;
   description?: string;
@@ -34,7 +34,7 @@ export class ElementsApiFixture {
       const page = Number(request.query['page'] ?? 0);
       const size = Number(request.query['size'] ?? 20);
       request.reply({
-        content: this.elements.slice(page * size, (page + 1) * size),
+        content: this.elements.slice(page * size, (page + 1) * size).map(corpsDe),
         currentPage: page,
         pageSize: size,
         totalElementsCount: this.elements.length,
@@ -52,7 +52,7 @@ export class ElementsApiFixture {
         request.reply({ statusCode: 404, body: { type: `${URN}element-de-fabrication-introuvable` } });
         return;
       }
-      request.reply({ statusCode: 200, body: element });
+      request.reply({ statusCode: 200, body: corpsDe(element) });
     }).as('elementRead');
   }
 
@@ -68,9 +68,15 @@ export class ElementsApiFixture {
         request.reply({ statusCode: 409, body: { type: `${URN}reference-deja-utilisee` } });
         return;
       }
-      const element: ElementEnregistre = { id: 'created-element', nom: 'PRD-2026-000009', ...commande };
+      const element: ElementEnregistre = {
+        id: 'created-element',
+        nom: 'PRD-2026-000009',
+        categorie: commande.categorie ?? 'MOULE',
+        ...(commande.reference === undefined ? {} : { reference: commande.reference }),
+        ...(commande.description === undefined ? {} : { description: commande.description }),
+      };
       this.elements.push(element);
-      request.reply({ statusCode: 201, body: element });
+      request.reply({ statusCode: 201, body: corpsDe(element) });
     }).as('elementCreate');
   }
 
@@ -84,9 +90,9 @@ export class ElementsApiFixture {
         return;
       }
       this.elements = this.elements.map(element =>
-        element.id === id ? { id: element.id, type: element.type, nom: element.nom, ...commande } : element,
+        element.id === id ? { id: element.id, categorie: element.categorie, nom: element.nom, ...commande } : element,
       );
-      request.reply({ statusCode: 200, body: this.elements.find(element => element.id === id) });
+      request.reply({ statusCode: 200, body: this.elements.filter(element => element.id === id).map(corpsDe)[0] });
     }).as('elementUpdate');
   }
 
@@ -98,12 +104,17 @@ export class ElementsApiFixture {
   }
 }
 
+const typeDeLaCategorie = (categorie: string): 'ORDRE_DE_FABRICATION' | 'PRODUIT' =>
+  categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT';
+
+const corpsDe = (element: ElementEnregistre): RestElement => ({ ...element, type: typeDeLaCategorie(element.categorie) });
+
 const numeroteSur6 = (rang: number): string => ('000000' + String(rang)).slice(-6);
 
 export const elementsFixture = (nombre: number): ElementEnregistre[] =>
   Array.from({ length: nombre }, (_, index) => ({
     id: 'element-' + String(index + 1),
-    type: index % 2 === 0 ? ('PRODUIT' as const) : ('ORDRE_DE_FABRICATION' as const),
+    categorie: index % 2 === 0 ? 'MOULE' : 'OF',
     nom: 'PRD-2026-' + numeroteSur6(index + 1),
     reference: String(1015 + index),
     description: 'Moule ' + String(index + 1),

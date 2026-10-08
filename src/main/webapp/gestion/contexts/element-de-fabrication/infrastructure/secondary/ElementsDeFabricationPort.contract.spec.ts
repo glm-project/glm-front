@@ -30,24 +30,23 @@ interface CorpsDeFiche {
 
 interface ElementFixture {
   readonly id: string;
-  readonly type: NonNullable<RestElement['type']>;
+  readonly categorie: string;
   readonly nom: string;
   readonly reference?: string;
   readonly description?: string;
 }
 
 const ROUTE = '/api/elements-de-fabrication';
-const CATEGORIE_DU_TYPE = { ORDRE_DE_FABRICATION: 'OF', PRODUIT: 'MOULE' } as const;
 const NOM_ATTRIBUE = 'PRD-2026-000001';
 
 const mouleFixture: ElementFixture = {
   id: 'moule-1',
-  type: 'PRODUIT',
+  categorie: 'MOULE',
   nom: 'PRD-2026-000001',
   reference: '1015',
   description: 'Moule de capot',
 };
-const ofSansReferenceFixture: ElementFixture = { id: 'of-1', type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000042' };
+const ofSansReferenceFixture: ElementFixture = { id: 'of-1', categorie: 'OF', nom: 'OF-2026-000042' };
 
 interface ProjectionElement {
   readonly id: string;
@@ -82,7 +81,7 @@ class ElementsHttpBackendFixture implements HttpBackend {
       case 'GET':
         return this.handleGet(url.pathname, url.searchParams);
       case 'POST':
-        return this.handlePost(url.pathname, request.body as CorpsDeFiche & { type: ElementFixture['type'] });
+        return this.handlePost(url.pathname, request.body as CorpsDeFiche & { categorie: string });
       case 'PUT':
         return this.handlePut(url.pathname, request.body as CorpsDeFiche);
       default:
@@ -99,7 +98,7 @@ class ElementsHttpBackendFixture implements HttpBackend {
     return new HttpResponse({
       status: 200,
       body: {
-        content: this.elements.slice(page * size, (page + 1) * size),
+        content: this.elements.slice(page * size, (page + 1) * size).map(corpsDe),
         currentPage: page,
         pageSize: size,
         totalElementsCount: this.elements.length,
@@ -107,13 +106,13 @@ class ElementsHttpBackendFixture implements HttpBackend {
     });
   }
 
-  private handlePost(pathname: string, body: CorpsDeFiche & { type: ElementFixture['type'] }): HttpResponse<unknown> | HttpErrorResponse {
+  private handlePost(pathname: string, body: CorpsDeFiche & { categorie: string }): HttpResponse<unknown> | HttpErrorResponse {
     if (pathname !== ROUTE) {
       return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
     }
-    const created: ElementFixture = { id: 'created-element', type: body.type, nom: NOM_ATTRIBUE, ...ficheOf(body) };
+    const created: ElementFixture = { id: 'created-element', categorie: body.categorie, nom: NOM_ATTRIBUE, ...ficheOf(body) };
     this.elements = [...this.elements, created];
-    return new HttpResponse({ status: 201, body: created });
+    return new HttpResponse({ status: 201, body: corpsDe(created) });
   }
 
   private handlePut(pathname: string, body: CorpsDeFiche): HttpResponse<unknown> | HttpErrorResponse {
@@ -122,11 +121,16 @@ class ElementsHttpBackendFixture implements HttpBackend {
     }
     const id = pathname.substring(`${ROUTE}/`.length);
     this.elements = this.elements.map(element =>
-      element.id === id ? { id, type: element.type, nom: element.nom, ...ficheOf(body) } : element,
+      element.id === id ? { id, categorie: element.categorie, nom: element.nom, ...ficheOf(body) } : element,
     );
-    return new HttpResponse({ status: 200, body: this.elements.find(element => element.id === id) });
+    return new HttpResponse({ status: 200, body: this.elements.filter(element => element.id === id).map(corpsDe)[0] ?? null });
   }
 }
+
+const corpsDe = (element: ElementFixture): RestElement => ({
+  ...element,
+  type: element.categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT',
+});
 
 const ficheOf = (body: CorpsDeFiche): CorpsDeFiche => ({
   ...(body.reference === undefined ? {} : { reference: body.reference }),
@@ -160,7 +164,7 @@ const createHttpHarness = (): ElementsHarness => {
 
 const toDomain = (element: ElementFixture): ElementDeFabrication =>
   new ElementDeFabrication(new ElementDeFabricationId(element.id), {
-    categorie: new CategorieDeProduit(CATEGORIE_DU_TYPE[element.type]),
+    categorie: new CategorieDeProduit(element.categorie),
     nom: new NomDElement(element.nom),
     reference: element.reference === undefined ? undefined : new ReferenceDElement(element.reference),
     libelle: element.description === undefined ? undefined : new LibelleDElement(element.description),
@@ -279,7 +283,7 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
     harness.seed(
       Array.from({ length: count }, (_, index) => ({
         id: `e-${index}`,
-        type: 'PRODUIT' as const,
+        categorie: 'MOULE',
         nom: `PRD-2026-${String(index).padStart(6, '0')}`,
       })),
     );
@@ -364,9 +368,9 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
   });
 
   it.each([
-    ['element.id', { type: 'PRODUIT' as const, nom: NOM_ATTRIBUE }],
-    ['element.nom', { id: 'moule-1', type: 'PRODUIT' as const }],
-    ['element.type', { id: 'moule-1', nom: NOM_ATTRIBUE }],
+    ['element.id', { categorie: 'MOULE', nom: NOM_ATTRIBUE }],
+    ['element.nom', { id: 'moule-1', categorie: 'MOULE' }],
+    ['element.categorie', { id: 'moule-1', nom: NOM_ATTRIBUE }],
   ])('should reject a server answer missing %s', async (champ, element) => {
     const result = port.elements(new RequeteElements(0, 20)).catch((failure: unknown) => failure);
     await whenReadAnswers([element]);
@@ -417,7 +421,7 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
     const request = await whenWriteAnswers(ROUTE, 201, {});
 
     await result;
-    expect(request.request.body).toEqual({ type: 'ORDRE_DE_FABRICATION' });
+    expect(request.request.body).toEqual({ categorie: 'OF' });
   });
 
   const whenCommandStarts = (action: 'creer' | 'modifier') => {

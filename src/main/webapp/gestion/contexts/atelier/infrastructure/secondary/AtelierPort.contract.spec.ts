@@ -101,6 +101,7 @@ const toRest = (suivi: SuiviFixture): RestSuivi => ({
   etat: suivi.etat,
   id: suivi.id,
   nom: suivi.nom,
+  categorie: suivi.categorie,
   type: suivi.categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT',
   ...(suivi.clotureLe === undefined ? {} : { clotureLe: suivi.clotureLe }),
   ...(suivi.cloturePar === undefined ? {} : { cloturePar: suivi.cloturePar }),
@@ -216,6 +217,7 @@ const clotureSansAuteurFixture: RestSuivi = {
   etat: 'CLOTURE',
   id: 'suivi-3',
   nom: 'PRD-2026-000002',
+  categorie: 'MOULE',
   type: 'PRODUIT',
 };
 

@@ -76,12 +76,10 @@ const toTotal = (duree: components['schemas']['RestDureeDeSynthese']): TotalDeDu
 const toPoste = ({ poste, nature }: RestPosteDeLElement): PosteDeLElement =>
   new PosteDeLElement(new PosteReleveId(poste.id), poste.libelle, nature);
 
-const CATEGORIE_DU_TYPE = { ORDRE_DE_FABRICATION: 'OF', PRODUIT: 'MOULE' } as const;
-
 const toElement = (element: RestElement): ElementDuReleve =>
   new ElementDuReleve({
     id: new ElementReleveId(element.id),
-    categorie: new CategorieDElement(CATEGORIE_DU_TYPE[element.type]),
+    categorie: new CategorieDElement(element.categorie),
     nom: element.nom,
     reference: element.reference,
     description: element.description,

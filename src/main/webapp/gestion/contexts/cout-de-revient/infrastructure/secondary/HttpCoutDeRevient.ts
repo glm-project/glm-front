@@ -81,18 +81,13 @@ const toTarif = (tarif: number | undefined): Montant | undefined => (tarif === u
 const toPoste = (poste: RestPoste | undefined): PosteCite | undefined =>
   poste === undefined ? undefined : new PosteCite(required(poste.id, 'poste.id'), poste.libelle);
 
-const CATEGORIE_DU_TYPE = { ORDRE_DE_FABRICATION: 'OF', PRODUIT: 'MOULE' } as const;
-
-const toCategorie = (type: keyof typeof CATEGORIE_DU_TYPE): CategorieDElementChiffre =>
-  new CategorieDElementChiffre(CATEGORIE_DU_TYPE[type]);
-
-const toCategorieCitee = (type: keyof typeof CATEGORIE_DU_TYPE | undefined): CategorieDElementChiffre | undefined =>
-  type === undefined ? undefined : toCategorie(type);
+const toCategorieCitee = (categorie: string | undefined): CategorieDElementChiffre | undefined =>
+  categorie === undefined ? undefined : new CategorieDElementChiffre(categorie);
 
 const toActivite = (activite: RestActiviteCitee): ActiviteCitee => {
   const element = required(activite.element, 'activite.element');
   return new ActiviteCitee(
-    new ElementCite(new ElementChiffreId(required(element.id, 'activite.element.id')), element.nom, toCategorieCitee(element.type)),
+    new ElementCite(new ElementChiffreId(required(element.id, 'activite.element.id')), element.nom, toCategorieCitee(element.categorie)),
     toPoste(activite.poste),
     toNature(activite.nature),
   );
@@ -147,10 +142,14 @@ const toElement = (rapport: RestRapport, fiche: components['schemas']['RestEleme
   if (element.id !== fiche.id) {
     throw new Error('Le référentiel ne désigne pas l’élément chiffré.');
   }
-  return new ElementChiffre(required(element.nom, 'rapport.element.nom'), toCategorie(required(element.type, 'rapport.element.type')), {
-    reference: fiche.reference,
-    libelle: fiche.description,
-  });
+  return new ElementChiffre(
+    required(element.nom, 'rapport.element.nom'),
+    new CategorieDElementChiffre(required(element.categorie, 'rapport.element.categorie')),
+    {
+      reference: fiche.reference,
+      libelle: fiche.description,
+    },
+  );
 };
 
 const toRapport = (rapport: RestRapport, fiche: components['schemas']['RestElementDeFabrication']): CoutDeRevient =>
@@ -235,7 +234,10 @@ export class HttpCoutDeRevient extends CoutDeRevientPort {
       elements.push(
         ...response.content.map(element => ({
           id: new ElementChiffreId(required(element.id, 'element.id')),
-          identite: new ElementChiffre(required(element.nom, 'element.nom'), toCategorie(required(element.type, 'element.type'))),
+          identite: new ElementChiffre(
+            required(element.nom, 'element.nom'),
+            new CategorieDElementChiffre(required(element.categorie, 'element.categorie')),
+          ),
         })),
       );
       total = response.totalElementsCount;

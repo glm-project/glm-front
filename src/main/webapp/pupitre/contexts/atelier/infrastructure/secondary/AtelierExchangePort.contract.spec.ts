@@ -36,6 +36,7 @@ const suiviSansReferenceFixture = {
   etat: 'EN_ATTENTE',
   id: 'piece',
   nom: 'PR-2026-000001',
+  categorie: 'MOULE',
   type: 'PRODUIT',
 } satisfies RestSuiviDuPupitre;
 const suiviAvecReferenceFixture = {
@@ -69,6 +70,7 @@ const referentielFixture = {
   genereLe: '2026-09-05T08:05:00Z',
   operateurs: [operateurFixture, operateurSansIdentifiantFixture],
   suivis: [suiviSansReferenceFixture, suiviAvecReferenceFixture],
+  categories: ['MOULE', 'OF'],
 } satisfies RestReferentielDuPupitre;
 const suiviDetailleFixture = {
   conflits: [],
@@ -80,6 +82,7 @@ const suiviDetailleFixture = {
   id: 'piece',
   journal: [],
   nom: 'OF-1',
+  categorie: 'MOULE',
   type: 'PRODUIT',
 } satisfies RestSuiviDAtelier & RestSuiviDAtelierEnGrille;
 const ouvertureFixture: GesteDePointage = {

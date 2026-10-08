@@ -35,6 +35,7 @@ const syntheseFixture = (): RestSynthese => ({
   elements: [
     {
       id: 'of-1',
+      categorie: 'OF',
       type: 'ORDRE_DE_FABRICATION',
       nom: 'OF-2026-000204',
       reference: '204',
@@ -44,6 +45,7 @@ const syntheseFixture = (): RestSynthese => ({
     },
     {
       id: 'of-2',
+      categorie: 'OF',
       type: 'ORDRE_DE_FABRICATION',
       nom: 'OF-2026-000205',
       duree: { complete: true, valeur: 'PT0S' },

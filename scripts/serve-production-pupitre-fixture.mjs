@@ -41,6 +41,7 @@ const workshopItem = {
   etat: 'EN_ATTENTE',
   id: 'workshop-item-1',
   nom: 'OF-1',
+  categorie: 'MOULE',
   type: 'PRODUIT',
 };
 

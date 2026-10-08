@@ -23,8 +23,6 @@ import { SuiviIntrouvable } from '../../domain/SuiviIntrouvable';
 
 type RestSuivi = components['schemas']['RestSuiviDAtelierEnGrille'];
 
-const CATEGORIE_DU_TYPE = { ORDRE_DE_FABRICATION: 'OF', PRODUIT: 'MOULE' } as const;
-
 const toCloture = (suivi: RestSuivi): ActeDAtelier | undefined =>
   suivi.clotureLe === undefined
     ? undefined
@@ -34,7 +32,7 @@ const toElement = (suivi: RestSuivi): ElementALAtelier =>
   new ElementALAtelier(new SuiviId(suivi.id), {
     element: new ElementEngageId(suivi.element),
     nom: new NomDElementEngage(suivi.nom),
-    categorie: new CategorieDElementEngage(CATEGORIE_DU_TYPE[suivi.type]),
+    categorie: new CategorieDElementEngage(suivi.categorie),
     etat: suivi.etat,
     engagement: new ActeDAtelier(new InstantDAtelier(suivi.engageLe), suivi.engagePar),
     cloture: toCloture(suivi),

@@ -97,6 +97,7 @@ const referenceFixture: ReferentielDuPupitre = {
 const publicationFixture = {
   id: 'piece',
   nom: 'OF-1',
+  categorie: 'MOULE',
   type: 'PRODUIT',
   etat: 'EN_COURS',
   element: 'element',
@@ -147,6 +148,7 @@ const resolvedReferenceFixture = {
     {
       id: 'piece',
       nom: 'OF-1',
+      categorie: 'MOULE',
       type: 'PRODUIT',
       etat: 'EN_COURS',
       activites: [
@@ -164,6 +166,7 @@ const resolvedReferenceFixture = {
     {
       id: 'piece-independante',
       nom: 'OF-2',
+      categorie: 'MOULE',
       type: 'PRODUIT',
       etat: 'EN_COURS',
       activites: [
@@ -180,12 +183,14 @@ const resolvedReferenceFixture = {
     {
       id: 'conflit-independant',
       nom: 'OF-3',
+      categorie: 'MOULE',
       type: 'PRODUIT',
       etat: 'EN_ATTENTE',
       activites: [],
       conflits: [{ operateur: 'jean', activites: [], pointages: ['contradiction-independante'] }],
     },
   ],
+  categories: ['MOULE', 'OF'],
 } satisfies components['schemas']['RestReferentielDuPupitre'];
 
 describe('Durable pupitre HTTP exchange', () => {

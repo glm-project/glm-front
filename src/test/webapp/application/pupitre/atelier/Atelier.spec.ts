@@ -235,6 +235,7 @@ describe('Pupitre workshop journey', () => {
       body: {
         id: new URL(request.url).pathname.split('/')[4],
         nom: 'OF-1',
+        categorie: 'OF',
         type: 'ORDRE_DE_FABRICATION',
         element: 'element',
         engageLe: '2026-09-05T07:00:00Z',

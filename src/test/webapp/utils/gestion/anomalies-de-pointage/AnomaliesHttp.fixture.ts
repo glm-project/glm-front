@@ -144,6 +144,7 @@ export const dossierFixture = (corrige = false): components['schemas']['RestDoss
       id: suiviFixture,
       element: elementFixture,
       nom: ligneFixture.designation,
+      categorie: 'MOULE',
       type: 'PRODUIT',
       engageLe: '2026-09-14T06:00:00Z',
       engagePar: 'gestionnaire',
@@ -219,7 +220,7 @@ export const givenTheReferentiel = (): void => {
 
 export const givenTheElements = (): void => {
   interceptElements([
-    { id: elementFixture, nom: elementNomFixture, reference: elementReferenceFixture, type: 'PRODUIT' },
-    { id: autreElementFixture, nom: autreElementNomFixture, type: 'PRODUIT' },
+    { id: elementFixture, nom: elementNomFixture, reference: elementReferenceFixture, categorie: 'MOULE', type: 'PRODUIT' },
+    { id: autreElementFixture, nom: autreElementNomFixture, categorie: 'MOULE', type: 'PRODUIT' },
   ]);
 };

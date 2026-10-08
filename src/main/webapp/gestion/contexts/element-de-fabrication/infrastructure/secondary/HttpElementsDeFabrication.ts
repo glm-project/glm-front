@@ -32,14 +32,9 @@ const toReference = (reference: string | undefined): ReferenceDElement | undefin
 const toLibelle = (description: string | undefined): LibelleDElement | undefined =>
   description === undefined ? undefined : new LibelleDElement(description);
 
-const CATEGORIE_DU_TYPE = { ORDRE_DE_FABRICATION: 'OF', PRODUIT: 'MOULE' } as const;
-
-const typeDeLaCategorie = (categorie: CategorieDeProduit): keyof typeof CATEGORIE_DU_TYPE =>
-  categorie.value === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT';
-
 const toElement = (element: RestElement): ElementDeFabrication =>
   new ElementDeFabrication(new ElementDeFabricationId(required(element.id, 'element.id')), {
-    categorie: new CategorieDeProduit(CATEGORIE_DU_TYPE[required(element.type, 'element.type')]),
+    categorie: new CategorieDeProduit(required(element.categorie, 'element.categorie')),
     nom: new NomDElement(required(element.nom, 'element.nom')),
     reference: toReference(element.reference),
     libelle: toLibelle(element.description),
@@ -96,7 +91,7 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
 
   override creer(commande: CommandeCreationElement): Promise<Result<void, ReferenceDejaUtilisee>> {
     return this.execute(
-      this.api.write('/api/elements-de-fabrication', { body: { type: typeDeLaCategorie(commande.categorie), ...toFiche(commande) } }),
+      this.api.write('/api/elements-de-fabrication', { body: { categorie: commande.categorie.value, ...toFiche(commande) } }),
       refusCreation,
     );
   }

@@ -42,12 +42,13 @@ const projeter = (element: ElementEngageable): ProjectionEngageable => ({
   categorie: element.categorie.value,
 });
 
-const typeDeLaCategorie = (categorie: string): NonNullable<RestElement['type']> =>
+const typeDeLaCategorie = (categorie: string): 'ORDRE_DE_FABRICATION' | 'PRODUIT' =>
   categorie === 'OF' ? 'ORDRE_DE_FABRICATION' : 'PRODUIT';
 
 const toRest = (element: EngageableFixture): RestElement => ({
   id: element.id,
   nom: element.nom,
+  categorie: element.categorie,
   type: typeDeLaCategorie(element.categorie),
   ...(element.reference === undefined ? {} : { reference: element.reference }),
 });
@@ -251,9 +252,9 @@ describe('Beyond the contract: HttpElementsEngageables', () => {
   });
 
   it.each([
-    ['element.id', { nom: 'PRD-2026-000001', type: 'PRODUIT' as const }],
-    ['element.nom', { id: 'moule-1', type: 'PRODUIT' as const }],
-    ['element.type', { id: 'moule-1', nom: 'PRD-2026-000001' }],
+    ['element.id', { nom: 'PRD-2026-000001', categorie: 'MOULE' }],
+    ['element.nom', { id: 'moule-1', categorie: 'MOULE' }],
+    ['element.categorie', { id: 'moule-1', nom: 'PRD-2026-000001' }],
   ])('should reject a server answer missing %s', async (champ, element) => {
     const result = port.elements(new RequeteEngageables(0, 20)).catch((failure: unknown) => failure);
     await whenListAnswers([element]);

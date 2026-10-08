@@ -122,7 +122,7 @@ const thenElementIsListed = (reference: string, categorie: string, libelle: stri
 };
 const thenElementWithoutFicheIsListed = (api: ElementsApiFixture): void => {
   thenElementIsListed('—', 'MOULE', '—');
-  cy.wrap(api.writes).should('deep.equal', [{ type: 'PRODUIT' }]);
+  cy.wrap(api.writes).should('deep.equal', [{ categorie: 'MOULE' }]);
 };
 const thenLastPageShowsTheRemainingElement = (): void => {
   cy.get(dataSelector('element-row')).should('have.length', 1);

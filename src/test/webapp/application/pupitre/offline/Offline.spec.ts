@@ -41,6 +41,7 @@ describe('Pupitre offline restart', () => {
           body: {
             id: 'piece',
             nom: 'OF-1',
+            categorie: 'MOULE',
             type: 'PRODUIT',
             element: 'element',
             engageLe: dateFixture,

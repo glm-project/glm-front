@@ -33,11 +33,9 @@ const toOperateur = (operateur: RestOperateur): OperateurDeclare =>
     metiers: operateur.metiers.map(metier => new NatureDeTravail(metier)),
   });
 
-const CATEGORIE_DU_TYPE = { ORDRE_DE_FABRICATION: 'OF', PRODUIT: 'MOULE' } as const;
-
 const toElement = (element: RestElement): ElementTravaille =>
   new ElementTravaille({
-    categorie: new CategorieDElement(CATEGORIE_DU_TYPE[element.type]),
+    categorie: new CategorieDElement(element.categorie),
     nom: element.nom,
     ...(element.reference === undefined ? {} : { reference: new ReferenceDElement(element.reference) }),
   });

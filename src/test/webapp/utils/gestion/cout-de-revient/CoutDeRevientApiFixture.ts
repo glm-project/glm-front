@@ -39,7 +39,7 @@ const pointageDeFraisage: RestPointage = {
       mainDOeuvre: completFixture(10),
       paralleles: [
         {
-          element: { id: 'element-192', nom: 'OF-2026-000192', type: 'ORDRE_DE_FABRICATION' },
+          element: { id: 'element-192', nom: 'OF-2026-000192', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
           poste: { id: 'poste-haas', libelle: 'Haas VF-2' },
           nature: 'Fraisage',
         },
@@ -110,7 +110,7 @@ export const coutDeRevientFixture = (): RestRapport => ({
   evaluation: '2026-05-11T12:00:00Z',
   activitesEnCours: 0,
   conflits: [],
-  element: { id: 'element-1', nom: 'OF-2026-000001', type: 'ORDRE_DE_FABRICATION' },
+  element: { id: 'element-1', nom: 'OF-2026-000001', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
   lignes: [fraisage, tournage, sansPoste],
   temps: { travail: completFixture('PT4H'), nonConformite: completFixture('PT1H'), total: completFixture('PT5H') },
   cout: { machine: completFixture(195), mainDOeuvre: completFixture(100), total: completFixture(295) },
@@ -120,7 +120,7 @@ export const rapportVideFixture = (): RestRapport => ({
   evaluation: '2026-05-11T12:00:00Z',
   activitesEnCours: 0,
   conflits: [],
-  element: { id: 'element-1', nom: 'OF-2026-000001', type: 'ORDRE_DE_FABRICATION' },
+  element: { id: 'element-1', nom: 'OF-2026-000001', categorie: 'OF', type: 'ORDRE_DE_FABRICATION' },
   lignes: [],
   temps: { travail: completFixture('PT0S'), nonConformite: completFixture('PT0S'), total: completFixture('PT0S') },
   cout: { machine: completFixture(0), mainDOeuvre: completFixture(0), total: completFixture(0) },

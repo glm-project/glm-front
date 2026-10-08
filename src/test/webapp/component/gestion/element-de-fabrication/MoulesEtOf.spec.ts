@@ -95,7 +95,7 @@ const givenFailedWrite = (): void => {
 const givenPendingCreation = (): ReturnType<typeof interceptForever> =>
   interceptForever(
     { method: 'POST', pathname: '/api/elements-de-fabrication' },
-    { statusCode: 201, body: { id: 'created-element', type: 'PRODUIT', nom: 'PRD-2026-000009', reference: '1015' } },
+    { statusCode: 201, body: { id: 'created-element', categorie: 'MOULE', type: 'PRODUIT', nom: 'PRD-2026-000009', reference: '1015' } },
     'pendingCreation',
   );
 const whenVisitingReferential = (): void => {
