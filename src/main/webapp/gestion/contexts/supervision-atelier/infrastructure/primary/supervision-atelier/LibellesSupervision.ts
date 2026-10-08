@@ -3,7 +3,6 @@ import {
   formatInstantTime,
   localCalendarDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
-import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { Instant } from '../../../domain/instant/Instant';
 import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
 import { CouloirDeSupervision } from '../../../domain/supervision/CouloirDeSupervision';
@@ -54,9 +53,6 @@ export const LIBELLES_SUPERVISION = {
   depuis: 'depuis',
   fin: 'fin',
   termineeAutomatiquement: 'Activité terminée automatiquement',
-  sequenceEnConflit: 'Séquence en conflit',
-  aResoudre: 'À résoudre',
-  objet: (objet: ElementTravaille): string => `${objet.categorie.value} ${objet.reference?.value ?? objet.nom}`,
   fraicheur: (total: number, instant: Instant): string =>
     `${total} ${pluriel(total, 'opérateur', 'opérateurs')} · d’après les pointages reçus jusqu’à ${heure(instant)} · actualisé toutes les 30 s`,
   listeDesMetiers: (metiers: readonly NatureDeTravail[]): string => metiers.map(metier => metier.value).join(', '),

@@ -11,9 +11,7 @@ import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
 import { CategorieDElement } from '../../../domain/activite/CategorieDElement';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
-import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
 import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
-import { SequenceEnConflit } from '../../../domain/activite/SequenceEnConflit';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
@@ -38,15 +36,6 @@ describe('InMemory demonstration beyond the shared contract', () => {
     expect(suivante.evaluation.value).toBe('2026-09-13T10:00:30.000Z');
   });
 
-  it('should read conflicting sequences separately from interpretable activities', async () => {
-    const port = new InMemoryDonneesDeSupervision();
-
-    const donnees = await port.read();
-
-    expect(donnees.sequencesEnConflit.length).toBeGreaterThan(0);
-    expect(donnees.sequencesEnConflit.every(sequence => sequence.hasOperateurIdentifiable(donnees.operateurs))).toBe(true);
-  });
-
   it('should represent personal work by its fabrication order in the demonstration', async () => {
     const port = new InMemoryDonneesDeSupervision();
 
@@ -56,12 +45,6 @@ describe('InMemory demonstration beyond the shared contract', () => {
       'OF',
       'OF Perso',
     ]);
-    expect(
-      designationOf(
-        donnees.sequencesEnConflit.flatMap(sequence => sequence.activites).find(activite => activite.id.value === 'act-morel-a-resoudre')
-          ?.objet,
-      ),
-    ).toEqual(['OF', 'OF Perso']);
   });
 
   it('should read supervision data in which every activity belongs to a declared operator', async () => {
@@ -102,7 +85,7 @@ interface HttpReadHarness extends ReadHarness {
 }
 
 const emptyFixture: SceneFixture = {
-  donnees: { evaluation: EVALUATION, operateurs: [], activites: [], sequencesEnConflit: [] },
+  donnees: { evaluation: EVALUATION, operateurs: [], activites: [] },
   response: { evaluation: EVALUATION.value, operateurs: [], activites: [], sequencesEnConflit: [] },
 };
 
@@ -217,95 +200,6 @@ const automaticEndFixture: SceneFixture = {
   },
 };
 
-const emptyConflictFixture: SceneFixture = {
-  donnees: {
-    ...fabricationOrderFixture.donnees,
-    sequencesEnConflit: [
-      new SequenceEnConflit({
-        id: new IdentifiantSequence('sequence-empty'),
-        operateurId: operateurFixture.id,
-        activites: [],
-      }),
-    ],
-  },
-  response: { ...fabricationOrderFixture.response, sequencesEnConflit: [{ id: 'sequence-empty', operateurId: 'op-serin', activites: [] }] },
-};
-
-const conflictFixture: SceneFixture = {
-  donnees: {
-    ...fabricationOrderFixture.donnees,
-    sequencesEnConflit: [
-      new SequenceEnConflit({
-        id: new IdentifiantSequence('sequence-described'),
-        operateurId: operateurFixture.id,
-        poste: new PosteDeSupervision({
-          id: new IdentifiantPoste('poste-erodeuse'),
-          libelle: 'Érodeuse 2',
-          nature: new NatureDeTravail('Érosion'),
-        }),
-        activites: [
-          new ActiviteDeSupervision({
-            id: new IdentifiantActivite('opening-conflict-perso'),
-            operateurId: operateurFixture.id,
-            objet: new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF Perso' }),
-            categorie: new CategorieActivite('NON_CONFORMITE'),
-            debut: new Instant('2026-09-12T08:00:00Z'),
-            echeance: new Instant('2026-09-12T21:00:00Z'),
-            etat: 'A_RESOUDRE',
-          }),
-          new ActiviteDeSupervision({
-            id: new IdentifiantActivite('opening-conflict-mould'),
-            operateurId: operateurFixture.id,
-            objet: new ElementTravaille({
-              categorie: new CategorieDElement('MOULE'),
-              nom: 'PRD-2026-000015',
-              reference: new ReferenceDElement('1015'),
-            }),
-            categorie: new CategorieActivite('TRAVAIL'),
-            debut: new Instant('2026-09-12T09:00:00Z'),
-            echeance: new Instant('2026-09-12T22:00:00Z'),
-            etat: 'A_RESOUDRE',
-            poste: new PosteDeSupervision({
-              id: new IdentifiantPoste('poste-erodeuse'),
-              libelle: 'Érodeuse 2',
-              nature: new NatureDeTravail('Érosion'),
-            }),
-          }),
-        ],
-      }),
-    ],
-  },
-  response: {
-    ...fabricationOrderFixture.response,
-    sequencesEnConflit: [
-      {
-        id: 'sequence-described',
-        operateurId: 'op-serin',
-        poste: { id: 'poste-erodeuse', libelle: 'Érodeuse 2', nature: 'Érosion' },
-        activites: [
-          {
-            id: 'opening-conflict-perso',
-            operateurId: 'op-serin',
-            element: { id: 'of-perso', categorie: 'OF', nom: 'OF Perso' },
-            categorie: 'NON_CONFORMITE',
-            debut: '2026-09-12T08:00:00Z',
-            echeance: '2026-09-12T21:00:00Z',
-          },
-          {
-            id: 'opening-conflict-mould',
-            operateurId: 'op-serin',
-            element: { id: 'moule-1015', categorie: 'MOULE', nom: 'PRD-2026-000015', reference: '1015' },
-            categorie: 'TRAVAIL',
-            debut: '2026-09-12T09:00:00Z',
-            echeance: '2026-09-12T22:00:00Z',
-            poste: { id: 'poste-erodeuse', libelle: 'Érodeuse 2', nature: 'Érosion' },
-          },
-        ],
-      },
-    ],
-  },
-};
-
 const unresolvedActivityFixture: SceneFixture = {
   donnees: { ...fabricationOrderFixture.donnees, operateurs: [] },
   response: { ...fabricationOrderFixture.response, operateurs: [] },
@@ -338,11 +232,6 @@ const preciseEndFixture: SceneFixture = {
     })),
   },
 };
-const unresolvedSequenceFixture: SceneFixture = {
-  donnees: { ...emptyConflictFixture.donnees, operateurs: [], activites: [] },
-  response: { ...emptyConflictFixture.response, operateurs: [], activites: [] },
-};
-
 const givenInMemory = (scene: SceneFixture): ReadHarness => ({
   port: new InMemoryDonneesDeSupervision(scene.donnees),
   answer: () => undefined,
@@ -403,12 +292,6 @@ const supervisionObservationFixture = (donnees: DonneesDeSupervision) => ({
     metiers: operateur.metiers.map(metier => metier.value),
   })),
   activites: donnees.activites.map(activite => activityObservationFixture(activite, donnees.evaluation)),
-  sequencesEnConflit: donnees.sequencesEnConflit.map(sequence => ({
-    id: sequence.id.value,
-    operateurId: sequence.operateurId?.value,
-    poste: posteObservationFixture(sequence.poste),
-    activites: sequence.activites.map(activite => activityObservationFixture(activite, donnees.evaluation)),
-  })),
 });
 
 describe.each([
@@ -474,34 +357,13 @@ describe.each([
     expect(donnees.activites.map(activite => activite.isTermineeAutomatiquement(donnees.evaluation))).toEqual([true]);
   });
 
-  it('should retain an empty conflicting sequence independently of current interpretable work', async () => {
+  it('should acquire a complete activity without a declared operator for the domain to decide exploitability', async () => {
     givenEvaluationAt(EVALUATION.value);
-    const harness = given(emptyConflictFixture);
+    const harness = given(unresolvedActivityFixture);
 
     const donnees = await whenRead(harness);
 
-    expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(emptyConflictFixture.donnees));
-  });
-
-  it('should retain every conflicting activity and its own element separately from interpretable work after expiration', async () => {
-    givenEvaluationAt(EVALUATION.value);
-    const harness = given(conflictFixture);
-
-    const donnees = await whenRead(harness);
-
-    expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(conflictFixture.donnees));
-  });
-
-  it.each([
-    { name: 'activity', scene: unresolvedActivityFixture },
-    { name: 'conflicting sequence', scene: unresolvedSequenceFixture },
-  ])('should acquire a complete $name without a declared operator for the domain to decide exploitability', async ({ scene }) => {
-    givenEvaluationAt(EVALUATION.value);
-    const harness = given(scene);
-
-    const donnees = await whenRead(harness);
-
-    expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(scene.donnees));
+    expect(supervisionObservationFixture(donnees)).toEqual(supervisionObservationFixture(unresolvedActivityFixture.donnees));
   });
 });
 

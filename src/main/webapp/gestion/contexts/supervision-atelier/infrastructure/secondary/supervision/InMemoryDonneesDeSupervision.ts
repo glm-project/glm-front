@@ -3,9 +3,7 @@ import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
 import { CategorieDElement } from '../../../domain/activite/CategorieDElement';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
-import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
 import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
-import { SequenceEnConflit } from '../../../domain/activite/SequenceEnConflit';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
@@ -28,7 +26,6 @@ const MOULE_1017 = moule('1017', 'PRD-2026-000003');
 const OF_3001 = ordreDeFabrication('3001', 'OF-2026-000039');
 const OF_3004 = ordreDeFabrication('3004', 'OF-2026-000042');
 const OF_3005 = ordreDeFabrication('3005', 'OF-2026-000043');
-const OF_3006 = ordreDeFabrication('3006', 'OF-2026-000044');
 const OF_PERSO = new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF Perso' });
 const OF_SANS_REFERENCE = new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF-2026-000048' });
 
@@ -81,46 +78,13 @@ const ACTIVITES: readonly ActiviteDeDemonstration[] = [
   { operateur: 'op-vidal', objet: OF_SANS_REFERENCE, categorie: TRAVAIL, minutes: 8 },
 ];
 
+const MINUTES_AVANT_FIN_AUTOMATIQUE = 13 * 60;
+
 const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision => {
   const instantBefore = (minutes: number): Instant => new Instant(new Date(instantDemonstration - minutes * 60_000).toISOString());
   const operateur = (id: string): IdentifiantOperateur => new IdentifiantOperateur(id);
   return {
     evaluation: new Instant(new Date(instantDemonstration).toISOString()),
-    sequencesEnConflit: [
-      new SequenceEnConflit({
-        id: new IdentifiantSequence('sequence-perrin'),
-        operateurId: operateur('op-perrin'),
-        poste: TOUR_1,
-        activites: [
-          new ActiviteDeSupervision({
-            id: new IdentifiantActivite('act-perrin-a-resoudre'),
-            operateurId: operateur('op-perrin'),
-            objet: OF_3006,
-            categorie: TRAVAIL,
-            debut: instantBefore(170),
-            etat: 'A_RESOUDRE',
-            poste: TOUR_1,
-          }),
-        ],
-      }),
-      new SequenceEnConflit({
-        id: new IdentifiantSequence('sequence-morel'),
-        operateurId: operateur('op-morel'),
-        poste: ERODEUSE_F,
-        activites: [
-          new ActiviteDeSupervision({
-            id: new IdentifiantActivite('act-morel-a-resoudre'),
-            operateurId: operateur('op-morel'),
-            objet: OF_PERSO,
-            categorie: NON_CONFORMITE,
-            debut: instantBefore(840),
-            etat: 'A_RESOUDRE',
-            poste: ERODEUSE_F,
-          }),
-        ],
-      }),
-      new SequenceEnConflit({ id: new IdentifiantSequence('sequence-schmitt'), operateurId: operateur('op-schmitt'), activites: [] }),
-    ],
     operateurs: OPERATEURS.map(
       ([id, nom, prenom, metiers]) =>
         new OperateurDeclare({ id: operateur(id), nom, prenom, metiers: metiers.map(metier => new NatureDeTravail(metier)) }),
@@ -133,6 +97,7 @@ const buildDemonstration = (instantDemonstration: number): DonneesDeSupervision 
           objet: activite.objet,
           categorie: activite.categorie,
           debut: instantBefore(activite.minutes),
+          echeance: instantBefore(activite.minutes - MINUTES_AVANT_FIN_AUTOMATIQUE),
           etat: 'EN_COURS',
           ...(activite.poste === undefined ? {} : { poste: activite.poste }),
         }),

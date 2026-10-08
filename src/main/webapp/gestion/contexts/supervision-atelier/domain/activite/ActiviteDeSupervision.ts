@@ -14,15 +14,13 @@ const comparePostes = (poste: PosteDeSupervision | undefined, autre: PosteDeSupe
     ? rangDuPoste(poste) - rangDuPoste(autre)
     : poste.libelle.localeCompare(autre.libelle, 'fr', { numeric: true });
 
-const DUREE_AVANT_FIN_AUTOMATIQUE_MS = 13 * 60 * 60 * 1000;
-
 export interface DescriptionActivite {
   readonly id: IdentifiantActivite;
   readonly operateurId: IdentifiantOperateur | undefined;
   readonly objet: ElementTravaille;
   readonly categorie: CategorieActivite;
   readonly debut: Instant;
-  readonly echeance?: Instant;
+  readonly echeance: Instant;
   readonly finRetenue?: Instant;
   readonly poste?: PosteDeSupervision;
   readonly etat?: EtatActiviteDeSupervision;
@@ -47,7 +45,7 @@ export class ActiviteDeSupervision {
     this.categorie = description.categorie;
     this.debut = description.debut;
     this.poste = description.poste;
-    this.echeance = description.echeance ?? this.debut.afterElapsedMilliseconds(DUREE_AVANT_FIN_AUTOMATIQUE_MS);
+    this.echeance = description.echeance;
     this.finRetenue = description.finRetenue ?? this.echeance;
   }
 

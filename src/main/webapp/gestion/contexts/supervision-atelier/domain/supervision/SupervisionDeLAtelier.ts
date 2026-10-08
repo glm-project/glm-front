@@ -32,12 +32,7 @@ export class SupervisionDeLAtelier {
 
   static determine(donnees: DonneesDeSupervision): ResultatSupervision {
     const maintenant = donnees.evaluation;
-    const hasActiviteSansOperateurIdentifiable = donnees.activites.some(activite => !activite.hasOperateurIdentifiable(donnees.operateurs));
-    const hasSequenceSansOperateurIdentifiable = donnees.sequencesEnConflit.some(
-      sequence => !sequence.hasOperateurIdentifiable(donnees.operateurs),
-    );
-    const hasDonneesSansOperateurIdentifiable = hasActiviteSansOperateurIdentifiable || hasSequenceSansOperateurIdentifiable;
-    if (hasDonneesSansOperateurIdentifiable) {
+    if (donnees.activites.some(activite => !activite.hasOperateurIdentifiable(donnees.operateurs))) {
       return resultatSupervisionInexploitable('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
     }
 
@@ -47,7 +42,6 @@ export class SupervisionDeLAtelier {
         return new OperateurSupervise(operateur, {
           activites: activites.filter(activite => activite.isEnCours(maintenant)),
           termineesAutomatiquement: activites.filter(activite => activite.isTermineeAutomatiquement(maintenant)),
-          sequencesEnConflit: donnees.sequencesEnConflit.filter(sequence => sequence.isFor(operateur.id)),
         });
       })
       .sort((left, right) => left.compareAlphabetically(right));
