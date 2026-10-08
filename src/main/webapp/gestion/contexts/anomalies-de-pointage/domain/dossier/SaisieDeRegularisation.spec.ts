@@ -52,4 +52,10 @@ describe('Entry of the regularisation of an automatic end', () => {
   it('should be none when the dossier carries no regularisation of the activity opened by the address', () => {
     expect(saisieDeRegularisation(dossierFixture({ choix: [regulariserFinFixture('travail-14')] }))).toBeUndefined();
   });
+
+  it('should be none when a choice of another code regularises the activity opened by the address', () => {
+    const autreCode: ChoixGuide = { ...regulariserFinFixture('travail-8'), code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE' };
+
+    expect(saisieDeRegularisation(dossierFixture({ choix: [autreCode] }))).toBeUndefined();
+  });
 });

@@ -108,7 +108,7 @@ const rangeeDePlacementSur = (
 export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise => {
   const { vue, maintenant: now, poignee, placement, largeur } = entrees;
   const { enCause, pointages, echelle } = lectureDeLaFrise(entrees);
-  const contexte = { now, echelle, largeur };
+  const contexte = { now, echelle };
   const cible = vue.activites.find(activite => activite.id.activite === (poignee ?? placement)?.activiteVisee);
   const hautDesActivites = HAUTEUR_DE_L_AXE_PX + ESPACE_ENTRE_RANGEES_PX;
   const rangees = parDebut(vue.activites).map((activite, rang): RangeeDActivite => {
