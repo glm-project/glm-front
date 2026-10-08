@@ -4,9 +4,9 @@ import { EtatPreparationActe, PreparationActe } from '../../../../../application
 import { RechercheDeLAnomalieSuivante } from '../../../../../application/RechercheDeLAnomalieSuivante';
 import { CadreDuFait } from '../../../../../domain/acte/CadreDuFait';
 import { InstantPointage } from '../../../../../domain/acte/InstantPointage';
-import { ChangementSaisie } from '../../../../../domain/acte/SaisieActe';
+import { ChangementSaisie, SaisieActe } from '../../../../../domain/acte/SaisieActe';
 import { adresseDeLaDestination, DestinationSuivante } from '../../../../../domain/dossier/AnomalieSuivante';
-import { ActiviteAnomalie, ChoixGuide, DossierAnomalie } from '../../../../../domain/dossier/DossierAnomalie';
+import { ActiviteAnomalie, DossierAnomalie } from '../../../../../domain/dossier/DossierAnomalie';
 import { filtreAnomaliesDemande } from '../../../../../domain/dossier/FiltreAnomaliesDemande';
 import { IssueDeLActe } from '../../../../../domain/dossier/IssueDeLActe';
 import { OperateurAnomalie } from '../../../../../domain/dossier/OperateurAnomalie';
@@ -32,13 +32,6 @@ import { LectureDuDossier } from '../LectureDuDossier';
 
 type RecuDeLActe = Extract<EtatPreparationActe, { readonly kind: 'APPLIQUE' }>;
 
-export interface VarianteDeResolution {
-  readonly validerA: (heure: string) => string;
-  readonly validerSansHeure: string;
-  readonly motif?: string;
-  readonly activiteOuverte?: (choix: ChoixGuide) => string;
-}
-
 @Component({
   selector: 'glm-resolution-de-fin',
   imports: [RouterLink, EnTeteDuDossier, SectionDeFrise, StatutDeLOperation, ComparaisonDesJournaux],
@@ -49,7 +42,7 @@ export interface VarianteDeResolution {
 })
 export class ResolutionDeFin implements OnInit {
   readonly dossier = input.required<DossierAnomalie>();
-  readonly choix = input.required<ChoixGuide>();
+  readonly saisieDeDepart = input.required<SaisieActe>();
   readonly now = input.required<Date>();
   readonly retour = input.required<Params>();
   readonly operateurs = input<readonly OperateurAnomalie[] | undefined>(undefined);
@@ -59,7 +52,6 @@ export class ResolutionDeFin implements OnInit {
   private readonly router = inject(Router);
   readonly lecture = input.required<LectureDuDossier>();
   protected readonly libelles = LIBELLES_ANOMALIES.resolution;
-  readonly variante = input.required<VarianteDeResolution>();
   private readonly relire = (): Promise<DossierAnomalie | undefined> => this.lecture().relire(this.dossier().ligne.adresse);
   private readonly maintenant = signal(new Date().toISOString());
   private readonly saisie = computed(() => this.preparation.resolution().saisie);
@@ -93,22 +85,21 @@ export class ResolutionDeFin implements OnInit {
     this.enregistre() ? undefined : placementDuDossier(this.dossier(), this.saisie().proposition, this.maintenant(), this.occupe()),
   );
   protected readonly libelleDeValider = computed(() =>
-    new InstantPointage(this.instant()).isValid() ? this.variante().validerA(heureDe(this.instant())) : this.variante().validerSansHeure,
+    new InstantPointage(this.instant()).isValid()
+      ? this.libelles.validerLaFin(heureDe(this.instant()))
+      : this.libelles.validerLaFinSansHeure,
   );
   protected readonly autresFinsAutomatiques = computed(() =>
     this.dossier().activites.filter(activite => this.estUneAutreFinAutomatique(activite)),
   );
   protected readonly autreFinAutomatique = computed(() => this.autresFinsAutomatiques()[0]);
-  protected readonly activiteOuverte = computed(() => this.variante().activiteOuverte?.(this.choix()));
   protected readonly rechercheEnCours = signal(false);
   protected readonly echec = computed(() => this.operation().kind === 'ERREUR');
   protected readonly libellesDesErreurs = LIBELLES_ANOMALIES.erreurs;
 
   ngOnInit(): void {
     this.lireLHorloge();
-    this.preparation.choose(this.choix().saisie);
-    const motif = this.variante().motif;
-    if (motif !== undefined) this.changer({ motif });
+    this.preparation.choose(this.saisieDeDepart());
     if (new InstantPointage(this.instant()).isValid()) void this.apercuAutomatique.lancer(this.dossier(), this.relire);
   }
 

@@ -3,9 +3,8 @@ import { ResizeObserverFixture } from '@test/unit/fixtures/gestion/anomalies-de-
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { instantLocalFixture } from '@test/utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
-import { SaisieActe } from '../../../domain/acte/SaisieActe';
 import { ActiviteAnomalieId } from '../../../domain/dossier/ActiviteAnomalieId';
-import { ActiviteAnomalie, ChoixGuide, DiagnosticConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { ActiviteAnomalie, DiagnosticConflit, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { PerimetreDuDossier } from '../../../domain/dossier/PerimetreDuDossier';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
 import { VueDeFrise } from './DispositionFrise';
@@ -77,27 +76,6 @@ const poigneeFixture = (heure: string, surcharge: Partial<PoigneeDeFrise> = {}):
   desactivee: false,
   ...surcharge,
 });
-
-const choixFixture = (code: NonNullable<ChoixGuide['code']>, saisie: SaisieActe): ChoixGuide => ({
-  id: `${code}:choix`,
-  code,
-  libelle: '',
-  explication: '',
-  saisie,
-});
-
-const correctionTardiveFixture = (code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE', pointage: string): ChoixGuide =>
-  choixFixture(
-    code,
-    SaisieActe.correct(pointage, {
-      type: 'FIN',
-      intention: 'FIN',
-      activiteVisee: 'travail-8',
-      operateur: 'op-camille',
-      poste: 'poste-1',
-      instant: instantAt('23:00'),
-    }),
-  );
 
 const placementFixture = (surcharge: Partial<PlacementDeLInstant> = {}): PlacementDeLInstant => ({
   activiteVisee: 'travail-8',
@@ -246,52 +224,6 @@ describe('Frise of a dossier', () => {
 
     thenTheMarkerIsNamed('fin-17', '17:00:00 · Arrêt');
     thenTheMarkerIsNamed('debut-8', '08:00:00 · Démarrage');
-  });
-
-  it('should name the marker of the late pointage a choice corrects as pointed after the deadline', async () => {
-    const dossier = {
-      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-23', 'ARRET', '23:00')],
-      choix: [correctionTardiveFixture('CORRIGER_FIN_TARDIVE', 'fin-23')],
-    };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheMarkerIsNamed('fin-23', '23:00:00 · Arrêt · pointé après l’échéance');
-    thenTheMarkerIsNamed('debut-8', '08:00:00 · Démarrage');
-  });
-
-  it.each(['CORRIGER_FIN_TARDIVE', 'CORRIGER_TRANSITION_TARDIVE'] as const)(
-    'should mark with a visible badge only the marker of the pointage the %s choice corrects',
-    async code => {
-      const dossier = {
-        journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-23', 'ARRET', '23:00')],
-        choix: [correctionTardiveFixture(code, 'fin-23')],
-      };
-
-      await whenRenderingTheFrise(dossier);
-
-      thenTheMarkerFlagIs('fin-23', 'data-tardif', 'true');
-      thenTheMarkerFlagIs('debut-8', 'data-tardif', 'false');
-      thenTheLateBadgeIsDrawnOn('fin-23');
-      thenNoLateBadgeIsDrawnOn('debut-8');
-    },
-  );
-
-  it.each([
-    { cas: 'a cancellation', choix: choixFixture('ANNULER_TRANSITION', SaisieActe.cancel('fin-23')) },
-    {
-      cas: 'an end regularisation',
-      choix: choixFixture('REGULARISER_FIN', SaisieActe.regularise()),
-    },
-  ])('should mark no pointage as late when the only choice is $cas', async ({ choix }) => {
-    const dossier = {
-      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-23', 'ARRET', '23:00')],
-      choix: [choix],
-    };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheMarkerFlagIs('fin-23', 'data-tardif', 'false');
   });
 
   it.each<{ cas: string; surcharge: Partial<PointageAnomalie>; diagnostics: readonly string[]; nom: string }>([
@@ -971,26 +903,6 @@ describe('Frise of a dossier', () => {
     expect(captured).toEqual([7]);
   });
 
-  it.each([
-    { cas: 'the handle leaves the instant it corrects', instant: '10:00', expected: 'true' },
-    { cas: 'the handle stands back on the instant it corrects', instant: '12:00', expected: 'false' },
-  ])('should flag the time of the corrected marker as replaced when $cas', async ({ instant, expected }) => {
-    const dossier = dossierDeLaFinAutomatique();
-
-    await whenRenderingTheFrise(dossier, poigneeFixture(instant, { origine: 'fin-12' }));
-
-    thenTheMarkerFlagIs('fin-12', 'data-deplace', expected);
-    thenTheMarkerFlagIs('debut-8', 'data-deplace', 'false');
-  });
-
-  it('should say in the name of the corrected marker that its time is replaced', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { origine: 'fin-12' }));
-
-    thenTheMarkerIsNamed('fin-12', '12:00:00 · Arrêt · heure remplacée');
-  });
-
   it('should name the handle and show the time it stands at', async () => {
     const dossier = dossierDeLaFinAutomatique();
 
@@ -1008,7 +920,6 @@ describe('Frise of a dossier', () => {
 
       await whenRenderingTheFrise(dossier);
 
-      thenNoTitleIsDrawnForThePointages();
       thenTheBarsStandOnRowsAt([36, 88]);
       thenTheStartMarkerStandsOnTheStartOfItsBar('debut-a-1', 'a-1');
       thenTheStartMarkerStandsOnTheStartOfItsBar('debut-a-2', 'a-2');
@@ -1067,26 +978,6 @@ describe('Frise of a dossier', () => {
 
       expect(topOf(handle())).toBe(88);
       thenTheBarsStandOnRowsAt([36, 88]);
-    });
-
-    it('should put the handle at the end of the previous bar when an opening passage is corrected, keeping its hour struck on the next bar', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-a-2', 'PASSAGE_NC', '11:00')],
-        activites: [
-          activiteFixture('a-1', 'TERMINEE', '08:00', '11:00'),
-          activiteFixture('a-2', 'ECHUE', '11:00', '21:00', 'NON_CONFORMITE'),
-        ],
-      };
-
-      await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { activiteVisee: 'a-1', origine: 'debut-a-2' }));
-
-      expect(topOf(handle())).toBe(36);
-      thenTheBarSpans('a-1', { left: '5.88235294117647%', width: '11.764705882352942%' });
-      thenTheHandleStandsAt({ left: '17.647058823529413%', onTheRowOf: 'a-1' });
-      thenTheBarAttributeIs('a-1', 'data-fin', 'PROPOSEE');
-      thenTheBarAttributeIs('a-2', 'data-fin', 'AUTOMATIQUE');
-      thenTheStartMarkerStandsOnTheStartOfItsBar('debut-a-2', 'a-2');
-      thenTheMarkerFlagIs('debut-a-2', 'data-deplace', 'true');
     });
 
     it('should draw no handle for an hour that terminates no activity of the dossier', async () => {
@@ -1497,13 +1388,6 @@ describe('Frise of a dossier', () => {
     ).dispatchEvent(new MouseEvent('click', { clientX, bubbles: true }));
   };
 
-  const titleOfThePointages = (): HTMLElement | null =>
-    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-frise-pointages-intitule'));
-
-  const thenNoTitleIsDrawnForThePointages = (): void => {
-    expect(titleOfThePointages()).toBeNull();
-  };
-
   const thenNoPlacementRowIsDrawn = (): void => {
     expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('anomalie-frise-placement'))).toBeNull();
   };
@@ -1633,17 +1517,6 @@ describe('Frise of a dossier', () => {
   const thenTheMarkerBadgeIs = (pointage: string, expected: string): void => {
     expect(badgeOf(pointage)?.textContent.trim()).toBe(expected);
   };
-
-  const thenTheLateBadgeIsDrawnOn = (pointage: string): void => {
-    expect(lateBadgeOf(pointage)).not.toBeNull();
-  };
-
-  const thenNoLateBadgeIsDrawnOn = (pointage: string): void => {
-    expect(lateBadgeOf(pointage)).toBeNull();
-  };
-
-  const lateBadgeOf = (pointage: string): HTMLElement | null =>
-    marker(pointage).querySelector<HTMLElement>(dataSelector('anomalie-pointage-tardif'));
 
   const thenTheMarkerHasNoBadge = (pointage: string): void => {
     expect(badgeOf(pointage)).toBeNull();

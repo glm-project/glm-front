@@ -19,13 +19,6 @@ const regularisation = (changement: Partial<FaitPropose> = {}): PropositionActe 
   fait: faitFixture(ARRET_FIXTURE, instantDuJourFixture('17:00'), changement),
 });
 
-const correction = (): PropositionActe => ({
-  kind: 'CORRECTION',
-  pointage: 'fin-23',
-  motif: '',
-  fait: faitFixture(ARRET_FIXTURE, instantDuJourFixture('23:00')),
-});
-
 describe('Handle of the proposed instant of a dossier', () => {
   it('should stand on the instant of an end the manager proposes, within the start of the activity and the clock', () => {
     const poignee = poigneeDuDossier(dossier, regularisation(), MAINTENANT, false);
@@ -36,10 +29,6 @@ describe('Handle of the proposed instant of a dossier', () => {
       bornes: { min: instantDuJourFixture('08:00'), max: MAINTENANT },
       desactivee: false,
     });
-  });
-
-  it('should name the pointage it corrects when the proposition corrects one', () => {
-    expect(poigneeDuDossier(dossier, correction(), MAINTENANT, false)?.origine).toBe('fin-23');
   });
 
   it('should be locked when the input is', () => {

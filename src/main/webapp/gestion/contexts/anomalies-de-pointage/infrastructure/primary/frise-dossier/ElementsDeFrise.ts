@@ -1,6 +1,5 @@
 import { formatInstantTimeWithSeconds } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { ActiviteAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { heureDe, libelleActivite, libelleCategorie, libelleDuGeste } from '../PresentationDossier';
 import {
@@ -20,10 +19,7 @@ import { pointagesDeLaFrise } from './PointagesDeLaFrise';
 
 export interface ContexteDeFrise {
   readonly now: Date;
-  readonly tardifs: ReadonlySet<string>;
   readonly echelle: EchelleFrise;
-  readonly poignee: PoigneeDeFrise | undefined;
-  readonly largeur: number;
 }
 
 export const POSITION_DU_BORD = 100;
@@ -34,48 +30,31 @@ const ETATS_SANS_FIN_RECUE: readonly ActiviteAnomalie['etat'][] = ['EN_COURS', '
 
 const QUALIFICATIFS = LIBELLES_ANOMALIES.frise;
 
-interface DrapeauxDuRepere {
-  readonly enCause: boolean;
-  readonly deplace: boolean;
-  readonly tardif: boolean;
-}
-
-const nomDuRepere = (pointage: PointageAnomalie, drapeaux: DrapeauxDuRepere): string =>
+const nomDuRepere = (pointage: PointageAnomalie, enCause: boolean): string =>
   [
     formatInstantTimeWithSeconds(new Date(pointage.fait.instant)),
     libelleDuGeste(pointage.fait),
     ...(pointage.annulation ? [QUALIFICATIFS.annule] : []),
     ...(pointage.regularisation ? [QUALIFICATIFS.regularise] : []),
-    ...(drapeaux.enCause ? [QUALIFICATIFS.enCause] : []),
-    ...(drapeaux.tardif ? [QUALIFICATIFS.tardif] : []),
-    ...(drapeaux.deplace ? [QUALIFICATIFS.heureRemplacee] : []),
+    ...(enCause ? [QUALIFICATIFS.enCause] : []),
   ].join(' · ');
 
 const symboleDuGeste = (fait: PointageAnomalie['fait']): string =>
   QUALIFICATIFS.symboles[fait.type][fait.intention] ?? QUALIFICATIFS.symboleInconnu;
 
-const estDeplace = (pointage: PointageAnomalie, poignee: PoigneeDeFrise | undefined): boolean =>
-  poignee?.origine === pointage.id.pointage && Date.parse(poignee.instant) !== Date.parse(pointage.fait.instant);
-
-export const repereDe = (pointage: PointageAnomalie, enCause: boolean, contexte: ContexteDeFrise): RepereASituer => {
-  const deplace = estDeplace(pointage, contexte.poignee);
-  const tardif = contexte.tardifs.has(pointage.id.pointage);
-  return {
-    kind: 'REPERE',
-    instant: Date.parse(pointage.fait.instant),
-    cle: `pointage:${pointage.id.pointage}`,
-    pointage: pointage.id.pointage,
-    nom: nomDuRepere(pointage, { enCause, deplace, tardif }),
-    heure: heureDe(pointage.fait.instant),
-    symbole: symboleDuGeste(pointage.fait),
-    nonConformite: pointage.fait.type === 'NON_CONFORMITE',
-    annule: pointage.annulation !== undefined,
-    regularise: pointage.regularisation,
-    enCause,
-    deplace,
-    tardif,
-  };
-};
+export const repereDe = (pointage: PointageAnomalie, enCause: boolean): RepereASituer => ({
+  kind: 'REPERE',
+  instant: Date.parse(pointage.fait.instant),
+  cle: `pointage:${pointage.id.pointage}`,
+  pointage: pointage.id.pointage,
+  nom: nomDuRepere(pointage, enCause),
+  heure: heureDe(pointage.fait.instant),
+  symbole: symboleDuGeste(pointage.fait),
+  nonConformite: pointage.fait.type === 'NON_CONFORMITE',
+  annule: pointage.annulation !== undefined,
+  regularise: pointage.regularisation,
+  enCause,
+});
 
 export const finRecueDe = (etat: ActiviteAnomalie['etat'], fin: string | undefined): string | undefined =>
   ETATS_SANS_FIN_RECUE.includes(etat) ? undefined : fin;
@@ -153,7 +132,6 @@ export const lectureDeLaFrise = ({ vue, maintenant, poignee, placement }: Entree
     enCause: new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage)),
     pointages,
     echelle: echelleDeLaFrise(instantsDeLEchelle(pointages, vue.activites, maintenant), poignee, placement),
-    tardifs: identifiantsDesPointagesTardifs(vue.choix ?? []),
   };
 };
 

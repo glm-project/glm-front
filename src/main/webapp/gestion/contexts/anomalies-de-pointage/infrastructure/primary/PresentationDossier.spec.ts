@@ -9,10 +9,8 @@ import { describe, expect, it } from 'vitest';
 import { ActiviteAnomalieId } from '../../domain/dossier/ActiviteAnomalieId';
 import { ActiviteAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import {
-  defini,
   detailDuPointage,
   erreursALire,
-  gesteDuPointage,
   heureDe,
   intituleDeLActivite,
   libelleActivite,
@@ -64,27 +62,6 @@ describe('Errors of an entry the manager has to read', () => {
 
   it('should keep the missing intention when the type is entered', () => {
     expect(erreursALire(['INTENTION_REQUISE'])).toEqual(['INTENTION_REQUISE']);
-  });
-});
-
-describe('Gesture in a sentence', () => {
-  it.each([
-    { geste: 'Arrêt', attendu: 'l’arrêt' },
-    { geste: 'Passage en NC', attendu: 'le passage en NC' },
-  ])('should write $geste with its definite article', ({ geste, attendu }) => {
-    expect(defini(geste)).toBe(attendu);
-  });
-
-  it('should say a regularised pointage is regularised', () => {
-    const pointage = pointageFixture('fin-17', faitFixture(ARRET_FIXTURE, instantDuJourFixture('17:00')), { regularisation: true });
-
-    expect(gesteDuPointage(pointage)).toBe('Arrêt régularisé');
-  });
-
-  it('should name a received pointage by its gesture only', () => {
-    const pointage = pointageFixture('fin-17', faitFixture(ARRET_FIXTURE, instantDuJourFixture('17:00')));
-
-    expect(gesteDuPointage(pointage)).toBe('Arrêt');
   });
 });
 

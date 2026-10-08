@@ -29,7 +29,6 @@ export interface PlacementDemande {
 
 export interface PoigneeDeFrise {
   readonly instant: string;
-  readonly origine?: string;
   readonly activiteVisee: string;
   readonly bornes: BornesDePoignee;
   readonly desactivee: boolean;
@@ -102,7 +101,6 @@ export const poigneeDuDossier = (
   if (bornes === undefined) return undefined;
   return {
     instant: fait.instant,
-    ...(proposition.kind === 'CORRECTION' ? { origine: proposition.pointage } : {}),
     activiteVisee: fait.activiteVisee,
     bornes,
     desactivee,

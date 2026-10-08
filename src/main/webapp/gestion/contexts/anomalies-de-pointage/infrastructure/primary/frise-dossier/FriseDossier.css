@@ -45,8 +45,7 @@
 .repere[data-en-cause='true'][data-non-conformite='true'] {
   color: var(--color-ink);
 }
-.repere[data-annule='true'] :is([data-selector='anomalie-pointage-symbole'], time),
-.repere[data-deplace='true'] time {
+.repere[data-annule='true'] :is([data-selector='anomalie-pointage-symbole'], time) {
   text-decoration: line-through;
 }
 [data-selector='anomalie-poignee'] {

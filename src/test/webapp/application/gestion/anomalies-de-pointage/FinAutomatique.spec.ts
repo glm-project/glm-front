@@ -6,21 +6,14 @@ import {
   activiteFinAutomatiqueFixture,
   apercuFixture,
   confirmationFinAutomatiqueFixture,
-  dossierApresCorrectionFixture,
   dossierApresRegularisationFixture,
   dossierApresRegularisationLaissantUneFinFixture,
   dossierDeuxFinsAutomatiquesFixture,
   dossierFinAutomatiqueFixture,
-  dossierFinTardiveFixture,
-  dossierFinTardiveLeLendemainFixture,
-  finCorrigeeFixture,
   finRegulariseeFixture,
-  finTardiveFixture,
   givenTheReferentielFinAutomatique,
   instantRegulariseLocalFixture,
   instantRegulariseSaisiFixture,
-  instantTardifFixture,
-  instantTardifLocalFixture,
   operateurFinAutomatiqueFixture,
   ouvrantFinAutomatiqueFixture,
   ouvrantSuivantFixture,
@@ -228,116 +221,15 @@ describe('Automatic end of an activity in Gestion', () => {
     cy.wait('@apercu').its('request.body.acte.fait').should('not.have.property', 'poste');
   };
 
-  it('should correct the end pointed after the due time from its resolution view, on its own time, through preview, validation and receipt', () => {
-    givenALateEndCorrectedByTheBackend();
-
-    whenOpeningTheAutomaticEnd();
-    whenValidatingTheLateEndCorrection();
-
-    thenTheLateEndCorrectionIsRecordedWithItsFixedReason();
-  });
-
-  it('should say in one sentence which pointage came after the due time', () => {
-    givenALateEndCorrectedByTheBackend();
-
-    whenOpeningTheAutomaticEnd();
-
-    thenTheLateEndIsSaid();
-  });
-
-  it('should open the hours of the operator on the day of the pointage pointed after the due time, the next day', () => {
-    givenALateEndPointedTheNextDay();
+  it('should open the hours of the operator on the day the automatic end starts', () => {
+    givenAnAutomaticEndRegularisedByTheBackend();
     const synthese = givenTheHoursOfTheOperator();
 
     whenOpeningTheAutomaticEnd();
     whenFollowingTheLinkToTheDayOfTheOperator();
 
-    thenTheHoursOpenOnTheDay(synthese, { annee: '2026', semaine: '38' }, 'mar. 15');
+    thenTheHoursOpenOnTheDay(synthese, { annee: '2026', semaine: '38' }, 'lun. 14');
   });
-
-  const givenALateEndPointedTheNextDay = (): void => {
-    cy.intercept('GET', urlDossier, { body: dossierFinTardiveLeLendemainFixture() });
-  };
-
-  const givenALateEndCorrectedByTheBackend = (): void => {
-    cy.intercept('GET', urlDossier, { body: dossierFinTardiveFixture() });
-    cy.intercept('POST', urlApercu, request => {
-      const demande = request.body as components['schemas']['RestDemandeDApercu'];
-      request.reply({
-        body: apercuFixture(demande, dossierFinTardiveFixture(), dossierApresCorrectionFixture(), finCorrigeeFixture),
-      });
-    }).as('apercu');
-    cy.intercept('POST', urlConfirmation, request => {
-      const demande = request.body as components['schemas']['RestConfirmationAEnregistrer'];
-      request.reply({ body: confirmationFinAutomatiqueFixture(demande, dossierApresCorrectionFixture()) });
-    }).as('confirmation');
-  };
-
-  const thenTheLateEndIsSaid = (): void => {
-    cy.get(dataSelector('anomalie-probleme'))
-      .should('have.length', 1)
-      .and('have.text', 'L’arrêt de 23:00 vise le travail, déjà terminé automatiquement à 21:00.');
-  };
-
-  const whenValidatingTheLateEndCorrection = (): void => {
-    thenTheHandleHolds(instantTardifLocalFixture);
-    cy.get(dataSelector('anomalie-resolution-apercu')).should('have.text', 'Travail 13 h → 15 h · anomalie traitée');
-    cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').and('contain.text', 'Valider la fin à 23:00').click();
-  };
-
-  const thenTheLateEndCorrectionIsRecordedWithItsFixedReason = (): void => {
-    cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
-    cy.get(dataSelector('anomalie-resolution-valider')).should('not.exist');
-    cy.get(dataSelector('anomalie-motif')).should('not.exist');
-    cy.wait('@apercu')
-      .its('request.body.acte')
-      .should('deep.equal', {
-        kind: 'CORRECTION',
-        pointage: finTardiveFixture,
-        motif: 'Arrêt pointé après l’échéance : heure vérifiée en gestion',
-        fait: {
-          type: 'FIN',
-          intention: 'FIN',
-          activiteVisee: activiteFinAutomatiqueFixture,
-          operateur: operateurFinAutomatiqueFixture,
-          poste: posteFinAutomatiqueFixture,
-          instant: instantTardifFixture,
-        },
-      });
-    cy.wait('@confirmation').its('request.body').should('deep.include', { evenement: finCorrigeeFixture });
-  };
-
-  it('should open the correction of a transition pointed after the due time in its resolution view instead of an end regularisation', () => {
-    givenALateTransition();
-
-    whenOpeningTheAutomaticEnd();
-
-    thenTheLateTransitionIsCorrectedOnItsOwnHour();
-  });
-
-  const givenALateTransition = (): void => {
-    cy.intercept('GET', urlDossier, { body: dossierFinTardiveFixture('CORRIGER_TRANSITION_TARDIVE') });
-    cy.intercept('POST', urlApercu, request => {
-      const demande = request.body as components['schemas']['RestDemandeDApercu'];
-      request.reply({
-        body: apercuFixture(
-          demande,
-          dossierFinTardiveFixture('CORRIGER_TRANSITION_TARDIVE'),
-          dossierApresCorrectionFixture(),
-          finCorrigeeFixture,
-        ),
-      });
-    }).as('apercu');
-  };
-
-  const thenTheLateTransitionIsCorrectedOnItsOwnHour = (): void => {
-    thenTheHandleHolds(instantTardifLocalFixture);
-    cy.get(dataSelector('anomalie-resolution-activite-ouverte')).should('have.text', 'La non-conformité commencera à cette heure.');
-    cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').and('contain.text', 'Valider le passage à 23:00');
-    cy.wait('@apercu')
-      .its('request.body.acte')
-      .should('include', { kind: 'CORRECTION', motif: 'Passage pointé après l’échéance : heure vérifiée en gestion' });
-  };
 
   refusFixture.forEach(({ statut, code, message, libelle }) => {
     it(`should keep the dated end and show the known refusal ${code} of the preview`, () => {

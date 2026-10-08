@@ -2,9 +2,7 @@ import { ActiviteAnomalie, DossierAnomalie } from '../../../domain/dossier/Dossi
 import { EchelleFrise, Graduation } from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise } from './PoigneeDeFrise';
 
-export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'perimetre' | 'activites' | 'diagnostics'> & {
-  readonly choix?: DossierAnomalie['choix'];
-};
+export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'perimetre' | 'activites' | 'diagnostics'>;
 
 export interface EntreesDeFrise {
   readonly vue: VueDeFrise;
@@ -45,8 +43,6 @@ export interface RepereFrise {
   readonly annule: boolean;
   readonly regularise: boolean;
   readonly enCause: boolean;
-  readonly deplace: boolean;
-  readonly tardif: boolean;
   readonly ancrage: 'CENTRE' | 'GAUCHE' | 'DROITE';
 }
 

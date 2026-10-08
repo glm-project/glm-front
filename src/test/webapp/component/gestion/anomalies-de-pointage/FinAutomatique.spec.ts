@@ -6,20 +6,14 @@ import {
   activiteFinAutomatiqueFixture,
   apercuFixture,
   confirmationFinAutomatiqueFixture,
-  dossierApresCorrectionFixture,
   dossierApresRegularisationFixture,
   dossierDeuxFinsAutomatiquesFixture,
-  dossierFinAutomatiqueEtConflitFixture,
   dossierFinAutomatiqueFixture,
-  dossierFinTardiveFixture,
-  dossierFinTardiveLeLendemainFixture,
+  dossierFinAutomatiqueSuivieLeLendemainFixture,
   echeanceFinAutomatiqueLocalFixture,
-  finCorrigeeFixture,
   finRegulariseeFixture,
-  finTardiveFixture,
   givenTheReferentielFinAutomatique,
   instantRegulariseLocalFixture,
-  motifFinAutomatiqueFixture,
   operateurFinAutomatiqueFixture,
   ouvrantFinAutomatiqueFixture,
   ouvrantSuivantFixture,
@@ -99,14 +93,6 @@ describe('Resolution view of an automatic end in Gestion', () => {
     thenOnlyTheResolutionViewIsDrawn();
   });
 
-  it('should draw no resolution view when the dossier carries a conflict choice beside the end', () => {
-    givenTheDossier(dossierFinAutomatiqueEtConflitFixture());
-
-    whenOpeningTheDossier();
-
-    thenNoResolutionViewIsDrawn();
-  });
-
   it('should say the other automatic end of the element and lead to it, keeping the way back to the list', () => {
     givenTheDossier(dossierDeuxFinsAutomatiquesFixture());
 
@@ -168,11 +154,6 @@ describe('Resolution view of an automatic end in Gestion', () => {
     });
   };
 
-  const whenOpeningTheDossier = (): void => {
-    cy.viewport(1280, 900);
-    cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
-  };
-
   const whenOpeningTheResolutionViewFromTheList = (): void => {
     cy.viewport(1280, 900);
     cy.visit(
@@ -189,11 +170,6 @@ describe('Resolution view of an automatic end in Gestion', () => {
     cy.get(dataSelector('anomalie-frise')).should('be.visible');
     thenTheHandleHoldsNoHour();
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
-  };
-
-  const thenNoResolutionViewIsDrawn = (): void => {
-    cy.get(dataSelector('anomalie-retour')).should('be.visible');
-    cy.get(dataSelector('anomalie-resolution')).should('not.exist');
   };
 
   const thenTheOtherAutomaticEndIsLinked = (): void => {
@@ -213,92 +189,6 @@ describe('Resolution view of an automatic end in Gestion', () => {
     cy.get(dataSelector('anomalie-resolution-apercu')).should('have.text', 'Travail 13 h → 9 h · anomalie traitée');
     cy.get(dataSelector('anomalie-resolution-detail')).should('not.have.attr', 'open');
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').and('contain.text', 'Valider la fin à 17:00');
-  };
-});
-
-describe('Resolution view of a pointage pointed after the deadline in Gestion', () => {
-  const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
-  const MOTIF_FIN_TARDIVE = 'Arrêt pointé après l’échéance : heure vérifiée en gestion';
-  const MOTIF_PASSAGE_TARDIF = 'Passage pointé après l’échéance : heure vérifiée en gestion';
-
-  beforeEach(() => {
-    cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
-    givenTheReferentielFinAutomatique();
-  });
-
-  it('should open a late end on its received hour and preview its correction by itself, with the reason fixed and hidden', () => {
-    givenALateGesture('CORRIGER_FIN_TARDIVE');
-
-    whenOpeningTheResolutionView();
-
-    whenUnfoldingTheDetailOfThePreview();
-
-    thenTheEndStandsOnTheReceivedHour();
-    thenThePreviewWasAskedWithTheReason(MOTIF_FIN_TARDIVE);
-    thenTheOutcomeIsInOneLineAndTheValidationIsOpen('Valider la fin à 23:00');
-    thenNoReasonIsShown(MOTIF_FIN_TARDIVE);
-  });
-
-  it('should say what the hour of a late passage starts', () => {
-    givenALateGesture('CORRIGER_TRANSITION_TARDIVE');
-
-    whenOpeningTheResolutionView();
-
-    thenTheOpenActivityIsSaid('La non-conformité commencera à cette heure.');
-    thenThePreviewWasAskedWithTheReason(MOTIF_PASSAGE_TARDIF);
-    thenTheOutcomeIsInOneLineAndTheValidationIsOpen('Valider le passage à 23:00');
-  });
-
-  const whenUnfoldingTheDetailOfThePreview = (): void => {
-    cy.get(dataSelector('anomalie-resolution-detail-ouvrir')).click();
-  };
-
-  const thenTheOpenActivityIsSaid = (ligne: string): void => {
-    cy.get(dataSelector('anomalie-resolution-activite-ouverte')).should('have.text', ligne);
-  };
-
-  it('should offer the next anomaly with the receipt of the correction of a late pointage', () => {
-    givenALateGesture('CORRIGER_TRANSITION_TARDIVE');
-    givenAConfirmationOf(dossierApresCorrectionFixture());
-    whenOpeningTheResolutionView();
-
-    whenValidating();
-
-    thenTheNextAnomalyIsOfferedWithTheReceipt();
-  });
-
-  const givenALateGesture = (code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE'): void => {
-    cy.intercept('GET', suiviUrl, { body: dossierFinTardiveFixture(code) });
-    cy.intercept('POST', `${suiviUrl}/apercus`, request => {
-      const demande = request.body as components['schemas']['RestDemandeDApercu'];
-      request.reply({
-        body: apercuFixture(demande, dossierFinTardiveFixture(code), dossierApresCorrectionFixture(), finCorrigeeFixture),
-      });
-    }).as('apercu');
-  };
-
-  const thenTheEndStandsOnTheReceivedHour = (): void => {
-    thenTheHandleHolds(new Date(2026, 8, 14, 23, 0));
-    abscisseDeLHeure(23).then(abscisse => {
-      cy.get(dataSelector('anomalie-poignee')).should(poignee => {
-        expect(centreDe(requiredFixture(poignee[0], 'poignée'))).to.be.closeTo(abscisse, 1);
-      });
-    });
-  };
-
-  const thenThePreviewWasAskedWithTheReason = (motif: string): void => {
-    cy.wait('@apercu').its('request.body.acte').should('include', { kind: 'CORRECTION', pointage: finTardiveFixture, motif });
-  };
-
-  const thenTheOutcomeIsInOneLineAndTheValidationIsOpen = (bouton: string): void => {
-    cy.get(dataSelector('anomalie-resolution-apercu')).should('have.text', 'Travail 13 h → 15 h · anomalie traitée');
-    cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').and('contain.text', bouton);
-  };
-
-  const thenNoReasonIsShown = (motif: string): void => {
-    cy.get(dataSelector('anomalie-motif')).should('not.exist');
-    cy.get(dataSelector('anomalie-resolution')).should('not.contain.text', motif);
-    cy.get(dataSelector('anomalie-resolution')).should('not.contain.text', motifFinAutomatiqueFixture);
   };
 });
 
@@ -544,7 +434,7 @@ describe('Automatic end on the frise in Gestion', () => {
     thenTheHandleIsHeldOnItsBar();
   });
 
-  it('should say the outcome of the preview in one line and draw no state after the act under the frise', () => {
+  it('should show the outcome of the preview once the end is placed on the frise', () => {
     whenOpeningTheFriseAt(1280);
     whenPlacingTheEndAt(17);
     whenWaitingForThePreviewOfTheEnd();
@@ -753,7 +643,7 @@ describe('Frise of a dossier spanning 26 hours in Gestion', () => {
   beforeEach(() => {
     cy.clock(new Date(2026, 8, 15, 12, 0).getTime(), ['Date']);
     givenTheReferentielFinAutomatique();
-    cy.intercept('GET', suiviUrl, { body: dossierFinTardiveLeLendemainFixture() });
+    cy.intercept('GET', suiviUrl, { body: dossierFinAutomatiqueSuivieLeLendemainFixture() });
   });
 
   [1280, 768, 390].forEach(width => {

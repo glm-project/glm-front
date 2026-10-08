@@ -1,18 +1,19 @@
-import { NgComponentOutlet } from '@angular/common';
 import { Component, computed, inject, linkedSignal, resource } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PreparationActe } from '../../../application/PreparationActe';
+import { SaisieActe } from '../../../domain/acte/SaisieActe';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { AdresseDossier, DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { saisieDeRegularisation } from '../../../domain/dossier/SaisieDeRegularisation';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { LectureDuDossier } from './vues-de-resolution/LectureDuDossier';
-import { AiguillageSimple, aiguiller } from './vues-de-resolution/VuesDeResolution';
+import { ResolutionDeFin } from './vues-de-resolution/resolution-de-fin/ResolutionDeFin';
 
 @Component({
   selector: 'glm-dossier-anomalie',
-  imports: [NgComponentOutlet, RouterLink],
+  imports: [ResolutionDeFin, RouterLink],
   templateUrl: './DossierAnomaliePage.html',
   styleUrls: ['../Boutons.css'],
   providers: [PreparationActe],
@@ -46,14 +47,14 @@ export class DossierAnomaliePage {
     const lecture = this.resultatLecture();
     return lecture?.kind === 'DOSSIER' ? lecture.dossier : undefined;
   });
-  protected readonly vueDeResolution = linkedSignal<
+  protected readonly saisieDeDepart = linkedSignal<
     { readonly cle: string; readonly dossier: DossierAnomalie | undefined },
-    AiguillageSimple | undefined
+    SaisieActe | undefined
   >({
     source: () => ({ cle: this.cleDeLAdresse(), dossier: this.dossier() }),
     computation: ({ cle, dossier }, precedent) => {
       const figee = precedent?.source.cle === cle ? precedent.value : undefined;
-      return figee ?? (dossier === undefined ? undefined : aiguiller(dossier));
+      return figee ?? (dossier === undefined ? undefined : saisieDeRegularisation(dossier));
     },
   });
   protected readonly lectureDuDossier: LectureDuDossier = {

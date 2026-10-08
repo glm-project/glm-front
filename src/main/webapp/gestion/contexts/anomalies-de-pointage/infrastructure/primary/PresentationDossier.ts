@@ -41,15 +41,6 @@ export const libelleDuGeste = (fait: Pick<SaisieFait, 'type' | 'intention'>): st
 export const erreursALire = (erreurs: readonly ErreurSaisieActe[]): readonly ErreurSaisieActe[] =>
   erreurs.filter(erreur => erreur !== 'INTENTION_REQUISE' || !erreurs.includes('TYPE_REQUIS'));
 
-const minuscule = (texte: string): string => texte.charAt(0).toLowerCase() + texte.slice(1);
-
-const commenceParUneVoyelle = (geste: string): boolean => /^[aeiou]/i.test(geste);
-
-export const defini = (geste: string): string => (commenceParUneVoyelle(geste) ? `l’${minuscule(geste)}` : `le ${minuscule(geste)}`);
-
-export const gesteDuPointage = (pointage: PointageAnomalie): string =>
-  pointage.regularisation ? `${libelleDuGeste(pointage.fait)} ${LIBELLES_ANOMALIES.problemes.regularise}` : libelleDuGeste(pointage.fait);
-
 export const libelleCategorie = (categorie: CategorieActivite): string =>
   categorie === 'TRAVAIL' ? LIBELLES_ANOMALIES.types.DEBUT : LIBELLES_ANOMALIES.types.NON_CONFORMITE;
 

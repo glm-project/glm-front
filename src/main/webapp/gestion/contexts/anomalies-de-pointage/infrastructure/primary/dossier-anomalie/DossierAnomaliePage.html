@@ -3,10 +3,14 @@
   <h1 id="dossier-heading" class="mt-2 text-title">{{ libelles.dossier }}</h1>
   @if (lecture.isLoading()) {
   <p role="status" data-selector="anomalie-chargement">{{ libelles.chargementDossier }}</p>
-  } @if (vueDeResolution(); as vue) { @if (dossier(); as dossier) {
-  <ng-container
-    [ngComponentOutlet]="vue.vue"
-    [ngComponentOutletInputs]="{ dossier, choix: vue.choix, now, retour: retour(), operateurs: operateursConnus(), lecture: lectureDuDossier }"
+  } @if (saisieDeDepart(); as saisie) { @if (dossier(); as dossier) {
+  <glm-resolution-de-fin
+    [dossier]="dossier"
+    [saisieDeDepart]="saisie"
+    [now]="now"
+    [retour]="retour()"
+    [operateurs]="operateursConnus()"
+    [lecture]="lectureDuDossier"
   />
   } } @if (adresse() === undefined) {
   <p role="alert" data-selector="anomalie-adresse-invalide">{{ libelles.adresseInvalide }}</p>

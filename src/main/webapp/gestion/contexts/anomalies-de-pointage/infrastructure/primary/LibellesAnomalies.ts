@@ -62,31 +62,15 @@ type Activite = ActiviteDansUnePhrase;
 
 const PROBLEMES = {
   activites: ACTIVITES_DE_PHRASE,
-  pointageNonResolu: 'Un pointage non résolu',
-  regularise: 'régularisé',
   finAutomatique: {
-    pointageTardif: (sujet: string, cible: Activite, fin: string) =>
-      `${sujet} vise ${cible.defini}, déjà terminé${cible.accord} automatiquement à ${fin}.`,
     sansFin: (cible: Activite, debut: string, fin: string) =>
       `${cible.defini} démarré${cible.accord} à ${debut} n’a jamais été arrêté${cible.accord} : fin automatique à ${fin}.`,
-    terminee: (cible: Activite, debut: string, fin: string) =>
-      `${cible.defini} démarré${cible.accord} à ${debut} a été terminé${cible.accord} automatiquement à ${fin}.`,
   },
 } as const;
 
 const RESOLUTION = {
   validerLaFin: (heure: string) => `Valider la fin à ${heure}`,
   validerLaFinSansHeure: 'Valider la fin',
-  validerLePassage: (heure: string) => `Valider le passage à ${heure}`,
-  validerLePassageSansHeure: 'Valider le passage',
-  motifs: {
-    finTardive: 'Arrêt pointé après l’échéance : heure vérifiée en gestion',
-    passageTardif: 'Passage pointé après l’échéance : heure vérifiée en gestion',
-  },
-  activiteOuverte: {
-    NON_CONFORMITE: 'La non-conformité commencera à cette heure.',
-    TRAVAIL: 'Le travail reprendra à cette heure.',
-  },
   autresFinsAutomatiques: (nombre: number) =>
     nombre === 1 ? '1 autre fin automatique sur cet élément' : `${nombre} autres fins automatiques sur cet élément`,
   anomalieSuivante: 'Anomalie suivante',
@@ -191,8 +175,6 @@ export const LIBELLES_ANOMALIES = {
     annule: 'annulé',
     regularise: 'régularisé',
     enCause: 'en cause',
-    tardif: 'pointé après l’échéance',
-    heureRemplacee: 'heure remplacée',
     heureProposee: 'heure proposée',
     finAutomatique: 'Fin automatique',
     poignee: 'Heure proposée du fait',
@@ -200,7 +182,6 @@ export const LIBELLES_ANOMALIES = {
     aucuneHeure: 'Aucune heure posée',
     placerLaFinReelle: 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.',
     badgeRegularise: 'R',
-    badgeTardif: '!',
     symboles: SYMBOLES_DES_GESTES,
     symboleInconnu: '•',
     contexte: {

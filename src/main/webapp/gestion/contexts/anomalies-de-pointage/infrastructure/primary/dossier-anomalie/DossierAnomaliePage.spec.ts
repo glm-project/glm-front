@@ -358,37 +358,6 @@ const dossierFinAutomatiqueFixture = (): DossierAnomalie => {
   };
 };
 
-const INSTANT_FIN_TARDIVE = instantLocalFixture(new Date(2026, 8, 14, 23, 0));
-const faitFinTardiveFixture = (instant = INSTANT_FIN_TARDIVE): FaitPropose => ({ ...faitConflitFixture(), instant });
-
-const dossierFinTardiveFixture = (instant = INSTANT_FIN_TARDIVE): DossierAnomalie => {
-  const dossier = dossierFinAutomatiqueFixture();
-  return {
-    ...dossier,
-    journal: [
-      ...dossier.journal,
-      {
-        id: new PointageAnomalieId('fin-23'),
-        fait: faitFinTardiveFixture(instant),
-        operateurNom: 'Camille Martin',
-        posteLibelle: 'DMU 50',
-        auteur: 'camille',
-        enregistre: instant,
-        regularisation: false,
-      },
-    ],
-    choix: [
-      {
-        id: 'CORRIGER_FIN_TARDIVE:fin-23',
-        code: 'CORRIGER_FIN_TARDIVE',
-        libelle: '',
-        explication: '',
-        saisie: SaisieActe.correct('fin-23', faitFinTardiveFixture(instant)),
-      },
-    ],
-  };
-};
-
 describe('Anomaly dossier page', () => {
   let fixture: ComponentFixture<DossierAnomaliePage>;
   let read: DossierReadFixture;
@@ -1065,18 +1034,6 @@ describe('Anomaly dossier page', () => {
       thenTheHandleHoldsNoHour();
     });
 
-    it('should show no resolution view for a choice that carries no code', async () => {
-      const dossier = dossierDeResolutionFixture();
-      read.result = {
-        kind: 'DOSSIER',
-        dossier: { ...dossier, choix: [{ id: 'sans-code', libelle: 'Régulariser', explication: '', saisie: finARegulariserFixture() }] },
-      };
-
-      await whenRendering();
-
-      thenNoResolutionViewIsShown();
-    });
-
     it('should not preview again when the handle is pressed and released without moving', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       await whenRendering();
@@ -1100,8 +1057,7 @@ describe('Anomaly dossier page', () => {
       thenThePreviewsWereAskedForTheHours(['17:00']);
     });
 
-    it('should show no resolution view when a conflict choice comes beside the regularisation of the end', async () => {
-      givenAnAutomaticEndWithAResolutionView();
+    it('should open the resolution view although a conflict choice comes beside the regularisation of the end', async () => {
       const dossier = dossierDeResolutionFixture();
       read.result = {
         kind: 'DOSSIER',
@@ -1122,25 +1078,11 @@ describe('Anomaly dossier page', () => {
 
       await whenRendering();
 
-      thenNoResolutionViewIsShown();
+      thenTheResolutionViewIsShown();
     });
 
-    it('should show no resolution view when none exists for the code of the choice', async () => {
-      read.result = {
-        kind: 'DOSSIER',
-        dossier: {
-          ...dossierDeResolutionFixture(),
-          choix: [
-            {
-              id: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE:fin-23',
-              code: 'RATTACHER_FIN_A_ACTIVITE_REMPLACANTE',
-              libelle: '',
-              explication: '',
-              saisie: SaisieActe.correct('fin-23', faitFinTardiveFixture()),
-            },
-          ],
-        },
-      };
+    it('should show no resolution view for a dossier that carries no regularisation of its end', async () => {
+      read.result = { kind: 'DOSSIER', dossier: { ...dossierDeResolutionFixture(), choix: [] } };
 
       await whenRendering();
 
@@ -1273,279 +1215,6 @@ describe('Anomaly dossier page', () => {
 
       thenNoResolutionViewIsShown();
     });
-  });
-
-  describe('resolution view of a pointage pointed after the deadline', () => {
-    const MOTIF_FIN_TARDIVE = 'Arrêt pointé après l’échéance : heure vérifiée en gestion';
-    const MOTIF_PASSAGE_TARDIF = 'Passage pointé après l’échéance : heure vérifiée en gestion';
-
-    interface CorrectionTardiveFixture {
-      readonly code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE';
-      readonly type: FaitPropose['type'];
-      readonly intention: FaitPropose['intention'];
-      readonly motif: string;
-      readonly bouton: string;
-      readonly ligne?: string;
-    }
-
-    const FIN_TARDIVE: CorrectionTardiveFixture = {
-      code: 'CORRIGER_FIN_TARDIVE',
-      type: 'FIN',
-      intention: 'FIN',
-      motif: MOTIF_FIN_TARDIVE,
-      bouton: 'Valider la fin à',
-    };
-    const PASSAGE_EN_NC_TARDIF: CorrectionTardiveFixture = {
-      code: 'CORRIGER_TRANSITION_TARDIVE',
-      type: 'NON_CONFORMITE',
-      intention: 'TRANSITION',
-      motif: MOTIF_PASSAGE_TARDIF,
-      bouton: 'Valider le passage à',
-      ligne: 'La non-conformité commencera à cette heure.',
-    };
-    const RETOUR_EN_BON_TARDIF: CorrectionTardiveFixture = {
-      code: 'CORRIGER_TRANSITION_TARDIVE',
-      type: 'DEBUT',
-      intention: 'TRANSITION',
-      motif: MOTIF_PASSAGE_TARDIF,
-      bouton: 'Valider le passage à',
-      ligne: 'Le travail reprendra à cette heure.',
-    };
-
-    beforeEach(() => {
-      HTMLElement.prototype.setPointerCapture = () => undefined;
-      vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
-      vi.setSystemTime(new Date(2026, 9, 5, 10, 0));
-    });
-
-    const faitTardifFixture = (cas: CorrectionTardiveFixture, instant = INSTANT_FIN_TARDIVE): FaitPropose => ({
-      ...faitFinTardiveFixture(instant),
-      type: cas.type,
-      intention: cas.intention,
-    });
-
-    const actePourLaCorrectionTardiveFixture = (cas: CorrectionTardiveFixture, instant = INSTANT_FIN_TARDIVE): ActeResolution => ({
-      kind: 'CORRECTION',
-      pointage: 'fin-23',
-      motif: cas.motif,
-      fait: faitTardifFixture(cas, instant),
-    });
-
-    const dossierAvecUneCorrectionTardiveFixture = (cas: CorrectionTardiveFixture): DossierAnomalie => {
-      const dossier = dossierFinTardiveFixture();
-      const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
-      return {
-        ...dossier,
-        ligne: { ...dossier.ligne, adresse },
-        journal: dossier.journal.map(pointage =>
-          pointage.id.pointage === 'fin-23' ? { ...pointage, fait: faitTardifFixture(cas) } : pointage,
-        ),
-        choix: [
-          {
-            id: `${cas.code}:fin-23`,
-            code: cas.code,
-            libelle: '',
-            explication: '',
-            saisie: SaisieActe.correct('fin-23', faitTardifFixture(cas)),
-          },
-        ],
-      };
-    };
-
-    const dossierApresLaCorrectionTardiveFixture = (cas: CorrectionTardiveFixture): DossierAnomalie => {
-      const avant = dossierAvecUneCorrectionTardiveFixture(cas);
-      const activite = requiredFixture(avant.activites[0], 'automatic end activity');
-      const periode = requiredFixture(activite.periode, 'automatic end period');
-      return {
-        ...avant,
-        etat: 'SANS_ANOMALIE',
-        finAutomatique: false,
-        version: 2,
-        choix: [],
-        activites: [{ ...activite, etat: 'TERMINEE', periode: { ...periode, fin: INSTANT_FIN_TARDIVE, duree: 'PT15H' } }],
-      };
-    };
-
-    const givenALateCorrectionWillBeAccepted = (cas: CorrectionTardiveFixture): void => {
-      const avant = dossierAvecUneCorrectionTardiveFixture(cas);
-      const apres = dossierApresLaCorrectionTardiveFixture(cas);
-      read.result = { kind: 'DOSSIER', dossier: avant };
-      givenASuccessfulPreview(apres, actePourLaCorrectionTardiveFixture(cas), avant);
-      application.result = { kind: 'APPLIQUE', dossier: apres };
-    };
-
-    it('should open the resolution view of a late end with its received hour on the handle and on the button', async () => {
-      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
-
-      await whenRendering();
-
-      thenTheResolutionViewIsShown();
-      thenTheHandleHoldsTheEndAt('23:00');
-      thenTextContains('anomalie-resolution-valider', 'Valider la fin à 23:00');
-    });
-
-    it.each([FIN_TARDIVE, PASSAGE_EN_NC_TARDIF, RETOUR_EN_BON_TARDIF])(
-      'should preview the correction by itself at the opening, with the fixed reason, and enable the validation ($code $type)',
-      async cas => {
-        givenALateCorrectionWillBeAccepted(cas);
-
-        await whenRendering();
-        await whenThePreviewOfTheOpeningArrives();
-
-        expect(preview.actes).toEqual([actePourLaCorrectionTardiveFixture(cas)]);
-        thenTheOutcomeReads('Travail 13 h → 15 h · anomalie traitée');
-        thenEnabled('anomalie-resolution-valider');
-      },
-    );
-
-    it.each([FIN_TARDIVE, PASSAGE_EN_NC_TARDIF, RETOUR_EN_BON_TARDIF])(
-      'should label the button "$bouton 23:00" ($code $type)',
-      async cas => {
-        givenALateCorrectionWillBeAccepted(cas);
-
-        await whenRendering();
-
-        thenTextContains('anomalie-resolution-valider', `${cas.bouton} 23:00`);
-      },
-    );
-
-    it.each([PASSAGE_EN_NC_TARDIF, RETOUR_EN_BON_TARDIF])('should say what the hour of the passage starts ($type)', async cas => {
-      givenALateCorrectionWillBeAccepted(cas);
-
-      await whenRendering();
-
-      thenTextContains('anomalie-resolution-activite-ouverte', cas.ligne ?? '');
-    });
-
-    it('should say nothing of an open activity for the end of an activity', async () => {
-      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
-
-      await whenRendering();
-
-      thenAbsent('anomalie-resolution-activite-ouverte');
-    });
-
-    it.each([FIN_TARDIVE, PASSAGE_EN_NC_TARDIF])('should show no reason anywhere, though the preview carries one ($code)', async cas => {
-      givenALateCorrectionWillBeAccepted(cas);
-      await whenRendering();
-      await whenThePreviewOfTheOpeningArrives();
-
-      thenAbsent('anomalie-motif');
-      thenNoTextOfTheViewContains(cas.motif);
-      thenNoTextOfTheViewContains('Erreur de saisie');
-    });
-
-    it('should hide the reason of the cancelled pointage in the detail of the preview', async () => {
-      givenALateCorrectionWillBeAcceptedWithACancelledPointage(FIN_TARDIVE);
-      await whenRendering();
-      await whenThePreviewOfTheOpeningArrives();
-
-      thenTheDetailReads('Pointage annulé');
-      thenTheDetailGivesNoReason('Erreur de saisie');
-    });
-
-    it('should preview the new hour with the same fixed reason once the manager moved it', async () => {
-      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
-      await whenRendering();
-      await whenThePreviewOfTheOpeningArrives();
-
-      await whenPlacingTheEndAt('22:30');
-
-      expect(preview.actes).toEqual([
-        actePourLaCorrectionTardiveFixture(FIN_TARDIVE),
-        expect.objectContaining({ kind: 'CORRECTION', motif: MOTIF_FIN_TARDIVE }),
-      ]);
-      thenThePreviewsWereAskedForTheHours(['23:00', '22:30']);
-      thenTextContains('anomalie-resolution-valider', 'Valider la fin à 22:30');
-    });
-
-    it('should say why and preview nothing when the received hour lies after the clock', async () => {
-      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
-      whenTheClockIs(new Date(2026, 8, 14, 22, 0));
-
-      await whenRendering();
-      await whenThePreviewOfTheOpeningArrives();
-
-      thenTheEndValidationReads(['La date et l’heure du fait ne peuvent pas être dans le futur.']);
-      thenNoPreviewWasAsked();
-      thenDisabled('anomalie-resolution-valider');
-    });
-
-    it('should keep the validation disabled until the preview of the opening comes back', async () => {
-      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
-      const attente = new PendingResponseFixture<ResultatApercu>();
-      preview.replies.pending = attente;
-
-      await whenRendering();
-      await attente.arrival;
-
-      thenDisabled('anomalie-resolution-valider');
-      thenTheHandleStaysUsable();
-    });
-
-    it('should offer to retry the preview of the opening after a network failure', async () => {
-      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
-      preview.failure = new Error('Réseau indisponible');
-      await whenRendering();
-      await whenThePreviewOfTheOpeningArrives();
-      preview.failure = undefined;
-
-      await whenClicking('anomalie-resolution-reessayer');
-
-      thenTheOutcomeReads('Travail 13 h → 15 h · anomalie traitée');
-    });
-
-    it('should record the correction with the fixed reason and show the receipt', async () => {
-      givenALateCorrectionWillBeAccepted(PASSAGE_EN_NC_TARDIF);
-      await whenRendering();
-      await whenThePreviewOfTheOpeningArrives();
-
-      await whenValidatingTheEnd();
-
-      thenTheResolutionViewShowsTheReceipt();
-    });
-
-    it('should show no resolution view when the address does not open the activity the correction ends', async () => {
-      read.result = { kind: 'DOSSIER', dossier: dossierFinTardiveFixture() };
-
-      await whenRendering();
-
-      thenNoResolutionViewIsShown();
-    });
-
-    const whenThePreviewOfTheOpeningArrives = async (): Promise<void> => {
-      await new Promise<void>(resolve => realSetTimeout(resolve));
-      await Promise.allSettled(preview.replies.automaticResponses);
-      await fixture.whenStable();
-    };
-
-    const givenALateCorrectionWillBeAcceptedWithACancelledPointage = (cas: CorrectionTardiveFixture): void => {
-      givenALateCorrectionWillBeAccepted(cas);
-      if (preview.result.kind !== 'APERCU') throw new Error('Expected a successful preview.');
-      const apercu = preview.result.apercu;
-      const pointage = requiredFixture(apercu.apres.journal[0], 'journal fixture pointage');
-      preview.result = {
-        kind: 'APERCU',
-        apercu: {
-          ...apercu,
-          apres: {
-            ...apercu.apres,
-            journal: [
-              ...apercu.apres.journal,
-              {
-                ...pointage,
-                id: new PointageAnomalieId('annule-9'),
-                annulation: { motif: 'Erreur de saisie', auteur: 'camille', instant: INSTANT_ENREGISTREMENT },
-              },
-            ],
-          },
-        },
-      };
-    };
-
-    const thenNoTextOfTheViewContains = (texte: string): void => {
-      expect((fixture.nativeElement as HTMLElement).textContent.replace(/\s+/g, ' ')).not.toContain(texte);
-    };
   });
 
   it('should explain the loading of a dossier without calling it a conflict', () => {

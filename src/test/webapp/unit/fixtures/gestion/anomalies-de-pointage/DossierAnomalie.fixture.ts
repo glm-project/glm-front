@@ -14,7 +14,6 @@ import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/dom
 import { SuiviAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/SuiviAnomalieId';
 
 export const ARRET_FIXTURE = { type: 'FIN', intention: 'FIN' } as const;
-export const PASSAGE_EN_NC_FIXTURE = { type: 'NON_CONFORMITE', intention: 'TRANSITION' } as const;
 
 export const instantDuJourFixture = (heure: string, jour = 14): string => {
   const [h = '0', m = '0'] = heure.split(':');
@@ -59,12 +58,6 @@ export const regularisationFixture = (activite: string): ChoixGuide => ({
   explication: '',
   saisie: SaisieActe.regularise({ ...ARRET_FIXTURE, activiteVisee: activite, operateur: 'op-camille', poste: 'poste-1', instant: '' }),
 });
-
-export const correctionTardiveFixture = (
-  code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE',
-  pointage: string,
-  fait: FaitPropose,
-): ChoixGuide => ({ id: `${code}:${pointage}`, code, libelle: '', explication: '', saisie: SaisieActe.correct(pointage, fait) });
 
 export const dossierDeFinAutomatiqueFixture = (changement: Partial<DossierAnomalie> = {}): DossierAnomalie => ({
   etat: 'FIN_AUTOMATIQUE',

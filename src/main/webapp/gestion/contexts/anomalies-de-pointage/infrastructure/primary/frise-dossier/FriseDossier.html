@@ -70,20 +70,12 @@
       [attr.aria-label]="element.nom"
       [attr.data-en-cause]="element.enCause"
       [attr.data-annule]="element.annule"
-      [attr.data-tardif]="element.tardif"
-      [attr.data-deplace]="element.deplace"
       [attr.data-non-conformite]="element.nonConformite"
       [attr.data-ancrage]="element.ancrage"
     >
       <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ element.symbole }}</span>
       <time class="text-(length:--text-label) tabular-nums" data-selector="anomalie-pointage-heure">{{ element.heure }}</time>
-      @if (element.tardif) {
-      <span
-        class="absolute -right-2 -bottom-2 grid size-5 place-items-center rounded-[50%] border-2 border-warn bg-surface text-(length:--text-label) font-bold text-ink"
-        data-selector="anomalie-pointage-tardif"
-        >{{ libelles.frise.badgeTardif }}</span
-      >
-      } @if (element.regularise) {
+      @if (element.regularise) {
       <span
         class="absolute -top-2 -right-2 grid size-5 place-items-center rounded-[50%] bg-ink text-(length:--text-label) font-bold text-surface"
         data-selector="anomalie-pointage-regularise"
