@@ -6,7 +6,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { FiltreAnomalies, NatureAnomalie, PAGE_SIZE_ANOMALIES } from '../../../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
-import { NATURE_ANOMALIE_PAR_DEFAUT, readNatureAnomalieDemandee } from '../../../domain/dossier/NatureAnomalieDemandee';
+import { filtreAnomaliesDemande } from '../../../domain/dossier/FiltreAnomaliesDemande';
+import { readNatureAnomalieDemandee } from '../../../domain/dossier/NatureAnomalieDemandee';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { readPageAnomaliesDemandee } from '../../../domain/dossier/PageAnomaliesDemandee';
 import { etatDeLecture } from '../EtatDeLecture';
@@ -32,12 +33,7 @@ export class ListeAnomalies {
   protected readonly echecNavigation = linkedSignal({ source: this.params, computation: () => false });
   protected readonly pageDemandee = computed(() => readPageAnomaliesDemandee(this.params().get('page')));
   protected readonly natureDemandee = computed(() => readNatureAnomalieDemandee(this.params().get('nature')));
-  protected readonly filtre = computed(() => ({
-    nature: this.natureDemandee() ?? NATURE_ANOMALIE_PAR_DEFAUT,
-    operateur: this.params().get('operateur') ?? '',
-    element: this.params().get('element') ?? '',
-    page: this.pageDemandee() ?? 1,
-  }));
+  protected readonly filtre = computed(() => filtreAnomaliesDemande(this.params()));
   protected readonly filtreActif = computed(() => this.filtre().operateur !== '' || this.filtre().element !== '');
   protected readonly libelles = { ...LIBELLES_ANOMALIES, ...LIBELLES_LISTE_ANOMALIES };
   protected readonly operateurDe = operateurPresente;
