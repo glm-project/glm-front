@@ -37,8 +37,9 @@ Elle représente la nature d'un poste et les métiers d'un opérateur.
 
 **Objet de l'activité** : élément travaillé.
 
-**Élément travaillé** : moule (`PRODUIT`) ou OF (`ORDRE_DE_FABRICATION`), avec son nom et sa référence
-facultative. Sans référence, l'écran le désigne par son nom ; aucune référence n'est fabriquée.
+**Élément travaillé** : produit d'une catégorie de l'entreprise (`MOULE`, `OF`…), avec le code de sa
+catégorie, son nom et sa référence facultative. Le code s'affiche tel quel. Sans référence, l'écran le
+désigne par son nom ; aucune référence n'est fabriquée.
 
 **OF Perso** : ordre de fabrication créé par le superviseur pour représenter son travail personnel.
 La supervision le lit comme tout OF. Sa création et son sous-type appartiennent à un autre chantier ;

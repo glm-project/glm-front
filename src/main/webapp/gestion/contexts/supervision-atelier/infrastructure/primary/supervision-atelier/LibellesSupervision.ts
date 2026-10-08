@@ -4,7 +4,6 @@ import {
   localCalendarDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
-import { TypeDElement } from '../../../domain/activite/TypeDElement';
 import { Instant } from '../../../domain/instant/Instant';
 import { NatureDeTravail } from '../../../domain/poste/NatureDeTravail';
 import { CouloirDeSupervision } from '../../../domain/supervision/CouloirDeSupervision';
@@ -24,11 +23,6 @@ export interface MomentAffiche {
 const COULOIRS: Record<CouloirDeSupervision, LibellesCouloir> = {
   AU_TRAVAIL: { titre: 'Au travail', definition: 'au moins une activité interprétable en cours' },
   SANS_ACTIVITE: { titre: 'Sans activité', definition: 'aucune activité interprétable en cours' },
-};
-
-const TYPES: Record<TypeDElement, string> = {
-  PRODUIT: 'Moule',
-  ORDRE_DE_FABRICATION: 'OF',
 };
 
 const NOMS_CITES_AU_PLUS = 6;
@@ -53,7 +47,6 @@ export const LIBELLES_SUPERVISION = {
   enNc: 'en NC',
   aVerifier: 'à vérifier',
   nc: 'NC',
-  types: TYPES,
   sansPoste: 'Sans poste',
   metier: 'Métier\u00a0:',
   metiers: 'Métiers\u00a0:',
@@ -63,7 +56,7 @@ export const LIBELLES_SUPERVISION = {
   termineeAutomatiquement: 'Activité terminée automatiquement',
   sequenceEnConflit: 'Séquence en conflit',
   aResoudre: 'À résoudre',
-  objet: (objet: ElementTravaille): string => `${TYPES[objet.type]} ${objet.reference?.value ?? objet.nom}`,
+  objet: (objet: ElementTravaille): string => `${objet.categorie.value} ${objet.reference?.value ?? objet.nom}`,
   fraicheur: (total: number, instant: Instant): string =>
     `${total} ${pluriel(total, 'opérateur', 'opérateurs')} · d’après les pointages reçus jusqu’à ${heure(instant)} · actualisé toutes les 30 s`,
   listeDesMetiers: (metiers: readonly NatureDeTravail[]): string => metiers.map(metier => metier.value).join(', '),

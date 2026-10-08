@@ -1,5 +1,6 @@
 import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
 import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { CategorieDElement } from '../../../domain/activite/CategorieDElement';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
 import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
@@ -17,9 +18,9 @@ const TRAVAIL = new CategorieActivite('TRAVAIL');
 const NON_CONFORMITE = new CategorieActivite('NON_CONFORMITE');
 
 const moule = (reference: string, nom: string): ElementTravaille =>
-  new ElementTravaille({ type: 'PRODUIT', nom, reference: new ReferenceDElement(reference) });
+  new ElementTravaille({ categorie: new CategorieDElement('MOULE'), nom, reference: new ReferenceDElement(reference) });
 const ordreDeFabrication = (reference: string, nom: string): ElementTravaille =>
-  new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom, reference: new ReferenceDElement(reference) });
+  new ElementTravaille({ categorie: new CategorieDElement('OF'), nom, reference: new ReferenceDElement(reference) });
 
 const MOULE_1015 = moule('1015', 'PRD-2026-000001');
 const MOULE_1016 = moule('1016', 'PRD-2026-000002');
@@ -28,8 +29,8 @@ const OF_3001 = ordreDeFabrication('3001', 'OF-2026-000039');
 const OF_3004 = ordreDeFabrication('3004', 'OF-2026-000042');
 const OF_3005 = ordreDeFabrication('3005', 'OF-2026-000043');
 const OF_3006 = ordreDeFabrication('3006', 'OF-2026-000044');
-const OF_PERSO = new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' });
-const OF_SANS_REFERENCE = new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000048' });
+const OF_PERSO = new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF Perso' });
+const OF_SANS_REFERENCE = new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF-2026-000048' });
 
 const poste = (id: string, libelle: string, nature: string): PosteDeSupervision =>
   new PosteDeSupervision({ id: new IdentifiantPoste(id), libelle, nature: new NatureDeTravail(nature) });

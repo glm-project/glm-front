@@ -8,6 +8,7 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActiviteDeSupervision } from '../../../domain/activite/ActiviteDeSupervision';
 import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { CategorieDElement } from '../../../domain/activite/CategorieDElement';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
 import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
@@ -51,17 +52,16 @@ describe('InMemory demonstration beyond the shared contract', () => {
 
     const donnees = await port.read();
 
-    expect(donnees.activites.find(activite => activite.operateurId?.value === 'op-chevalier')?.objet).toMatchObject({
-      type: 'ORDRE_DE_FABRICATION',
-      nom: 'OF Perso',
-    });
+    expect(designationOf(donnees.activites.find(activite => activite.operateurId?.value === 'op-chevalier')?.objet)).toEqual([
+      'OF',
+      'OF Perso',
+    ]);
     expect(
-      donnees.sequencesEnConflit.flatMap(sequence => sequence.activites).find(activite => activite.id.value === 'act-morel-a-resoudre')
-        ?.objet,
-    ).toMatchObject({
-      type: 'ORDRE_DE_FABRICATION',
-      nom: 'OF Perso',
-    });
+      designationOf(
+        donnees.sequencesEnConflit.flatMap(sequence => sequence.activites).find(activite => activite.id.value === 'act-morel-a-resoudre')
+          ?.objet,
+      ),
+    ).toEqual(['OF', 'OF Perso']);
   });
 
   it('should read supervision data in which every activity belongs to a declared operator', async () => {
@@ -120,7 +120,7 @@ const oneOperatorFixture: SceneFixture = {
 const activityFixture = new ActiviteDeSupervision({
   id: new IdentifiantActivite('opening-of'),
   operateurId: operateurFixture.id,
-  objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF-2026-000042', reference: new ReferenceDElement('3004') }),
+  objet: new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF-2026-000042', reference: new ReferenceDElement('3004') }),
   categorie: new CategorieActivite('TRAVAIL'),
   debut: new Instant('2026-09-13T08:30:00Z'),
   echeance: new Instant('2026-09-13T21:30:00Z'),
@@ -147,7 +147,7 @@ const otherOperatorFixture = new OperateurDeclare({ id: new IdentifiantOperateur
 const mouldActivityFixture = new ActiviteDeSupervision({
   id: new IdentifiantActivite('opening-mould'),
   operateurId: otherOperatorFixture.id,
-  objet: new ElementTravaille({ type: 'PRODUIT', nom: 'Moule personnel' }),
+  objet: new ElementTravaille({ categorie: new CategorieDElement('MOULE'), nom: 'Moule personnel' }),
   categorie: new CategorieActivite('NON_CONFORMITE'),
   debut: new Instant('2026-09-13T09:15:00Z'),
   echeance: new Instant('2026-09-13T22:15:00Z'),
@@ -189,7 +189,7 @@ const automaticEndFixture: SceneFixture = {
       new ActiviteDeSupervision({
         id: new IdentifiantActivite('automatic-end'),
         operateurId: operateurFixture.id,
-        objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
+        objet: new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF Perso' }),
         categorie: new CategorieActivite('TRAVAIL'),
         debut: new Instant('2026-09-12T08:00:00Z'),
         echeance: new Instant('2026-09-12T21:00:00Z'),
@@ -247,7 +247,7 @@ const conflictFixture: SceneFixture = {
           new ActiviteDeSupervision({
             id: new IdentifiantActivite('opening-conflict-perso'),
             operateurId: operateurFixture.id,
-            objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
+            objet: new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF Perso' }),
             categorie: new CategorieActivite('NON_CONFORMITE'),
             debut: new Instant('2026-09-12T08:00:00Z'),
             echeance: new Instant('2026-09-12T21:00:00Z'),
@@ -256,7 +256,11 @@ const conflictFixture: SceneFixture = {
           new ActiviteDeSupervision({
             id: new IdentifiantActivite('opening-conflict-mould'),
             operateurId: operateurFixture.id,
-            objet: new ElementTravaille({ type: 'PRODUIT', nom: 'PRD-2026-000015', reference: new ReferenceDElement('1015') }),
+            objet: new ElementTravaille({
+              categorie: new CategorieDElement('MOULE'),
+              nom: 'PRD-2026-000015',
+              reference: new ReferenceDElement('1015'),
+            }),
             categorie: new CategorieActivite('TRAVAIL'),
             debut: new Instant('2026-09-12T09:00:00Z'),
             echeance: new Instant('2026-09-12T22:00:00Z'),
@@ -314,7 +318,7 @@ const preciseEndFixture: SceneFixture = {
       new ActiviteDeSupervision({
         id: new IdentifiantActivite('automatic-end'),
         operateurId: operateurFixture.id,
-        objet: new ElementTravaille({ type: 'ORDRE_DE_FABRICATION', nom: 'OF Perso' }),
+        objet: new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF Perso' }),
         categorie: new CategorieActivite('TRAVAIL'),
         debut: new Instant('2026-09-12T06:00:00.123456789Z'),
         echeance: new Instant('2026-09-12T19:00:00.987654321Z'),
@@ -366,6 +370,8 @@ const givenHttp = (scene: SceneFixture): HttpReadHarness => {
   };
 };
 
+const designationOf = (objet: ElementTravaille | undefined): readonly (string | undefined)[] => [objet?.categorie.value, objet?.nom];
+
 const whenRead = async (harness: ReadHarness): Promise<DonneesDeSupervision> => {
   const reading = harness.port.read();
   harness.answer();
@@ -378,7 +384,7 @@ const posteObservationFixture = (poste: PosteDeSupervision | undefined) =>
 const activityObservationFixture = (activite: ActiviteDeSupervision, evaluation: Instant) => ({
   id: activite.id.value,
   operateurId: activite.operateurId?.value,
-  objet: { type: activite.objet.type, nom: activite.objet.nom, reference: activite.objet.reference?.value },
+  objet: { categorie: activite.objet.categorie.value, nom: activite.objet.nom, reference: activite.objet.reference?.value },
   categorie: activite.categorie.value,
   debut: activite.debut.value,
   echeance: activite.echeance.value,

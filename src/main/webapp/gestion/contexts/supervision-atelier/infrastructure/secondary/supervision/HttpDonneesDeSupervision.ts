@@ -5,6 +5,7 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { inject, Injectable } from '@angular/core';
 import { ActiviteDeSupervision, DescriptionActivite } from '../../../domain/activite/ActiviteDeSupervision';
 import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
+import { CategorieDElement } from '../../../domain/activite/CategorieDElement';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
 import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
@@ -32,9 +33,11 @@ const toOperateur = (operateur: RestOperateur): OperateurDeclare =>
     metiers: operateur.metiers.map(metier => new NatureDeTravail(metier)),
   });
 
+const CATEGORIE_DU_TYPE = { ORDRE_DE_FABRICATION: 'OF', PRODUIT: 'MOULE' } as const;
+
 const toElement = (element: RestElement): ElementTravaille =>
   new ElementTravaille({
-    type: element.type,
+    categorie: new CategorieDElement(CATEGORIE_DU_TYPE[element.type]),
     nom: element.nom,
     ...(element.reference === undefined ? {} : { reference: new ReferenceDElement(element.reference) }),
   });
