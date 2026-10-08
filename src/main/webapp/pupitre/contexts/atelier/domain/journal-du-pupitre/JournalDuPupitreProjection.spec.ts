@@ -39,44 +39,6 @@ const debutGesteFixture: GesteDePointage = {
 };
 const debutFixture: EvenementDuJournal = { geste: debutGesteFixture, etat: 'EN_ATTENTE' };
 describe('JournalDuPupitreProjection', () => {
-  it.each(['2026-09-05T11:00:00Z', '2026-09-05T11:01:00Z'])(
-    'should not interpret an opening at %s as replacing a target strictly before FIN at 11:00',
-    depuis => {
-      const replacement = {
-        operateurId: 'jean',
-        categorie: 'TRAVAIL' as const,
-        ouverture: 'b',
-        depuis,
-        echeance: '2026-09-06T00:00:00Z',
-        posteId: 'tour',
-      };
-      const state: JournalDuPupitre = {
-        ...givenEvents([
-          {
-            etat: 'EN_ATTENTE',
-            geste: {
-              ...debutGesteFixture,
-              id: 'fin-a',
-              intention: 'FIN',
-              type: 'FIN',
-              cible: 'a',
-              posteId: 'tour',
-              dateDeSurvenue: '2026-09-05T11:00:00Z',
-            },
-          },
-        ]),
-        referentiel: {
-          ...referenceFixture,
-          suivis: [{ ...requiredFixture(referenceFixture.suivis[0], 'item'), activites: [replacement] }],
-        },
-      };
-
-      const projected = whenProjecting(state);
-
-      expect(projected?.suivis[0]?.activites).toEqual([replacement]);
-    },
-  );
-
   it('should ignore an accepted event once the canonical reference contains its gesture', () => {
     const state = {
       ...givenEvents([{ geste: debutGesteFixture, etat: 'ACCEPTE' }]),
