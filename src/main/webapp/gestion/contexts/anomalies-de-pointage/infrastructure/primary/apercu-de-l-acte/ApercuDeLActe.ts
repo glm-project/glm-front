@@ -4,15 +4,14 @@ import { ApercuAnomalie } from '../../../domain/acte/AnomaliesActesPorts';
 import { DossierAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { IssueDeLActe } from '../../../domain/dossier/IssueDeLActe';
 import { ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
-import { ChronologiePointagesPipe } from '../chronologie-pointages/ChronologiePointagesPipe';
-import { DetailDuPointage } from '../detail-du-pointage/DetailDuPointage';
+import { ComparaisonDesJournaux } from '../comparaison-des-journaux/ComparaisonDesJournaux';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
-import { detailDuPointage, labelForActivite, libelleDuGeste, referencePointage, remplacementDe } from '../PresentationDossier';
+import { labelForActivite, libelleDuGeste, referencePointage } from '../PresentationDossier';
 import { operateurDeLActe, posteDeLActe } from '../PresentationIdentites';
 
 @Component({
   selector: 'glm-apercu-de-l-acte',
-  imports: [ChronologiePointagesPipe, InstantLongDayWithSecondsPipe, DetailDuPointage],
+  imports: [InstantLongDayWithSecondsPipe, ComparaisonDesJournaux],
   templateUrl: './ApercuDeLActe.html',
   styleUrls: ['../Boutons.css', './ApercuDeLActe.css'],
   host: { class: 'block' },
@@ -28,8 +27,6 @@ export class ApercuDeLActe {
   protected readonly issueDe = (origine: DossierAnomalie, apres: DossierAnomalie) => IssueDeLActe.depuis(origine, apres);
   protected readonly libelleDuGeste = libelleDuGeste;
   protected readonly labelForActivite = labelForActivite;
-  protected readonly remplacementDe = remplacementDe;
-  protected readonly detailDuPointage = detailDuPointage;
 
   focusTitre(): void {
     this.titre().nativeElement.focus();
