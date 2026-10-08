@@ -8,9 +8,12 @@ import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
 import { CategorieDejaExistante } from '../../domain/CategorieDejaExistante';
 import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
+import { CategorieIntrouvable } from '../../domain/CategorieIntrouvable';
 import { CategoriesDeProduitPort } from '../../domain/CategoriesDeProduitPort';
+import { CategorieUtilisee } from '../../domain/CategorieUtilisee';
 import { OrdreDesCategories } from '../../domain/OrdreDesCategories';
 import { OrdreIncomplet } from '../../domain/OrdreIncomplet';
+import { RefusSuppressionCategorie } from '../../domain/RefusSuppressionCategorie';
 
 const URN = 'urn:glm:erreur:categorie-de-produit:';
 
@@ -19,6 +22,17 @@ const refusDeclaration = (urn: string | undefined): CategorieDejaExistante | und
 
 const refusReordonnancement = (urn: string | undefined): OrdreIncomplet | undefined =>
   urn === `${URN}ordre-incomplet` ? new OrdreIncomplet() : undefined;
+
+const refusSuppression = (urn: string | undefined): RefusSuppressionCategorie | undefined => {
+  switch (urn) {
+    case `${URN}categorie-utilisee`:
+      return new CategorieUtilisee();
+    case `${URN}categorie-introuvable`:
+      return new CategorieIntrouvable();
+    default:
+      return undefined;
+  }
+};
 
 @Injectable()
 export class HttpCategoriesDeProduit extends CategoriesDeProduitPort {
@@ -46,6 +60,10 @@ export class HttpCategoriesDeProduit extends CategoriesDeProduitPort {
       this.api.update('/api/categories-de-produit/ordre', { body: { codes: ordre.categories.map(categorie => categorie.value) } }),
       refusReordonnancement,
     );
+  }
+
+  override supprimer(categorie: CategorieDeProduit): Promise<Result<void, RefusSuppressionCategorie>> {
+    return this.execute(this.api.delete('/api/categories-de-produit/{code}', { pathParams: { code: categorie.value } }), refusSuppression);
   }
 
   private async page(page: number, taille: number): Promise<Page<CategorieDeProduit>> {

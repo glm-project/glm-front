@@ -8,7 +8,9 @@ import { CategoriesDeProduitFixture } from '@test/unit/fixtures/gestion/element-
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
 import { CategorieDejaExistante } from '../../domain/CategorieDejaExistante';
 import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
+import { CategorieIntrouvable } from '../../domain/CategorieIntrouvable';
 import { CategoriesDeProduitPort } from '../../domain/CategoriesDeProduitPort';
+import { CategorieUtilisee } from '../../domain/CategorieUtilisee';
 import { OrdreDesCategories } from '../../domain/OrdreDesCategories';
 import { OrdreIncomplet } from '../../domain/OrdreIncomplet';
 import { HttpCategoriesDeProduit } from './HttpCategoriesDeProduit';
@@ -21,6 +23,7 @@ const sameCodes = (gauche: readonly string[], droite: readonly string[]): boolea
 
 class CategoriesHttpBackendFixture implements HttpBackend {
   codes: string[] = [];
+  utilisees: string[] = [];
 
   handle(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
     return defer(() => this.answer(request)).pipe(
@@ -33,6 +36,9 @@ class CategoriesHttpBackendFixture implements HttpBackend {
     const url = new URL(request.urlWithParams, 'http://localhost');
     if (url.pathname === `${ROUTE}/ordre`) {
       return this.reorder(request.body as { codes: string[] });
+    }
+    if (request.method === 'DELETE') {
+      return this.remove(decodeURIComponent(url.pathname.substring(`${ROUTE}/`.length)));
     }
     if (url.pathname !== ROUTE) {
       return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
@@ -52,6 +58,17 @@ class CategoriesHttpBackendFixture implements HttpBackend {
         totalElementsCount: this.codes.length,
       },
     });
+  }
+
+  private remove(code: string): HttpResponse<unknown> | HttpErrorResponse {
+    if (!this.codes.includes(code)) {
+      return new HttpErrorResponse({ status: 404, statusText: 'Not Found', error: { type: `${URN}categorie-introuvable` } });
+    }
+    if (this.utilisees.includes(code)) {
+      return new HttpErrorResponse({ status: 409, statusText: 'Conflict', error: { type: `${URN}categorie-utilisee` } });
+    }
+    this.codes = this.codes.filter(candidate => candidate !== code);
+    return new HttpResponse({ status: 204 });
   }
 
   private reorder(body: { codes: string[] }): HttpResponse<unknown> | HttpErrorResponse {
@@ -74,6 +91,7 @@ class CategoriesHttpBackendFixture implements HttpBackend {
 interface CategoriesHarness {
   readonly port: CategoriesDeProduitPort;
   declare(codes: readonly string[]): void;
+  use(codes: readonly string[]): void;
 }
 
 const createHttpHarness = (): CategoriesHarness => {
@@ -93,6 +111,9 @@ const createHttpHarness = (): CategoriesHarness => {
     declare: codes => {
       backend.codes = [...codes];
     },
+    use: codes => {
+      backend.utilisees = [...codes];
+    },
   };
 };
 
@@ -102,6 +123,9 @@ const createFixtureHarness = (): CategoriesHarness => {
     port: fixture,
     declare: codes => {
       fixture.liste = codes.map(code => new CategorieDeProduit(code));
+    },
+    use: codes => {
+      fixture.utilisees = [...codes];
     },
   };
 };
@@ -154,6 +178,32 @@ describe.each(adapters)('CategoriesDeProduitPort contract, honoured by %s', (_ad
     expect(resultat).toEqual({ ok: false, error: new OrdreIncomplet() });
   });
 
+  it('should remove a category no product uses', async () => {
+    harness.declare(['MOULE', 'OF']);
+
+    const resultat = await harness.port.supprimer(new CategorieDeProduit('MOULE'));
+
+    expect(resultat).toEqual({ ok: true, value: undefined });
+    expect((await harness.port.categories()).map(categorie => categorie.value)).toEqual(['OF']);
+  });
+
+  it('should refuse to remove a category that products use', async () => {
+    harness.declare(['MOULE']);
+    harness.use(['MOULE']);
+
+    const resultat = await harness.port.supprimer(new CategorieDeProduit('MOULE'));
+
+    expect(resultat).toEqual({ ok: false, error: new CategorieUtilisee() });
+  });
+
+  it('should refuse to remove a category that no longer exists', async () => {
+    harness.declare(['OF']);
+
+    const resultat = await harness.port.supprimer(new CategorieDeProduit('MOULE'));
+
+    expect(resultat).toEqual({ ok: false, error: new CategorieIntrouvable() });
+  });
+
   it('should refuse a category that already exists', async () => {
     harness.declare(['MOULE']);
 
@@ -199,6 +249,16 @@ describe('Beyond the contract: HttpCategoriesDeProduit', () => {
   it('should keep an unknown refusal of a declaration as a technical failure', async () => {
     const result = port.declarer(new CategorieDeProduit('PIECE')).catch((failure: unknown) => failure);
     await whenServerAnswers(409, { type: `${URN}inconnu` });
+
+    expect(await result).toBeInstanceOf(HttpErrorResponse);
+  });
+
+  it.each([
+    ['reordering', (): Promise<unknown> => port.reordonner(new OrdreDesCategories([new CategorieDeProduit('OF')])), `${ROUTE}/ordre`],
+    ['removal', (): Promise<unknown> => port.supprimer(new CategorieDeProduit('OF')), `${ROUTE}/OF`],
+  ])('should keep an unknown refusal of a %s as a technical failure', async (_action, act, url) => {
+    const result = act().catch((failure: unknown) => failure);
+    await whenServerAnswers(409, { type: `${URN}inconnu` }, url);
 
     expect(await result).toBeInstanceOf(HttpErrorResponse);
   });

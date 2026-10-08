@@ -4,12 +4,16 @@ import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/prim
 import { TextField } from '@/gestion/shared/design-system/infrastructure/primary/text-field/TextField';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { CategoriesDeProduitPort } from '../../../domain/CategoriesDeProduitPort';
 import { FormulaireCategorieDeProduit } from '../../../domain/FormulaireCategorieDeProduit';
 import { OrdreDesCategories } from '../../../domain/OrdreDesCategories';
 import { OrdreIncomplet } from '../../../domain/OrdreIncomplet';
+import {
+  ConfirmationSuppressionCategorieDialog,
+  ConfirmationSuppressionCategorieDialogData,
+} from '../confirmation-suppression-categorie-dialog/ConfirmationSuppressionCategorieDialog';
 import { LIBELLES_CATEGORIES_DE_PRODUIT } from '../LibellesElementsDeFabrication';
 
 @Component({
@@ -20,6 +24,7 @@ import { LIBELLES_CATEGORIES_DE_PRODUIT } from '../LibellesElementsDeFabrication
 export class CategoriesDeProduitDialog implements OnInit {
   private readonly port = inject(CategoriesDeProduitPort);
   private readonly errors = inject(ErrorHandlerPort);
+  private readonly dialogs = inject(MatDialog);
 
   protected readonly libelles = LIBELLES_CATEGORIES_DE_PRODUIT;
   protected readonly ordre = signal(new OrdreDesCategories([]));
@@ -51,6 +56,18 @@ export class CategoriesDeProduitDialog implements OnInit {
 
   protected descendre(categorie: CategorieDeProduit): void {
     this.errors.observe(this.reorder(this.ordre().apresDescente(categorie)));
+  }
+
+  protected supprimer(categorie: CategorieDeProduit): void {
+    const dialogRef = this.dialogs.open<ConfirmationSuppressionCategorieDialog, ConfirmationSuppressionCategorieDialogData, boolean>(
+      ConfirmationSuppressionCategorieDialog,
+      { data: { categorie }, width: '28rem', maxWidth: 'calc(100vw - 2rem)' },
+    );
+    dialogRef.afterClosed().subscribe(supprimee => {
+      if (supprimee === true) {
+        this.reload();
+      }
+    });
   }
 
   protected declarer(event: Event): void {

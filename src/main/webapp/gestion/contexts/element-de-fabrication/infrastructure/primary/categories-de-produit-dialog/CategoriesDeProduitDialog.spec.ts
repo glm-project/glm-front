@@ -169,6 +169,26 @@ describe('CategoriesDeProduitDialog', () => {
     expect(errors.errors).toHaveLength(1);
   });
 
+  it('should list the categories again once one is removed', async () => {
+    givenCategories(['MOULE', 'OF']);
+    await whenOpening();
+    await whenClicking('categorie-supprimer-MOULE');
+
+    await whenAnsweringConfirmation('categorie-delete-confirm');
+
+    expect(texts('categorie-item')).toEqual(['OF']);
+  });
+
+  it('should keep the list when the removal is cancelled', async () => {
+    givenCategories(['MOULE', 'OF']);
+    await whenOpening();
+    await whenClicking('categorie-supprimer-MOULE');
+
+    await whenAnsweringConfirmation('categorie-delete-cancel');
+
+    expect(texts('categorie-item')).toEqual(['MOULE', 'OF']);
+  });
+
   it('should offer a retry after a failed read', async () => {
     givenReadingFails();
     await whenOpening();
@@ -216,6 +236,13 @@ describe('CategoriesDeProduitDialog', () => {
     requiredFixture(document.querySelector(dataSelector('categorie-form')), 'form').dispatchEvent(
       new Event('submit', { bubbles: true, cancelable: true }),
     );
+    await fixture.whenStable();
+  };
+  const whenAnsweringConfirmation = async (selector: string): Promise<void> => {
+    const confirmation = requiredFixture(TestBed.inject(MatDialog).openDialogs.at(-1), 'confirmation dialog');
+    const fermee = firstValueFrom(confirmation.afterClosed());
+    await whenClicking(selector);
+    await fermee;
     await fixture.whenStable();
   };
   const whenClicking = async (selector: string): Promise<void> => {

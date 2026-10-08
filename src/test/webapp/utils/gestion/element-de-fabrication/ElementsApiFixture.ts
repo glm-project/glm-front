@@ -18,6 +18,7 @@ const URN = 'urn:glm:erreur:element-de-fabrication:';
 export class ElementsApiFixture {
   elements: ElementEnregistre[];
   categories: string[] = ['MOULE', 'OF'];
+  categoriesUtilisees: string[] = [];
   failRead = false;
   failWrite = false;
   readonly writes: (Creation | Modification)[] = [];
@@ -75,6 +76,15 @@ export class ElementsApiFixture {
       this.categories = [...(request.body as { codes: string[] }).codes];
       request.reply({ statusCode: 204 });
     }).as('categoriesReorder');
+    cy.intercept('DELETE', `${CATEGORIES}/*`, request => {
+      const code = request.url.split('/').slice(-1)[0] ?? '';
+      if (this.categoriesUtilisees.includes(code)) {
+        request.reply({ statusCode: 409, body: { type: 'urn:glm:erreur:categorie-de-produit:categorie-utilisee' } });
+        return;
+      }
+      this.categories = this.categories.filter(candidate => candidate !== code);
+      request.reply({ statusCode: 204 });
+    }).as('categorieDelete');
   }
 
   private installSingleRead(): void {

@@ -55,6 +55,7 @@ export const LIBELLES_CATEGORIES_DE_PRODUIT = {
   liste: 'Catégories, dans l’ordre des boutons de création',
   monter: (categorie: CategorieDeProduit): string => `Monter ${categorie.value}`,
   descendre: (categorie: CategorieDeProduit): string => `Descendre ${categorie.value}`,
+  supprimer: (categorie: CategorieDeProduit): string => `Supprimer ${categorie.value}`,
   erreurDeplacement: 'Le déplacement a échoué. Vérifiez la connexion puis réessayez.',
   nouvelle: 'Nouvelle catégorie',
   nouvelleComplement: '(code de 1 à 10 lettres)',
@@ -63,6 +64,16 @@ export const LIBELLES_CATEGORIES_DE_PRODUIT = {
   declaration: 'Déclaration…',
   erreurTechnique: 'La déclaration a échoué. Vérifiez la connexion puis réessayez.',
   fermer: 'Fermer',
+} as const;
+
+export const LIBELLES_SUPPRESSION_CATEGORIE = {
+  titre: 'Supprimer la catégorie ?',
+  description: (categorie: CategorieDeProduit): string =>
+    `La catégorie ${categorie.value} sera retirée des boutons de création, des filtres et du pupitre. Cette action est définitive.`,
+  annuler: 'Annuler',
+  confirmer: 'Supprimer',
+  encours: 'Suppression…',
+  erreurTechnique: 'La suppression a échoué. Vérifiez la connexion puis réessayez.',
 } as const;
 
 export const LIBELLES_FORMULAIRE_ELEMENT = {

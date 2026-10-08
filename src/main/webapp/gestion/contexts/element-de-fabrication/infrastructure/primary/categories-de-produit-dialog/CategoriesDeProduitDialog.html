@@ -40,6 +40,16 @@
         >
           <glm-icon name="chevronDown" />
         </button>
+        <button
+          mat-icon-button
+          type="button"
+          (click)="supprimer(categorie)"
+          [disabled]="deplacement()"
+          [attr.aria-label]="libelles.supprimer(categorie)"
+          [attr.data-selector]="'categorie-supprimer-' + categorie.value"
+        >
+          <glm-icon name="trash2" />
+        </button>
       </span>
     </li>
     }
