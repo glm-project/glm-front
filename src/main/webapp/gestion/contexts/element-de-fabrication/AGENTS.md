@@ -53,7 +53,10 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   majuscules, vérifie le motif (`^[A-Z]{1,10}$`, porté par `CategorieDeProduit.erreur`) et garde le refus
   `CategorieDejaExistante` sur le champ tant que le même code est saisi.
 - **CategoriesDeProduitPort** : port secondaire de la gestion des catégories (`/api/categories-de-produit`) :
-  lecture dans l'ordre de l'entreprise et déclaration.
+  lecture dans l'ordre de l'entreprise, déclaration et réordonnancement.
+- **OrdreDesCategories** : l'ordre des catégories et ses déplacements d'une place (`apresMontee`,
+  `apresDescente`). Chaque déplacement envoie l'ordre complet ; s'il ne nomme plus toutes les catégories,
+  le refus `OrdreIncomplet` (409 `ordre-incomplet`) s'affiche et l'overlay relit la liste.
 - **Refus de commande** : `ReferenceDejaUtilisee` (unicité de référence en création et en modification),
   `CategorieInconnue` (catégorie supprimée entre la lecture et la création, 409
   `urn:glm:erreur:element-de-fabrication:categorie-inconnue`) et `ElementDeFabricationIntrouvable` (élément

@@ -9,10 +9,15 @@ import { defer, Observable, of, switchMap, throwError } from 'rxjs';
 import { CategorieDejaExistante } from '../../domain/CategorieDejaExistante';
 import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
 import { CategoriesDeProduitPort } from '../../domain/CategoriesDeProduitPort';
+import { OrdreDesCategories } from '../../domain/OrdreDesCategories';
+import { OrdreIncomplet } from '../../domain/OrdreIncomplet';
 import { HttpCategoriesDeProduit } from './HttpCategoriesDeProduit';
 
 const ROUTE = '/api/categories-de-produit';
 const URN = 'urn:glm:erreur:categorie-de-produit:';
+
+const sameCodes = (gauche: readonly string[], droite: readonly string[]): boolean =>
+  gauche.length === droite.length && gauche.every(code => droite.includes(code));
 
 class CategoriesHttpBackendFixture implements HttpBackend {
   codes: string[] = [];
@@ -26,6 +31,9 @@ class CategoriesHttpBackendFixture implements HttpBackend {
   private async answer(request: HttpRequest<unknown>): Promise<HttpResponse<unknown> | HttpErrorResponse> {
     await new Promise(resolve => setTimeout(resolve));
     const url = new URL(request.urlWithParams, 'http://localhost');
+    if (url.pathname === `${ROUTE}/ordre`) {
+      return this.reorder(request.body as { codes: string[] });
+    }
     if (url.pathname !== ROUTE) {
       return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
     }
@@ -44,6 +52,14 @@ class CategoriesHttpBackendFixture implements HttpBackend {
         totalElementsCount: this.codes.length,
       },
     });
+  }
+
+  private reorder(body: { codes: string[] }): HttpResponse<unknown> | HttpErrorResponse {
+    if (!sameCodes(body.codes, this.codes)) {
+      return new HttpErrorResponse({ status: 409, statusText: 'Conflict', error: { type: `${URN}ordre-incomplet` } });
+    }
+    this.codes = [...body.codes];
+    return new HttpResponse({ status: 204 });
   }
 
   private declare(body: { code: string }): HttpResponse<unknown> | HttpErrorResponse {
@@ -90,6 +106,8 @@ const createFixtureHarness = (): CategoriesHarness => {
   };
 };
 
+const ordreFixture = (...codes: string[]): OrdreDesCategories => new OrdreDesCategories(codes.map(code => new CategorieDeProduit(code)));
+
 const adapters: [string, () => CategoriesHarness][] = [
   ['HttpCategoriesDeProduit', createHttpHarness],
   ['CategoriesDeProduitFixture', createFixtureHarness],
@@ -117,6 +135,23 @@ describe.each(adapters)('CategoriesDeProduitPort contract, honoured by %s', (_ad
 
     expect(resultat).toEqual({ ok: true, value: undefined });
     expect((await harness.port.categories()).map(categorie => categorie.value)).toEqual(['MOULE', 'PIECE']);
+  });
+
+  it('should keep the order the manager chose', async () => {
+    harness.declare(['MOULE', 'OF', 'PIECE']);
+
+    const resultat = await harness.port.reordonner(ordreFixture('PIECE', 'MOULE', 'OF'));
+
+    expect(resultat).toEqual({ ok: true, value: undefined });
+    expect((await harness.port.categories()).map(categorie => categorie.value)).toEqual(['PIECE', 'MOULE', 'OF']);
+  });
+
+  it('should refuse an order that no longer names every category', async () => {
+    harness.declare(['MOULE', 'OF', 'PIECE']);
+
+    const resultat = await harness.port.reordonner(ordreFixture('OF', 'MOULE'));
+
+    expect(resultat).toEqual({ ok: false, error: new OrdreIncomplet() });
   });
 
   it('should refuse a category that already exists', async () => {
@@ -176,9 +211,17 @@ describe('Beyond the contract: HttpCategoriesDeProduit', () => {
     expect(request.request.body).toEqual({ code: 'PIECE' });
   });
 
-  const whenServerAnswers = async (status: number, body: object): Promise<TestRequest> => {
+  it('should send the whole order as codes', async () => {
+    const result = port.reordonner(ordreFixture('OF', 'MOULE'));
+    const request = await whenServerAnswers(204, {}, `${ROUTE}/ordre`);
+
+    await result;
+    expect(request.request.body).toEqual({ codes: ['OF', 'MOULE'] });
+  });
+
+  const whenServerAnswers = async (status: number, body: object, url = ROUTE): Promise<TestRequest> => {
     await new Promise(resolve => setTimeout(resolve));
-    const request = server.expectOne(candidate => candidate.url === ROUTE);
+    const request = server.expectOne(candidate => candidate.url === url);
     request.flush(body, { status, statusText: 'Response' });
     return request;
   };

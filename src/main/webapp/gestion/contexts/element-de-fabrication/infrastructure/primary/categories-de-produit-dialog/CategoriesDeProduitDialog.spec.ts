@@ -107,7 +107,7 @@ describe('CategoriesDeProduitDialog', () => {
   });
 
   it('should report a technical declaration failure and keep the typed code', async () => {
-    givenDeclarationFails();
+    givenWritingFails();
     await whenOpening();
 
     await whenEntering('categorie-code', 'piece');
@@ -115,6 +115,57 @@ describe('CategoriesDeProduitDialog', () => {
 
     expect(text('categorie-technical-error')).toContain('La déclaration a échoué');
     expect(input('categorie-code').value).toBe('piece');
+    expect(errors.errors).toHaveLength(1);
+  });
+
+  it('should move a category one place up and keep that order', async () => {
+    givenCategories(['MOULE', 'OF', 'PIECE']);
+    await whenOpening();
+
+    await whenClicking('categorie-monter-PIECE');
+
+    expect(texts('categorie-item')).toEqual(['MOULE', 'PIECE', 'OF']);
+    expect(port.liste.map(categorie => categorie.value)).toEqual(['MOULE', 'PIECE', 'OF']);
+  });
+
+  it('should move a category one place down', async () => {
+    givenCategories(['MOULE', 'OF']);
+    await whenOpening();
+
+    await whenClicking('categorie-descendre-MOULE');
+
+    expect(texts('categorie-item')).toEqual(['OF', 'MOULE']);
+  });
+
+  it('should offer no move beyond the first and the last place', async () => {
+    givenCategories(['MOULE', 'OF']);
+
+    await whenOpening();
+
+    expect([button('categorie-monter-MOULE').disabled, button('categorie-descendre-MOULE').disabled]).toEqual([true, false]);
+    expect([button('categorie-monter-OF').disabled, button('categorie-descendre-OF').disabled]).toEqual([false, true]);
+  });
+
+  it('should explain a refused order and show the categories as they now are', async () => {
+    givenCategories(['MOULE', 'OF']);
+    await whenOpening();
+    givenAnotherManagerDeclared('PIECE');
+
+    await whenClicking('categorie-descendre-MOULE');
+
+    expect(text('categories-refus')).toContain('Les catégories ont changé entre-temps');
+    expect(texts('categorie-item')).toEqual(['MOULE', 'OF', 'PIECE']);
+  });
+
+  it('should report a technical move failure and keep the order', async () => {
+    givenCategories(['MOULE', 'OF']);
+    await whenOpening();
+    givenWritingFails();
+
+    await whenClicking('categorie-descendre-MOULE');
+
+    expect(text('categories-technical-error')).toContain('Le déplacement a échoué');
+    expect(texts('categorie-item')).toEqual(['MOULE', 'OF']);
     expect(errors.errors).toHaveLength(1);
   });
 
@@ -133,10 +184,13 @@ describe('CategoriesDeProduitDialog', () => {
   const givenCategories = (codes: readonly string[]): void => {
     port.liste = codes.map(code => new CategorieDeProduit(code));
   };
+  const givenAnotherManagerDeclared = (code: string): void => {
+    port.liste = [...port.liste, new CategorieDeProduit(code)];
+  };
   const givenDeclarationIsPending = (pending: DeferredFixture<Result<void, CategorieDejaExistante>>): void => {
     port.declarationDifferee = pending.promise;
   };
-  const givenDeclarationFails = (): void => {
+  const givenWritingFails = (): void => {
     port.ecritureFailure = new Error('Network down');
   };
   const givenReadingFails = (): void => {
@@ -170,6 +224,8 @@ describe('CategoriesDeProduitDialog', () => {
   };
   const input = (selector: string): HTMLInputElement =>
     requiredFixture(document.querySelector<HTMLInputElement>(dataSelector(selector)), selector);
+  const button = (selector: string): HTMLButtonElement =>
+    requiredFixture(document.querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';
   const texts = (selector: string): string[] =>
     Array.from(document.querySelectorAll(dataSelector(selector)), element => element.textContent.trim());

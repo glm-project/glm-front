@@ -1,3 +1,4 @@
+import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
 import { TextField } from '@/gestion/shared/design-system/infrastructure/primary/text-field/TextField';
@@ -7,19 +8,24 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { CategoriesDeProduitPort } from '../../../domain/CategoriesDeProduitPort';
 import { FormulaireCategorieDeProduit } from '../../../domain/FormulaireCategorieDeProduit';
+import { OrdreDesCategories } from '../../../domain/OrdreDesCategories';
+import { OrdreIncomplet } from '../../../domain/OrdreIncomplet';
 import { LIBELLES_CATEGORIES_DE_PRODUIT } from '../LibellesElementsDeFabrication';
 
 @Component({
   selector: 'glm-categories-de-produit-dialog',
   templateUrl: './CategoriesDeProduitDialog.html',
-  imports: [ErrorMessage, TextField, MatDialogModule, MatButtonModule],
+  imports: [ErrorMessage, Icon, TextField, MatDialogModule, MatButtonModule],
 })
 export class CategoriesDeProduitDialog implements OnInit {
   private readonly port = inject(CategoriesDeProduitPort);
   private readonly errors = inject(ErrorHandlerPort);
 
   protected readonly libelles = LIBELLES_CATEGORIES_DE_PRODUIT;
-  protected readonly categories = signal<readonly CategorieDeProduit[]>([]);
+  protected readonly ordre = signal(new OrdreDesCategories([]));
+  protected readonly deplacement = signal(false);
+  protected readonly refusDeplacement = signal<OrdreIncomplet | undefined>(undefined);
+  protected readonly erreurDeplacement = signal(false);
   protected readonly chargement = signal(true);
   protected readonly echec = signal(false);
   protected readonly formulaire = signal(FormulaireCategorieDeProduit.vide());
@@ -39,6 +45,14 @@ export class CategoriesDeProduitDialog implements OnInit {
     this.formulaire.update(formulaire => formulaire.avecCode(code));
   }
 
+  protected monter(categorie: CategorieDeProduit): void {
+    this.errors.observe(this.reorder(this.ordre().apresMontee(categorie)));
+  }
+
+  protected descendre(categorie: CategorieDeProduit): void {
+    this.errors.observe(this.reorder(this.ordre().apresDescente(categorie)));
+  }
+
   protected declarer(event: Event): void {
     event.preventDefault();
     this.errors.observe(this.declare());
@@ -48,11 +62,31 @@ export class CategoriesDeProduitDialog implements OnInit {
     this.chargement.set(true);
     this.echec.set(false);
     try {
-      this.categories.set(await this.port.categories());
+      this.ordre.set(new OrdreDesCategories(await this.port.categories()));
     } catch {
       this.echec.set(true);
     } finally {
       this.chargement.set(false);
+    }
+  }
+
+  private async reorder(ordre: OrdreDesCategories): Promise<void> {
+    this.deplacement.set(true);
+    this.refusDeplacement.set(undefined);
+    this.erreurDeplacement.set(false);
+    try {
+      const resultat = await this.port.reordonner(ordre);
+      if (resultat.ok) {
+        this.ordre.set(ordre);
+      } else {
+        this.refusDeplacement.set(resultat.error);
+        await this.load();
+      }
+    } catch (failure) {
+      this.erreurDeplacement.set(true);
+      this.errors.handleError(failure);
+    } finally {
+      this.deplacement.set(false);
     }
   }
 

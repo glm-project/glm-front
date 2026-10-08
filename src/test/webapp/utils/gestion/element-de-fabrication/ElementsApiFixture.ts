@@ -71,6 +71,10 @@ export class ElementsApiFixture {
       this.categories.push(code);
       request.reply({ statusCode: 201, body: { code } });
     }).as('categorieDeclare');
+    cy.intercept('PUT', `${CATEGORIES}/ordre`, request => {
+      this.categories = [...(request.body as { codes: string[] }).codes];
+      request.reply({ statusCode: 204 });
+    }).as('categoriesReorder');
   }
 
   private installSingleRead(): void {

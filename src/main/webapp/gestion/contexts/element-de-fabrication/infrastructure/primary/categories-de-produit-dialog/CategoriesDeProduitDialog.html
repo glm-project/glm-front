@@ -12,16 +12,42 @@
     retrySelector="categories-retry"
     (retryRequested)="reload()"
   />
-  } @else if (categories().length === 0) {
+  } @else if (ordre().categories.length === 0) {
   <p class="py-6 text-center text-body text-ink-muted" data-selector="categories-empty">{{ libelles.vide }}</p>
   } @else {
   <ol class="mb-6 flex flex-col gap-2" [attr.aria-label]="libelles.liste" data-selector="categories-list">
-    @for (categorie of categories(); track categorie.value) {
+    @for (categorie of ordre().categories; track categorie.value) {
     <li class="flex items-center gap-2" data-selector="categorie-row">
       <span class="gestion-type" data-selector="categorie-item">{{ categorie.value }}</span>
+      <span class="ml-auto flex gap-1">
+        <button
+          mat-icon-button
+          type="button"
+          (click)="monter(categorie)"
+          [disabled]="deplacement() || ordre().estPremiere(categorie)"
+          [attr.aria-label]="libelles.monter(categorie)"
+          [attr.data-selector]="'categorie-monter-' + categorie.value"
+        >
+          <glm-icon name="chevronUp" />
+        </button>
+        <button
+          mat-icon-button
+          type="button"
+          (click)="descendre(categorie)"
+          [disabled]="deplacement() || ordre().estDerniere(categorie)"
+          [attr.aria-label]="libelles.descendre(categorie)"
+          [attr.data-selector]="'categorie-descendre-' + categorie.value"
+        >
+          <glm-icon name="chevronDown" />
+        </button>
+      </span>
     </li>
     }
   </ol>
+  } @if (refusDeplacement(); as refus) {
+  <p role="alert" class="mb-4 text-body-sm text-danger" data-selector="categories-refus">{{ refus.message }}</p>
+  } @if (erreurDeplacement()) {
+  <p role="alert" class="mb-4 text-body-sm text-danger" data-selector="categories-technical-error">{{ libelles.erreurDeplacement }}</p>
   }
   <form novalidate (submit)="declarer($event)" data-selector="categorie-form">
     <fieldset [disabled]="enregistrement()">

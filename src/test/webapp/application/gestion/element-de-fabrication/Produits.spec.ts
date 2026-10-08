@@ -65,6 +65,14 @@ describe('Manufacturing element referential in gestion', () => {
     thenElementIsListed('2001', 'PIECE', 'Insert');
   });
 
+  it('should offer the creations in the order chosen in the category management', () => {
+    givenReferential();
+    whenVisitingReferential();
+    whenMovingCategoryDown('MOULE');
+
+    thenCreationsAreOffered(['OF', 'MOULE']);
+  });
+
   it('should paginate the referential without asking for any period', () => {
     givenReferential(21);
     whenVisitingReferential();
@@ -86,6 +94,19 @@ const whenDeclaringCategory = (code: string): void => {
   cy.get(dataSelector('categorie-declare')).click();
   cy.get(dataSelector('categorie-item')).should('contain.text', code.toUpperCase());
   cy.get(dataSelector('categories-close')).click();
+};
+const whenMovingCategoryDown = (code: string): void => {
+  cy.get(dataSelector('elements-categories')).click();
+  cy.get(dataSelector(`categorie-descendre-${code}`)).click();
+  cy.wait('@categoriesReorder');
+  cy.get(dataSelector('categories-close')).click();
+};
+const thenCreationsAreOffered = (codes: readonly string[]): void => {
+  cy.get(dataSelector('elements-creations'))
+    .find('button')
+    .should(buttons => {
+      expect(Array.from(buttons, button => button.textContent.trim())).to.deep.equal(codes);
+    });
 };
 const whenVisitingReferential = (): void => {
   cy.viewport(1280, 900);

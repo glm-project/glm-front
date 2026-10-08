@@ -9,11 +9,16 @@ import { inject, Injectable } from '@angular/core';
 import { CategorieDejaExistante } from '../../domain/CategorieDejaExistante';
 import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
 import { CategoriesDeProduitPort } from '../../domain/CategoriesDeProduitPort';
+import { OrdreDesCategories } from '../../domain/OrdreDesCategories';
+import { OrdreIncomplet } from '../../domain/OrdreIncomplet';
 
 const URN = 'urn:glm:erreur:categorie-de-produit:';
 
 const refusDeclaration = (urn: string | undefined): CategorieDejaExistante | undefined =>
   urn === `${URN}categorie-deja-existante` ? new CategorieDejaExistante() : undefined;
+
+const refusReordonnancement = (urn: string | undefined): OrdreIncomplet | undefined =>
+  urn === `${URN}ordre-incomplet` ? new OrdreIncomplet() : undefined;
 
 @Injectable()
 export class HttpCategoriesDeProduit extends CategoriesDeProduitPort {
@@ -34,6 +39,13 @@ export class HttpCategoriesDeProduit extends CategoriesDeProduitPort {
 
   override declarer(categorie: CategorieDeProduit): Promise<Result<void, CategorieDejaExistante>> {
     return this.execute(this.api.write('/api/categories-de-produit', { body: { code: categorie.value } }), refusDeclaration);
+  }
+
+  override reordonner(ordre: OrdreDesCategories): Promise<Result<void, OrdreIncomplet>> {
+    return this.execute(
+      this.api.update('/api/categories-de-produit/ordre', { body: { codes: ordre.categories.map(categorie => categorie.value) } }),
+      refusReordonnancement,
+    );
   }
 
   private async page(page: number, taille: number): Promise<Page<CategorieDeProduit>> {
