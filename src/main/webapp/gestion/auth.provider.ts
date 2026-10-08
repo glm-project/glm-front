@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
 import { KeycloakOidcAuthentication } from '@/gestion/shared/authentication/infrastructure/secondary/keycloak-oidc/KeycloakOidcAuthentication';
 import { Provider } from '@angular/core';
 import Keycloak from 'keycloak-js';
@@ -15,5 +16,7 @@ export const authProvider: Provider[] = [
         clientId: environment.keycloak.client_id,
       }),
   },
-  { provide: AuthenticationPort, useClass: KeycloakOidcAuthentication },
+  KeycloakOidcAuthentication,
+  { provide: AuthenticationPort, useExisting: KeycloakOidcAuthentication },
+  { provide: RolesPort, useExisting: KeycloakOidcAuthentication },
 ];

@@ -1,6 +1,8 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
+import { ROLE_GESTIONNAIRE } from '@/gestion/shared/authentication/infrastructure/primary/gestionnaire';
+import { InMemoryGestionAuthentication } from '@/gestion/shared/authentication/infrastructure/secondary/in-memory/InMemoryGestionAuthentication';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
@@ -20,7 +22,9 @@ describe('Gestion shell', () => {
       providers: [
         provideRouter(routes),
         { provide: ComponentFixtureAutoDetect, useValue: true },
-        { provide: AuthenticationPort, useClass: InMemoryAuthentication },
+        { provide: InMemoryGestionAuthentication, useFactory: () => new InMemoryGestionAuthentication([ROLE_GESTIONNAIRE]) },
+        { provide: AuthenticationPort, useExisting: InMemoryGestionAuthentication },
+        { provide: RolesPort, useExisting: InMemoryGestionAuthentication },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
     }).compileComponents();
@@ -47,7 +51,9 @@ describe('Gestion shell', () => {
   });
 
   const givenAuthenticationIsRefused = (): void => {
-    TestBed.overrideProvider(AuthenticationPort, { useValue: new RefusedAuthenticationFixture() });
+    const refused = new RefusedAuthenticationFixture();
+    TestBed.overrideProvider(AuthenticationPort, { useValue: refused });
+    TestBed.overrideProvider(RolesPort, { useValue: refused });
   };
 
   const whenBootingTheShell = async (): Promise<void> => {
@@ -68,7 +74,11 @@ describe('Gestion shell', () => {
   };
 });
 
-class RefusedAuthenticationFixture extends AuthenticationPort {
+class RefusedAuthenticationFixture extends AuthenticationPort implements RolesPort {
+  realmRoles(): Promise<readonly string[]> {
+    return new Promise(() => undefined);
+  }
+
   override authenticate(): Promise<void> {
     return Promise.reject(new Error('login refused'));
   }
