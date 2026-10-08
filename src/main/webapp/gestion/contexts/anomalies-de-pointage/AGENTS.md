@@ -94,7 +94,9 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   reçu qui remplace le dossier lu ne la fait donc pas basculer). Une vue de résolution s'affiche si et seulement si le dossier
   est une fin automatique (`finAutomatique`), n'a pas de conflit à expliquer (`conflitAExpliquer`), porte **exactement un** choix,
   que ce choix vise l'activité dont l'`ouvrant` est le pointage de l'adresse, et que son code a une vue au registre
-  (`choixDeResolution`, `domain/dossier/`). Sinon la vue complète s'affiche, comme pour une adresse annulée, remplacée ou
+  (`choixDeResolution`, `domain/dossier/`). Une régularisation (`REGULARISER_FIN`) exige en plus que la frise se lise en ligne
+  (`seLitEnLigne`, `VuesDeResolution.ts`) : en rangées, elle n'a pas de poignée « Heure ? », et la vue de résolution, sans champ,
+  n'offrirait au clavier aucun accès à l'heure. Sinon la vue complète s'affiche, comme pour une adresse annulée, remplacée ou
   résolue. Un dossier de fin automatique qui porte aussi un choix de conflit (`RATTACHER_FIN_A_ACTIVITE_REMPLACANTE`,
   `ANNULER_TRANSITION`) retombe donc sur la vue complète.
 - **Solutions** : dans la vue complète, « Votre décision » en présente trois sortes, dans cet ordre : les propositions du serveur,

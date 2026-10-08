@@ -130,7 +130,8 @@ Un dossier de fin automatique sans conflit à expliquer, qui porte un seul choix
 `CORRIGER_TRANSITION_TARDIVE`) visant l'activité que son adresse ouvre, s'ouvre dans une vue de résolution : la phrase du problème, la frise en lecture seule et sa poignée, sans champ d'heure, l'aperçu en
 une ligne, « Valider la fin à HH:MM » et « Autre correction… ». La page choisit la vue à l'ouverture de l'adresse et la fige
 jusqu'au changement d'adresse : le reçu qui remplace le dossier ne la fait pas basculer. Tout autre dossier (un conflit, un choix de
-conflit en plus de la fin, un choix qui vise une autre activité) garde la vue complète.
+conflit en plus de la fin, un choix qui vise une autre activité, une régularisation dont la frise se lit en rangées, donc sans poignée
+« Heure ? » à piloter au clavier) garde la vue complète.
 
 Pour une correction tardive (`CORRIGER_FIN_TARDIVE`, `CORRIGER_TRANSITION_TARDIVE`), la vue s'ouvre sur l'heure reçue du pointage
 tardif : la poignée et le bouton « Valider la fin à HH:MM » (« Valider le passage à HH:MM » pour une transition, avec

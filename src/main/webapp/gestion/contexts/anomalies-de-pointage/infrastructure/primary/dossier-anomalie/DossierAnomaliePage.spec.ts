@@ -5040,6 +5040,14 @@ describe('Anomaly dossier page', () => {
       thenTheHandleHoldsNoHour();
     });
 
+    it('should keep the full view for a regularisation whose frise is read in rows, where no hourless handle gives the keyboard a way to the hour', async () => {
+      read.result = { kind: 'DOSSIER', dossier: dossierDeResolutionLuEnRangeesFixture() };
+
+      await whenRendering();
+
+      thenTheFullViewIsShown();
+    });
+
     it('should keep the full view for a choice that carries no code', async () => {
       const dossier = dossierDeResolutionFixture();
       read.result = {
@@ -5822,6 +5830,18 @@ describe('Anomaly dossier page', () => {
       choix: [],
       activites: [{ ...activite, etat: 'TERMINEE', periode: { ...periode, fin: INSTANT_FIN_DE_TRAVAIL, duree: 'PT9H' } }],
     };
+  };
+
+  const dossierDeResolutionLuEnRangeesFixture = (): DossierAnomalie => {
+    const dossier = dossierDeResolutionFixture();
+    const ouvrant = requiredFixture(dossier.journal[0], 'opening pointage');
+    const annule: PointageAnomalie = {
+      ...ouvrant,
+      id: new PointageAnomalieId('debut-annule-7'),
+      annulation: { motif: 'Erreur de saisie', auteur: 'camille', instant: INSTANT_ENREGISTREMENT },
+    };
+    const journal = [...dossier.journal, annule];
+    return { ...dossier, journal, perimetre: new PerimetreDuDossier(journal.map(pointage => pointage.id)) };
   };
 
   const givenAnAutomaticEndWithAResolutionView = (): void => {
