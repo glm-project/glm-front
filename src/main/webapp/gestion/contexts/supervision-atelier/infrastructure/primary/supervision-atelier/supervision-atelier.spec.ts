@@ -431,6 +431,24 @@ describe('Supervision atelier component', () => {
     expect(signal('supervision-anomalie')).toBe('Activité terminée automatiquement · fin 08:45');
   });
 
+  it('should open the report at the ISO week and day of the retained end, not of the observation', async () => {
+    const activite = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('retained-end-previous-week'),
+      operateurId: aliceFixture.id,
+      objet: ofFixture('3001'),
+      categorie: new CategorieActivite('TRAVAIL'),
+      debut: new Instant(new Date(2026, 8, 5, 21).toISOString()),
+      echeance: new Instant(new Date(2026, 8, 6, 10).toISOString()),
+      etat: 'TERMINEE_AUTOMATIQUEMENT',
+      finRetenue: new Instant(new Date(2026, 8, 6, 8, 45).toISOString()),
+    });
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive({ operateurs: [aliceFixture], activites: [activite] });
+
+    thenAnomalyLinkIs('/operateurs/alice/heures?annee=2026&semaine=36&jour=2026-09-06');
+  });
+
   it('should order several automatic-end warnings by workstation while preserving their end instants', async () => {
     await givenAcquisitionInProgress();
     const dernier = activiteFixture(aliceFixture, {
@@ -809,6 +827,10 @@ describe('Supervision atelier component', () => {
     ).toEqual(expected);
     expect(element('supervision-loading')).toBeNull();
     expect(element('supervision-error')).toBeNull();
+  };
+
+  const thenAnomalyLinkIs = (href: string): void => {
+    expect(requiredFixture(element('supervision-anomalie'), 'supervision-anomalie').getAttribute('href')).toBe(href);
   };
 
   const thenEmptyStateIsDisplayed = (): void => {
