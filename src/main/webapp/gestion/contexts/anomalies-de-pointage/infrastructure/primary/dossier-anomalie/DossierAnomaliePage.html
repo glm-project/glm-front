@@ -33,12 +33,11 @@
     </div>
     }
   </div>
-  } } } @else if (dossier(); as dossier) { @if (aiguillage(); as aiguillage) { @if (aiguillage.kind === 'COMPLETE') { @if
-  (aiguillage.vueSimple; as simple) {
+  } } } @else if (dossier(); as dossier) { @if (retourALaVueSimple(dossier); as simple) {
   <button type="button" class="lien-discret" data-selector="anomalie-resolution-retour-simple" (click)="revenirALaVueSimple(simple)">
     {{ libellesResolution.revenirALaVueSimple }}
   </button>
-  } } } @let poignee = poigneeDe(dossier); @let placement = placementDe(dossier);
+  } @let poignee = poigneeDe(dossier); @let placement = placementDe(dossier);
   <glm-en-tete-du-dossier [dossier]="dossier" [now]="now" />
   <div class="dossier-grille">
     <glm-section-de-frise

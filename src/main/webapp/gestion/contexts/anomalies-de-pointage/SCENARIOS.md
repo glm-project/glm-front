@@ -150,8 +150,8 @@ reçu, à jour et sans refus. Après `CONCURRENCE`, la vue relit le dossier et r
 
 Le reçu s'affiche dans la vue (« Anomalie traitée », ou « Acte enregistré, anomalie restante » avec un lien par fin automatique
 restante). Une ligne « 1 autre fin automatique sur cet élément » mène à l'adresse d'une autre fin échue de l'élément, avec les
-paramètres de la liste. « Autre correction… » mène à la vue complète, sans acte choisi, avec un lien « Revenir à la vue simple » ;
-une heure saisie est d'abord confirmée.
+paramètres de la liste. « Autre correction… » mène à la vue complète, sans acte choisi, avec un lien « Revenir à la vue simple »,
+retiré dès qu'un autre acte y est enregistré ; une heure saisie est d'abord confirmée.
 
 Avec le reçu, la vue offre « Anomalie suivante ». Au clic, elle mène : 1. à la première fin automatique restante du même dossier, sans lire
 la liste ; 2. sinon à une autre ligne de la liste, lue à ce moment avec les filtres de l'adresse (`nature`, `operateur`, `element`, `page`,

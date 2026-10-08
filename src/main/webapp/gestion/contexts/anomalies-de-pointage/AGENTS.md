@@ -487,7 +487,9 @@ l'aperçu » le relance aussitôt après une erreur réseau (`ERREUR`). Aucune r
 passage vide la saisie : la vue complète redémarre sans acte choisi ni motif. Une confirmation en ligne (« Passer à la vue
 complète » / « Rester ici ») n'est demandée que si une heure a été **saisie** (`SaisieActe.heureDifferenteDe` le choix de départ : une heure posée en régularisation,
 ou, en correction, un instant différent de l'instant reçu, comparé comme instant et non comme texte). Le
-lien est désactivé pendant la confirmation et l'issue inconnue. Revenir à la vue simple rouvre une vue neuve.
+lien est désactivé pendant la confirmation et l'issue inconnue. Revenir à la vue simple rouvre une vue neuve, aiguillée de nouveau sur
+le dossier courant (`aiguiller`), jamais sur le choix figé à l'ouverture : le lien n'est offert que si ce dossier a encore une vue de
+résolution, donc il disparaît dès qu'un autre acte a été enregistré depuis la vue complète.
 
 La composition utilise uniquement `HttpAnomalies`, y compris dans les parcours Cypress. Les réponses
 réseau des tests sont des données REST typées interceptées ; elles ne calculent aucune règle métier

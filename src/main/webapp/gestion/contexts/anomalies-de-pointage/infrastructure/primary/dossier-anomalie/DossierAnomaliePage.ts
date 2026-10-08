@@ -75,6 +75,12 @@ import { Aiguillage, AiguillageSimple, aiguiller } from './vues-de-resolution/Vu
 
 const REFERENTIEL_VIDE = new ReferentielAnomalies([], []);
 
+const retourALaVueSimple = (aiguillage: Aiguillage | undefined, dossier: DossierAnomalie): AiguillageSimple | undefined => {
+  const aQuitteUneVueSimple = aiguillage?.kind === 'COMPLETE' && aiguillage.vueSimple !== undefined;
+  const aiguillageActuel = aiguiller(dossier);
+  return aQuitteUneVueSimple && aiguillageActuel.kind === 'SIMPLE' ? aiguillageActuel : undefined;
+};
+
 @Component({
   selector: 'glm-dossier-anomalie',
   imports: [
@@ -187,6 +193,7 @@ export class DossierAnomaliePage {
     const aiguillage = this.aiguillage();
     return aiguillage?.kind === 'SIMPLE' ? aiguillage : undefined;
   });
+  protected readonly retourALaVueSimple = (dossier: DossierAnomalie) => retourALaVueSimple(this.aiguillage(), dossier);
   protected readonly sortieAConfirmer = signal(false);
   protected readonly lectureDuDossier: LectureDuDossier = {
     relire: adresse => this.relire(adresse),

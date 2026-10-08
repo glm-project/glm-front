@@ -4914,6 +4914,18 @@ describe('Anomaly dossier page', () => {
       thenTheEndFieldsShow('', '');
     });
 
+    it('should offer no way back to the resolution view once another act was recorded from the full view', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenClicking('anomalie-resolution-autre-correction');
+      await whenPreviewingTheDatedEnd();
+
+      await whenClicking('anomalie-confirmer');
+
+      thenTextContains('anomalie-resultat', 'Anomalie traitée');
+      thenAbsent('anomalie-resolution-retour-simple');
+    });
+
     it('should block the exit while the outcome of the confirmation is unknown', async () => {
       givenTheRegularisationOfTheEndWillBeAccepted();
       application.result = { kind: 'ISSUE_INCONNUE' };
