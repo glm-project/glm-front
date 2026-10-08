@@ -215,11 +215,6 @@
   color: var(--color-on-accent);
 }
 
-.pastille[data-anomalie='A_RESOUDRE'] {
-  background: var(--color-warn);
-  color: var(--color-on-accent);
-}
-
 .pastille[data-anomalie='PARTAGE_INCONNU'] {
   border: 1px solid var(--color-warn);
   color: var(--color-warn);

@@ -17,7 +17,6 @@ import { ElementCite } from '../../../domain/pointage/ElementCite';
 import { OperateurCite } from '../../../domain/pointage/OperateurCite';
 import { PartDePointage } from '../../../domain/pointage/PartDePointage';
 import { FicheDePointage, PointageDeCout } from '../../../domain/pointage/PointageDeCout';
-import { PointageEnConflit } from '../../../domain/pointage/PointageEnConflit';
 import { PosteCite } from '../../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient, FicheDuRapport } from '../../../domain/rapport/CoutDeRevient';
@@ -154,7 +153,6 @@ const pointageFixture = (fiche: Partial<FicheDePointage> = {}): PointageDeCout =
     poste: new PosteCite('poste-dmg', 'DMG DMU 50'),
     categorie: 'TRAVAIL',
     periode: new PeriodeDeTravail(instantFixture(7, 30), instantFixture(11, 30)),
-    finAuPlusTard: undefined,
     duree: TotalDeTemps.complet(new DureePassee('PT4H')),
     coutHoraire: new Montant(48),
     tauxHoraire: new Montant(35),
@@ -164,7 +162,6 @@ const pointageFixture = (fiche: Partial<FicheDePointage> = {}): PointageDeCout =
       partFixture([9, 0], [10, 30], 'PT1H30M', 2, 26.25, { paralleles: [haasFixture] }),
       partFixture([10, 30], [11, 30], 'PT1H', 1, 35),
     ],
-    contradictoires: [],
     ...fiche,
   });
 
@@ -687,35 +684,6 @@ describe('Cout de revient component', () => {
     ]);
   });
 
-  it('should show a clocking to resolve without finish nor figures, and the clockings that contradict it', async () => {
-    await givenDetailDe([
-      pointageSeulFixture({
-        anomalies: ['A_RESOUDRE'],
-        periode: new PeriodeDeTravail(instantFixture(8, 0), undefined),
-        finAuPlusTard: instantFixture(11, 40),
-        duree: TotalDeTemps.incomplet(),
-        cout: new Cout(montantFixture(undefined), montantFixture(undefined), montantFixture(undefined)),
-        parts: [],
-        contradictoires: [
-          new PointageEnConflit('fait-1', 'DEBUT', instantFixture(8, 0)),
-          new PointageEnConflit('fait-2', 'DEBUT', instantFixture(9, 10)),
-        ],
-      }),
-    ]);
-
-    expect([
-      texteCompact('cout-pointage-plage'),
-      texte('cout-pointage-duree'),
-      texte('cout-pointage-machine'),
-      texte('cout-pointage-main-d-oeuvre'),
-      texte('cout-pointage-total'),
-      texte('cout-pointage-anomalie'),
-    ]).toEqual(['11 mai · 08:00 → fin à résoudre fin au plus tard 11 mai 11:40', '—', '—', '—', '—', 'À résoudre']);
-    expect(texte('cout-pointage-explication')).toBe(
-      'Pointages contradictoires : début à 11 mai 08:00, début à 11 mai 09:10. Il faut les corriger pour connaître la durée et le coût de ce pointage.',
-    );
-  });
-
   it('should show a share whose divisor is unknown and the clocking that blocks it', async () => {
     const inconnu = new ActiviteCitee(new ElementCite(new ElementChiffreId('element-inconnu'), undefined, undefined), undefined, undefined);
     await givenDetailDe([
@@ -751,14 +719,6 @@ describe('Cout de revient component', () => {
     ]);
   });
 
-  it('should explain a clocking to resolve whose contradictory clockings the server did not detail', async () => {
-    await givenDetailDe([pointageSeulFixture({ anomalies: ['A_RESOUDRE'], parts: [] })]);
-
-    expect(texte('cout-pointage-explication')).toBe(
-      'Les pointages de cette activité se contredisent : il faut les corriger pour connaître sa durée et son coût.',
-    );
-  });
-
   it('should explain a share the operator cannot be split on yet', async () => {
     await givenDetailDe([pointageSeulFixture({ anomalies: ['PARTAGE_INCONNU'] })]);
 
@@ -773,8 +733,8 @@ describe('Cout de revient component', () => {
         {
           pointages: [
             pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE'] }),
-            pointageSeulFixture({ anomalies: ['A_RESOUDRE'] }),
-            pointageSeulFixture({ anomalies: ['A_RESOUDRE', 'PARTAGE_INCONNU'] }),
+            pointageSeulFixture({ anomalies: ['PARTAGE_INCONNU'] }),
+            pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE', 'PARTAGE_INCONNU'] }),
           ],
         },
       ),
@@ -784,10 +744,10 @@ describe('Cout de revient component', () => {
 
     await whenEcranAffiche();
 
-    expect(textes('cout-nature-anomalie')).toEqual(['1 fin automatique', '2 à résoudre', '1 partage inconnu', '1 partage inconnu']);
+    expect(textes('cout-nature-anomalie')).toEqual(['2 fins automatiques', '2 partages inconnus', '1 partage inconnu']);
     expect(texte('cout-bandeau-titre')).toBe('4 pointages en anomalie sur les natures Électroérosion, Sans poste.');
     expect(texte('cout-bandeau-detail')).toBe(
-      'Électroérosion : 1 fin automatique, 2 à résoudre, 1 partage inconnu · Sans poste : 1 partage inconnu. Dépliez la nature concernée pour voir ce qu’il manque sur chaque pointage.',
+      'Électroérosion : 2 fins automatiques, 2 partages inconnus · Sans poste : 1 partage inconnu. Dépliez la nature concernée pour voir ce qu’il manque sur chaque pointage.',
     );
   });
 
@@ -1082,8 +1042,6 @@ describe('Cout de revient component', () => {
     [...requis(selector).querySelectorAll<HTMLElement>('th, td')].map(cellule => compacte(cellule.textContent));
 
   const textesCompacts = (selector: string): string[] => textes(selector).map(compacte);
-
-  const texteCompact = (selector: string): string => compacte(requis(selector).textContent);
 
   const diviseursPartages = (): string[] =>
     [...racine().querySelectorAll<HTMLElement>(dataSelector('cout-pointage-diviseur'))]

@@ -30,7 +30,6 @@ const ficheFixture = (
   poste: undefined,
   categorie,
   periode: new PeriodeDeTravail(new InstantDeTravail('2026-09-12T07:30:00Z'), new InstantDeTravail('2026-09-12T09:30:00Z')),
-  finAuPlusTard: undefined,
   duree: TotalDeTemps.complet(new DureePassee('PT2H')),
   coutHoraire: new Montant(48),
   tauxHoraire: new Montant(35),
@@ -40,7 +39,6 @@ const ficheFixture = (
     TotalDeMontant.complet(new Montant(166)),
   ),
   parts,
-  contradictoires: [],
 });
 
 describe('PointageDeCout', () => {
@@ -74,20 +72,13 @@ describe('PointageDeCout', () => {
   });
 
   it('should tell the anomalies a clocking carries', () => {
-    const pointage = new PointageDeCout(ficheFixture([], 'TRAVAIL', ['A_RESOUDRE']));
+    const pointage = new PointageDeCout(ficheFixture([], 'TRAVAIL', ['FIN_AUTOMATIQUE']));
 
-    expect([pointage.porte('A_RESOUDRE'), pointage.porte('FIN_AUTOMATIQUE'), pointage.estAResoudre(), pointage.estEnAnomalie()]).toEqual([
-      true,
-      false,
-      true,
-      true,
-    ]);
+    expect([pointage.porte('FIN_AUTOMATIQUE'), pointage.porte('PARTAGE_INCONNU'), pointage.estEnAnomalie()]).toEqual([true, false, true]);
   });
 
-  it('should not call a clocking without anomaly a clocking to resolve', () => {
-    const pointage = new PointageDeCout(ficheFixture([]));
-
-    expect([pointage.estAResoudre(), pointage.estEnAnomalie()]).toEqual([false, false]);
+  it('should not call a clocking without anomaly a clocking in anomaly', () => {
+    expect(new PointageDeCout(ficheFixture([])).estEnAnomalie()).toBe(false);
   });
 
   it('should tell a rework clocking', () => {

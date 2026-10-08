@@ -25,12 +25,12 @@ describe('Cost of manufacture in gestion', () => {
     thenIndependentCompletenessIsVisible();
   });
 
-  it('should announce clockings to resolve in a banner and on their nature, then explain them in the detail', () => {
+  it('should announce clockings with an unknown share in a banner and on their nature, then explain them in the detail', () => {
     givenIncompleteReport();
     whenVisitingTheReport();
     whenOpeningTheDetailOfTheFirstRow();
 
-    thenTheClockingToResolveIsExplained();
+    thenTheUnknownShareIsExplained();
   });
 
   it('should show automatic finishes before expanding a row and explain their counted periods', () => {
@@ -194,12 +194,11 @@ describe('Cost of manufacture in gestion', () => {
     cy.get(dataSelector('cout-repartition')).should('contain.text', 'Main d’œuvre Incomplet');
   };
 
-  const thenTheClockingToResolveIsExplained = (): void => {
+  const thenTheUnknownShareIsExplained = (): void => {
     cy.get(dataSelector('cout-bandeau-titre')).should('contain.text', '1 pointage en anomalie sur la nature Fraisage');
-    cy.get(dataSelector('cout-nature-anomalie')).should('have.text', '1 à résoudre');
-    cy.get(dataSelector('cout-pointage-anomalie')).should('have.text', 'À résoudre');
-    cy.get(dataSelector('cout-pointage-fin-au-plus-tard')).should('contain.text', 'fin au plus tard');
-    cy.get(dataSelector('cout-pointage-explication')).should('contain.text', 'Pointages contradictoires : début à');
+    cy.get(dataSelector('cout-nature-anomalie')).should('have.text', '1 partage inconnu');
+    cy.get(dataSelector('cout-pointage-anomalie')).should('have.text', 'Partage inconnu');
+    cy.get(dataSelector('cout-pointage-explication')).should('contain.text', 'on ne sait pas comment partager son temps');
   };
 
   const thenAutomaticFinishIsVisibleBeforeDetail = (): void => {

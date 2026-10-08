@@ -24,13 +24,11 @@ const pointageFixture = (anomalies: readonly AnomalieDePointage[]): PointageDeCo
     poste: undefined,
     categorie: 'TRAVAIL',
     periode: new PeriodeDeTravail(new InstantDeTravail('2026-05-11T09:00:00Z'), new InstantDeTravail('2026-05-11T11:00:00Z')),
-    finAuPlusTard: undefined,
     duree: TotalDeTemps.complet(new DureePassee('PT2H')),
     coutHoraire: undefined,
     tauxHoraire: undefined,
     cout: new Cout(TotalDeMontant.complet(new Montant(0)), TotalDeMontant.complet(new Montant(0)), TotalDeMontant.complet(new Montant(0))),
     parts: [],
-    contradictoires: [],
   });
 
 const ligneFixture = (nature: string, pointages: readonly PointageDeCout[] = []): LigneDeCout =>
@@ -76,7 +74,7 @@ describe('CoutDeRevient', () => {
 
   it('should name the lines whose clockings carry an anomaly, in the order the server sent them', () => {
     const rapport = rapportFixture([
-      ligneFixture('Tournage', [pointageFixture(['A_RESOUDRE'])]),
+      ligneFixture('Tournage', [pointageFixture(['PARTAGE_INCONNU'])]),
       ligneFixture('Fraisage', [pointageFixture([])]),
       ligneFixture('Polissage', [pointageFixture(['FIN_AUTOMATIQUE'])]),
     ]);

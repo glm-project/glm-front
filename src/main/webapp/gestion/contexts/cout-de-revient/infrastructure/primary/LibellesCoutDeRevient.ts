@@ -12,7 +12,6 @@ import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
 import { OperateurCite } from '../../domain/pointage/OperateurCite';
 import { PartDePointage } from '../../domain/pointage/PartDePointage';
 import { AnomalieDePointage, PointageDeCout } from '../../domain/pointage/PointageDeCout';
-import { TypeDePointage } from '../../domain/pointage/PointageEnConflit';
 import { PosteCite } from '../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient } from '../../domain/rapport/CoutDeRevient';
@@ -51,9 +50,6 @@ const borne = (instant: InstantDeTravail): string => `${formatInstantShortDayMon
 const plageDuPointage = (pointage: PointageDeCout): string => {
   const debut = pointage.periode.debut;
   const fin = pointage.periode.fin;
-  if (fin === undefined) {
-    return `${formatInstantShortDayMonth(debut.value)} · ${formatInstantTime(debut.value)} → fin à résoudre`;
-  }
   return memeJour(debut, fin)
     ? `${formatInstantShortDayMonth(debut.value)} · ${formatInstantTime(debut.value)} → ${formatInstantTime(fin.value)}`
     : `${borne(debut)} → ${borne(fin)}`;
@@ -108,36 +104,21 @@ const calculMachine = (pointage: PointageDeCout): string => {
 
 const ANOMALIES: Record<AnomalieDePointage, string> = {
   FIN_AUTOMATIQUE: 'Fin automatique',
-  A_RESOUDRE: 'À résoudre',
   PARTAGE_INCONNU: 'Partage inconnu',
-};
-
-const TYPES_DE_POINTAGE: Record<TypeDePointage, string> = {
-  DEBUT: 'début',
-  NON_CONFORMITE: 'reprise en non-conformité',
-  FIN: 'fin',
 };
 
 const pluriel = (nombre: number, singulier: string, pluriel: string): string => `${nombre} ${nombre === 1 ? singulier : pluriel}`;
 
 const COMPTES_D_ANOMALIES: Record<AnomalieDePointage, (nombre: number) => string> = {
   FIN_AUTOMATIQUE: nombre => pluriel(nombre, 'fin automatique', 'fins automatiques'),
-  A_RESOUDRE: nombre => `${nombre} à résoudre`,
   PARTAGE_INCONNU: nombre => pluriel(nombre, 'partage inconnu', 'partages inconnus'),
 };
 
 const compteDAnomalies = (compte: CompteDAnomalies): string => COMPTES_D_ANOMALIES[compte.anomalie](compte.nombre);
 
-const contradictoires = (pointage: PointageDeCout): string =>
-  pointage.contradictoires.map(fait => `${TYPES_DE_POINTAGE[fait.type]} à ${borne(fait.survenue)}`).join(', ');
-
 const EXPLICATIONS: Record<AnomalieDePointage, (pointage: PointageDeCout) => string> = {
   FIN_AUTOMATIQUE: () =>
     'Aucune fin n’a été pointée : l’activité a été arrêtée automatiquement après 13 h et elle est comptée ainsi. Il faut ajouter le pointage de fin réel.',
-  A_RESOUDRE: pointage =>
-    pointage.contradictoires.length === 0
-      ? 'Les pointages de cette activité se contredisent : il faut les corriger pour connaître sa durée et son coût.'
-      : `Pointages contradictoires : ${contradictoires(pointage)}. Il faut les corriger pour connaître la durée et le coût de ce pointage.`,
   PARTAGE_INCONNU: pointage =>
     `Ce pointage est correct, mais ${nomDeLOperateur(pointage.operateur)} a un pointage à résoudre sur un autre poste pendant ce temps : tant qu’il n’est pas corrigé, on ne sait pas comment partager son temps.`,
 };
@@ -181,7 +162,6 @@ export const LIBELLES_COUT_DE_REVIENT = {
     activites.nombre === 1
       ? '1 activité en cours exclue du temps, du coût et du partage humain.'
       : `${String(activites.nombre)} activités en cours exclues du temps, du coût et du partage humain.`,
-  sansValeur: '—',
 
   indicateurCout: 'Coût de revient',
   indicateurTemps: 'Temps passé',
@@ -231,7 +211,6 @@ export const LIBELLES_COUT_DE_REVIENT = {
     calculMachine,
     anomalie: (anomalie: AnomalieDePointage): string => ANOMALIES[anomalie],
     explication: (pointage: PointageDeCout, anomalie: AnomalieDePointage): string => EXPLICATIONS[anomalie](pointage),
-    finAuPlusTard: (instant: InstantDeTravail): string => `fin au plus tard ${borne(instant)}`,
   },
   anomalies: {
     compte: compteDAnomalies,

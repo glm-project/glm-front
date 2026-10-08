@@ -18,7 +18,6 @@ import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
 import { ElementCite } from '../../domain/pointage/ElementCite';
 import { OperateurCite } from '../../domain/pointage/OperateurCite';
 import { PartDePointage } from '../../domain/pointage/PartDePointage';
-import { PointageEnConflit } from '../../domain/pointage/PointageEnConflit';
 import { PosteCite } from '../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient } from '../../domain/rapport/CoutDeRevient';
@@ -735,11 +734,11 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     });
     const pointage = (await result)?.lignes[0]?.pointages[0];
 
-    expect([pointage?.anomalies, pointage?.finAuPlusTard, pointage?.contradictoires]).toEqual([[], undefined, []]);
+    expect(pointage?.anomalies).toEqual([]);
     expect(pointage?.operateur).toEqual(new OperateurCite('operateur-1', 'Julien', 'Martin'));
     expect(pointage?.poste).toEqual(new PosteCite('poste-dmg', 'DMG DMU 50'));
     expect([pointage?.categorie, pointage?.coutHoraire, pointage?.tauxHoraire]).toEqual(['TRAVAIL', new Montant(48), new Montant(35)]);
-    expect(pointage?.periode.fin?.value.toISOString()).toBe('2026-09-12T09:00:00.000Z');
+    expect(pointage?.periode.fin.value.toISOString()).toBe('2026-09-12T09:00:00.000Z');
     expect(pointage?.cout.mainDOeuvre.snapshot()).toEqual({ complete: true, valeur: new Montant(26.25) });
     expect(pointage?.parts).toEqual([
       new PartDePointage({
@@ -760,8 +759,8 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     ]);
   });
 
-  it('should return a clocking to resolve without finish, work station, rates nor amounts, with its contradictory clockings', async () => {
-    const result = port.rapport(DEMANDE);
+  it('should reject a clocking to resolve and report the failure once', async () => {
+    const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
     await whenServerAnswers({
       ...toRest([fraisageFixture]),
       lignes: [
@@ -770,38 +769,22 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
           pointages: [
             {
               anomalies: ['A_RESOUDRE'],
-              operateur: { id: 'operateur-inconnu' },
-              categorie: 'NON_CONFORMITE',
+              operateur: { id: 'operateur-1' },
+              categorie: 'TRAVAIL',
               debut: '2026-09-17T08:00:00Z',
               finAuPlusTard: '2026-09-17T11:40:00Z',
               duree: { complete: false },
               cout: { machine: { complete: false }, mainDOeuvre: { complete: false }, total: { complete: false } },
               parts: [],
-              contradictoires: [
-                { id: 'fait-1', type: 'DEBUT', survenue: '2026-09-17T08:00:00Z' },
-                { id: 'fait-2', type: 'DEBUT', survenue: '2026-09-17T09:10:00Z' },
-              ],
+              contradictoires: [{ id: 'fait-1', type: 'DEBUT', survenue: '2026-09-17T08:00:00Z' }],
             },
           ],
         },
       ],
     });
-    const pointage = (await result)?.lignes[0]?.pointages[0];
 
-    expect([pointage?.poste, pointage?.coutHoraire, pointage?.tauxHoraire, pointage?.periode.fin]).toEqual([
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-    ]);
-    expect(pointage?.operateur.estNomme()).toBe(false);
-    expect(pointage?.duree.snapshot()).toEqual({ complete: false });
-    expect(pointage?.anomalies).toEqual(['A_RESOUDRE']);
-    expect(pointage?.finAuPlusTard?.value.toISOString()).toBe('2026-09-17T11:40:00.000Z');
-    expect(pointage?.contradictoires).toEqual([
-      new PointageEnConflit('fait-1', 'DEBUT', new InstantDeTravail('2026-09-17T08:00:00Z')),
-      new PointageEnConflit('fait-2', 'DEBUT', new InstantDeTravail('2026-09-17T09:10:00Z')),
-    ]);
+    expect(await result).toEqual(new Error('Un pointage à résoudre n’a pas de coût : le rapport ne peut pas être établi.'));
+    expect(errorHandler.errors).toHaveLength(1);
   });
 
   it('should keep a share whose divisor is unknown, with the clockings that block it', async () => {

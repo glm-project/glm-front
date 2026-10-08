@@ -18,13 +18,11 @@ const pointageFixture = (anomalies: readonly AnomalieDePointage[]): PointageDeCo
     poste: undefined,
     categorie: 'TRAVAIL',
     periode: new PeriodeDeTravail(new InstantDeTravail('2026-05-11T09:00:00Z'), new InstantDeTravail('2026-05-11T11:00:00Z')),
-    finAuPlusTard: undefined,
     duree: TotalDeTemps.complet(new DureePassee('PT2H')),
     coutHoraire: undefined,
     tauxHoraire: undefined,
     cout: new Cout(TotalDeMontant.complet(new Montant(0)), TotalDeMontant.complet(new Montant(0)), TotalDeMontant.complet(new Montant(0))),
     parts: [],
-    contradictoires: [],
   });
 
 const ficheFixture = (nature: NatureDOperation | undefined, pointages: readonly PointageDeCout[] = []): FicheDeLigne => ({
@@ -46,7 +44,7 @@ describe('LigneDeCout', () => {
   it('should count its clockings by anomaly, in a fixed order, leaving out the absent ones', () => {
     const ligne = new LigneDeCout(
       ficheFixture(new NatureDOperation('Électroérosion'), [
-        pointageFixture(['A_RESOUDRE']),
+        pointageFixture(['PARTAGE_INCONNU']),
         pointageFixture(['FIN_AUTOMATIQUE', 'PARTAGE_INCONNU']),
         pointageFixture([]),
         pointageFixture(['FIN_AUTOMATIQUE']),
@@ -55,8 +53,7 @@ describe('LigneDeCout', () => {
 
     expect(ligne.anomalies()).toEqual([
       { anomalie: 'FIN_AUTOMATIQUE', nombre: 2 },
-      { anomalie: 'A_RESOUDRE', nombre: 1 },
-      { anomalie: 'PARTAGE_INCONNU', nombre: 1 },
+      { anomalie: 'PARTAGE_INCONNU', nombre: 2 },
     ]);
     expect([ligne.pointagesEnAnomalie(), ligne.porteDesAnomalies()]).toEqual([3, true]);
   });

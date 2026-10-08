@@ -16,8 +16,7 @@ import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
 import { ElementCite } from '../../domain/pointage/ElementCite';
 import { OperateurCite } from '../../domain/pointage/OperateurCite';
 import { PartDePointage } from '../../domain/pointage/PartDePointage';
-import { PointageDeCout } from '../../domain/pointage/PointageDeCout';
-import { PointageEnConflit } from '../../domain/pointage/PointageEnConflit';
+import { AnomalieDePointage, PointageDeCout } from '../../domain/pointage/PointageDeCout';
 import { PosteCite } from '../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient } from '../../domain/rapport/CoutDeRevient';
@@ -73,9 +72,6 @@ const toCout = (cout: RestCout | undefined, chemin: string): Cout => {
 const toNature = (nature: string | undefined): NatureDOperation | undefined =>
   nature === undefined ? undefined : new NatureDOperation(nature);
 
-const toInstant = (instant: string | undefined): InstantDeTravail | undefined =>
-  instant === undefined ? undefined : new InstantDeTravail(instant);
-
 const toTarif = (tarif: number | undefined): Montant | undefined => (tarif === undefined ? undefined : new Montant(tarif));
 
 const toPoste = (poste: RestPoste | undefined): PosteCite | undefined =>
@@ -104,28 +100,29 @@ const toPart = (part: RestPart): PartDePointage =>
     bloquants: required(part.bloquants, 'part.bloquants').map(toActivite),
   });
 
+const toAnomalie = (anomalie: RestPointage['anomalies'][number]): AnomalieDePointage => {
+  if (anomalie === 'A_RESOUDRE') {
+    throw new Error('Un pointage à résoudre n’a pas de coût : le rapport ne peut pas être établi.');
+  }
+  return anomalie;
+};
+
 const toPointage = (pointage: RestPointage): PointageDeCout => {
   const operateur = required(pointage.operateur, 'pointage.operateur');
   return new PointageDeCout({
-    anomalies: required(pointage.anomalies, 'pointage.anomalies'),
+    anomalies: required(pointage.anomalies, 'pointage.anomalies').map(toAnomalie),
     operateur: new OperateurCite(required(operateur.id, 'pointage.operateur.id'), operateur.prenom, operateur.nom),
     poste: toPoste(pointage.poste),
     categorie: required(pointage.categorie, 'pointage.categorie'),
-    periode: new PeriodeDeTravail(new InstantDeTravail(required(pointage.debut, 'pointage.debut')), toInstant(pointage.fin)),
-    finAuPlusTard: toInstant(pointage.finAuPlusTard),
+    periode: new PeriodeDeTravail(
+      new InstantDeTravail(required(pointage.debut, 'pointage.debut')),
+      new InstantDeTravail(required(pointage.fin, 'pointage.fin')),
+    ),
     duree: toDuree(pointage.duree, 'pointage.duree'),
     coutHoraire: toTarif(pointage.coutHoraire),
     tauxHoraire: toTarif(pointage.tauxHoraire),
     cout: toCout(pointage.cout, 'pointage.cout'),
     parts: required(pointage.parts, 'pointage.parts').map(toPart),
-    contradictoires: required(pointage.contradictoires, 'pointage.contradictoires').map(
-      fait =>
-        new PointageEnConflit(
-          required(fait.id, 'contradictoire.id'),
-          required(fait.type, 'contradictoire.type'),
-          new InstantDeTravail(required(fait.survenue, 'contradictoire.survenue')),
-        ),
-    ),
   });
 };
 
