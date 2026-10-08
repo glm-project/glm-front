@@ -46,7 +46,6 @@ const dossierFixture: DossierAnomalie = {
   enConflit: true,
   finAutomatique: false,
   consequences: [],
-  continuations: [],
 };
 const dossierFinAutomatiqueFixture: DossierAnomalie = {
   ...dossierFixture,

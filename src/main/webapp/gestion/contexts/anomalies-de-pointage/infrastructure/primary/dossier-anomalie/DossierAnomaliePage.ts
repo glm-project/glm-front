@@ -38,8 +38,8 @@ export class DossierAnomaliePage {
     page: this.parametres().get('page'),
   }));
   protected readonly lecture = resource({ params: () => ({ adresse: this.adresse() }), loader: ({ params }) => this.read(params.adresse) });
-  protected readonly referentiel = resource({ loader: () => this.port.referentiel() });
-  protected readonly referentielConnu = computed(() => (this.referentiel.hasValue() ? this.referentiel.value() : undefined));
+  protected readonly operateurs = resource({ loader: () => this.port.operateurs() });
+  protected readonly operateursConnus = computed(() => (this.operateurs.hasValue() ? this.operateurs.value() : undefined));
   protected readonly resultatLecture = computed(() => (this.lecture.error() ? undefined : this.lecture.value()));
   protected readonly dossier = computed(() => {
     if (this.lecture.isLoading()) return undefined;

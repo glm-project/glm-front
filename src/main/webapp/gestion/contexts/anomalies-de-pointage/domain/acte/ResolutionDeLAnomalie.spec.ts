@@ -43,7 +43,6 @@ const dossierFixture: DossierAnomalie = {
   enConflit: true,
   finAutomatique: false,
   consequences: [],
-  continuations: [],
 };
 const apercuFixture: ApercuAnomalie = {
   empreinteConsequences: 'empreinte-1',

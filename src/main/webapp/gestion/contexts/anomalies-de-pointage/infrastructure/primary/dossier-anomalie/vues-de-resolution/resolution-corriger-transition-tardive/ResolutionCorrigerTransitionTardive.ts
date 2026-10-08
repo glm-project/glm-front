@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 import { Params } from '@angular/router';
 import { ChoixGuide, DossierAnomalie } from '../../../../../domain/dossier/DossierAnomalie';
-import { ReferentielAnomalies } from '../../../../../domain/dossier/ReferentielAnomalies';
+import { OperateurAnomalie } from '../../../../../domain/dossier/OperateurAnomalie';
 import { LIBELLES_ANOMALIES } from '../../../LibellesAnomalies';
 import { LectureDuDossier } from '../LectureDuDossier';
 import { ResolutionDeFin, VarianteDeResolution } from '../resolution-de-fin/ResolutionDeFin';
@@ -19,7 +19,7 @@ const categorieOuverte = (choix: ChoixGuide): 'NON_CONFORMITE' | 'TRAVAIL' => {
     [choix]="choix()"
     [now]="now()"
     [retour]="retour()"
-    [referentiel]="referentiel()"
+    [operateurs]="operateurs()"
     [lecture]="lecture()"
     [variante]="variante"
   />`,
@@ -30,7 +30,7 @@ export class ResolutionCorrigerTransitionTardive {
   readonly choix = input.required<ChoixGuide>();
   readonly now = input.required<Date>();
   readonly retour = input.required<Params>();
-  readonly referentiel = input<ReferentielAnomalies | undefined>(undefined);
+  readonly operateurs = input<readonly OperateurAnomalie[] | undefined>(undefined);
   readonly lecture = input.required<LectureDuDossier>();
   protected readonly variante: VarianteDeResolution = {
     validerA: LIBELLES_ANOMALIES.resolution.validerLePassage,

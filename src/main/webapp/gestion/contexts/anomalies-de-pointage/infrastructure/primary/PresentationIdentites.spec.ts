@@ -7,7 +7,6 @@ import {
 import { describe, expect, it } from 'vitest';
 import { DossierAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
-import { ReferentielAnomalies } from '../../domain/dossier/ReferentielAnomalies';
 import { operateurDuDossier, operateurNomme, operateurPresente, postePresente } from './PresentationIdentites';
 
 describe('Operator and workstation presentation', () => {
@@ -32,43 +31,38 @@ describe('Operator and workstation presentation', () => {
   });
 
   it('should name an operator with its pupitre code when it has one', () => {
-    expect(operateurNomme({ id: new OperateurAnomalieId('op-1'), nom: 'Ada Lovelace', code: '007', postesHabilites: [] })).toBe(
-      'Ada Lovelace · 007',
-    );
+    expect(operateurNomme({ id: new OperateurAnomalieId('op-1'), nom: 'Ada Lovelace', code: '007' })).toBe('Ada Lovelace · 007');
   });
 
   it('should name an operator without a code when it has none', () => {
-    expect(operateurNomme({ id: new OperateurAnomalieId('op-1'), nom: 'Ada Lovelace', postesHabilites: [] })).toBe('Ada Lovelace');
+    expect(operateurNomme({ id: new OperateurAnomalieId('op-1'), nom: 'Ada Lovelace' })).toBe('Ada Lovelace');
   });
 
   describe('operator of a dossier', () => {
-    const referentielFixture = new ReferentielAnomalies(
-      [{ id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin', postesHabilites: [] }],
-      [],
-    );
+    const operateursFixture = [{ id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin' }];
     const dossierFixture = (ligne: string, journal: string): DossierAnomalie =>
       dossierDeFinAutomatiqueFixture({
         ligne: { ...dossierDeFinAutomatiqueFixture().ligne, operateur: ligne },
         journal: [pointageFixture('debut-8', faitFixture(ARRET_FIXTURE, '2026-09-14T08:00:00Z'), { operateurNom: journal })],
       });
 
-    it('should be the name the line of the dossier carries, before the referential and the journal', () => {
-      expect(operateurDuDossier(dossierFixture('Camille Durand', 'Camille Journal'), referentielFixture)).toBe('Camille Durand');
+    it('should be the name the line of the dossier carries, before the operators and the journal', () => {
+      expect(operateurDuDossier(dossierFixture('Camille Durand', 'Camille Journal'), operateursFixture)).toBe('Camille Durand');
     });
 
-    it('should be the name of the referential, before the one of the journal, when the line carries none', () => {
-      expect(operateurDuDossier(dossierFixture('', 'Camille Journal'), referentielFixture)).toBe('Camille Martin');
+    it('should be the name among the operators, before the one of the journal, when the line carries none', () => {
+      expect(operateurDuDossier(dossierFixture('', 'Camille Journal'), operateursFixture)).toBe('Camille Martin');
     });
 
-    it('should be the name of the journal when neither the line nor the referential carries one', () => {
-      expect(operateurDuDossier(dossierFixture('', 'Camille Journal'), new ReferentielAnomalies([], []))).toBe('Camille Journal');
+    it('should be the name of the journal when neither the line nor the operators carry one', () => {
+      expect(operateurDuDossier(dossierFixture('', 'Camille Journal'), [])).toBe('Camille Journal');
     });
 
     it('should be none when no source carries a name', () => {
-      expect(operateurDuDossier(dossierFixture('', ''), new ReferentielAnomalies([], []))).toBeUndefined();
+      expect(operateurDuDossier(dossierFixture('', ''), [])).toBeUndefined();
     });
 
-    it('should still be the name of the journal when the referential could not be read', () => {
+    it('should still be the name of the journal when the operators could not be read', () => {
       expect(operateurDuDossier(dossierFixture('', 'Camille Journal'), undefined)).toBe('Camille Journal');
     });
   });

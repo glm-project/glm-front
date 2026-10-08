@@ -6,7 +6,7 @@
   } @if (vueDeResolution(); as vue) { @if (dossier(); as dossier) {
   <ng-container
     [ngComponentOutlet]="vue.vue"
-    [ngComponentOutletInputs]="{ dossier, choix: vue.choix, now, retour: retour(), referentiel: referentielConnu(), lecture: lectureDuDossier }"
+    [ngComponentOutletInputs]="{ dossier, choix: vue.choix, now, retour: retour(), operateurs: operateursConnus(), lecture: lectureDuDossier }"
   />
   } } @if (adresse() === undefined) {
   <p role="alert" data-selector="anomalie-adresse-invalide">{{ libelles.adresseInvalide }}</p>

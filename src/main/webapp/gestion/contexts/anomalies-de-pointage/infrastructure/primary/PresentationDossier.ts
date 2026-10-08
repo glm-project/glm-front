@@ -1,5 +1,5 @@
-import { formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
-import { InstantLongDayPipe, InstantLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
+import { formatInstantLongDayWithSeconds, formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
+import { InstantLongDayPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { ErreurSaisieActe, SaisieFait } from '../../domain/acte/SaisieActe';
 import { ActiviteAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
@@ -19,7 +19,11 @@ type CategorieActivite = NonNullable<ActiviteAnomalie['periode']>['categorie'];
 export type ReferencePointage = Readonly<{ libelle: string; pointage?: PointageAnomalie }>;
 
 const instantLongDay = new InstantLongDayPipe();
-const instantLongDayWithSeconds = new InstantLongDayWithSecondsPipe();
+
+const instantLongDayWithSeconds = (texte: string, now: Date): string => {
+  const instant = new Date(texte);
+  return Number.isNaN(instant.getTime()) ? texte : formatInstantLongDayWithSeconds(instant, now);
+};
 
 export const heureDe = (instant: string): string => {
   const date = new Date(instant);
@@ -64,7 +68,7 @@ const labelForActivite = (id: string, vue: VueDActivites, now: Date): string => 
   const activite = vue.activites?.find(activite => activite.id.activite === id);
   if (activite !== undefined) return libelleActivite(activite, now);
   const origine = vue.journal.find(pointage => pointage.activiteCreee?.activite === id);
-  if (origine !== undefined) return `${libelleDuGeste(origine.fait)} · ${instantLongDayWithSeconds.transform(origine.fait.instant, now)}`;
+  if (origine !== undefined) return `${libelleDuGeste(origine.fait)} · ${instantLongDayWithSeconds(origine.fait.instant, now)}`;
   return LIBELLES_ANOMALIES.activiteNonResolue;
 };
 
@@ -73,7 +77,7 @@ const referencePointage = (journal: readonly PointageAnomalie[], identifiant: st
   if (pointage === undefined) return { libelle: LIBELLES_ANOMALIES.pointageNonResolu };
   const fait = pointage.fait;
   return {
-    libelle: `${instantLongDayWithSeconds.transform(fait.instant, now)} · ${libelleDuGeste(fait)}`,
+    libelle: `${instantLongDayWithSeconds(fait.instant, now)} · ${libelleDuGeste(fait)}`,
     pointage,
   };
 };
@@ -86,7 +90,7 @@ export const remplacementDe = (journal: readonly PointageAnomalie[], identifiant
 export const detailDuPointage = (pointage: PointageAnomalie, vue: VueDActivites, now: Date): DetailPointage => {
   const fait = pointage.fait;
   return {
-    entete: `${operateurPresente(pointage.operateurNom)} · ${instantLongDayWithSeconds.transform(fait.instant, now)}`,
+    entete: `${operateurPresente(pointage.operateurNom)} · ${instantLongDayWithSeconds(fait.instant, now)}`,
     geste: libelleDuGeste(fait),
     ...(fait.activiteVisee ? { cible: labelForActivite(fait.activiteVisee, vue, now) } : {}),
     ...(pointage.activiteCreee ? { creee: labelForActivite(pointage.activiteCreee.activite, vue, now) } : {}),

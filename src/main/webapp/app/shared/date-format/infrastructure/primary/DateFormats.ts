@@ -79,6 +79,8 @@ export const formatInstantNumericDateTime = (instant: Date): string => NUMERIC_D
 
 export const formatInstantTime = (instant: Date): string => TIME.format(instant);
 
+export const formatInstantTimeWithSeconds = (instant: Date): string => TIME_WITH_SECONDS.format(instant);
+
 export const formatInstantNumericDayMonth = (instant: Date): string => NUMERIC_DAY_MONTH.format(instant);
 
 export const formatInstantShortDateTime = (instant: Date): string => SHORT_DATE_TIME.format(instant);
@@ -98,11 +100,6 @@ export const formatInstantLongDay = (instant: Date, now: Date): string => `${lon
 
 export const formatInstantLongDayWithSeconds = (instant: Date, now: Date): string =>
   `${longDayOf(instant, now)} à ${TIME_WITH_SECONDS.format(instant)}`;
-
-export const formatInstantTimeAndLongDayWithSeconds = (instant: Date, now: Date): Readonly<{ time: string; day: string }> => ({
-  time: TIME_WITH_SECONDS.format(instant),
-  day: longDayOf(instant, now),
-});
 
 export const formatCalendarDayRange = (first: string, last: string): string =>
   CALENDAR_DAY_SHORT_DAY_MONTH_YEAR.formatRange(utcMidnightOf(first), utcMidnightOf(last));

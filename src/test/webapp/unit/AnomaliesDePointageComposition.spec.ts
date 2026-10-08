@@ -13,10 +13,9 @@ import { AnomaliesReadPort } from '@/gestion/contexts/anomalies-de-pointage/doma
 import { AdresseDossier } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
 import { ElementAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalie';
 import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalieId';
+import { OperateurAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalie';
 import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PointageAnomalieId';
-import { PosteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PosteAnomalieId';
-import { OperateurAnomalie, ReferentielAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/SuiviAnomalieId';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -98,24 +97,7 @@ describe('Real conflict resolution composition', () => {
     expect(resultat.confirmation).toEqual({ kind: 'ISSUE_INCONNUE' });
   });
 
-  it('should read the operator and workstation referential through the public read port on the same-origin API', async () => {
-    const lecture = whenReadingTheReferential();
-    whenTheReferentielAnswers();
-
-    const referentiel = await lecture;
-
-    expect(referentiel.operateurs).toEqual([
-      {
-        id: new OperateurAnomalieId('op-camille'),
-        nom: 'Camille Martin',
-        code: '007',
-        postesHabilites: [new PosteAnomalieId('poste-tour')],
-      },
-    ]);
-    expect(referentiel.postes).toEqual([{ id: new PosteAnomalieId('poste-tour'), libelle: 'Tour 1' }]);
-  });
-
-  it('should read the operators alone through the public read port on the same-origin API, without asking for the workstations', async () => {
+  it('should read the operators through the public read port on the same-origin API', async () => {
     const lecture = whenReadingTheOperators();
     whenTheOperatorsAnswer();
 
@@ -126,14 +108,11 @@ describe('Real conflict resolution composition', () => {
         id: new OperateurAnomalieId('op-camille'),
         nom: 'Camille Martin',
         code: '007',
-        postesHabilites: [new PosteAnomalieId('poste-tour')],
       },
     ]);
   });
 
   const whenReadingTheOperators = (): Promise<readonly OperateurAnomalie[]> => TestBed.inject(AnomaliesReadPort).operateurs();
-
-  const whenReadingTheReferential = (): Promise<ReferentielAnomalies> => TestBed.inject(AnomaliesReadPort).referentiel();
 
   const whenTheOperatorsAnswer = (): void => {
     server.expectOne('/api/operateurs?page=0&size=100').flush({
@@ -151,16 +130,6 @@ describe('Real conflict resolution composition', () => {
       pageSize: 100,
       totalElementsCount: 1,
     } satisfies components['schemas']['PageRestOperateur']);
-  };
-
-  const whenTheReferentielAnswers = (): void => {
-    whenTheOperatorsAnswer();
-    server.expectOne('/api/postes-de-travail?page=0&size=100').flush({
-      content: [{ id: 'poste-tour', libelle: 'Tour 1', nature: 'tournage' }],
-      currentPage: 0,
-      pageSize: 100,
-      totalElementsCount: 1,
-    } satisfies components['schemas']['PageRestPosteDeTravail']);
   };
 
   it('should read the element referential through the public read port on the same-origin API', async () => {

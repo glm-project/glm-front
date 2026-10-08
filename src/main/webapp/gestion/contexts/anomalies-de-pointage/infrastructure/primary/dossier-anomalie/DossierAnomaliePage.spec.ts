@@ -4,11 +4,10 @@ import { ActiviteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/dom
 import { DossierAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
 import { ElementAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalie';
 import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalieId';
+import { OperateurAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalie';
 import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
 import { PerimetreDuDossier } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PerimetreDuDossier';
 import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PointageAnomalieId';
-import { PosteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PosteAnomalieId';
-import { OperateurAnomalie, ReferentielAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/SuiviAnomalieId';
 
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
@@ -77,19 +76,11 @@ class PendingResponseFixture<T> {
   }
 }
 
-const referentielFixture = (): ReferentielAnomalies => {
-  const dmu = { id: new PosteAnomalieId('poste-1'), libelle: 'DMU 50' };
-  const tour = { id: new PosteAnomalieId('poste-2'), libelle: 'Tour 1' };
-  const scie = { id: new PosteAnomalieId('poste-3'), libelle: 'Scie 1' };
-  return new ReferentielAnomalies(
-    [
-      { id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin', code: '007', postesHabilites: [dmu.id] },
-      { id: new OperateurAnomalieId('op-alex'), nom: 'Alex Durand', postesHabilites: [tour.id, scie.id] },
-      { id: new OperateurAnomalieId('op-zoe'), nom: 'Zoé Évrard', code: '012', postesHabilites: [] },
-    ],
-    [dmu, tour, scie],
-  );
-};
+const operateursFixture = (): readonly OperateurAnomalie[] => [
+  { id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin', code: '007' },
+  { id: new OperateurAnomalieId('op-alex'), nom: 'Alex Durand' },
+  { id: new OperateurAnomalieId('op-zoe'), nom: 'Zoé Évrard', code: '012' },
+];
 
 const JOURNAL_ENTIER_EN_PERIMETRE = new PerimetreDuDossier([]);
 
@@ -125,10 +116,8 @@ class DossierReadFixture extends AnomaliesReadPort {
   pending: PendingResponseFixture<LectureDossier> | undefined;
   readonly demandes: AdresseDossier[] = [];
   readonly followingResults: LectureDossier[] = [];
-  referentielFailure: Error | undefined;
-  referentielResult = referentielFixture();
-  referentielPending: PendingResponseFixture<ReferentielAnomalies> | undefined;
-  referentielDemandes = 0;
+  operateursFailure: Error | undefined;
+  operateursResult = operateursFixture();
   elementsDemandes = 0;
 
   elements(): Promise<readonly ElementAnomalie[]> {
@@ -137,16 +126,8 @@ class DossierReadFixture extends AnomaliesReadPort {
   }
 
   operateurs(): Promise<readonly OperateurAnomalie[]> {
-    return Promise.reject(new Error('Le dossier lit le référentiel entier, jamais les opérateurs seuls.'));
-  }
-
-  referentiel(): Promise<ReferentielAnomalies> {
-    this.referentielDemandes += 1;
-    const pending = this.referentielPending;
-    this.referentielPending = undefined;
-    if (pending !== undefined) return pending.arrive();
-    const failure = this.referentielFailure;
-    const result = this.referentielResult;
+    const failure = this.operateursFailure;
+    const result = this.operateursResult;
     return roundTripFixture(() => {
       if (failure !== undefined) throw failure;
       return result;
@@ -313,7 +294,6 @@ const dossierAnomalieFixture = (): DossierAnomalie => ({
   enConflit: true,
   finAutomatique: false,
   consequences: [],
-  continuations: [],
 });
 
 const acteCorrectionFixture: ActeResolution = {
@@ -474,9 +454,9 @@ describe('Anomaly dossier page', () => {
     thenAbsent('anomalie-adresse-obsolete');
   });
 
-  it('should open the resolution view although the referential of the operators cannot be read', async () => {
+  it('should open the resolution view although the operators cannot be read', async () => {
     givenAnAutomaticEndWithAResolutionView();
-    read.referentielFailure = new Error('Référentiel indisponible');
+    read.operateursFailure = new Error('Opérateurs indisponibles');
 
     await whenRendering();
 
@@ -485,7 +465,7 @@ describe('Anomaly dossier page', () => {
 
   it('should say the operator in the link to the day when no name is resolved', async () => {
     const dossier = dossierDeResolutionFixture();
-    read.referentielResult = new ReferentielAnomalies([], []);
+    read.operateursResult = [];
     read.result = {
       kind: 'DOSSIER',
       dossier: {

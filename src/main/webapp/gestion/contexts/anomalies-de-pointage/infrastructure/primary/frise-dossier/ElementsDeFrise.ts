@@ -1,4 +1,4 @@
-import { InstantTimeAndLongDayWithSecondsPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
+import { formatInstantTimeWithSeconds } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { ActiviteAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { identifiantsDesPointagesTardifs } from '../../../domain/dossier/PointagesTardifs';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
@@ -39,7 +39,6 @@ export const HAUTEUR_D_UN_ELEMENT_PX = 44;
 export const ESPACE_ENTRE_RANGEES_PX = 8;
 const ETATS_SANS_FIN_RECUE: readonly ActiviteAnomalie['etat'][] = ['EN_COURS', 'A_RESOUDRE'];
 
-const instantAvecSecondes = new InstantTimeAndLongDayWithSecondsPipe();
 const QUALIFICATIFS = LIBELLES_ANOMALIES.frise;
 
 interface DrapeauxDuRepere {
@@ -49,9 +48,9 @@ interface DrapeauxDuRepere {
   readonly faitDeLActe: boolean;
 }
 
-const nomDuRepere = (pointage: PointageAnomalie, drapeaux: DrapeauxDuRepere, now: Date): string =>
+const nomDuRepere = (pointage: PointageAnomalie, drapeaux: DrapeauxDuRepere): string =>
   [
-    instantAvecSecondes.transform(pointage.fait.instant, now).time,
+    formatInstantTimeWithSeconds(new Date(pointage.fait.instant)),
     libelleDuGeste(pointage.fait),
     ...(pointage.annulation ? [QUALIFICATIFS.annule] : []),
     ...(pointage.regularisation ? [QUALIFICATIFS.regularise] : []),
@@ -85,7 +84,7 @@ export const repereDe = (pointage: PointageAnomalie, enCause: boolean, voie: num
     voie,
     cle: `pointage:${pointage.id.pointage}`,
     pointage: pointage.id.pointage,
-    nom: nomDuRepere(pointage, { enCause, deplace, tardif, faitDeLActe }, contexte.now),
+    nom: nomDuRepere(pointage, { enCause, deplace, tardif, faitDeLActe }),
     selection: { kind: 'POINTAGE', id: pointage.id.pointage },
     heure: heureDe(pointage.fait.instant),
     symbole: symboleDuGeste(pointage.fait),

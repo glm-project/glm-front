@@ -9,9 +9,9 @@ import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
 import { FiltreAnomalies, LectureDossier, LigneConflit, LigneFinAutomatique, PageAnomalies } from '../../../domain/dossier/DossierAnomalie';
 import { ElementAnomalie } from '../../../domain/dossier/ElementAnomalie';
 import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
+import { OperateurAnomalie } from '../../../domain/dossier/OperateurAnomalie';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
-import { OperateurAnomalie, ReferentielAnomalies } from '../../../domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '../../../domain/dossier/SuiviAnomalieId';
 import { ListeAnomalies } from './ListeAnomalies';
 
@@ -19,12 +19,11 @@ class AnomaliesReadFixture extends AnomaliesReadPort {
   page: PageAnomalies = { nature: 'CONFLIT', lignes: [], total: 0, complete: true };
   failure: Error | undefined;
   operateursLus: readonly OperateurAnomalie[] = [
-    { id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin', code: '007', postesHabilites: [] },
-    { id: new OperateurAnomalieId('op-jean'), nom: 'Jean Dupont', postesHabilites: [] },
+    { id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin', code: '007' },
+    { id: new OperateurAnomalieId('op-jean'), nom: 'Jean Dupont' },
   ];
   operateursFailure: Error | undefined;
   operateursLectures = 0;
-  referentielLectures = 0;
   elementsLus: readonly ElementAnomalie[] = [
     { id: new ElementAnomalieId('moule-42'), nom: 'Moule M-042', reference: 'M-042' },
     { id: new ElementAnomalieId('of-m24-0655'), nom: 'OF M24-0655' },
@@ -95,11 +94,6 @@ class AnomaliesReadFixture extends AnomaliesReadPort {
     this.operateursLectures += 1;
     if (this.heldOperateurs !== undefined) return this.heldOperateurs;
     return this.operateursFailure === undefined ? Promise.resolve(this.operateursLus) : Promise.reject(this.operateursFailure);
-  }
-
-  override referentiel(): Promise<ReferentielAnomalies> {
-    this.referentielLectures += 1;
-    return Promise.reject(new Error('Postes indisponibles'));
   }
 
   override elements(): Promise<readonly ElementAnomalie[]> {
@@ -282,19 +276,10 @@ describe('Anomalies list', () => {
     expect(textOf('anomalies-filtre-element')).toBe('Moule M-042 · M-042');
   });
 
-  it('should read the operators alone for any reader to name the operator filter, without the workstations the list does not use', async () => {
+  it('should read the operators once to name the operator filter', async () => {
     await whenTheListIsRendered();
 
     expect(portFixture.operateursLectures).toBe(1);
-    expect(portFixture.referentielLectures).toBe(0);
-  });
-
-  it('should keep the operator filter usable while the workstations are unavailable', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
-    await whenTheListIsRendered();
-
-    expect(button('anomalies-filtre-operateur').disabled).toBe(false);
-    expect(present('anomalies-referentiel-erreur')).toBe(false);
   });
 
   it('should offer every operator by name, after an entry for all of them', async () => {

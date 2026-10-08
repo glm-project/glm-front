@@ -1,6 +1,6 @@
 import { DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
+import { OperateurAnomalie } from '../../domain/dossier/OperateurAnomalie';
 import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
-import { OperateurAnomalie, ReferentielAnomalies } from '../../domain/dossier/ReferentielAnomalies';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
 
 export const operateurPresente = (nom: string): string => nom || LIBELLES_ANOMALIES.operateurNonResolu;
@@ -15,11 +15,11 @@ export const operateurNomme = (operateur: OperateurAnomalie): string =>
 
 const nomConnuDeLOperateur = (
   operateur: string,
-  referentiel: ReferentielAnomalies | undefined,
+  operateurs: readonly OperateurAnomalie[] | undefined,
   journal: readonly PointageAnomalie[],
 ): string | undefined =>
-  referentiel?.operateur(new OperateurAnomalieId(operateur))?.nom
+  operateurs?.find(candidat => candidat.id.equals(new OperateurAnomalieId(operateur)))?.nom
   ?? journal.find(pointage => pointage.fait.operateur === operateur && pointage.operateurNom !== '')?.operateurNom;
 
-export const operateurDuDossier = (dossier: DossierAnomalie, referentiel: ReferentielAnomalies | undefined): string | undefined =>
-  dossier.ligne.operateur || nomConnuDeLOperateur(dossier.operateur.operateur, referentiel, dossier.journal);
+export const operateurDuDossier = (dossier: DossierAnomalie, operateurs: readonly OperateurAnomalie[] | undefined): string | undefined =>
+  dossier.ligne.operateur || nomConnuDeLOperateur(dossier.operateur.operateur, operateurs, dossier.journal);

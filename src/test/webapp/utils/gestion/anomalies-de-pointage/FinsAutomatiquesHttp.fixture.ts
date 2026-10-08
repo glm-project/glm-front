@@ -9,7 +9,7 @@ import {
   posteFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from './FinAutomatiqueHttp.fixture';
-import { interceptElements, interceptReferentiel } from './ReferentielHttp.fixture';
+import { interceptElements, interceptOperateurs } from './ReferentielHttp.fixture';
 
 export const finAutomatiqueLigneFixture: components['schemas']['RestFinAutomatiqueEnListe'] = {
   nature: 'FIN_AUTOMATIQUE',
@@ -41,13 +41,10 @@ export const autreOperateurFinAutomatiqueFixture = '71000000-0000-0000-0000-0000
 export const autreElementFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000010';
 
 export const givenTheReferentielFinsAutomatiques = (): void => {
-  interceptReferentiel(
-    [
-      { id: operateurFinAutomatiqueFixture, prenom: 'Jean', nom: 'Dupont', natures: ['fraisage'], postes: [] },
-      { id: autreOperateurFinAutomatiqueFixture, identifiant: '012', prenom: 'Alex', nom: 'Durand', natures: ['tournage'], postes: [] },
-    ],
-    [],
-  );
+  interceptOperateurs([
+    { id: operateurFinAutomatiqueFixture, prenom: 'Jean', nom: 'Dupont', natures: ['fraisage'], postes: [] },
+    { id: autreOperateurFinAutomatiqueFixture, identifiant: '012', prenom: 'Alex', nom: 'Durand', natures: ['tournage'], postes: [] },
+  ]);
 };
 
 export const givenTheElementsFinsAutomatiques = (): void => {

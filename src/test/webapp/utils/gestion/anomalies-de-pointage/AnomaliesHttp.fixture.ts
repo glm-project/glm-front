@@ -1,6 +1,6 @@
 import { components } from '@/app/generated/schema';
 import { instantLocalFixture, instantLocalWithOffsetFixture } from './InstantLocal.fixture';
-import { interceptElements, interceptReferentiel } from './ReferentielHttp.fixture';
+import { interceptElements, interceptOperateurs } from './ReferentielHttp.fixture';
 
 export const suiviFixture = '70000000-0000-0000-0000-000000000001';
 export const finFixture = '70000000-0000-0000-0000-000000000002';
@@ -192,29 +192,23 @@ export const confirmationFixture = (commande: string): components['schemas']['Re
 });
 
 export const givenTheReferentiel = (): void => {
-  interceptReferentiel(
-    [
-      {
-        id: operateurFixture,
-        identifiant: operateurCodeFixture,
-        prenom: 'Camille',
-        nom: 'Martin',
-        natures: ['fraisage'],
-        postes: [{ id: posteFixture, libelle: posteLibelleFixture, nature: 'fraisage' }],
-      },
-      {
-        id: autreOperateurFixture,
-        prenom: 'Alex',
-        nom: 'Durand',
-        natures: ['tournage'],
-        postes: [{ id: autrePosteFixture, libelle: autrePosteLibelleFixture, nature: 'tournage' }],
-      },
-    ],
-    [
-      { id: posteFixture, libelle: posteLibelleFixture, nature: 'fraisage' },
-      { id: autrePosteFixture, libelle: autrePosteLibelleFixture, nature: 'tournage' },
-    ],
-  );
+  interceptOperateurs([
+    {
+      id: operateurFixture,
+      identifiant: operateurCodeFixture,
+      prenom: 'Camille',
+      nom: 'Martin',
+      natures: ['fraisage'],
+      postes: [{ id: posteFixture, libelle: posteLibelleFixture, nature: 'fraisage' }],
+    },
+    {
+      id: autreOperateurFixture,
+      prenom: 'Alex',
+      nom: 'Durand',
+      natures: ['tournage'],
+      postes: [{ id: autrePosteFixture, libelle: autrePosteLibelleFixture, nature: 'tournage' }],
+    },
+  ]);
 };
 
 export const givenTheElements = (): void => {

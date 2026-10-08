@@ -17,9 +17,9 @@ import {
   formatInstantShortWeekdayDay,
   formatInstantShortWeekdayDayMonth,
   formatInstantTime,
-  formatInstantTimeAndLongDayWithSeconds,
   formatInstantTimeUnambiguous,
   formatInstantTimeWithOffset,
+  formatInstantTimeWithSeconds,
   formatInstantWeekdayDay,
   localCalendarDay,
   toOffsetIsoString,
@@ -284,31 +284,12 @@ describe('DateFormats', () => {
     expect(text).toBe('mercredi 1 octobre 2025 à 09:41:22');
   });
 
-  it('should split an instant into its local time with seconds and its long day', () => {
-    const instant = new Date(2026, 9, 1, 9, 41, 22);
-    const now = new Date(2026, 9, 5, 10, 0);
+  it('should write the local time of an instant with its seconds', () => {
+    const instant = new Date(2026, 8, 14, 8, 2, 7);
 
-    const parts = formatInstantTimeAndLongDayWithSeconds(instant, now);
+    const text = formatInstantTimeWithSeconds(instant);
 
-    expect(parts).toEqual({ time: '09:41:22', day: 'jeudi 1 octobre' });
-  });
-
-  it('should add the year to the long day part of an instant that falls in another year than now', () => {
-    const instant = new Date(2025, 9, 1, 9, 41, 22);
-    const now = new Date(2026, 9, 5, 10, 0);
-
-    const parts = formatInstantTimeAndLongDayWithSeconds(instant, now);
-
-    expect(parts).toEqual({ time: '09:41:22', day: 'mercredi 1 octobre 2025' });
-  });
-
-  it('should keep the local day and time of an instant whose UTC day is the next one in its time and long day parts', () => {
-    const instant = new Date(Date.UTC(2026, 9, 2, 1, 30, 5));
-    const now = new Date(2026, 9, 5, 10, 0);
-
-    const parts = formatInstantTimeAndLongDayWithSeconds(instant, now);
-
-    expect(parts).toEqual({ time: '22:30:05', day: 'jeudi 1 octobre' });
+    expect(text).toBe('08:02:07');
   });
 
   it('should write an instant with its local offset and without fraction', () => {

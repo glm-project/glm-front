@@ -111,7 +111,6 @@ export interface DossierAnomalie {
   readonly enConflit: boolean;
   readonly finAutomatique: boolean;
   readonly consequences: readonly string[];
-  readonly continuations: readonly LigneConflit[];
   readonly diagnostics?: readonly DiagnosticConflit[];
 }
 

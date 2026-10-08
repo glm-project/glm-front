@@ -9,7 +9,7 @@ import { adresseDeLaDestination, DestinationSuivante } from '../../../../../doma
 import { ActiviteAnomalie, ChoixGuide, DossierAnomalie } from '../../../../../domain/dossier/DossierAnomalie';
 import { filtreAnomaliesDemande } from '../../../../../domain/dossier/FiltreAnomaliesDemande';
 import { IssueDeLActe } from '../../../../../domain/dossier/IssueDeLActe';
-import { ReferentielAnomalies } from '../../../../../domain/dossier/ReferentielAnomalies';
+import { OperateurAnomalie } from '../../../../../domain/dossier/OperateurAnomalie';
 import { ApercuAutomatique } from '../../../apercu-automatique/ApercuAutomatique';
 import { ComparaisonDesJournaux } from '../../../comparaison-des-journaux/ComparaisonDesJournaux';
 import { EnTeteDuDossier } from '../../../en-tete-du-dossier/EnTeteDuDossier';
@@ -52,7 +52,7 @@ export class ResolutionDeFin implements OnInit {
   readonly choix = input.required<ChoixGuide>();
   readonly now = input.required<Date>();
   readonly retour = input.required<Params>();
-  readonly referentiel = input<ReferentielAnomalies | undefined>(undefined);
+  readonly operateurs = input<readonly OperateurAnomalie[] | undefined>(undefined);
   protected readonly preparation = inject(PreparationActe);
   private readonly apercuAutomatique = inject(ApercuAutomatique);
   private readonly recherche = inject(RechercheDeLAnomalieSuivante);
@@ -77,7 +77,7 @@ export class ResolutionDeFin implements OnInit {
   protected readonly enregistre = computed(() => this.recu() !== undefined);
   protected readonly instant = computed(() => this.saisie().instantDuFait());
   protected readonly resume = resumeDeLApercu;
-  protected readonly operateur = computed(() => operateurDuDossier(this.dossier(), this.referentiel()));
+  protected readonly operateur = computed(() => operateurDuDossier(this.dossier(), this.operateurs()));
   private readonly cadre = computed(() => CadreDuFait.depuis(this.dossier().activites, this.maintenant()));
   protected readonly erreurs = computed(() =>
     erreursALire(

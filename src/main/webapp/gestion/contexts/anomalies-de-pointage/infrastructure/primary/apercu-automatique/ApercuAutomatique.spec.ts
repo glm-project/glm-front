@@ -42,7 +42,6 @@ const dossierFixture = (version: number): DossierAnomalie => ({
   enConflit: false,
   finAutomatique: true,
   consequences: [],
-  continuations: [],
 });
 const saisieFixture = SaisieActe.cancel('debut-8').afterChange({ motif: 'Double appui' });
 const cadreFixture = CadreDuFait.depuis([], '2026-09-14T18:00:00Z');

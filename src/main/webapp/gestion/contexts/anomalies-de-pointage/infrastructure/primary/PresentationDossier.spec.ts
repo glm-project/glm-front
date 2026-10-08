@@ -198,6 +198,12 @@ describe('Detail of a pointage', () => {
     expect(detail).not.toHaveProperty('cible');
   });
 
+  it('should keep the text of an instant it cannot read', () => {
+    const illisible = pointageFixture('fin-17', faitFixture(ARRET_FIXTURE, 'pas un instant'));
+
+    expect(detailDuPointage(illisible, { journal: [illisible] }, NOW).entete).toBe('Camille Martin · pas un instant');
+  });
+
   it('should name an unnamed operator as unresolved', () => {
     expect(detailDuPointage({ ...fin, operateurNom: '' }, { journal: [fin] }, NOW).entete).toBe(
       'Opérateur non résolu · lundi 14 septembre à 17:00:00',

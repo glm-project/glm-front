@@ -93,7 +93,6 @@ const RESOLUTION = {
   verification: 'Vérification des conséquences…',
   reessayerLApercu: 'Réessayer l’aperçu',
   voirLeDetail: 'Voir le détail',
-  consequences: 'Conséquences',
   resume: {
     TRAITEE: 'anomalie traitée',
     ANOMALIE_RESTANTE: 'anomalie restante',
@@ -112,12 +111,6 @@ export const LIBELLES_ANOMALIES = {
   traiterLaFinAutomatiqueRestante: (rang: number, total: number) =>
     total === 1 ? 'Traiter la fin automatique restante' : `Traiter la fin automatique restante (${rang} sur ${total})`,
   issue: {
-    apercu: {
-      TRAITEE: 'Après cet acte : anomalie traitée',
-      CONFLIT_LEVE_FIN_AUTOMATIQUE_RESTANTE: 'Après cet acte : conflit levé · fin automatique restante',
-      CONFLIT_RESTANT: 'Après cet acte : conflit restant',
-      ANOMALIE_RESTANTE: 'Après cet acte : anomalie restante',
-    },
     recu: {
       TRAITEE: 'Anomalie traitée',
       CONFLIT_LEVE_FIN_AUTOMATIQUE_RESTANTE: 'Conflit levé · fin automatique restante',
@@ -147,7 +140,6 @@ export const LIBELLES_ANOMALIES = {
   aucunResultatElement: 'Aucun élément ne correspond à cette recherche',
   elementNonResoluActuel: 'Élément non résolu (référence actuelle)',
   elementActuelConserve: 'Élément actuel conservé',
-  posteActuelConserve: 'Poste actuel conservé',
   comparerJournal: 'Comparer tous les pointages avant et après',
   avant: 'Avant',
   apres: 'Après cet acte',
@@ -188,7 +180,6 @@ export const LIBELLES_ANOMALIES = {
   sousTitre: 'Comprendre les faits, choisir une correction et vérifier ses conséquences avant de l’enregistrer.',
   element: 'Élément',
   operateur: 'Opérateur',
-  poste: 'Poste',
   sansPoste: 'Sans poste',
   operateurNonResolu: 'Opérateur non résolu',
   activiteNonResolue: 'Activité non résolue',

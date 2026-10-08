@@ -165,8 +165,4 @@ describe('Phrases saying the problem of an automatic end', () => {
   ])('should say nothing of $cas on an automatic end', ({ activite }) => {
     expect(phrasesDuProbleme(dossierDeFinAutomatiqueFixture({ activites: [activite] }))).toEqual([]);
   });
-
-  it('should say nothing of a due activity on a dossier that is no automatic end', () => {
-    expect(phrasesDuProbleme(dossierDeFinAutomatiqueFixture({ finAutomatique: false }))).toEqual([]);
-  });
 });

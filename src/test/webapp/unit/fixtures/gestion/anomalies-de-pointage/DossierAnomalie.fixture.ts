@@ -89,6 +89,5 @@ export const dossierDeFinAutomatiqueFixture = (changement: Partial<DossierAnomal
   enConflit: false,
   finAutomatique: true,
   consequences: [],
-  continuations: [],
   ...changement,
 });

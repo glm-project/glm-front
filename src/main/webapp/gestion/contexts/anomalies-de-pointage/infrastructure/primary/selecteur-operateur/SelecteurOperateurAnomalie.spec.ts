@@ -1,14 +1,13 @@
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { dataSelector } from '@test/utils/DataSelector';
+import { OperateurAnomalie } from '../../../domain/dossier/OperateurAnomalie';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
-import { PosteAnomalieId } from '../../../domain/dossier/PosteAnomalieId';
-import { OperateurAnomalie } from '../../../domain/dossier/ReferentielAnomalies';
 import { SelecteurOperateurAnomalie } from './SelecteurOperateurAnomalie';
 
 const operateursFixture: readonly OperateurAnomalie[] = [
-  { id: new OperateurAnomalieId('op-dupont'), nom: 'Jean Dupont', code: '012', postesHabilites: [] },
-  { id: new OperateurAnomalieId('op-evrard'), nom: 'Zoé Évrard', postesHabilites: [new PosteAnomalieId('poste-tour')] },
-  { id: new OperateurAnomalieId('op-martin'), nom: 'Camille Martin', code: '007', postesHabilites: [] },
+  { id: new OperateurAnomalieId('op-dupont'), nom: 'Jean Dupont', code: '012' },
+  { id: new OperateurAnomalieId('op-evrard'), nom: 'Zoé Évrard' },
+  { id: new OperateurAnomalieId('op-martin'), nom: 'Camille Martin', code: '007' },
 ];
 
 interface InputsFixture {

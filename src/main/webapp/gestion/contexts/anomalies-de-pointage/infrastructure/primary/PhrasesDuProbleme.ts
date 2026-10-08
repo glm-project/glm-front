@@ -47,13 +47,10 @@ const phraseDeFinAutomatique = (dossier: DossierAnomalie, activite: ActiviteAnom
       );
 };
 
-const phrasesDeFinAutomatique = (dossier: DossierAnomalie): readonly string[] =>
+export const phrasesDuProbleme = (dossier: DossierAnomalie): readonly string[] =>
   dossier.activites.flatMap(activite => {
     const periode = activite.periode;
     return activite.etat === 'ECHUE' && periode?.fin !== undefined
       ? [phraseDeFinAutomatique(dossier, activite, { ...periode, fin: periode.fin })]
       : [];
   });
-
-export const phrasesDuProbleme = (dossier: DossierAnomalie): readonly string[] =>
-  dossier.finAutomatique ? phrasesDeFinAutomatique(dossier) : [];
