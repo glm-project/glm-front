@@ -113,8 +113,8 @@ Déplacer la poignée retire l'aperçu, donc cet état de la barre.
 
 Le panneau « Sélection », avant « Votre décision », montre le pointage choisi : geste, instant avec ses secondes, opérateur et
 poste, régularisation, annulation (motif, auteur, instant), remplacement, activités visée et créée, enregistrement (instant
-et auteur), puis Corriger et Annuler. Un pointage annulé n'a ni l'un ni l'autre ; le consultant et une opération en cours
-les voient désactivés, avec le message des droits. Pour une activité, il dit sa catégorie, son état et son temps reçus, son
+et auteur), puis Corriger et Annuler. Un pointage annulé n'a ni l'un ni l'autre ; une opération en cours
+les désactive. Pour une activité, il dit sa catégorie, son état et son temps reçus, son
 début et sa fin reçus (« Fin »), sans bouton d'acte ; l'état d'une activité échue se dit « Fin automatique », jamais « Échue ». Un pointage du journal hors de l'anomalie ne s'y
 affiche pas, ne se corrige ni ne s'annule depuis ce dossier (« Ajouter un pointage manquant » reste). À l'ouverture d'un conflit,
 le plus ancien pointage en cause parmi ceux de l'anomalie est sélectionné ; à l'ouverture d'une fin automatique, l'activité échue ; si
@@ -141,7 +141,7 @@ Chaque action est nommée par le geste et l'heure du pointage visé (« Annuler 
 journal tombe dans la même minute. La choisir prépare la saisie attendue
 (annulation ou correction, motif à saisir), met le focus sur la proposition, ouvre le champ heure pour une correction et se
 comporte comme une proposition du serveur : une seule solution est pressée à la fois. La section n'apparaît que s'il y a une
-action. Le consultant et une opération en cours les voient désactivées, avec le message des droits. « Autres corrections »
+action. Une opération en cours les désactive. « Autres corrections »
 remplace le repli « Un pointage manque sur la frise ? » : il rappelle que Corriger et Annuler du pointage sélectionné sont
 dans le panneau Sélection et garde « Ajouter un pointage manquant » (la régularisation).
 
@@ -160,8 +160,7 @@ accents sur le nom, le prénom et le code), qui commence par « Tous les opérat
 jamais : un identifiant que les opérateurs ne contiennent pas s'affiche « Opérateur non résolu (référence actuelle) ». Le choix
 se range dans le brouillon du formulaire, comme le champ « Élément » ; il entre dans l'URL, avec `page=1`, quand le
 gestionnaire applique les filtres, et « Tous les opérateurs » en retire l'identifiant (`operateur=` vide). Les opérateurs
-sont lus seuls (`operateurs()`, sans les postes que la liste n'emploie pas) à chaque ouverture de la liste, pour tout
-lecteur, consultant compris : le filtre sert à qui consulte, et une panne de `/api/postes-de-travail` ne l'atteint pas.
+sont lus seuls (`operateurs()`, sans les postes que la liste n'emploie pas) à chaque ouverture de la liste, et une panne de `/api/postes-de-travail` ne l'atteint pas.
 Pendant leur lecture, la liste dit « Chargement des opérateurs… » à la place du filtre ; s'il échoue, elle dit « Liste des opérateurs
 indisponible » avec « Réessayer », désactive le filtre, qui garde l'opérateur de l'URL, et reste utilisable : la liste des
 anomalies ne dépend pas des opérateurs et ne se relit pas. Tant que les opérateurs ne sont pas lus, le filtre ne prétend pas
@@ -243,7 +242,7 @@ actuelle) » ou « Poste non résolu (référence actuelle) ». L'aperçu nomme 
 référentiel, puis depuis le journal, sinon « non résolu ». Si le référentiel est indisponible, le dossier le dit, propose
 « Réessayer » et conserve la saisie, l'opérateur et le poste courants s'affichant « Opérateur actuel conservé » et « Poste
 actuel conservé » (jamais « non résolu » : le référentiel n'a pas été lu), de même que l'aperçu de l'acte quand le journal
-ne les nomme pas ; un consultant, qui ne peut rien appliquer, ne le lit pas. Pendant la relecture,
+ne les nomme pas. Pendant la relecture,
 les champs restent en place et « Réessayer » reste affiché, `aria-busy`, si bien que le focus ne tombe pas sur le document
 (seule la première lecture remplace les champs par « Chargement… »).
 
@@ -332,7 +331,7 @@ traverse minuit et l'heure répétée, sans jamais deux graduations à moins de 
   avant/après et de l'historique obsolète ; les specs Cypress vérifient qu'aucun UUID d'opérateur ou d'activité n'y reste.
 - Les contrats HTTP vérifient que le référentiel lit toutes les pages des opérateurs et des postes, et refuse une collection
   dont le total change, une page tronquée, une page autre que la demandée ou une identité dupliquée ; les opérateurs se lisent
-  aussi seuls, sans aucune requête de postes, avec les mêmes refus ; la composition lit l'un et l'autre par les ports publics. Les specs DOM et Cypress vérifient qu'il n'est lu que pour un gestionnaire, que le choix se fait
+  aussi seuls, sans aucune requête de postes, avec les mêmes refus ; la composition lit l'un et l'autre par les ports publics. Les specs DOM et Cypress vérifient que le choix se fait
   par nom (recherche, groupes de postes), qu'il invalide l'aperçu et que son échec se réessaie sans perdre la saisie ; ils vérifient que la liste ne lit que les opérateurs et que le filtre
   « Opérateur » reste utilisable quand les postes sont en panne ; Cypress intercepte `/api/operateurs` et `/api/postes-de-travail` en données REST typées.
 - Les contrats HTTP vérifient que les éléments se lisent sur toutes les pages de `GET /api/elements-de-fabrication`, sur
@@ -346,7 +345,7 @@ traverse minuit et l'heure répétée, sans jamais deux graduations à moins de 
   « Modifier » ou d'office ; `PresentationDossier.spec.ts` ne garde que ce que le DOM n'atteint pas (repli du libellé d'un fait hors des cinq gestes, geste lu d'un choix inconnu) ; `SaisieActe.spec.ts` fixe `operateurManque()` et `cibleApplicable()`, que la page consomme, et la règle du geste à moitié choisi.
 - Les specs DOM et Cypress vérifient les faits reçus, leurs dates affichées en heure locale (fixtures bâties
   depuis une heure locale, horloge fixée), les formulaires, la comparaison avant/après,
-  les droits, la navigation et les reprises. Cypress utilise la composition HTTP réelle avec des
+  la navigation et les reprises. Cypress utilise la composition HTTP réelle avec des
   réponses JSON typées interceptées, sans adapter de simulation ni stockage des aperçus.
 
 La [documentation du contexte](AGENTS.md) décrit les responsabilités et les invariants.

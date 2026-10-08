@@ -10,7 +10,6 @@ import {
 import { PropositionResolution } from '@/gestion/contexts/anomalies-de-pointage/domain/acte/ResolutionDeLAnomalie';
 import { SaisieActe } from '@/gestion/contexts/anomalies-de-pointage/domain/acte/SaisieActe';
 import { AnomaliesReadPort } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/AnomaliesReadPort';
-import { AnomaliesRightsPort } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/AnomaliesRightsPort';
 import { AdresseDossier } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
 import { ElementAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalie';
 import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalieId';
@@ -80,7 +79,6 @@ describe('Real conflict resolution composition', () => {
         PreparationActe,
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: AnomaliesRightsPort, useValue: { canApply: () => true } },
         { provide: ErrorHandlerPort, useValue: errors },
       ],
     });

@@ -216,7 +216,6 @@ export const LIBELLES_ANOMALIES = {
   remplaceNonResolu: 'Remplace un pointage non résolu',
   regularisation: 'Régularisation',
   pointeApresLEcheance: 'Pointé après l’échéance',
-  droits: 'La correction est réservée aux gestionnaires. Vous pouvez consulter les faits.',
   erreurLecture: 'Le dossier n’a pas pu être chargé.',
   reessayer: 'Réessayer',
   adresseInvalide: 'L’adresse doit préciser un suivi et un pointage.',

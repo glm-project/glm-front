@@ -85,22 +85,10 @@
       </div>
       @if (!pointage.annulation) {
       <div class="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          class="bouton"
-          data-selector="anomalie-corriger"
-          [disabled]="occupe() || !droits.canApply()"
-          (click)="correct(pointage)"
-        >
+        <button type="button" class="bouton" data-selector="anomalie-corriger" [disabled]="occupe()" (click)="correct(pointage)">
           {{ libelles.corriger }}
         </button>
-        <button
-          type="button"
-          class="bouton"
-          data-selector="anomalie-annuler"
-          [disabled]="occupe() || !droits.canApply()"
-          (click)="cancel(pointage)"
-        >
+        <button type="button" class="bouton" data-selector="anomalie-annuler" [disabled]="occupe()" (click)="cancel(pointage)">
           {{ libelles.annuler }}
         </button>
       </div>
@@ -129,7 +117,7 @@
         data-selector="anomalie-choix"
         [attr.aria-pressed]="choixAffiche() === choix.id"
         [class.choix-selectionne]="choixAffiche() === choix.id"
-        [disabled]="occupe() || !droits.canApply()"
+        [disabled]="occupe()"
         (click)="chooseGuide(choix)"
       >
         <span class="text-body font-semibold">{{ libelleChoix(choix) }}</span>
@@ -147,15 +135,13 @@
           [attr.data-pointage]="action.pointage.id.pointage"
           [attr.aria-pressed]="choixAffiche() === identifiantDeLAction(action)"
           [class.choix-selectionne]="choixAffiche() === identifiantDeLAction(action)"
-          [disabled]="occupe() || !droits.canApply()"
+          [disabled]="occupe()"
           (click)="chooseAction(action)"
         >
           <span class="text-body font-semibold">{{ libelleDeLAction(action, dossier.journal) }}</span>
         </button>
         }
       </section>
-      } @if (!droits.canApply()) {
-      <p class="mt-4 text-body-sm" data-selector="anomalie-droits">{{ libelles.droits }}</p>
       }
       <details class="mt-4">
         <summary class="min-h-touch cursor-pointer py-3 font-semibold" data-selector="anomalie-detail">
@@ -164,13 +150,7 @@
         <p class="mt-1 text-body-sm text-ink-muted" data-selector="anomalie-autres-corrections-aide">
           {{ libelles.autresCorrectionsAide }}
         </p>
-        <button
-          type="button"
-          class="bouton mt-3"
-          data-selector="anomalie-regulariser"
-          [disabled]="occupe() || !droits.canApply()"
-          (click)="regularise()"
-        >
+        <button type="button" class="bouton mt-3" data-selector="anomalie-regulariser" [disabled]="occupe()" (click)="regularise()">
           {{ libelles.regulariser }}
         </button>
       </details>
@@ -369,7 +349,7 @@
         <button
           type="button"
           class="bouton mt-4"
-          [disabled]="occupe() || preparation.resolution().saisie.command(cadreDe(dossier)) === undefined || !droits.canApply()"
+          [disabled]="occupe() || preparation.resolution().saisie.command(cadreDe(dossier)) === undefined"
           data-selector="anomalie-previsualiser"
           (click)="preview(dossier)"
         >
@@ -383,13 +363,7 @@
       } @if (operation.kind === 'ISSUE_INCONNUE') {
       <div class="mt-3 flex flex-wrap gap-3">
         <button class="bouton" type="button" data-selector="anomalie-verifier" (click)="verify()">{{ libelles.verifier }}</button>
-        <button
-          class="bouton"
-          type="button"
-          data-selector="anomalie-reprendre-confirmation"
-          [disabled]="!droits.canApply()"
-          (click)="retryConfirmation()"
-        >
+        <button class="bouton" type="button" data-selector="anomalie-reprendre-confirmation" (click)="retryConfirmation()">
           {{ libelles.reprendreConfirmation }}
         </button>
       </div>
@@ -452,7 +426,7 @@
         type="button"
         class="bouton bouton-principal mt-4"
         data-selector="anomalie-confirmer"
-        [disabled]="occupe() || !droits.canApply() || preparation.resolution().confirmation() === undefined"
+        [disabled]="occupe() || preparation.resolution().confirmation() === undefined"
         (click)="confirm()"
       >
         {{ libelles.confirmer }}
