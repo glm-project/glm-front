@@ -254,7 +254,11 @@ l'activation de cette barre au clavier (Entrée, Espace : `detail === 0`) la sé
 (`selectionInitiale`), et un clic au pointeur la sélectionne quand le placement est désactivé (pendant une opération), sans rien placer ; les autres barres et les repères gardent leur sélection au clic. Une aide visible (`anomalie-frise-aide`) dit de
 tirer le bout de la barre ou de cliquer dessus pour placer l'heure du fait, ou de la saisir, sans nommer « la fin » : elle vaut pour un arrêt
 comme pour un passage ; le champ reste l'accès au clavier. Elle est inactive
-pendant une opération. La poignée est un `slider` : le pointeur la
+pendant une opération. La frise a un **mode lecture seule** (entrée `lectureSeule`, faux par défaut) : les repères et les barres y sont des images (`role="img"`, `div`),
+sans `aria-pressed`, hors de l'ordre de tabulation, et ne demandent jamais de sélection ; ils gardent leur nom, leur symbole, leur heure et leurs
+badges. Ils laissent passer le pointeur (`pointer-events: none`) : pendant le placement, un clic au pointeur sur la barre visée tombe sur la rangée
+de placement qui la couvre et place l'heure ; ailleurs il ne fait rien. La poignée garde son pointeur et son clavier.
+La poignée est un `slider` : le pointeur la
 capture (`touch-action: none`) et la déplace par pas de 5 minutes (le décalage de la prise est gardé), les flèches de 1 minute
 (Maj : 15), Origine et Fin vont aux bornes, `aria-valuetext` porte l'heure (avec son offset quand l'heure est répétée au
 changement d'heure d'automne). La frise ne décide pas de l'instant : elle émet une demande (`DemandeDeDeplacement` : `DE`

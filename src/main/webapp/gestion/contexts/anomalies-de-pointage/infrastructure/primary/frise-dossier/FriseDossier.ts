@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, input, output, signal } from '@angular/core';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { memeSelection, SelectionDuDossier } from '../SelectionDuDossier';
@@ -20,6 +21,7 @@ const sePlaceAuClavier = (position: PositionDePoignee): position is PositionAvec
 
 @Component({
   selector: 'glm-frise-dossier',
+  imports: [NgTemplateOutlet],
   templateUrl: './FriseDossier.html',
   styleUrl: './FriseDossier.css',
 })
@@ -30,6 +32,7 @@ export class FriseDossier {
   readonly poignee = input<PoigneeDeFrise | undefined>(undefined);
   readonly placement = input<PlacementDeLInstant | undefined>(undefined);
   readonly apercu = input<ApercuDeFrise | undefined>(undefined);
+  readonly lectureSeule = input(false);
   readonly selectionDemandee = output<SelectionDuDossier>();
   readonly deplacementDemande = output<DeplacementDemande>();
   readonly placementDemande = output<PlacementDemande>();
