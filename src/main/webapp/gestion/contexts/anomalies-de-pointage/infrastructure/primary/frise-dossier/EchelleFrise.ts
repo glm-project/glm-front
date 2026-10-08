@@ -5,7 +5,6 @@ const UNE_MINUTE = 60_000;
 const UNE_HEURE = 3_600_000;
 const TROIS_HEURES = 3 * UNE_HEURE;
 const CINQ_MINUTES = 300_000;
-const LARGEUR_D_UN_REPERE_PX = 44;
 const MARGE_DES_REPERES_PX = 22;
 const POSITION_DU_BORD = 100;
 const ECART_MINIMAL_ENTRE_GRADUATIONS_PX = 64;
@@ -116,23 +115,4 @@ export const graduationsDe = (echelle: EchelleFrise, largeur: number): readonly 
   return Array.from({ length: Math.ceil((echelle.fin - echelle.debut) / UNE_HEURE) + 1 }, (_, rang) => graduationHoraire(echelle, rang))
     .filter(graduation => estMultipleDuPas(graduation, debut, pas))
     .reduce<readonly Graduation[]>((gardees, graduation) => ajouteEnEspacant(gardees, graduation, pixelsParHeure), []);
-};
-
-export interface SurUneVoie<Element> {
-  readonly element: Element;
-  readonly voie: number;
-}
-
-export const surVoies = <Element>(
-  elements: readonly Element[],
-  abscisseEnPixelsDe: (element: Element) => number,
-): readonly SurUneVoie<Element>[] => {
-  const derniereParVoie: number[] = [];
-  return elements.map(element => {
-    const abscisse = abscisseEnPixelsDe(element);
-    const libre = derniereParVoie.findIndex(derniere => Math.abs(abscisse - derniere) >= LARGEUR_D_UN_REPERE_PX);
-    const voie = libre === -1 ? derniereParVoie.length : libre;
-    derniereParVoie[voie] = abscisse;
-    return { element, voie };
-  });
 };

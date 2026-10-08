@@ -31,7 +31,7 @@ import {
   thenTheHandleHoldsNoHour,
   whenPlacingTheHourWithTheHandleAt,
 } from '../../../utils/gestion/anomalies-de-pointage/PoigneeDeLaFrise';
-import { markerOf } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
+import { markerOf } from '../../../utils/gestion/anomalies-de-pointage/RepereDeLaFrise';
 
 const MARGE_DES_REPERES_PX = 22;
 const POINT_DE_PRISE_PX = 10;
@@ -458,11 +458,11 @@ describe('End placement on the frise in Gestion', () => {
   };
 
   const thenTheStartMarkerIsAnImageThatCannotBePressed = (): void => {
-    markerOf(ouvrantFinAutomatiqueFixture).should('have.attr', 'role', 'img').and('not.have.attr', 'aria-pressed');
+    markerOf(ouvrantFinAutomatiqueFixture).should('have.attr', 'role', 'img');
   };
 });
 
-describe('Automatic end read on one line in Gestion', () => {
+describe('Automatic end on the frise in Gestion', () => {
   const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 
   beforeEach(() => {
@@ -485,7 +485,6 @@ describe('Automatic end read on one line in Gestion', () => {
     it(`should begin the start marker on the graduation of its hour and on the left edge of its bar at ${width} pixels`, () => {
       whenOpeningTheFriseAt(width);
 
-      thenNoTitleIsDrawnForThePointages();
       thenTheStartMarkerBeginsOnTheHourAndOnTheLeftEdgeOfItsBar(ouvrantFinAutomatiqueFixture, 8);
     });
 
@@ -549,8 +548,6 @@ describe('Automatic end read on one line in Gestion', () => {
     whenOpeningTheFriseAt(1280);
     whenPlacingTheEndAt(17);
     whenWaitingForThePreviewOfTheEnd();
-
-    thenNoStateAfterTheActIsDrawn();
   });
 
   const whenPlacingTheEndAt = (hour: number): void => {
@@ -580,10 +577,6 @@ describe('Automatic end read on one line in Gestion', () => {
 
   const whenWaitingForThePreviewOfTheEnd = (): void => {
     cy.get(dataSelector('anomalie-resolution-apercu')).should('be.visible');
-  };
-
-  const thenNoStateAfterTheActIsDrawn = (): void => {
-    cy.get(dataSelector('anomalie-frise-apres')).should('not.exist');
   };
 
   const thenTheBarEndsOnTheHour = (hour: number): void => {
@@ -621,10 +614,6 @@ describe('Automatic end read on one line in Gestion', () => {
     markerOf(finRegulariseeFixture).should('exist');
   };
 
-  const thenNoTitleIsDrawnForThePointages = (): void => {
-    cy.get(dataSelector('anomalie-frise-pointages-intitule')).should('not.exist');
-  };
-
   const thenTheStartMarkerBeginsOnTheHourAndOnTheLeftEdgeOfItsBar = (pointage: string, hour: number): void => {
     abscisseDeLHeure(hour).then(abscisse => {
       barreDeLActivite().then(barre => {
@@ -650,62 +639,16 @@ describe('Automatic end read on one line in Gestion', () => {
   };
 });
 
-describe('Pointage pointed after the deadline on the frise in Gestion', () => {
-  const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
-
-  beforeEach(() => {
-    givenTheReferentielFinAutomatique();
-  });
-
-  (['CORRIGER_FIN_TARDIVE', 'CORRIGER_TRANSITION_TARDIVE'] as const).forEach(code => {
-    it(`should mark on the frise the pointage the ${code} choice corrects`, () => {
-      givenALateGestureCorrectedBy(code);
-
-      whenOpeningTheLateGesture();
-
-      thenOnlyTheLatePointageIsMarkedOnTheFrise();
-    });
-  });
-
-  const givenALateGestureCorrectedBy = (code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE'): void => {
-    cy.intercept('GET', suiviUrl, { body: dossierFinTardiveFixture(code) });
-  };
-
-  const whenOpeningTheLateGesture = (): void => {
-    cy.viewport(1280, 900);
-    cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
-  };
-
-  const thenOnlyTheLatePointageIsMarkedOnTheFrise = (): void => {
-    markerOf(finTardiveFixture)
-      .should('have.attr', 'data-tardif', 'true')
-      .and('have.attr', 'aria-label')
-      .and('contain', 'pointé après l’échéance');
-    markerOf(finTardiveFixture).find(dataSelector('anomalie-pointage-tardif')).should('be.visible');
-    markerOf(ouvrantFinAutomatiqueFixture).should('have.attr', 'data-tardif', 'false');
-  };
-});
-
 describe('Geometry of the frise in Gestion', () => {
   const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
-  const instantProcheFixture = '71000000-0000-0000-0000-000000000010';
 
   beforeEach(() => {
     cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
     givenTheReferentielFinAutomatique();
   });
 
-  it('should stand each marker on the graduation of its hour', () => {
-    givenTheDossier(dossierFinTardiveFixture());
-
-    whenOpeningTheFrise();
-
-    thenTheMarkerStandsOnTheHour(ouvrantFinAutomatiqueFixture, 8);
-    thenTheMarkerStandsOnTheHour(finTardiveFixture, 23);
-  });
-
   it('should stretch the graduations from the left edge to the right edge of the frise', () => {
-    givenTheDossier(dossierFinTardiveFixture());
+    givenTheDossier(dossierFinAutomatiqueFixture());
 
     whenOpeningTheFrise();
 
@@ -713,7 +656,7 @@ describe('Geometry of the frise in Gestion', () => {
   });
 
   it('should stop the bar of an expired activity at its automatic end, short of the edge of the frise', () => {
-    givenTheDossier(dossierFinTardiveFixture());
+    givenTheDossier(dossierFinAutomatiqueFixture());
 
     whenOpeningTheFrise();
 
@@ -737,15 +680,6 @@ describe('Geometry of the frise in Gestion', () => {
     thenTheBarReachesTheEdge();
   });
 
-  it('should lower a marker closer to the previous one than a touch target, and keep the far ones on one row', () => {
-    givenTheDossier(withAPointageTenMinutesAfterTheLateEnd());
-
-    whenOpeningTheFrise();
-
-    thenTheMarkerStandsBelow(instantProcheFixture, finTardiveFixture);
-    thenTheMarkersStandOnOneRow(ouvrantFinAutomatiqueFixture, finTardiveFixture);
-  });
-
   const givenTheDossier = (dossier: components['schemas']['RestDossierAnomalie']): void => {
     cy.intercept('GET', suiviUrl, { body: dossier });
   };
@@ -753,27 +687,10 @@ describe('Geometry of the frise in Gestion', () => {
   const withTheActivity = (
     changement: Partial<components['schemas']['RestActiviteDuDossier']>,
   ): components['schemas']['RestDossierAnomalie'] => {
-    const dossier = dossierFinTardiveFixture();
+    const dossier = dossierFinAutomatiqueFixture();
     return {
       ...dossier,
       activites: dossier.activites.map(activite => ({ ...activite, ...changement })),
-    };
-  };
-
-  const withAPointageTenMinutesAfterTheLateEnd = (): components['schemas']['RestDossierAnomalie'] => {
-    const dossier = dossierFinTardiveFixture();
-    const finTardive = requiredFixture(dossier.suivi.journal[1], 'fin tardive reçue');
-    const perimetre = requiredFixture(dossier.perimetre, 'périmètre du dossier');
-    return {
-      ...dossier,
-      perimetre: { ...perimetre, pointages: [...perimetre.pointages, instantProcheFixture] },
-      suivi: {
-        ...dossier.suivi,
-        journal: [
-          ...dossier.suivi.journal,
-          { ...finTardive, id: instantProcheFixture, dateDeSurvenue: instantLocalFixture(new Date(2026, 8, 14, 23, 10)) },
-        ],
-      },
     };
   };
 
@@ -786,14 +703,6 @@ describe('Geometry of the frise in Gestion', () => {
   const plan = () => cy.get(dataSelector('anomalie-frise-plan'));
 
   const barre = barreDeLActivite;
-
-  const thenTheMarkerStandsOnTheHour = (pointage: string, hour: number): void => {
-    abscisseDeLHeure(hour).then(abscisse => {
-      markerOf(pointage).should(repere => {
-        expect(centreDe(requiredFixture(repere[0], 'repère'))).to.be.closeTo(abscisse, 1);
-      });
-    });
-  };
 
   const thenTheGraduationsSpanThePlan = (): void => {
     plan().then(element => {
@@ -836,27 +745,6 @@ describe('Geometry of the frise in Gestion', () => {
       });
     });
   };
-
-  const thenTheMarkerStandsBelow = (dessous: string, dessus: string): void => {
-    markerOf(dessus).then(haut => {
-      markerOf(dessous).should(bas => {
-        expect(requiredFixture(bas[0], 'repère').getBoundingClientRect().top).to.be.greaterThan(
-          requiredFixture(haut[0], 'repère').getBoundingClientRect().bottom - 1,
-        );
-      });
-    });
-  };
-
-  const thenTheMarkersStandOnOneRow = (premier: string, second: string): void => {
-    markerOf(premier).then(gauche => {
-      markerOf(second).should(droite => {
-        expect(requiredFixture(droite[0], 'repère').getBoundingClientRect().top).to.be.closeTo(
-          requiredFixture(gauche[0], 'repère').getBoundingClientRect().top,
-          1,
-        );
-      });
-    });
-  };
 });
 
 describe('Frise of a dossier spanning 26 hours in Gestion', () => {
@@ -869,18 +757,11 @@ describe('Frise of a dossier spanning 26 hours in Gestion', () => {
   });
 
   [1280, 768, 390].forEach(width => {
-    it(`should fit the page and the frise in ${width} pixels, with the late pointage of the next day on the frise`, () => {
+    it(`should fit the page and the frise in ${width} pixels`, () => {
       whenOpeningTheFriseAt(width);
 
       thenNeitherThePageNorTheFriseOverflows();
-      thenTheLatePointageStandsOnTheFrise();
     });
-  });
-
-  it('should hold the earliest and the latest markers 22 pixels away from the edges of the plan of a narrow frise', () => {
-    whenOpeningTheFriseAt(390);
-
-    thenTheMarkersAreHeldAwayFromTheEdgesOfThePlan([ouvrantFinAutomatiqueFixture, finTardiveFixture]);
   });
 
   const thenNeitherThePageNorTheFriseOverflows = (): void => {
@@ -890,30 +771,6 @@ describe('Frise of a dossier spanning 26 hours in Gestion', () => {
     cy.get(dataSelector('anomalie-frise')).should(frise => {
       const element = requiredFixture(frise[0], 'frise');
       expect(element.scrollWidth).to.equal(element.clientWidth);
-    });
-  };
-
-  const thenTheMarkersAreHeldAwayFromTheEdgesOfThePlan = (pointages: readonly string[]): void => {
-    cy.get(dataSelector('anomalie-frise-plan')).then(plan => {
-      const { left, right } = requiredFixture(plan[0], 'plan de la frise').getBoundingClientRect();
-      pointages.forEach(pointage => {
-        markerOf(pointage).should(repere => {
-          const centre = centreDe(requiredFixture(repere[0], 'repère'));
-          expect(centre - left).to.be.at.least(MARGE_DES_REPERES_PX - 1);
-          expect(right - centre).to.be.at.least(MARGE_DES_REPERES_PX - 1);
-        });
-      });
-    });
-  };
-
-  const thenTheLatePointageStandsOnTheFrise = (): void => {
-    cy.get(dataSelector('anomalie-frise')).then(frise => {
-      const { left, right } = requiredFixture(frise[0], 'frise').getBoundingClientRect();
-      markerOf(finTardiveFixture).should(repere => {
-        const rect = requiredFixture(repere[0], 'repère tardif').getBoundingClientRect();
-        expect(rect.left).to.be.at.least(left);
-        expect(rect.right).to.be.at.most(right);
-      });
     });
   };
 });

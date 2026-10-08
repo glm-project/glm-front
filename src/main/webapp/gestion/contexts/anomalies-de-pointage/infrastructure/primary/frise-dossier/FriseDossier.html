@@ -1,32 +1,6 @@
 @if (disposition().elements.length > 0) {
 <div class="rounded-surface border border-border bg-surface" data-selector="anomalie-frise">
-  <div
-    #plan
-    class="relative w-full overflow-x-clip"
-    data-selector="anomalie-frise-plan"
-    [attr.data-en-ligne]="disposition().enLigne"
-    [style.height.px]="disposition().hauteur"
-  >
-    <svg class="pointer-events-none absolute inset-0 size-full overflow-visible" aria-hidden="true" focusable="false">
-      <defs>
-        <marker id="frise-pointe" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-          <path class="fill-danger" d="M0,0 L8,4 L0,8 z" />
-        </marker>
-      </defs>
-      @for (fleche of disposition().fleches; track fleche.cle) {
-      <line
-        class="stroke-danger stroke-2 [stroke-dasharray:5_4]"
-        data-selector="anomalie-frise-fleche"
-        marker-end="url(#frise-pointe)"
-        [attr.data-pointage]="fleche.pointage"
-        [attr.data-activite]="fleche.activite"
-        [attr.x1]="fleche.departGauche + '%'"
-        [attr.y1]="fleche.departHaut"
-        [attr.x2]="fleche.arriveeGauche + '%'"
-        [attr.y2]="fleche.arriveeHaut"
-      />
-      }
-    </svg>
+  <div #plan class="relative w-full overflow-x-clip" data-selector="anomalie-frise-plan" [style.height.px]="disposition().hauteur">
     @for (graduation of disposition().graduations; track graduation.instant) {
     <span
       class="pointer-events-none absolute inset-y-0 flex flex-col border-l border-l-border pt-1 pl-1 text-(length:--text-label) leading-[1.2] text-ink-muted tabular-nums"
@@ -39,15 +13,6 @@
       <span data-selector="anomalie-frise-jour">{{ jour }}</span>
       }
     </span>
-    } @if (disposition().intituleDesPointages; as intitule) {
-    <p
-      class="pointer-events-none absolute left-0 bg-surface px-2 text-(length:--text-label) leading-5 text-ink-muted"
-      data-selector="anomalie-frise-pointages-intitule"
-      [style.top.px]="intitule.haut"
-      [style.height.px]="intitule.hauteur"
-    >
-      {{ libelles.frise.pointages }}
-    </p>
     } @if (disposition().rangeeDePlacement; as rangee) {
     <div
       class="absolute inset-x-0 cursor-crosshair"
@@ -78,7 +43,7 @@
         >{{ finRecue.texte }}</span
       >
     </div>
-    } @for (element of disposition().elements; track element.cle) { @switch (element.kind) { @case ('BARRE') { @if (lectureSeule()) {
+    } @for (element of disposition().elements; track element.cle) { @switch (element.kind) { @case ('BARRE') {
     <div
       role="img"
       class="barre cursor-default"
@@ -91,30 +56,10 @@
       [attr.data-categorie]="element.categorie"
       [attr.data-etat]="element.etat"
       [attr.data-fin]="element.fin"
-      [attr.data-modifiee]="element.modifiee"
     >
       {{ element.texte }}
     </div>
-    } @else {
-    <button
-      type="button"
-      class="barre cursor-pointer"
-      data-selector="anomalie-activite"
-      [attr.data-activite]="element.activite"
-      [style.left.%]="element.gauche"
-      [style.top.px]="element.haut"
-      [style.width.%]="element.largeur"
-      [attr.aria-label]="element.nom"
-      [attr.data-categorie]="element.categorie"
-      [attr.data-etat]="element.etat"
-      [attr.data-fin]="element.fin"
-      [attr.data-modifiee]="element.modifiee"
-      [attr.aria-pressed]="estSelectionne(element.selection)"
-      (click)="clique($event, plan, element)"
-    >
-      {{ element.texte }}
-    </button>
-    } } @case ('REPERE') { @if (lectureSeule()) {
+    } @case ('REPERE') {
     <div
       role="img"
       class="repere cursor-default"
@@ -130,29 +75,23 @@
       [attr.data-non-conformite]="element.nonConformite"
       [attr.data-ancrage]="element.ancrage"
     >
-      <ng-container *ngTemplateOutlet="contenuDuRepere; context: { $implicit: element }" />
+      <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ element.symbole }}</span>
+      <time class="text-(length:--text-label) tabular-nums" data-selector="anomalie-pointage-heure">{{ element.heure }}</time>
+      @if (element.tardif) {
+      <span
+        class="absolute -right-2 -bottom-2 grid size-5 place-items-center rounded-[50%] border-2 border-warn bg-surface text-(length:--text-label) font-bold text-ink"
+        data-selector="anomalie-pointage-tardif"
+        >{{ libelles.frise.badgeTardif }}</span
+      >
+      } @if (element.regularise) {
+      <span
+        class="absolute -top-2 -right-2 grid size-5 place-items-center rounded-[50%] bg-ink text-(length:--text-label) font-bold text-surface"
+        data-selector="anomalie-pointage-regularise"
+        >{{ libelles.frise.badgeRegularise }}</span
+      >
+      }
     </div>
-    } @else {
-    <button
-      type="button"
-      class="repere cursor-pointer"
-      data-selector="anomalie-pointage"
-      [attr.data-pointage]="element.pointage"
-      [style.left.%]="element.gauche"
-      [style.top.px]="element.haut"
-      [attr.aria-label]="element.nom"
-      [attr.data-en-cause]="element.enCause"
-      [attr.data-annule]="element.annule"
-      [attr.data-tardif]="element.tardif"
-      [attr.data-deplace]="element.deplace"
-      [attr.data-non-conformite]="element.nonConformite"
-      [attr.data-ancrage]="element.ancrage"
-      [attr.aria-pressed]="estSelectionne(element.selection)"
-      (click)="selectionDemandee.emit(element.selection)"
-    >
-      <ng-container *ngTemplateOutlet="contenuDuRepere; context: { $implicit: element }" />
-    </button>
-    } } @case ('POIGNEE') { @let sansHeure = element.heure === 'SANS_HEURE';
+    } @case ('POIGNEE') { @let sansHeure = element.heure === 'SANS_HEURE';
     <div
       role="slider"
       class="absolute z-2 flex h-touch min-w-touch cursor-grab touch-none items-center justify-center rounded-control border-2 border-ink bg-accent px-2 text-(length:--text-body-sm) font-semibold whitespace-nowrap text-on-accent tabular-nums select-none"
@@ -175,77 +114,7 @@
     >
       {{ element.etiquette }}
     </div>
-    } } } @if (disposition().apres; as apres) {
-    <div
-      role="group"
-      class="absolute inset-x-0"
-      data-selector="anomalie-frise-apres"
-      [style.top.px]="apres.haut"
-      [style.height.px]="apres.hauteur"
-      [attr.aria-label]="libelles.apres"
-    >
-      <p class="absolute top-0 left-0" data-selector="anomalie-frise-apres-titre">{{ libelles.apres }}</p>
-      @for (repere of apres.reperes; track repere.cle) {
-      <div
-        role="img"
-        class="repere cursor-default"
-        data-selector="anomalie-apres-pointage"
-        [attr.data-pointage]="repere.pointage"
-        [style.left.%]="repere.gauche"
-        [style.top.px]="repere.haut"
-        [attr.aria-label]="repere.nom"
-        [attr.data-annule]="repere.annule"
-        [attr.data-non-conformite]="repere.nonConformite"
-        [attr.data-fait-de-l-acte]="repere.faitDeLActe"
-      >
-        <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ repere.symbole }}</span>
-        <time class="text-(length:--text-label) tabular-nums" data-selector="anomalie-pointage-heure">{{ repere.heure }}</time>
-        @if (repere.regularise) {
-        <span
-          class="absolute -top-2 -right-2 grid size-5 place-items-center rounded-[50%] bg-ink text-(length:--text-label) font-bold text-surface"
-          data-selector="anomalie-pointage-regularise"
-          >{{ libelles.frise.badgeRegularise }}</span
-        >
-        }
-      </div>
-      } @for (barre of apres.barres; track barre.cle) {
-      <div
-        role="img"
-        class="barre cursor-default"
-        data-selector="anomalie-apercu-activite-apres"
-        [attr.data-activite]="barre.activite"
-        [style.left.%]="barre.gauche"
-        [style.top.px]="barre.haut"
-        [style.width.%]="barre.largeur"
-        [attr.aria-label]="barre.nom"
-        [attr.data-categorie]="barre.categorie"
-        [attr.data-etat]="barre.etat"
-        [attr.data-fin]="barre.fin"
-        [attr.data-modifiee]="barre.modifiee"
-      >
-        {{ barre.texte }}
-      </div>
-      }
-    </div>
-    }
+    } } }
   </div>
 </div>
 }
-
-<ng-template #contenuDuRepere let-element>
-  <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ element.symbole }}</span>
-  <time class="text-(length:--text-label) tabular-nums" data-selector="anomalie-pointage-heure">{{ element.heure }}</time>
-  @if (element.tardif) {
-  <span
-    class="absolute -right-2 -bottom-2 grid size-5 place-items-center rounded-[50%] border-2 border-warn bg-surface text-(length:--text-label) font-bold text-ink"
-    data-selector="anomalie-pointage-tardif"
-    >{{ libelles.frise.badgeTardif }}</span
-  >
-  } @if (element.regularise) {
-  <span
-    class="absolute -top-2 -right-2 grid size-5 place-items-center rounded-[50%] bg-ink text-(length:--text-label) font-bold text-surface"
-    data-selector="anomalie-pointage-regularise"
-    >{{ libelles.frise.badgeRegularise }}</span
-  >
-  }
-</ng-template>

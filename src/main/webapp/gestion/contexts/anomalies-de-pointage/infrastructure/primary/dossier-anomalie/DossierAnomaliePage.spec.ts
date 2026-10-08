@@ -1056,12 +1056,13 @@ describe('Anomaly dossier page', () => {
       thenTheHandleHoldsNoHour();
     });
 
-    it('should show no resolution view for a regularisation whose frise is read in rows, where no hourless handle gives the keyboard a way to the hour', async () => {
-      read.result = { kind: 'DOSSIER', dossier: dossierDeResolutionLuEnRangeesFixture() };
+    it('should show the resolution view of a regularisation whose journal holds a pointage that stands on no bar', async () => {
+      read.result = { kind: 'DOSSIER', dossier: dossierAuPointageAnnuleFixture() };
 
       await whenRendering();
 
-      thenNoResolutionViewIsShown();
+      thenTheResolutionViewIsShown();
+      thenTheHandleHoldsNoHour();
     });
 
     it('should show no resolution view for a choice that carries no code', async () => {
@@ -1575,7 +1576,7 @@ describe('Anomaly dossier page', () => {
     };
   };
 
-  const dossierDeResolutionLuEnRangeesFixture = (): DossierAnomalie => {
+  const dossierAuPointageAnnuleFixture = (): DossierAnomalie => {
     const dossier = dossierDeResolutionFixture();
     const ouvrant = requiredFixture(dossier.journal[0], 'opening pointage');
     const annule: PointageAnomalie = {

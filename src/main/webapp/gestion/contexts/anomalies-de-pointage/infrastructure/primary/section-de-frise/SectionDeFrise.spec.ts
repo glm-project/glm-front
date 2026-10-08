@@ -33,13 +33,10 @@ describe('Section of the frise', () => {
     resizeObserver.restore();
   });
 
-  it.each([
-    { lectureSeule: false, aide: 'Tirez le bout de la barre ou cliquez dessus pour placer l’heure du fait, ou saisissez-la.' },
-    { lectureSeule: true, aide: 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.' },
-  ])('should tell how to place the hour when the frise is read only: $lectureSeule', async ({ lectureSeule, aide }) => {
-    await whenRendering({ placement: PLACEMENT, lectureSeule });
+  it('should tell how to place the real end while an instant waits to be placed', async () => {
+    await whenRendering({ placement: PLACEMENT });
 
-    expect(text('anomalie-frise-aide')).toBe(aide);
+    expect(text('anomalie-frise-aide')).toBe('Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.');
   });
 
   it('should tell nothing about the placement while no hour is to be placed', async () => {
@@ -89,14 +86,12 @@ describe('Section of the frise', () => {
     readonly dossier?: DossierAnomalie;
     readonly operateur?: string;
     readonly placement?: PlacementDeLInstant;
-    readonly lectureSeule?: boolean;
   }): Promise<void> => {
     fixture = TestBed.createComponent(SectionDeFrise);
     fixture.componentRef.setInput('dossier', inputs.dossier ?? dossierDeFinAutomatiqueFixture());
     fixture.componentRef.setInput('now', new Date(2026, 9, 5, 10, 0));
     fixture.componentRef.setInput('operateur', inputs.operateur);
     fixture.componentRef.setInput('placement', inputs.placement);
-    fixture.componentRef.setInput('lectureSeule', inputs.lectureSeule ?? false);
     await fixture.whenStable();
   };
 
