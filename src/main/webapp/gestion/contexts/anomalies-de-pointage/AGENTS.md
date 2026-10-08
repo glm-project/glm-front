@@ -414,7 +414,10 @@ aperçu avant toute confirmation. Une adresse devenue obsolète conserve son ré
 
 La composition utilise uniquement `HttpAnomalies`, y compris dans les parcours Cypress. Les réponses
 réseau des tests sont des données REST typées interceptées ; elles ne calculent aucune règle métier
-et n'interprètent aucun acte. Les droits d'application restent `GESTIONNAIRE`.
+et n'interprètent aucun acte. La route `anomalies` est réservée au gestionnaire par un garde `canMatch` de Gestion
+(`reservedToGestionnaire`, voir [`authentication.md`](../../../../../../documentation/authentication.md)) : une
+personne sans le rôle est renvoyée vers `/` avant tout chargement du contexte. Les droits d'application restent
+`GESTIONNAIRE`.
 
 Les tests passent par la saisie et la résolution publiques, les contrats des ports, le DOM Cypress
 et les routes réelles. Leur liste et les garanties HTTP sont dans les [garanties de résolution](SCENARIOS.md).

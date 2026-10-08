@@ -29,6 +29,18 @@ authentication ends. Do not read this port through `resource()`: a promise that 
 application unstable. The decision and its alternatives are in
 [ADR 0052](adr/0052-reserve-anomalies-to-the-gestionnaire.md).
 
+The `anomalies` route reserves itself with `reservedToGestionnaire`, a `canMatch` guard in
+`gestion/shared/authentication/infrastructure/primary/`. It awaits `realmRoles()` and returns `true` for the
+gestionnaire, or the `UrlTree` of `/` for anyone else, so the reserved address simply does not match and the
+Supervision opens. It never returns `false`: the repository has no `**` route, so a refusal would raise NG04002
+towards `ErrorHandlerPort`. While authentication is pending, and for good if it fails, the guard stays pending
+with the promise: the address does not change and no error is added to the authentication failure. A unit
+spec runs the guard through `TestBed.runInInjectionContext`; the application tests hold, release or refuse
+authentication to cover the journeys. The redirection is not recorded for a consultant: in-app, the router never
+moved the URL to the reserved address, so it pushes `/` after the current page; on a load or a browser
+traversal it replaces the entry. Going back therefore returns to the previous page and never to the reserved
+address.
+
 ## Each front owns its wiring
 
 `gestion/auth.provider.ts` builds `keycloak-js` from the front environment, binds
