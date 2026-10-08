@@ -32,6 +32,7 @@ import { HttpCoutDeRevient } from './HttpCoutDeRevient';
 
 type RestRapport = components['schemas']['RestCoutDeRevient'];
 type RestLigne = components['schemas']['RestLigneDeCout'];
+type RestPointage = components['schemas']['RestPointageDuCout'];
 
 const ROUTE = '/api/couts-de-revient';
 const ELEMENT = '4f8d1e0a-1111-2222-3333-444455556666';
@@ -869,6 +870,26 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     await whenServerAnswers({ ...rapport, lignes: [sansChampDeLigne(premiereLigneDe(rapport), champ)] });
 
     expect(await result).toEqual(new Error(`ligne.${champ} manque dans la réponse du serveur`));
+  });
+
+  it('should reject a server answer missing pointage.fin', async () => {
+    const rapport = toRest([fraisageFixture]);
+    const ligne = premiereLigneDe(rapport);
+    const pointage: RestPointage = {
+      anomalies: [],
+      operateur: { id: 'operateur-1' },
+      categorie: 'TRAVAIL',
+      debut: '2026-09-12T07:30:00Z',
+      duree: completFixture('PT1H30M'),
+      cout: { machine: completFixture(72), mainDOeuvre: completFixture(26.25), total: completFixture(98.25) },
+      parts: [],
+      contradictoires: [],
+    };
+    const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
+    await whenServerAnswers({ ...rapport, lignes: [{ ...ligne, pointages: [pointage] }] });
+
+    expect(await result).toEqual(new Error('pointage.fin manque dans la réponse du serveur'));
+    expect(errorHandler.errors).toHaveLength(1);
   });
 
   it('should reject a server answer missing the element name', async () => {
