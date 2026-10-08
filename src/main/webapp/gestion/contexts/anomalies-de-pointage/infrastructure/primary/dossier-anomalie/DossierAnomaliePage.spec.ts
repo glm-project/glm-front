@@ -4517,6 +4517,26 @@ describe('Anomaly dossier page', () => {
       thenThePreviewsWereAskedForTheHours(['21:00']);
     });
 
+    it('should place the end at the start of the activity when Home is pressed on the hourless handle', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+
+      await whenPressingOnTheHandle('Home');
+
+      thenTheHandleHoldsTheEndAt('08:00');
+    });
+
+    it('should place the end at the whole minute of the clock read at the key when End is pressed on the hourless handle', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      whenTheClockIs(new Date(2026, 8, 14, 22, 10, 30));
+      await whenRendering();
+      whenTheClockIs(new Date(2026, 8, 14, 22, 12, 10));
+
+      await whenPressingOnTheHandle('End');
+
+      thenTheHandleHoldsAt(new Date(2026, 8, 14, 22, 12));
+    });
+
     it('should offer a validation that waits for the end', async () => {
       givenAnAutomaticEndWithAResolutionView();
 

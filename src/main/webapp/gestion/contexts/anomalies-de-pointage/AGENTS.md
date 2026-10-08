@@ -272,8 +272,9 @@ une fin reçue, une poignée « Heure ? » se tient sur ce bout, bordure pointil
 l'ordre de tabulation, sans `aria-valuenow`, que `aria-valuetext` dit « Aucune heure posée » ; c'est le même élément `POIGNEE` (clé `poignee`, même `@case`) que la
 poignée, si bien que le nœud, donc la capture du pointeur, survit au premier mouvement qui donne une heure au fait. Appuyer puis glisser
 émet un `PlacementDemande` au premier mouvement (instant sous le pointeur, arrondi à 5 minutes), puis des déplacements `VERS` une fois
-l'heure posée ; un appui relâché sans mouvement n'émet rien. Au clavier, une flèche (avec ou sans Maj) émet un `PlacementDemande` à
-l'instant qu'elle tient, Origine et Fin aux bornes, puis la poignée, gardant le focus, se déplace comme toute poignée ; elle est
+l'heure posée ; un appui relâché sans mouvement n'émet rien. Au clavier, la frise émet la demande sans la résoudre : une flèche (avec
+ou sans Maj) un `PlacementDemande` `VERS` la fin reçue qu'elle tient, Origine et Fin un `BORNE`, que la page résout avec l'horloge lue à
+l'action (`instantDeplace`, qui ramène aussi un `VERS` à la minute entière), puis la poignée, gardant le focus, se déplace comme toute poignée ; elle est
 désactivée avec `placement.desactivee`. Sans fin reçue, pas de poignée sans heure. **Clic sur la barre** : un clic au pointeur (`MouseEvent.detail > 0`) sur la barre visée,
 ou sur sa rangée hors des repères, place l'heure comme ci-dessus. C'est l'**exception documentée à la sélection** : pendant le placement,
 l'activation de cette barre au clavier (Entrée, Espace : `detail === 0`) la sélectionne toujours, comme à l'ouverture

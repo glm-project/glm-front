@@ -13,7 +13,7 @@ const cibleDe = (demande: DemandeDeDeplacement, courant: string, plancher: numbe
     case 'BORNE':
       return demande.borne === 'MIN' ? plancher : plafond;
     case 'VERS':
-      return demande.instant;
+      return aLaMinute(demande.instant);
   }
 };
 

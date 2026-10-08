@@ -23,10 +23,8 @@ import {
 
 const LARGEUR_DE_REFERENCE_PX = 1214;
 
-const instantPlaceAuClavier = (demande: DemandeDeDeplacement, position: PositionSansHeure): number => {
-  if (demande.kind !== 'BORNE') return position.instant;
-  return demande.borne === 'MIN' ? position.min : position.max;
-};
+const placementAuClavier = (demande: DemandeDeDeplacement, position: PositionSansHeure): DemandeDeDeplacement =>
+  demande.kind === 'BORNE' ? demande : { kind: 'VERS', instant: position.instant };
 
 @Component({
   selector: 'glm-frise-dossier',
@@ -124,7 +122,7 @@ export class FriseDossier {
     if (position.heure === 'AVEC_HEURE') this.deplacementDemande.emit({ demande, poignee: position.source });
     else
       this.placementDemande.emit({
-        demande: { kind: 'VERS', instant: instantPlaceAuClavier(demande, position) },
+        demande: placementAuClavier(demande, position),
         placement: position.source,
       });
   }

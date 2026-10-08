@@ -2207,14 +2207,14 @@ describe('Frise of a dossier', () => {
       thenTheMovesAsked([]);
     });
 
-    it.each([
-      { touche: 'ArrowRight', maj: false, heure: new Date(2026, 8, 14, 12, 0) },
-      { touche: 'ArrowLeft', maj: true, heure: new Date(2026, 8, 14, 12, 0) },
-      { touche: 'Home', maj: false, heure: new Date(2026, 8, 14, 8, 0) },
-      { touche: 'End', maj: false, heure: new Date(2026, 9, 5, 10, 0) },
+    it.each<{ touche: string; maj: boolean; demande: DemandeDeDeplacement }>([
+      { touche: 'ArrowRight', maj: false, demande: { kind: 'VERS', instant: new Date(2026, 8, 14, 12, 0).getTime() } },
+      { touche: 'ArrowLeft', maj: true, demande: { kind: 'VERS', instant: new Date(2026, 8, 14, 12, 0).getTime() } },
+      { touche: 'Home', maj: false, demande: { kind: 'BORNE', borne: 'MIN' } },
+      { touche: 'End', maj: false, demande: { kind: 'BORNE', borne: 'MAX' } },
     ])(
-      'should ask to place the instant at $heure when $touche is pressed on the hourless handle (shift: $maj)',
-      async ({ touche, maj, heure }) => {
+      'should ask to place the instant $demande.kind when $touche is pressed on the hourless handle (shift: $maj)',
+      async ({ touche, maj, demande }) => {
         const dossier = {
           journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
           activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
@@ -2224,7 +2224,7 @@ describe('Frise of a dossier', () => {
 
         const pressee = whenPressingKeyOnTheHandle(touche, maj);
 
-        thenThePlacementsAsked([heure.getTime()]);
+        thenThePlacementDemandsAsked([demande]);
         thenTheMovesAsked([]);
         expect(pressee.defaultPrevented).toBe(true);
       },
@@ -2931,7 +2931,11 @@ describe('Frise of a dossier', () => {
   };
 
   const thenThePlacementsAsked = (expected: readonly number[]): void => {
-    expect(requestedPlacements.map(placement => placement.demande)).toEqual(expected.map(instant => ({ kind: 'VERS', instant })));
+    thenThePlacementDemandsAsked(expected.map(instant => ({ kind: 'VERS', instant })));
+  };
+
+  const thenThePlacementDemandsAsked = (expected: readonly DemandeDeDeplacement[]): void => {
+    expect(requestedPlacements.map(placement => placement.demande)).toEqual(expected);
   };
 
   const whenTheGestureEndsWith = (type: string, pointerId = 1): void => {
