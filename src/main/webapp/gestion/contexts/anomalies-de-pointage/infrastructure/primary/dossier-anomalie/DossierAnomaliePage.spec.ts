@@ -4502,8 +4502,7 @@ describe('Anomaly dossier page', () => {
 
       await whenRendering();
 
-      thenAbsent('anomalie-resolution-instant-date');
-      thenAbsent('anomalie-resolution-instant-heure');
+      thenTheResolutionViewOffersNoField();
     });
 
     it('should place the end at the automatic end with the first key pressed on the handle, then preview it', async () => {
@@ -5417,6 +5416,18 @@ describe('Anomaly dossier page', () => {
       thenTextContains('anomalie-resolution-valider', 'Valider la fin à 22:30');
     });
 
+    it('should say why and preview nothing when the received hour lies after the clock', async () => {
+      givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
+      whenTheClockIs(new Date(2026, 8, 14, 22, 0));
+
+      await whenRendering();
+      await whenThePreviewOfTheOpeningArrives();
+
+      thenTheEndValidationReads(['La date et l’heure du fait ne peuvent pas être dans le futur.']);
+      thenNoPreviewWasAsked();
+      thenDisabled('anomalie-resolution-valider');
+    });
+
     it('should keep the validation disabled until the preview of the opening comes back', async () => {
       givenALateCorrectionWillBeAccepted(FIN_TARDIVE);
       const attente = new PendingResponseFixture<ResultatApercu>();
@@ -5864,6 +5875,7 @@ describe('Anomaly dossier page', () => {
     if (element('anomalie-poignee').hasAttribute('data-sans-heure')) await whenPressingOnTheHandle('ArrowLeft');
     for (let ecart = minutesFromTheHandleTo(heure); ecart !== 0; ecart = minutesFromTheHandleTo(heure)) {
       await whenPressingOnTheHandle(ecart > 0 ? 'ArrowRight' : 'ArrowLeft', Math.abs(ecart) >= 15);
+      if (minutesFromTheHandleTo(heure) === ecart) throw new Error(`The handle cannot reach ${heure}: it stays ${ecart} minutes away.`);
     }
   };
 
@@ -5919,6 +5931,10 @@ describe('Anomaly dossier page', () => {
 
   const whenValidatingTheEnd = async (): Promise<void> => {
     await whenClicking('anomalie-resolution-valider');
+  };
+
+  const thenTheResolutionViewOffersNoField = (): void => {
+    expect(element('anomalie-resolution').querySelector('input')).toBeNull();
   };
 
   const thenTheHandleHoldsTheEndAt = (heure: string): void => {
