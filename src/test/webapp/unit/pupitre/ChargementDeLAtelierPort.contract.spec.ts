@@ -19,7 +19,7 @@ import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 
-const referentielFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
+const referentielFixture: ReferentielDuPupitre = { operateurs: [], suivis: [], categories: [] };
 
 class AtelierCoordinatorFixture {
   readonly reference = signal<ReferentielDuPupitre | undefined>(undefined);

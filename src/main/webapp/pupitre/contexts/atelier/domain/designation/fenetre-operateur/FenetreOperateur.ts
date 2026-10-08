@@ -118,14 +118,15 @@ export class FenetreOperateur {
     });
   }
   pointage(): VueDePointage {
-    const elements = (projectReferentiel(this.etat.vue)?.suivis ?? []).map(suivi => ({
+    const referentiel = projectReferentiel(this.etat.vue);
+    const elements = (referentiel?.suivis ?? []).map(suivi => ({
       element: new ElementDePointage(suivi.id, NumeroDElement.from(suivi), this.activitesFor(suivi).snapshot()),
       categorie: suivi.categorie,
     }));
     const sorted = [...elements].sort((left, right) => left.element.numero.compare(right.element.numero));
     return {
       conflits: this.conflitsPersonnels(),
-      zones: zonesDePointage(sorted),
+      zones: zonesDePointage(sorted, referentiel?.categories ?? []),
     };
   }
 

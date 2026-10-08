@@ -39,6 +39,7 @@ export interface SuiviDuPupitre {
 export interface ReferentielDuPupitre {
   readonly operateurs: readonly OperateurDuPupitre[];
   readonly suivis: readonly SuiviDuPupitre[];
+  readonly categories: readonly string[];
 }
 
 export interface IdentiteDuGeste {
@@ -136,6 +137,7 @@ export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre =
             conflits: suivi.conflits.map(snapshotConflit),
             evenements: [...suivi.evenements],
           })),
+          categories: [...journal.referentiel.categories],
         },
       }),
 });

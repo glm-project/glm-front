@@ -37,6 +37,7 @@ interface KeyFixture {
 const referentielFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
   suivis: [],
+  categories: [],
 };
 
 const referenceFixture: JournalDuPupitre = { ...EMPTY_JOURNAL_DU_PUPITRE, referentiel: referentielFixture };

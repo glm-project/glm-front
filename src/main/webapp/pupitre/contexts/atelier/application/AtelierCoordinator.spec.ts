@@ -45,6 +45,7 @@ const referenceFixture: ReferentielDuPupitre = {
     },
   ],
   suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
+  categories: [],
 };
 const ouvertureFixture: GesteDePointage = {
   nature: 'POINTAGE',

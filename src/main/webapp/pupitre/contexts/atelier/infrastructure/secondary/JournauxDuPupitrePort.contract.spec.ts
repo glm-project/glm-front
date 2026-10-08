@@ -23,13 +23,14 @@ import { IntentionGlobaleInitiee } from '../../domain/designation/IntentionGloba
 import { keyFor } from './local/ClesDesJournaux';
 import { IndexedDbJournauxDuPupitre } from './local/IndexedDbJournauxDuPupitre';
 
-const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [] };
+const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [], categories: [] };
 const refreshedReferenceFixture: ReferentielDuPupitre = {
   operateurs: [],
   suivis: [
     { conflits: [], id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] },
     { conflits: [], id: 'autre-piece', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] },
   ],
+  categories: [],
 };
 const ouvertureFixture: GesteDePointage = {
   nature: 'POINTAGE',
@@ -323,6 +324,7 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
       ['moule', 'MOULE'],
       ['of', 'OF'],
     ]);
+    expect(state.referentiel?.categories).toEqual([]);
   });
 
   it('should store the category of every element once a reference stored before categories existed changes', async () => {
@@ -518,6 +520,7 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
           evenements: [],
         },
       ],
+      categories: [],
     });
     await journal.append(Entreprise.of('entreprise-a'), [suspensionFixture]);
     return journal.read(Entreprise.of('entreprise-a'));

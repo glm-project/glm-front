@@ -116,6 +116,7 @@ describe('JournalDuPupitre', () => {
             evenements: ['EVT-1', 'EVT-2'],
           },
         ],
+        categories: [],
       },
     };
 
@@ -157,6 +158,7 @@ describe('JournalDuPupitre', () => {
             evenements: ['EVT-1'],
           },
         ],
+        categories: [],
       },
       evenements: [
         {

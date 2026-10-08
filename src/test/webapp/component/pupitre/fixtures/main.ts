@@ -86,6 +86,7 @@ const referentielFixture = {
     },
   ],
   suivis: baseSuivis,
+  categories: ['MOULE', 'OF'],
 };
 
 const parameters = new URLSearchParams(location.search);

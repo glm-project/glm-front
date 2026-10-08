@@ -93,6 +93,7 @@ const referenceFixture: ReferentielDuPupitre = {
       evenements: [],
     },
   ],
+  categories: [],
 };
 const publicationFixture = {
   id: 'piece',
@@ -476,6 +477,7 @@ describe('Durable pupitre HTTP exchange', () => {
       },
       { id: 'autre-piece', nom: `Conflit-${company}`, categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], conflits: [], evenements: [] },
     ],
+    categories: [],
   });
   const afterAcceptingLastCompanyGesture = (before: JournalDuPupitre): JournalDuPupitre => ({
     ...before,

@@ -17,6 +17,7 @@ const referentielFixture: ReferentielDuPupitre = {
       evenements: [],
     },
   ],
+  categories: [],
 };
 
 const SEMAINE_EN_COURS = 38;
@@ -154,6 +155,7 @@ describe('Pupitre my pointages journey', () => {
         suivis: [
           { id: 'piece-1', nom: '204', etat: 'EN_ATTENTE', categorie: 'OF', type: 'ORDRE_DE_FABRICATION', activites: [], conflits: [] },
         ],
+        categories: ['OF'],
       },
     }).as('workshop');
     cy.intercept('GET', '/api/syntheses-des-heures/jean*', request => {

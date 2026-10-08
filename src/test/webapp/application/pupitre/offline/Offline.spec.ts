@@ -32,7 +32,7 @@ describe('Pupitre offline restart', () => {
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('enrolment');
     cy.intercept('POST', '**/protocol/openid-connect/token', { forceNetworkError: true });
     cy.intercept('GET', '/api/pupitre/referentiel', {
-      body: { genereLe: '2026-09-05T08:05:00Z', operateurs: [], suivis: [] },
+      body: { genereLe: '2026-09-05T08:05:00Z', operateurs: [], suivis: [], categories: [] },
     }).as('reference');
     cy.intercept('POST', '/api/atelier/suivis/piece/pointages', request => {
       if (online) {

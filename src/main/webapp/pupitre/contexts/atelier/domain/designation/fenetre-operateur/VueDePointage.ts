@@ -40,10 +40,20 @@ export interface VueDePointage {
   readonly zones: readonly ZoneDePointage[];
 }
 
-export const zonesDePointage = (elements: readonly ElementCategorise[]): readonly ZoneDePointage[] =>
-  [...new Set(elements.map(({ categorie }) => categorie))]
-    .sort((gauche, droite) => gauche.localeCompare(droite))
-    .map(categorie => ({
-      categorie,
-      elements: elements.filter(candidat => candidat.categorie === categorie).map(({ element }) => element),
-    }));
+const rangDans =
+  (ordre: readonly string[]) =>
+  (categorie: string): number => {
+    const rang = ordre.indexOf(categorie);
+    return rang === -1 ? ordre.length : rang;
+  };
+
+const comparerDans =
+  (ordre: readonly string[]) =>
+  (gauche: string, droite: string): number =>
+    rangDans(ordre)(gauche) - rangDans(ordre)(droite) || gauche.localeCompare(droite);
+
+export const zonesDePointage = (elements: readonly ElementCategorise[], ordre: readonly string[]): readonly ZoneDePointage[] =>
+  [...new Set(elements.map(({ categorie }) => categorie))].sort(comparerDans(ordre)).map(categorie => ({
+    categorie,
+    elements: elements.filter(candidat => candidat.categorie === categorie).map(({ element }) => element),
+  }));

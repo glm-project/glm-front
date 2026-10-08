@@ -10,7 +10,10 @@ type SuiviStockeAvantLesCategories = Omit<SuiviDuPupitre, 'categorie'> & { reado
 
 type SuiviStocke = SuiviDuPupitre | SuiviStockeAvantLesCategories;
 
-type ReferentielStocke = Omit<ReferentielDuPupitre, 'suivis'> & { readonly suivis: readonly SuiviStocke[] };
+type ReferentielStocke = Omit<ReferentielDuPupitre, 'suivis' | 'categories'> & {
+  readonly suivis: readonly SuiviStocke[];
+  readonly categories?: readonly string[];
+};
 
 export type JournalStocke = Omit<JournalDuPupitre, 'referentiel'> & { readonly referentiel?: ReferentielStocke };
 
@@ -22,5 +25,11 @@ const toSuiviDuPupitre = (suivi: SuiviStocke): SuiviDuPupitre => {
   return { ...reste, categorie: CATEGORIE_DU_TYPE[type] };
 };
 
+const toReferentielDuPupitre = ({ suivis, categories, ...referentiel }: ReferentielStocke): ReferentielDuPupitre => ({
+  ...referentiel,
+  suivis: suivis.map(toSuiviDuPupitre),
+  categories: categories ?? [],
+});
+
 export const toJournalDuPupitre = ({ referentiel, ...journal }: JournalStocke): JournalDuPupitre =>
-  referentiel === undefined ? journal : { ...journal, referentiel: { ...referentiel, suivis: referentiel.suivis.map(toSuiviDuPupitre) } };
+  referentiel === undefined ? journal : { ...journal, referentiel: toReferentielDuPupitre(referentiel) };

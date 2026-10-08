@@ -12,6 +12,7 @@ const aReferentiel = (evenementsRecus: Readonly<Record<string, readonly string[]
     conflits: [],
     evenements: evenementsRecus[id] ?? [],
   })),
+  categories: [],
 });
 
 const ouverture = (id: string, operateurId = 'jean', suiviId = 'piece'): GesteDePointage => ({

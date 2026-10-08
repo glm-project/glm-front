@@ -127,6 +127,7 @@ const vueFixture: JournalDuPupitre = {
         evenements: [],
       },
     ],
+    categories: [],
   },
 };
 
@@ -690,7 +691,11 @@ describe('FenetreOperateur', () => {
     const opened = givenAMultiWorkstationWindow();
     const reconciled = opened.afterReconciling(Entreprise.of('entreprise-a'), {
       ...structuredClone(vueFixture),
-      referentiel: { operateurs: [], suivis: structuredClone(requiredFixture(vueFixture.referentiel, 'referential').suivis) },
+      referentiel: {
+        operateurs: [],
+        suivis: structuredClone(requiredFixture(vueFixture.referentiel, 'referential').suivis),
+        categories: [],
+      },
     });
 
     const chosen = whenChoosingWith(reconciled, 'of-1015', 'PRINCIPALE', 'fraiseuse');
@@ -776,6 +781,40 @@ describe('FenetreOperateur', () => {
     thenPointageViewIsEmpty();
   });
 
+  it.each([
+    [
+      ['OF', 'MOULE'],
+      ['OF', 'MOULE', 'PIECE'],
+    ],
+    [
+      ['MOULE', 'OF'],
+      ['MOULE', 'OF', 'PIECE'],
+    ],
+    [[], ['MOULE', 'OF', 'PIECE']],
+  ])('should order the zones as the reference orders the categories %j, unknown ones last by code', (categories, attendu) => {
+    const element = (id: string, categorie: string) => ({
+      conflits: [],
+      id,
+      nom: id,
+      etat: 'EN_ATTENTE' as const,
+      categorie,
+      activites: [],
+      evenements: [],
+    });
+    const journal: JournalDuPupitre = {
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
+        suivis: [element('piece-1', 'PIECE'), element('of-1', 'OF'), element('moule-1', 'MOULE')],
+        categories,
+      },
+    };
+
+    const pointage = whenReadingPointage(givenAWindowOpenedOn(journal));
+
+    expect(pointage.zones.map(zone => zone.categorie)).toEqual(attendu);
+  });
+
   it('should mark an element non conforme when its activities only contain non conformity', () => {
     const onlyNcJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -800,6 +839,7 @@ describe('FenetreOperateur', () => {
             evenements: [],
           },
         ],
+        categories: [],
       },
     };
     const onlyNcWindow = givenAWindowOpenedOn(onlyNcJournal);
@@ -862,6 +902,7 @@ describe('FenetreOperateur', () => {
             evenements: [],
           },
         ],
+        categories: [],
       },
     };
     const multiWindow = givenAWindowOpenedOn(multiNcJournal);
@@ -882,6 +923,7 @@ describe('FenetreOperateur', () => {
           { conflits: [], id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
           { conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
         ],
+        categories: [],
       },
     };
     const sortWindow = givenAWindowOpenedOn(unsortedJournal);
@@ -919,6 +961,7 @@ describe('FenetreOperateur', () => {
             evenements: [],
           },
         ],
+        categories: [],
       },
     };
     const sortWindow = givenAWindowOpenedOn(referencedJournal);
@@ -1028,6 +1071,7 @@ describe('FenetreOperateur', () => {
       referentiel: {
         operateurs: referentiel.operateurs,
         suivis: referentiel.suivis.map(suivi => ({ ...suivi, activites: activitesParSuivi[suivi.id] ?? [] })),
+        categories: [],
       },
     });
   };
@@ -1051,6 +1095,7 @@ describe('FenetreOperateur', () => {
       referentiel: {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [{ conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] }],
+        categories: [],
       },
     };
     const initialWindow = givenAWindowOpenedOn(inactiveJournalFixture);

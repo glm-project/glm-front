@@ -155,7 +155,7 @@ class AtelierExchangeFixture extends AtelierExchangePort {
   }
 
   override referentiel(): Promise<ReferentielDuPupitre> {
-    return Promise.resolve({ operateurs: [], suivis: [] });
+    return Promise.resolve({ operateurs: [], suivis: [], categories: [] });
   }
 }
 

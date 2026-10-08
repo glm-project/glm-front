@@ -49,6 +49,7 @@ const vueFixture: JournalDuPupitre = {
         evenements: [],
       },
     ],
+    categories: [],
   },
 };
 

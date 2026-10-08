@@ -313,6 +313,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   };
   const thenReferenceIsComplete = async (operation: Promise<ReferentielDuPupitre>): Promise<void> => {
     const reference = await operation;
+    expect(reference.categories).toEqual(['MOULE', 'OF']);
     expect(reference.operateurs).toEqual([
       { id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] },
       { id: 'marie', nom: 'Martin', prenom: 'Marie', postes: [{ id: 'tour', libelle: 'Tour' }] },

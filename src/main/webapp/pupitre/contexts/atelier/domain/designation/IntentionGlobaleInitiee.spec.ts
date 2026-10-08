@@ -29,6 +29,7 @@ const journalFixture = (suivis: readonly SuiviDuPupitre[]): JournalDuPupitre => 
       },
     ],
     suivis,
+    categories: [],
   },
 });
 const atelierAuTravailFixture = journalFixture([

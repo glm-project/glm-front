@@ -49,7 +49,7 @@ const operateurAjouteFixture: OperateurDuPupitre = {
 };
 const identiteOperateurAjouteFixture = { id: 'lea', nom: 'Martin', prenom: 'Lea', identifiant: '050' };
 
-const referentielFixture = { operateurs: [operateurFixture], suivis: [] };
+const referentielFixture = { operateurs: [operateurFixture], suivis: [], categories: [] };
 
 const referenceFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -629,7 +629,7 @@ describe('Designation du pupitre', () => {
   });
 
   const givenAnOperateurAddedToTheServerReferential = (): void => {
-    serveur.reference = { operateurs: [operateurFixture, operateurAjouteFixture], suivis: [] };
+    serveur.reference = { operateurs: [operateurFixture, operateurAjouteFixture], suivis: [], categories: [] };
   };
   const givenAHangingServerExchange = (): void => {
     serveur.suspendExchanges();

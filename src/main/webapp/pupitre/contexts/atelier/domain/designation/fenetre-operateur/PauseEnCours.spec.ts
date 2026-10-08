@@ -39,6 +39,7 @@ const referentielFixture: ReferentielDuPupitre = {
     },
   ],
   suivis: [suiviFixture('of-204', [travailAuTourFixture])],
+  categories: [],
 };
 const suspensionFixture = (
   suiviId: string,

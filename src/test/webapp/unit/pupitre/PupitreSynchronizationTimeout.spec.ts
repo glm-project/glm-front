@@ -59,6 +59,7 @@ const referenceFixture: ReferentielDuPupitre = {
       evenements: [],
     },
   ],
+  categories: [],
 };
 const openingBodyFixture = {
   id: 'arrivee-originale',
