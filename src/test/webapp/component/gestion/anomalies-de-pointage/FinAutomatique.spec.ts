@@ -164,6 +164,28 @@ describe('Resolution view of an automatic end in Gestion', () => {
     thenTheOutcomeIsInOneLineWithAFoldedDetail();
   });
 
+  it('should not offer the next anomaly while the end is not validated', () => {
+    givenTheDossier(dossierFinAutomatiqueFixture());
+    givenAPreviewOfTheRegularisation();
+    whenOpeningTheResolutionView();
+
+    whenTypingTheEnd();
+
+    thenTheNextAnomalyIsNotOffered();
+  });
+
+  it('should offer the next anomaly with the receipt once the end is validated', () => {
+    givenTheDossier(dossierFinAutomatiqueFixture());
+    givenAPreviewOfTheRegularisation();
+    givenAConfirmationOf(dossierApresRegularisationFixture());
+    whenOpeningTheResolutionView();
+
+    whenTypingTheEnd();
+    whenValidating();
+
+    thenTheNextAnomalyIsOfferedWithTheReceipt();
+  });
+
   const givenTheDossier = (dossier: components['schemas']['RestDossierAnomalie']): void => {
     cy.intercept('GET', suiviUrl, { body: dossier });
   };
@@ -320,6 +342,16 @@ describe('Resolution view of a pointage pointed after the deadline in Gestion', 
     cy.get(dataSelector('anomalie-acte')).should('not.exist');
   };
 
+  it('should offer the next anomaly with the receipt of the correction of a late pointage', () => {
+    givenALateGesture('CORRIGER_TRANSITION_TARDIVE');
+    givenAConfirmationOf(dossierApresCorrectionFixture());
+    whenOpeningTheResolutionView();
+
+    whenValidating();
+
+    thenTheNextAnomalyIsOfferedWithTheReceipt();
+  });
+
   const givenALateGesture = (code: 'CORRIGER_FIN_TARDIVE' | 'CORRIGER_TRANSITION_TARDIVE'): void => {
     cy.intercept('GET', suiviUrl, { body: dossierFinTardiveFixture(code) });
     cy.intercept('POST', `${suiviUrl}/apercus`, request => {
@@ -360,6 +392,26 @@ const whenOpeningTheDossierAndChoosing = (): void => {
   cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
   cy.get(dataSelector('anomalie-resolution-autre-correction')).click();
   cy.get(dataSelector('anomalie-choix')).click();
+};
+
+const givenAConfirmationOf = (dossier: components['schemas']['RestDossierAnomalie']): void => {
+  cy.intercept('POST', `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/confirmations-de-resolution`, request => {
+    const demande = request.body as components['schemas']['RestConfirmationAEnregistrer'];
+    request.reply({ body: confirmationFinAutomatiqueFixture(demande, dossier) });
+  });
+};
+
+const whenValidating = (): void => {
+  cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').click();
+};
+
+const thenTheNextAnomalyIsNotOffered = (): void => {
+  cy.get(dataSelector('anomalie-resolution-suivante')).should('not.exist');
+};
+
+const thenTheNextAnomalyIsOfferedWithTheReceipt = (): void => {
+  cy.get(dataSelector('anomalie-resultat')).should('contain.text', 'Anomalie traitée');
+  cy.get(dataSelector('anomalie-resolution-suivante')).should('be.visible').and('be.enabled').and('contain.text', 'Anomalie suivante');
 };
 
 const whenOpeningTheResolutionView = (): void => {

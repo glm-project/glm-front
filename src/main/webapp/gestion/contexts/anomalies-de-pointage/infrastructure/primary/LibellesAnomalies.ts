@@ -141,6 +141,7 @@ const RESOLUTION = {
   autresFinsAutomatiques: (nombre: number) =>
     nombre === 1 ? '1 autre fin automatique sur cet élément' : `${nombre} autres fins automatiques sur cet élément`,
   autreCorrection: 'Autre correction…',
+  anomalieSuivante: 'Anomalie suivante',
   revenirALaVueSimple: 'Revenir à la vue simple',
   sortie: {
     avertissement: 'L’heure saisie sera perdue si vous passez à la vue complète.',

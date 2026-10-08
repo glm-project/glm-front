@@ -153,6 +153,12 @@ restante). Une ligne « 1 autre fin automatique sur cet élément » mène à l'
 paramètres de la liste. « Autre correction… » mène à la vue complète, sans acte choisi, avec un lien « Revenir à la vue simple » ;
 une heure saisie est d'abord confirmée.
 
+Avec le reçu, la vue offre « Anomalie suivante ». Au clic, elle mène : 1. à la première fin automatique restante du même dossier, sans lire
+la liste ; 2. sinon à une autre ligne de la liste, lue à ce moment avec les filtres de l'adresse (`nature`, `operateur`, `element`, `page`,
+la nature valant `FIN_AUTOMATIQUE` si elle manque), l'adresse d'origine exclue ; si la page n'a plus d'autre ligne, la lecture recule d'une seule
+page ; 3. sinon à la liste (`page` retirée, `plusAucune=1`), qui dit « Plus aucune anomalie » au-dessus de ses lignes. Si la lecture de la liste
+échoue, la vue mène à la liste sans ce message, et la liste affiche sa propre erreur.
+
 ## Actions directes
 
 « Votre décision » présente, dans cet ordre, les propositions du serveur (les choix guidés reçus, tous de même rang, aucun

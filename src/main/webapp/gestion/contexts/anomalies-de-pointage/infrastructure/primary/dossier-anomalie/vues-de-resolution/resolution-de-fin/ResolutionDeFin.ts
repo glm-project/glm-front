@@ -1,11 +1,15 @@
 import { DateTimeField, DateTimeFieldLabels } from '@/gestion/shared/design-system/infrastructure/primary/date-time-field/DateTimeField';
 import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
-import { Params, RouterLink } from '@angular/router';
-import { PreparationActe } from '../../../../../application/PreparationActe';
+import { convertToParamMap, Params, Router, RouterLink } from '@angular/router';
+import { EtatPreparationActe, PreparationActe } from '../../../../../application/PreparationActe';
+import { RechercheDeLAnomalieSuivante } from '../../../../../application/RechercheDeLAnomalieSuivante';
 import { CadreDuFait } from '../../../../../domain/acte/CadreDuFait';
 import { InstantPointage } from '../../../../../domain/acte/InstantPointage';
 import { ChangementSaisie } from '../../../../../domain/acte/SaisieActe';
+import { adresseDeLaDestination, DestinationSuivante } from '../../../../../domain/dossier/AnomalieSuivante';
 import { ActiviteAnomalie, ChoixGuide, DossierAnomalie } from '../../../../../domain/dossier/DossierAnomalie';
+import { filtreAnomaliesDemande } from '../../../../../domain/dossier/FiltreAnomaliesDemande';
+import { IssueDeLActe } from '../../../../../domain/dossier/IssueDeLActe';
 import { ReferentielAnomalies } from '../../../../../domain/dossier/ReferentielAnomalies';
 import { ApercuAutomatique } from '../../../apercu-automatique/ApercuAutomatique';
 import { ComparaisonDesJournaux } from '../../../comparaison-des-journaux/ComparaisonDesJournaux';
@@ -19,12 +23,15 @@ import {
   poigneeDuDossier,
 } from '../../../frise-dossier/PoigneeDeFrise';
 import { LIBELLES_ANOMALIES } from '../../../LibellesAnomalies';
+import { PARAMETRE_PLUS_AUCUNE_ANOMALIE } from '../../../liste-anomalies/PlusAucuneAnomalie';
 import { erreursALire, heureDe } from '../../../PresentationDossier';
 import { operateurDuDossier } from '../../../PresentationIdentites';
 import { resumeDeLApercu } from '../../../ResumeDeLApercu';
 import { SectionDeFrise } from '../../../section-de-frise/SectionDeFrise';
 import { StatutDeLOperation } from '../../../statut-de-l-operation/StatutDeLOperation';
 import { LectureDuDossier } from '../LectureDuDossier';
+
+type RecuDeLActe = Extract<EtatPreparationActe, { readonly kind: 'APPLIQUE' }>;
 
 export interface VarianteDeResolution {
   readonly champ: DateTimeFieldLabels;
@@ -39,7 +46,7 @@ export interface VarianteDeResolution {
   imports: [RouterLink, EnTeteDuDossier, SectionDeFrise, StatutDeLOperation, DateTimeField, ComparaisonDesJournaux],
   templateUrl: './ResolutionDeFin.html',
   styleUrls: ['../../../Boutons.css'],
-  providers: [ApercuAutomatique],
+  providers: [ApercuAutomatique, RechercheDeLAnomalieSuivante],
   host: { class: 'block' },
 })
 export class ResolutionDeFin implements OnInit {
@@ -50,6 +57,8 @@ export class ResolutionDeFin implements OnInit {
   readonly referentiel = input<ReferentielAnomalies | undefined>(undefined);
   protected readonly preparation = inject(PreparationActe);
   private readonly apercuAutomatique = inject(ApercuAutomatique);
+  private readonly recherche = inject(RechercheDeLAnomalieSuivante);
+  private readonly router = inject(Router);
   readonly lecture = input.required<LectureDuDossier>();
   protected readonly libelles = LIBELLES_ANOMALIES.resolution;
   readonly variante = input.required<VarianteDeResolution>();
@@ -63,7 +72,11 @@ export class ResolutionDeFin implements OnInit {
   protected readonly validable = computed(
     () => this.operation().kind === 'REPOS' && this.preparation.resolution().confirmation() !== undefined,
   );
-  protected readonly enregistre = computed(() => this.operation().kind === 'APPLIQUE');
+  protected readonly recu = computed(() => {
+    const operation = this.operation();
+    return operation.kind === 'APPLIQUE' ? operation : undefined;
+  });
+  protected readonly enregistre = computed(() => this.recu() !== undefined);
   protected readonly instant = computed(() => this.saisie().instantDuFait());
   protected readonly resume = resumeDeLApercu;
   protected readonly operateur = computed(() => operateurDuDossier(this.dossier(), this.referentiel()));
@@ -89,6 +102,7 @@ export class ResolutionDeFin implements OnInit {
   );
   protected readonly autreFinAutomatique = computed(() => this.autresFinsAutomatiques()[0]);
   protected readonly activiteOuverte = computed(() => this.variante().activiteOuverte?.(this.choix()));
+  protected readonly rechercheEnCours = signal(false);
   protected readonly echec = computed(() => this.operation().kind === 'ERREUR');
   protected readonly libellesDesErreurs = LIBELLES_ANOMALIES.erreurs;
 
@@ -146,6 +160,30 @@ export class ResolutionDeFin implements OnInit {
   protected async reprendre(): Promise<void> {
     await this.preparation.retryConfirmation();
     await this.apresConfirmation();
+  }
+
+  protected async passerALaSuivante(recu: RecuDeLActe): Promise<void> {
+    this.rechercheEnCours.set(true);
+    try {
+      const issue = IssueDeLActe.depuis(recu.origine, recu.dossier);
+      const filtre = filtreAnomaliesDemande(convertToParamMap(this.retour()));
+      await this.aller(await this.recherche.destination(issue, recu.origine.ligne.adresse, filtre));
+    } finally {
+      this.rechercheEnCours.set(false);
+    }
+  }
+
+  private async aller(destination: DestinationSuivante): Promise<void> {
+    const adresse = adresseDeLaDestination(destination);
+    if (adresse !== undefined) {
+      await this.router.navigate(['/anomalies', adresse.suivi.suivi], {
+        queryParams: { ...this.retour(), pointage: adresse.pointage.pointage },
+      });
+      return;
+    }
+    const plusAucune = destination.kind === 'PLUS_AUCUNE_ANOMALIE';
+    const queryParams = plusAucune ? { ...this.retour(), page: null, [PARAMETRE_PLUS_AUCUNE_ANOMALIE]: '1' } : this.retour();
+    await this.router.navigate(['/anomalies'], { queryParams });
   }
 
   private async apresConfirmation(): Promise<void> {

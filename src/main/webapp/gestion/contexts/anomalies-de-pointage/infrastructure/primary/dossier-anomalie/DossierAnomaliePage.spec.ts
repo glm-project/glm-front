@@ -31,7 +31,9 @@ import {
   ActiviteAnomalie,
   AdresseDossier,
   ChoixGuide,
+  FiltreAnomalies,
   LectureDossier,
+  LigneFinAutomatique,
   PageAnomalies,
   PointageAnomalie,
 } from '../../../domain/dossier/DossierAnomalie';
@@ -166,8 +168,18 @@ class DossierReadFixture extends AnomaliesReadPort {
     });
   }
 
-  list(): Promise<PageAnomalies> {
-    return roundTripFixture(() => ({ nature: 'CONFLIT', lignes: [], total: 0, complete: true }));
+  readonly listesDemandees: FiltreAnomalies[] = [];
+  listFailure: Error | undefined;
+  lignesDeLaListe: readonly LigneFinAutomatique[] = [];
+
+  list(filtre: FiltreAnomalies): Promise<PageAnomalies> {
+    this.listesDemandees.push(filtre);
+    const failure = this.listFailure;
+    const lignes = this.lignesDeLaListe;
+    return roundTripFixture(() => {
+      if (failure !== undefined) throw failure;
+      return { nature: 'FIN_AUTOMATIQUE', lignes, total: lignes.length, complete: true };
+    });
   }
 }
 
@@ -224,8 +236,18 @@ class RouteFixture {
   readonly queryParamMap = new BehaviorSubject<ParamMap>(convertToParamMap({ pointage: 'fin-17' }));
 }
 
+interface NavigationFixture {
+  readonly commands: readonly unknown[];
+  readonly queryParams: Record<string, string | null | undefined>;
+}
+
 class RouterFixture {
   readonly events = EMPTY;
+  readonly navigations: NavigationFixture[] = [];
+  navigate(commands: readonly unknown[], extras?: { queryParams?: Record<string, string | null | undefined> }): Promise<boolean> {
+    this.navigations.push({ commands, queryParams: extras?.queryParams ?? {} });
+    return Promise.resolve(true);
+  }
   createUrlTree(commands: unknown[], extras?: { queryParams?: Record<string, string | null | undefined>; fragment?: string | null }) {
     const queryParams = Object.entries(extras?.queryParams ?? {}).filter(([, value]) => value !== null && value !== undefined);
     return { commands, queryParams: Object.fromEntries(queryParams), fragment: extras?.fragment ?? null };
@@ -851,6 +873,7 @@ describe('Anomaly dossier page', () => {
   let fixture: ComponentFixture<DossierAnomaliePage>;
   let read: DossierReadFixture;
   let route: RouteFixture;
+  let router: RouterFixture;
   let preview: DossierPreviewFixture;
   let application: DossierApplicationFixture;
   let resizeObserver: ResizeObserverFixture;
@@ -861,12 +884,13 @@ describe('Anomaly dossier page', () => {
     vi.setSystemTime(new Date(2026, 9, 5, 10, 0));
     read = new DossierReadFixture();
     route = new RouteFixture();
+    router = new RouterFixture();
     preview = new DossierPreviewFixture();
     application = new DossierApplicationFixture();
     TestBed.configureTestingModule({
       providers: [
         { provide: ActivatedRoute, useValue: route },
-        { provide: Router, useClass: RouterFixture },
+        { provide: Router, useFactory: () => router },
         { provide: AnomaliesReadPort, useValue: read },
         { provide: PrevisualisationAnomaliePort, useValue: preview },
         { provide: ApplicationActePort, useValue: application },
@@ -5089,6 +5113,77 @@ describe('Anomaly dossier page', () => {
       thenAbsent('anomalie-fin-automatique-restante');
     });
 
+    it('should offer no next anomaly before the end is validated', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      thenAbsent('anomalie-resolution-suivante');
+    });
+
+    it('should offer the next anomaly with the receipt', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+
+      await whenValidatingTheEnd();
+
+      thenTextContains('anomalie-resolution-suivante', 'Anomalie suivante');
+    });
+
+    it('should lead to the automatic end still remaining on the dossier, keeping the way back to the list', async () => {
+      givenAnotherAutomaticEndRemainingAfterTheRegularisation();
+      givenTheAddressComesFromTheList();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenValidatingTheEnd();
+
+      await whenAskingForTheNextAnomaly();
+
+      thenTheManagerIsLedTo(['/anomalies', 'suivi-camille'], { ...QUERY_DE_LA_LISTE, pointage: 'debut-10' });
+      expect(read.listesDemandees).toEqual([]);
+    });
+
+    it('should lead to another row of the list read with the filters of the address when no automatic end remains', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      givenTheAddressComesFromTheList();
+      read.lignesDeLaListe = [uneLigneDeLaListe('suivi-autre', 'debut-12')];
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenValidatingTheEnd();
+
+      await whenAskingForTheNextAnomaly();
+
+      thenTheListWasReadFor({ nature: 'FIN_AUTOMATIQUE', operateur: 'op-1', element: 'el-1', page: 2 });
+      thenTheManagerIsLedTo(['/anomalies', 'suivi-autre'], { ...QUERY_DE_LA_LISTE, pointage: 'debut-12' });
+    });
+
+    it('should lead back to the list saying that no anomaly is left when the list holds no other row', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      givenTheAddressComesFromTheList();
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenValidatingTheEnd();
+
+      await whenAskingForTheNextAnomaly();
+
+      thenTheManagerIsLedTo(['/anomalies'], { ...QUERY_DE_LA_LISTE, page: null, plusAucune: '1' });
+    });
+
+    it('should lead back to the list, without that message, when the list cannot be read', async () => {
+      givenTheRegularisationOfTheEndWillBeAccepted();
+      givenTheAddressComesFromTheList();
+      read.listFailure = new Error('lecture impossible');
+      await whenRendering();
+      await whenPlacingTheEndAt('14/09/2026', '17:00');
+      await whenValidatingTheEnd();
+
+      await whenAskingForTheNextAnomaly();
+
+      thenTheManagerIsLedTo(['/anomalies'], QUERY_DE_LA_LISTE);
+    });
+
     it('should choose the view again when the address changes', async () => {
       givenAnAutomaticEndWithAResolutionView();
       await whenRendering();
@@ -5737,6 +5832,46 @@ describe('Anomaly dossier page', () => {
   const whenTheTypingPauses = async (): Promise<void> => {
     await vi.advanceTimersByTimeAsync(400);
     await fixture.whenStable();
+  };
+
+  const QUERY_DE_LA_LISTE = { nature: 'FIN_AUTOMATIQUE', operateur: 'op-1', element: 'el-1', page: '2' };
+
+  const givenTheAddressComesFromTheList = (): void => {
+    route.queryParamMap.next(convertToParamMap({ pointage: 'debut-8', ...QUERY_DE_LA_LISTE }));
+  };
+
+  const givenAnotherAutomaticEndRemainingAfterTheRegularisation = (): void => {
+    givenTheRegularisationOfTheEndWillBeAccepted();
+    const apres = dossierRegulariseFixture();
+    const autre: ActiviteAnomalie = {
+      ...requiredFixture(dossierDeResolutionFixture().activites[0], 'automatic end activity'),
+      id: new ActiviteAnomalieId('travail-10'),
+      ouvrant: new PointageAnomalieId('debut-10'),
+    };
+    application.result = { kind: 'APPLIQUE', dossier: { ...apres, finAutomatique: true, activites: [...apres.activites, autre] } };
+  };
+
+  const uneLigneDeLaListe = (suivi: string, pointage: string): LigneFinAutomatique => ({
+    adresse: { suivi: new SuiviAnomalieId(suivi), pointage: new PointageAnomalieId(pointage) },
+    element: new ElementAnomalieId('moule-42'),
+    designation: 'M-042',
+    operateur: 'Camille Martin',
+    poste: 'DMU 50',
+    debut: INSTANT_DEBUT,
+    echeance: INSTANT_ECHEANCE,
+  });
+
+  const whenAskingForTheNextAnomaly = async (): Promise<void> => {
+    await whenClicking('anomalie-resolution-suivante');
+    await fixture.whenStable();
+  };
+
+  const thenTheListWasReadFor = (filtre: FiltreAnomalies): void => {
+    expect(read.listesDemandees).toEqual([filtre]);
+  };
+
+  const thenTheManagerIsLedTo = (commands: readonly unknown[], queryParams: Record<string, string | null>): void => {
+    expect(router.navigations).toEqual([{ commands, queryParams }]);
   };
 
   const whenValidatingTheEnd = async (): Promise<void> => {

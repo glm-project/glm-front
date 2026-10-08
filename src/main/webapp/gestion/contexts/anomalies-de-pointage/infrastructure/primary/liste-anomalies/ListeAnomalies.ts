@@ -16,6 +16,7 @@ import { operateurPresente, postePresente } from '../PresentationIdentites';
 import { SelecteurElementAnomalie } from '../selecteur-element/SelecteurElementAnomalie';
 import { SelecteurOperateurAnomalie } from '../selecteur-operateur/SelecteurOperateurAnomalie';
 import { LIBELLES_LISTE_ANOMALIES } from './LibellesListeAnomalies';
+import { PARAMETRE_PLUS_AUCUNE_ANOMALIE } from './PlusAucuneAnomalie';
 
 @Component({
   selector: 'glm-liste-anomalies',
@@ -34,6 +35,7 @@ export class ListeAnomalies {
   protected readonly pageDemandee = computed(() => readPageAnomaliesDemandee(this.params().get('page')));
   protected readonly natureDemandee = computed(() => readNatureAnomalieDemandee(this.params().get('nature')));
   protected readonly filtre = computed(() => filtreAnomaliesDemande(this.params()));
+  protected readonly plusAucuneAnomalie = computed(() => this.params().get(PARAMETRE_PLUS_AUCUNE_ANOMALIE) === '1');
   protected readonly filtreActif = computed(() => this.filtre().operateur !== '' || this.filtre().element !== '');
   protected readonly libelles = { ...LIBELLES_ANOMALIES, ...LIBELLES_LISTE_ANOMALIES };
   protected readonly operateurDe = operateurPresente;

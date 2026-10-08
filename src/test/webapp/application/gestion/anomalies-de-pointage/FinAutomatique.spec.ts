@@ -8,6 +8,7 @@ import {
   confirmationFinAutomatiqueFixture,
   dossierApresCorrectionFixture,
   dossierApresRegularisationFixture,
+  dossierApresRegularisationLaissantUneFinFixture,
   dossierDeuxFinsAutomatiquesFixture,
   dossierFinAutomatiqueFixture,
   dossierFinTardiveFixture,
@@ -28,6 +29,13 @@ import {
   suiviFinAutomatiqueFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
 import {
+  finAutomatiqueLigneFixture,
+  finAutomatiqueSuivanteLigneFixture,
+  givenTheElementsFinsAutomatiques,
+  givenTheReferentielFinsAutomatiques,
+  pageFinsAutomatiquesFixture,
+} from '../../../utils/gestion/anomalies-de-pointage/FinsAutomatiquesHttp.fixture';
+import {
   CHAMP_DE_LA_VUE_DE_RESOLUTION,
   thenTheInstantFieldsAreEmpty,
   thenTheInstantFieldsShow,
@@ -45,6 +53,7 @@ import {
 } from '../../../utils/gestion/anomalies-de-pointage/SelectionDuPointage';
 
 const urlDossier = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
+const urlDossierSuivant = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantSuivantFixture}`;
 const urlApercu = `${urlDossier}/apercus`;
 const urlConfirmation = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/confirmations-de-resolution`;
 
@@ -570,6 +579,189 @@ describe('Automatic end of an activity in Gestion', () => {
     cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
     cy.get(dataSelector('anomalie-resolution-autre-fin')).should('contain.text', '1 autre fin automatique sur cet élément');
     cy.get(dataSelector('anomalie-retour')).should('have.attr', 'href').and('contain', 'nature=FIN_AUTOMATIQUE').and('contain', 'page=2');
+  };
+
+  it('should lead from the receipt to the automatic end remaining on the same element, without reading the list', () => {
+    givenTwoAutomaticEndsOnTheElementTheFirstOneRegularised();
+    givenTheListOfAutomaticEnds(pageFinsAutomatiquesFixture([finAutomatiqueSuivanteLigneFixture]));
+
+    whenRegularisingTheFirstAutomaticEndFromTheList('?nature=FIN_AUTOMATIQUE&page=2');
+    whenAskingForTheNextAnomaly();
+
+    thenTheRemainingAutomaticEndIsOpenedWithItsResolutionView();
+    thenTheListWasNotRead();
+  });
+
+  it('should lead from the receipt to another row of the list, read at the click with the filters of the address', () => {
+    givenAnAutomaticEndRegularisedByTheBackend();
+    givenTheOtherAutomaticEndOfTheList();
+    givenTheListOfAutomaticEnds(pageFinsAutomatiquesFixture([finAutomatiqueLigneFixture, finAutomatiqueSuivanteLigneFixture]));
+
+    whenRegularisingTheFirstAutomaticEndFromTheList('?nature=FIN_AUTOMATIQUE&operateur=op-1&element=el-1&page=2');
+    whenAskingForTheNextAnomaly();
+
+    thenTheOtherRowOfTheListIsOpenedWithItsResolutionView();
+    thenTheListWasReadWithTheFiltersOfTheAddress();
+  });
+
+  it('should not read the list before the manager asks for the next anomaly', () => {
+    givenAnAutomaticEndRegularisedByTheBackend();
+    givenTheListOfAutomaticEnds(pageFinsAutomatiquesFixture([finAutomatiqueSuivanteLigneFixture]));
+
+    whenRegularisingTheFirstAutomaticEndFromTheList('?nature=FIN_AUTOMATIQUE');
+
+    thenTheListWasNotRead();
+  });
+
+  it('should read the automatic ends of the list when the address names no nature', () => {
+    givenAnAutomaticEndRegularisedByTheBackend();
+    givenTheOtherAutomaticEndOfTheList();
+    givenTheListOfAutomaticEnds(pageFinsAutomatiquesFixture([finAutomatiqueSuivanteLigneFixture]));
+
+    whenRegularisingTheFirstAutomaticEndFromTheList('');
+    whenAskingForTheNextAnomaly();
+
+    thenTheListWasReadForTheAutomaticEndsOfThePage(0);
+  });
+
+  it('should step back once to the previous page when the page of the address holds no other row', () => {
+    givenAnAutomaticEndRegularisedByTheBackend();
+    givenTheOtherAutomaticEndOfTheList();
+    givenTheListOfAutomaticEndsByPage({ 1: [], 0: [finAutomatiqueSuivanteLigneFixture] });
+
+    whenRegularisingTheFirstAutomaticEndFromTheList('?nature=FIN_AUTOMATIQUE&page=2');
+    whenAskingForTheNextAnomaly();
+
+    thenTheOtherRowOfTheListIsOpenedWithItsResolutionView();
+    thenThePageAndThePreviousOneWereRead();
+  });
+
+  it('should lead back to the list saying that no anomaly is left when no other row remains', () => {
+    givenAnAutomaticEndRegularisedByTheBackend();
+    givenTheListOfAutomaticEnds(pageFinsAutomatiquesFixture([]));
+
+    whenRegularisingTheFirstAutomaticEndFromTheList('?nature=FIN_AUTOMATIQUE&operateur=op-1');
+    whenAskingForTheNextAnomaly();
+
+    thenTheListSaysThatNoAnomalyIsLeft();
+    thenTheListKeepsTheFiltersWithoutAnyDossier();
+  });
+
+  it('should lead back to the list which shows its own error when the list cannot be read', () => {
+    givenAnAutomaticEndRegularisedByTheBackend();
+    givenTheListCannotBeRead();
+
+    whenRegularisingTheFirstAutomaticEndFromTheList('?nature=FIN_AUTOMATIQUE');
+    whenAskingForTheNextAnomaly();
+
+    thenTheListShowsItsOwnError();
+  });
+
+  const givenTheListCannotBeRead = (): void => {
+    givenTheElementsFinsAutomatiques();
+    cy.intercept('GET', '/api/atelier/anomalies*', { statusCode: 500, body: {} });
+  };
+
+  const thenTheListShowsItsOwnError = (): void => {
+    cy.location('pathname').should('equal', '/anomalies');
+    cy.get(dataSelector('anomalies-erreur')).should('be.visible');
+    cy.get(dataSelector('anomalies-plus-aucune')).should('not.exist');
+  };
+
+  const thenThePageAndThePreviousOneWereRead = (): void => {
+    cy.get('@liste.all').should('have.length', 2);
+  };
+
+  const thenTheListKeepsTheFiltersWithoutAnyDossier = (): void => {
+    cy.location('search').should('contain', 'operateur=op-1').and('not.contain', 'pointage');
+  };
+
+  const givenTwoAutomaticEndsOnTheElementTheFirstOneRegularised = (): void => {
+    cy.intercept('GET', urlDossier, { body: dossierDeuxFinsAutomatiquesFixture() });
+    cy.intercept('GET', urlDossierSuivant, { body: dossierDeuxFinsAutomatiquesFixture('SUIVANTE') });
+    cy.intercept('POST', urlApercu, request => {
+      const demande = request.body as components['schemas']['RestDemandeDApercu'];
+      request.reply({
+        body: apercuFixture(
+          demande,
+          dossierDeuxFinsAutomatiquesFixture(),
+          dossierApresRegularisationLaissantUneFinFixture(),
+          finRegulariseeFixture,
+        ),
+      });
+    });
+    cy.intercept('POST', urlConfirmation, request => {
+      const demande = request.body as components['schemas']['RestConfirmationAEnregistrer'];
+      request.reply({ body: confirmationFinAutomatiqueFixture(demande, dossierApresRegularisationLaissantUneFinFixture()) });
+    });
+  };
+
+  const givenTheOtherAutomaticEndOfTheList = (): void => {
+    cy.intercept('GET', urlDossierSuivant, { body: dossierDeuxFinsAutomatiquesFixture('SUIVANTE') });
+  };
+
+  const givenTheListOfAutomaticEnds = (page: components['schemas']['RestPageDesAnomalies']): void => {
+    givenTheReferentielFinsAutomatiques();
+    givenTheElementsFinsAutomatiques();
+    cy.intercept('GET', '/api/atelier/anomalies*', { body: page }).as('liste');
+  };
+
+  const givenTheListOfAutomaticEndsByPage = (pages: Record<number, components['schemas']['RestFinAutomatiqueEnListe'][]>): void => {
+    givenTheReferentielFinsAutomatiques();
+    givenTheElementsFinsAutomatiques();
+    cy.intercept('GET', '/api/atelier/anomalies*', request => {
+      const lignes = pages[Number(new URL(request.url).searchParams.get('page'))] ?? [];
+      request.reply({ body: { ...pageFinsAutomatiquesFixture(lignes), page: 0 } });
+    }).as('liste');
+  };
+
+  const whenRegularisingTheFirstAutomaticEndFromTheList = (filters: string): void => {
+    const adresse = `/anomalies/${suiviFinAutomatiqueFixture}`;
+    const requete = filters === '' ? '?' : `${filters}&`;
+    cy.visit(`${adresse}${requete}pointage=${ouvrantFinAutomatiqueFixture}`);
+    whenTypingTheInstant(instantRegulariseLocalFixture, CHAMP_DE_LA_VUE_DE_RESOLUTION);
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled').click();
+    cy.get(dataSelector('anomalie-resultat')).should('be.visible');
+  };
+
+  const whenAskingForTheNextAnomaly = (): void => {
+    cy.get(dataSelector('anomalie-resolution-suivante')).should('contain.text', 'Anomalie suivante').click();
+  };
+
+  const thenTheListWasNotRead = (): void => {
+    cy.get('@liste.all').should('have.length', 0);
+  };
+
+  const thenTheRemainingAutomaticEndIsOpenedWithItsResolutionView = (): void => {
+    cy.location('search').should('equal', `?nature=FIN_AUTOMATIQUE&page=2&pointage=${ouvrantSuivantFixture}`);
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
+    cy.get(dataSelector('anomalie-resultat')).should('not.exist');
+  };
+
+  const thenTheOtherRowOfTheListIsOpenedWithItsResolutionView = (): void => {
+    cy.location('pathname').should('equal', `/anomalies/${suiviFinAutomatiqueFixture}`);
+    cy.location('search').should('contain', `pointage=${ouvrantSuivantFixture}`);
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
+    cy.get(dataSelector('anomalie-resultat')).should('not.exist');
+  };
+
+  const thenTheListWasReadWithTheFiltersOfTheAddress = (): void => {
+    cy.get('@liste.all').should('have.length', 1);
+    cy.get('@liste')
+      .its('request.url')
+      .should('contain', 'nature=FIN_AUTOMATIQUE')
+      .and('contain', 'operateur=op-1')
+      .and('contain', 'element=el-1');
+    cy.get('@liste').its('request.url').should('contain', 'page=1');
+  };
+
+  const thenTheListWasReadForTheAutomaticEndsOfThePage = (page: number): void => {
+    cy.get('@liste').its('request.url').should('contain', 'nature=FIN_AUTOMATIQUE').and('contain', `page=${page}`);
+  };
+
+  const thenTheListSaysThatNoAnomalyIsLeft = (): void => {
+    cy.location('pathname').should('equal', '/anomalies');
+    cy.get(dataSelector('anomalies-plus-aucune')).should('be.visible').and('contain.text', 'Plus aucune anomalie');
   };
 
   const givenTheClockOnAFixedDay = (): void => {

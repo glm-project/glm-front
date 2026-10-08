@@ -77,6 +77,13 @@ l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activi
   restant), selon la nature du dossier d'origine : projection du domaine (`IssueDeLActe`).
 - **Fin automatique restante** : une activité `ECHUE` du dossier d'après, ailleurs que l'adresse d'origine ; le reçu y mène par
   un lien.
+- **Anomalie suivante** : le bouton « Anomalie suivante » du reçu d'une vue de résolution. Sa destination se décide dans l'ordre
+  (`AnomalieSuivante`, `domain/dossier/`, que `RechercheDeLAnomalieSuivante`, `application/`, déroule autour de la lecture) : 1. une
+  fin automatique restante du même dossier (`IssueDeLActe`) ; 2. sinon une autre ligne de la liste, lue au clic par
+  `AnomaliesReadPort.list` avec les filtres de l'adresse (`filtreAnomaliesDemande` : `nature`, `operateur`, `element`, `page`, `nature`
+  par défaut `FIN_AUTOMATIQUE`), l'adresse d'origine exclue (elle peut rester dans la liste), en reculant d'**une seule** page quand la
+  page demandée n'a aucune autre ligne ; 3. sinon la liste, qui dit « Plus aucune anomalie » (paramètre `plusAucune=1`, éphémère : tout
+  changement d'onglet, de filtre ou de page l'abandonne). Une erreur de lecture de la liste ramène à la liste, qui affiche sa propre erreur.
 - **Vue complète** : l'écran du dossier d'anomalie (`DossierAnomaliePage`) avec la frise sélectionnable, le panneau Sélection,
   « Votre décision » et le formulaire du fait. Elle sert tous les dossiers, conflits compris, et de repli à toute vue de résolution.
 - **Vue de résolution** : écran minimal d'un dossier de fin automatique, un composant par code de choix du serveur

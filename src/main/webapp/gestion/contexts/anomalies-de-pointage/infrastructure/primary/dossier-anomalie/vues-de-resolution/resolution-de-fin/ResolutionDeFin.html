@@ -28,7 +28,18 @@
     (verificationDemandee)="verifier()"
     (repriseDemandee)="reprendre()"
   />
-  @if (!enregistre()) {
+  @if (recu(); as recu) {
+  <button
+    type="button"
+    class="bouton bouton-principal mt-4"
+    data-selector="anomalie-resolution-suivante"
+    [attr.aria-busy]="rechercheEnCours()"
+    [disabled]="rechercheEnCours()"
+    (click)="passerALaSuivante(recu)"
+  >
+    {{ libelles.anomalieSuivante }}
+  </button>
+  } @if (!enregistre()) {
   <glm-date-time-field
     class="mt-4"
     fieldId="instant-resolution"

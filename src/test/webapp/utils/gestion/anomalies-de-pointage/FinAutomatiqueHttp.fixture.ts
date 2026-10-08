@@ -238,6 +238,13 @@ export const dossierApresRegularisationFixture = (sansPoste = false): components
   };
 };
 
+export const dossierApresRegularisationLaissantUneFinFixture = (): components['schemas']['RestDossierAnomalie'] => ({
+  ...dossierDeuxFinsAutomatiquesFixture(),
+  revision: 1,
+  activites: [activiteTermineeFixture(instantRegulariseFixture, 'PT9H', false), activiteSuivanteEchueFixture],
+  choix: [],
+});
+
 export const dossierApresCorrectionFixture = (): components['schemas']['RestDossierAnomalie'] => {
   const finAnnulee: components['schemas']['RestEvenementDAtelier'] = {
     ...finTardiveRecueFixture,
