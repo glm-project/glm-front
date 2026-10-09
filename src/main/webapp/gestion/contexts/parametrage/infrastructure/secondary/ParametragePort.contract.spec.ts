@@ -177,12 +177,12 @@ describe.each(adapters)('ParametragePort contract, honoured by %s', (_adapter, c
   });
 
   it('should hand back the reason a logo was refused', async () => {
-    harness.refuserLesLogos('Le logo doit mesurer 50 x 50 pixels (recu : 120 x 80)');
+    harness.refuserLesLogos('Le logo doit tenir dans 256 x 256 pixels (recu : 300 x 80)');
 
     const depot = harness.port.deposerLogo(new FichierDeLogo(pngFixture(50, 50)));
     await harness.settle();
 
-    expect(await depot).toEqual({ ok: false, error: new LogoRefuse('Le logo doit mesurer 50 x 50 pixels (recu : 120 x 80)') });
+    expect(await depot).toEqual({ ok: false, error: new LogoRefuse('Le logo doit tenir dans 256 x 256 pixels (recu : 300 x 80)') });
   });
 
   it('should not read the image of a version that is no longer the current one', async () => {

@@ -1,10 +1,10 @@
 import { ImageLue, lireEnTeteDImage } from './EnTeteDImage';
 
-const COTE = 50;
+const COTE_MAXIMAL = 256;
 const POIDS_MAXIMAL = 20 * 1024;
 const OCTETS_PAR_KO = 1024;
 
-const aLaBonneTaille = (image: ImageLue): boolean => image.largeur === COTE && image.hauteur === COTE;
+const aLaBonneTaille = (image: ImageLue): boolean => image.largeur <= COTE_MAXIMAL && image.hauteur <= COTE_MAXIMAL;
 
 export class FichierDeLogo {
   private readonly image: ImageLue | undefined;
@@ -19,7 +19,7 @@ export class FichierDeLogo {
     }
     if (this.image === undefined) return 'Le logo doit être une image PNG ou JPEG.';
     if (!aLaBonneTaille(this.image)) {
-      return `Le logo doit mesurer 50 × 50 pixels (reçu : ${this.image.largeur} × ${this.image.hauteur}).`;
+      return `Le logo doit tenir dans 256 × 256 pixels (reçu : ${this.image.largeur} × ${this.image.hauteur}).`;
     }
     return undefined;
   }

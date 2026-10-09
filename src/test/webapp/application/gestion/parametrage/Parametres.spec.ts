@@ -35,9 +35,9 @@ describe('Company settings in gestion', () => {
   it('should refuse a logo of the wrong size without sending it', () => {
     const api = givenSettings();
     whenVisitingSettings();
-    whenChoosingTheLogo(pngFixture(120, 80));
+    whenChoosingTheLogo(pngFixture(300, 80));
 
-    thenTheLogoIsRefusedWithoutBeingSent(api, 'Le logo doit mesurer 50 × 50 pixels (reçu : 120 × 80).');
+    thenTheLogoIsRefusedWithoutBeingSent(api, 'Le logo doit tenir dans 256 × 256 pixels (reçu : 300 × 80).');
   });
 
   it('should remove the logo after a confirmation and show the GLM logo again', () => {
