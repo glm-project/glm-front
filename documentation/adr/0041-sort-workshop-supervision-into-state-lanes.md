@@ -8,7 +8,7 @@ Accepted. Amends [0031](0031-own-workshop-supervision-in-gestion.md) and complem
 interpretable current activities. The positioning, alphabetical order, optional workstation labels,
 NC overlay and duration-free reading remain. Local pause ownership is carried by
 [0045](0045-keep-the-pause-on-the-pupitre.md).
-Amended on 2026-10-09 by [0054](0054-ignore-incoherent-pointages-at-reception.md) (lot B9 of #254): there is no
+Amended by [0054](0054-ignore-incoherent-pointages-at-reception.md): there is no
 conflicting sequence to render any more; the card's verification signal carries automatic finishes only.
 
 ## Context

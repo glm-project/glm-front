@@ -5,10 +5,10 @@
 `Accepted`
 
 Revised under [ADR 0047](0047-count-only-finished-activities.md): PAUSE closes only interpretable,
-unexpired activities; REPRENDRE opens new activities.
-Amended on 2026-10-09 by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md) (lot B9 of #254): a finish
-closes the activity of its key and carries no target; a pause has no conflicting suspension to leave unresumed. TOUT ARRÊTER atomically invalidates
+unexpired activities; REPRENDRE opens new activities. TOUT ARRÊTER atomically invalidates
 local resumption memory even without a finish. The global commands are the confirmed activity workflow.
+Amended by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md): a finish closes the activity of its key
+and carries no target, and a suspension is never left unresumed because of a conflict, which no longer exists.
 Amended by [ADR 0049](0049-forget-integrated-gestures-at-reference-activation.md): the journal no longer keeps
 accepted history. `PauseEnCours` reads the journal that remains, which always holds the last pause of every
 operator, and TOUT ARRÊTER retains pending gestures, refusals and what the last pause still needs.

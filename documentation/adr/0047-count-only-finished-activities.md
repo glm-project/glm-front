@@ -7,13 +7,13 @@ du relevé et du coût mis en œuvre ; le front épingle le backend final publi�
 documentaire. Les validations de publication portent sur leurs commits exacts ; ce statut ne remplace
 aucun résultat de CI ni contrôle visuel.
 Ce document fixe la comptabilisation et le traitement des fins reçues tardivement.
-La fin automatique est dérivée, avec conservation des seuls pointages et régularisations.
+La fin automatique est dérivée, avec conservation des seuls pointages et régularisations (les corrections et annulations du premier texte n'existent plus).
 Le recalcul après régularisation et l'instant commun du relevé sont confirmés.
 Amended by [ADR 0049](0049-forget-integrated-gestures-at-reference-activation.md) : le journal du pupitre
 n'est plus un historique ; TOUT ARRÊTER conserve les pending, les refus et ce que la dernière pause lit
 encore, et les gestes acceptés déjà intégrés au référentiel sont oubliés à son activation.
 
-Amended on 2026-10-09 by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md) (lot B9 of #254) : le serveur
+Amended by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md): le serveur
 ignore les pointages qui ne s'accordent pas avec l'état de leur clé au lieu d'en faire des conflits. **Ne tiennent
 plus** : les séquences en conflit et leur résolution par le gestionnaire ; l'activité visée, l'intention et la cible
 des gestes ; la distinction ouverture / transition / fin ; les durées et coûts « à résoudre » et les totaux

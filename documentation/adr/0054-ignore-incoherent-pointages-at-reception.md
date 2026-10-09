@@ -11,6 +11,7 @@ réception du backend.
   automatique dérivée, la régularisation par le gestionnaire et l'instant d'évaluation commun.
 - `Amends 0006`: `AtelierExchangePort.send` rend `Result<void, RefusDePublication>`, un corps de pointage ne porte plus
   ni `intention` ni `cible`, et une réponse 200 ou 201 n'a plus de conflits.
+- `Amends 0049`: le journal garde sans l'afficher le refus `pointage-ignore`.
 - `Amends 0007`, `0009`, `0045`: le geste ne porte plus qu'un type et un poste, le stockage du journal passe à
   `atelier-activites-v2:<entreprise>`, `FenetreOperateur` prépare des pointages demandés.
 - `Amends 0031`, `0041`: la supervision ne rend plus de séquence en conflit.
@@ -53,7 +54,8 @@ poste ; elle porte au plus une activité en cours. Une `FIN` ferme l'activité d
 **Règle de réception.** Elle appartient au backend ; le front en dépend ainsi :
 
 1. un pointage dont l'heure de geste est strictement plus ancienne que le dernier accepté de la clé est ignoré
-   (`ANTERIEUR`) ; une heure égale passe ;
+   (`ANTERIEUR`) ; une heure égale passe, sauf pour une `FIN` : une `FIN` qui n'est pas postérieure au début de
+   l'activité qu'elle fermerait est aussi `ANTERIEUR`, car aucune activité n'a une durée nulle ;
 2. l'échéance est jugée sur l'heure du geste : elle est atteinte quand cette heure est supérieure ou égale au début plus
    la durée maximale, donc une `FIN` pile à l'échéance est ignorée (`APRES_ECHEANCE`) ; une activité échue compte comme
    terminée ;
@@ -70,7 +72,8 @@ la `FIN` d'abord : NC pendant un travail envoie `FIN` puis `NON_CONFORMITE`, « 
 `DEBUT`. PAUSE envoie une `FIN` par activité, REPRENDRE une ouverture par activité suspendue, TOUT ARRÊTER ne change pas.
 
 **Le pupitre suit la même règle, sans la décider.** La projection locale applique `FIN` et ouverture comme le serveur, y
-compris une clé libérée par une activité échue. L'échéance d'une activité ouverte localement est l'heure du geste plus la
+compris une clé libérée par une activité échue ; elle ne juge pas `ANTERIEUR` : une `FIN` qui n'est pas postérieure au
+début retire localement l'activité, puis le pupitre se recale sur le référentiel. L'échéance d'une activité ouverte localement est l'heure du geste plus la
 durée maximale que le référentiel porte (`dureeMaximaleDActivite`) : aucune durée n'est écrite dans le front. Un pointage
 ignoré retire l'effet local du geste et le pupitre se recale sur le référentiel de la synchronisation suivante. Seul
 `suivi-d-atelier-cloture` est affiché à l'opérateur ; tout autre refus reste au journal. Les pupitres sont réinitialisés
@@ -107,6 +110,8 @@ l'échéance, et les totaux sont toujours complets.
 - Une `FIN` pile à l'échéance est désormais ignorée, alors qu'elle l'emportait sur la fin automatique.
 - Le serveur lit la durée maximale à la réception du `DEBUT`, non à l'heure du geste, et ne garde aucun historique du
   réglage : un `DEBUT` pointé hors ligne avant une modification de la durée, et reçu après, prend la nouvelle.
+- **La régularisation est définitive** : il n'y a ni correction ni annulation d'une fin régularisée.
+- Le chantier reste à un opérateur par pupitre (V1) ; la clé le suppose.
 - Les pupitres perdent à ce déploiement les gestes en attente de leurs journaux d'avant `v2`.
 - Le backend est déployé dans la même fenêtre que la fusion du front, qui part en production à chaque push sur `main` :
   le schéma d'API généré est commun et un front d'avant ne lit plus les réponses du backend nouveau.

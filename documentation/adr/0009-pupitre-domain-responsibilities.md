@@ -7,8 +7,7 @@ extraction in [ADR 0008](0008-extract-methods-to-expose-intent.md). Complemented
 [ADR 0013](0013-keep-business-decisions-in-rich-domain-models.md), which generalizes the same ownership rule
 to every context and brings interaction and lifecycle rules into the domain. Revised under
 [ADR 0045](0045-keep-the-pause-on-the-pupitre.md): pause/resumption
-memory has its own local domain owner. Amended on 2026-10-09 by
-[ADR 0054](0054-ignore-incoherent-pointages-at-reception.md) (lot B9 of #254): the window prepares requested
+memory has its own local domain owner. Amended by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md): the window prepares requested
 pointages (a type and a workstation), no target, and `MotifDeRefus` decides which refusal the operator sees.
 Complemented by [ADR 0050](0050-erase-workshop-journals-on-explicit-reset.md): the device-wide erasure of the journals has its own port, apart from the per-company `JournauxDuPupitrePort`.
 

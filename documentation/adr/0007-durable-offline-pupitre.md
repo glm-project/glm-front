@@ -12,7 +12,7 @@ Issue 165 replaced paged reference acquisition with one unpaged `GET /api/pupitr
 The backend uses READ COMMITTED; successive queries can observe concurrent commits. This response is
 complete acquisition, without a shared transactional snapshot. Revised under
 [ADR 0045](0045-keep-the-pause-on-the-pupitre.md): pause memory remains local and atomic.
-Amended on 2026-10-09 by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md) (lot B9 of #254): a gesture
+Amended by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md): a gesture
 carries a type and a workstation, no intention or target; no accepted conflict diagnostic is retained; the document
 key is `atelier-activites-v2:<tenant>`, and the obsolete `atelier:` and `atelier-activites-v1:` documents are discarded.
 Amended by [ADR 0049](0049-forget-integrated-gestures-at-reference-activation.md): an accepted gesture is

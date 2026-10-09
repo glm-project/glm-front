@@ -11,7 +11,7 @@ journal's size no longer depends on past activity.
 always holds the last pause of each operator, and TOUT ARRÊTER no longer retains accepted history.
 `Amends` [ADR 0047](0047-count-only-finished-activities.md): TOUT ARRÊTER keeps pending and refused gestures, and the
 accepted ones only while they are still the last gesture of their operator or carry the last pause.
-`Amended on 2026-10-09 (lot B9 of #254, ADR 0054)`: the pupitre keeps the refusals a server ignore produces
+`Amended by` [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md): the pupitre keeps the refusals a server ignore produces
 (`pointage-ignore`) in this journal without showing them; only the closure refusal reaches the operator.
 
 ## Context

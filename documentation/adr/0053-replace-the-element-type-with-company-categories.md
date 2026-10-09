@@ -5,7 +5,7 @@
 `Accepted`
 
 - `Amends 0044: les moules ne s'affichent plus deux par ligne ; toutes les zones du pupitre partagent la grille commune.`
-- `Amended on 2026-10-09 (lot B9 of #254, ADR 0054): la clé du journal stocké passe de atelier-activites-v1: à atelier-activites-v2: et l'ancienne est écartée, sans migration ; la traduction à la lecture d'un journal sans catégorie n'existe plus, et un pupitre qui avait un journal d'avant les catégories repart d'un journal vide au déploiement.`
+- `Amended by 0054: la clé du journal stocké passe de atelier-activites-v1: à atelier-activites-v2: et l'ancienne est écartée, sans migration ; la traduction à la lecture d'un journal sans catégorie n'existe plus, et un pupitre qui avait un journal d'avant les catégories repart d'un journal vide au déploiement.`
 
 ## Context
 
@@ -46,7 +46,7 @@ tuiles en une zone par catégorie présente, dans l'ordre de `categories` du ré
 catégorie que cet ordre ne connaît pas. Toutes les zones partagent la grille commune : la disposition des
 moules sur deux colonnes disparaît avec leur zone.
 
-**Le journal stocké se traduisait à la lecture** (retiré le 2026-10-09). L'adaptateur IndexedDB donnait à un suivi
+**Le journal stocké se traduisait à la lecture** (retiré par l'ADR 0054). L'adaptateur IndexedDB donnait à un suivi
 stocké sans `categorie` celle de son ancien `type` (`ORDRE_DE_FABRICATION` → `OF`, `PRODUIT` → `MOULE`) et un ordre
 vide à un référentiel sans `categories`. La clé `v2` écarte tout journal d'avant ; le domaine ne connaît que la nouvelle
 forme.
@@ -66,6 +66,6 @@ forme.
 - Le code brut (« MOULE ») remplace un libellé rédigé (« Moule ») ; une entreprise qui voudrait un libellé
   distinct du code rouvrirait la question côté back.
 - La traduction du journal stocké est retirée avec la clé `v2` : un pupitre déployé avant cette clé perd ses gestes en
-  attente, ce que le ticket #254 accepte.
+  attente, ce que l'ADR 0054 accepte.
 - Les moules perdent leurs cibles plus larges ; si l'atelier le regrette, il faudra une disposition par
   catégorie, donc une donnée de paramétrage de plus.

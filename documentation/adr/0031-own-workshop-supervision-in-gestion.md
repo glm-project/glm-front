@@ -10,7 +10,7 @@ Complements [0012](0012-own-business-contexts-by-front.md). Acquisition is amend
 [0047](0047-count-only-finished-activities.md). This revised account retains the context and acquisition
 reasons with the delivered two-lane model. HTTP acquisition now uses the complete atelier projection;
 InMemory remains a demonstration adapter.
-Amended on 2026-10-09 by [0054](0054-ignore-incoherent-pointages-at-reception.md) (lot B9 of #254): the supervision
+Amended by [0054](0054-ignore-incoherent-pointages-at-reception.md): the supervision
 no longer renders conflicting sequences; an operator « à vérifier » carries an automatic finish only, and the
 demonstration sets its own deadlines.
 

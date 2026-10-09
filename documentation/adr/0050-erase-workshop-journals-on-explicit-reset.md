@@ -8,7 +8,7 @@ Amends [ADR 0007](0007-durable-offline-pupitre.md): the former company's journal
 after a reenrolment that follows an explicit reset. The automatic return to enrolment after a definitive loss of
 authorization keeps every journal, as ADR 0007 and [ADR 0009](0009-pupitre-domain-responsibilities.md) describe.
 
-`Amended on 2026-10-09 (lot B9 of #254, ADR 0054)`: the journal document is now `atelier-activites-v2:<tenant>`. The
+`Amended by` [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md): the journal document is now `atelier-activites-v2:<tenant>`. The
 erasure removes every document under that prefix and nothing else, so the format change leaves this decision intact; the
 documents of the obsolete prefixes are discarded when a journal is read.
 

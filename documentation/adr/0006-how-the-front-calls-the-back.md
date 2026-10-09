@@ -8,7 +8,7 @@ rules govern online list ports. [ADR 0034](0034-proxy-the-api-at-the-edge.md) ad
 [ADR 0037](0037-require-production-consumers.md) removes unused `Page.isComplete()` while preserving the
 server total. This account is revised under [ADR 0045](0045-keep-the-pause-on-the-pupitre.md): durable local
 pause memory. The publication amendment below keeps local acceptance separate from server outcomes.
-Amended on 2026-10-09 by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md) (lot B9 of #254): a pointage
+Amended by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md): a pointage
 body carries its type and workstation only, never an intention or a target; the server ignores what does not fit its
 key (409 `pointage-ignore`) and no longer accepts a publication with conflicts, so
 `AtelierExchangePort.send` resolves `Result<void, RefusDePublication>`.
