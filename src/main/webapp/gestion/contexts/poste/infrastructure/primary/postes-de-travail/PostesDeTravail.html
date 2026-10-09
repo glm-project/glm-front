@@ -35,14 +35,7 @@
     />
 
     <section class="gestion-carte postes-tableau" [attr.aria-busy]="etat().chargement" aria-labelledby="postes-selection-title">
-      <header class="flex flex-wrap items-baseline gap-3 border-b border-border px-4 py-3">
-        <h2 id="postes-selection-title" class="text-section" data-selector="postes-selection-title">
-          {{ natureChoisie()?.libelle?.value ?? 'Tous les postes' }}
-        </h2>
-        <span class="text-body-sm text-ink-muted" data-selector="postes-selection-count">
-          {{ compte(natureChoisie()?.postes ?? etat().postes.length) }}
-        </span>
-      </header>
+      <glm-en-tete-des-postes [nature]="natureChoisie()" [total]="etat().postes.length" />
       @if (etat().chargement) {
       <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="postes-loading">
         Chargement des postes de travail…

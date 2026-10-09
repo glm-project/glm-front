@@ -22,6 +22,7 @@ import {
   ConfirmationSuppressionPosteDialog,
   ConfirmationSuppressionPosteDialogData,
 } from '../confirmation-suppression-poste-dialog/ConfirmationSuppressionPosteDialog';
+import { EnTeteDesPostes } from '../en-tete-des-postes/EnTeteDesPostes';
 import { PosteFormDialog, PosteFormDialogData } from '../poste-form-dialog/PosteFormDialog';
 
 interface EtatPostes {
@@ -39,7 +40,7 @@ interface EtatPostes {
   host: { 'data-selector': 'postes-page' },
   templateUrl: './PostesDeTravail.html',
   styleUrl: './PostesDeTravail.css',
-  imports: [ColonneDesNatures, ErrorMessage, Icon, MatButtonModule, MatTableModule, MatPaginatorModule],
+  imports: [ColonneDesNatures, EnTeteDesPostes, ErrorMessage, Icon, MatButtonModule, MatTableModule, MatPaginatorModule],
   providers: [
     {
       provide: MatPaginatorIntl,
@@ -94,13 +95,6 @@ export class PostesDeTravail implements OnInit {
       queryParams: { nature: nature?.id.value ?? null },
       queryParamsHandling: 'merge',
     });
-  }
-
-  protected compte(postes: number): string {
-    if (postes === 0) {
-      return 'aucun poste';
-    }
-    return postes === 1 ? '1 poste' : `${postes} postes`;
   }
 
   protected rechercher(value: string): void {

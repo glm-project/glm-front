@@ -1,0 +1,6 @@
+<header class="flex flex-wrap items-baseline gap-3 border-b border-border px-4 py-3">
+  <h2 id="postes-selection-title" class="text-section" data-selector="postes-selection-title">
+    {{ nature()?.libelle?.value ?? 'Tous les postes' }}
+  </h2>
+  <span class="text-body-sm text-ink-muted" data-selector="postes-selection-count">{{ compte() }}</span>
+</header>
