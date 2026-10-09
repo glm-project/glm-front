@@ -67,6 +67,13 @@ export class PostesApiFixture {
       this.natures.push(nature);
       request.reply({ statusCode: 201, body: nature });
     }).as('natureCreate');
+    cy.intercept('PUT', '/api/natures-de-travail/*', request => {
+      const id = request.url.split('/').slice(-1)[0];
+      const { libelle } = request.body as { libelle: string };
+      this.natures = this.natures.map(nature => (nature.id === id ? { ...nature, libelle } : nature));
+      this.postes = this.postes.map(poste => (poste.natureId === id ? { ...poste, nature: libelle } : poste));
+      request.reply({ statusCode: 200, body: { id, libelle, utilisee: true, postes: 0 } });
+    }).as('natureRename');
   }
 
   private installCreation(): void {

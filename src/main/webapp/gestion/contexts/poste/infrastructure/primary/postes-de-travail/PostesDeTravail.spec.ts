@@ -303,6 +303,17 @@ describe('PostesDeTravail page', () => {
       expect(texts('nature-filter-label')).toEqual(['peinture', 'Rectification', 'sciage', 'tournage']);
     });
 
+    it('should show the new name of the chosen nature right after renaming it', async () => {
+      givenWorkstationsAndNatures();
+      await whenOpening();
+      await whenChoosingNature('tournage');
+
+      await whenRenamingChosenNature('Décolletage');
+
+      expect(texts('nature-filter-label')).toEqual(['Décolletage', 'peinture', 'sciage']);
+      expect(text('postes-selection-title')).toBe('Décolletage');
+    });
+
     it('should invite to declare natures when none exists', async () => {
       givenWorkstations();
 
@@ -340,6 +351,14 @@ describe('PostesDeTravail page', () => {
     champ.value = libelle;
     champ.dispatchEvent(new Event('input'));
     await whenClicking('nature-save');
+    await whenViewSettles();
+  };
+  const whenRenamingChosenNature = async (libelle: string): Promise<void> => {
+    await whenClicking('nature-rename');
+    const champ = requiredFixture(document.querySelector<HTMLInputElement>('#nature-nouveau-libelle'), 'nature-nouveau-libelle');
+    champ.value = libelle;
+    champ.dispatchEvent(new Event('input'));
+    await whenClicking('nature-rename-save');
     await whenViewSettles();
   };
   const whenChoosingNature = async (libelle: string): Promise<void> => {

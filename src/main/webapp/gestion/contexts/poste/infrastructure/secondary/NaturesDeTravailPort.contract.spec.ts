@@ -10,6 +10,7 @@ import { NatureDejaExistante } from '../../domain/NatureDejaExistante';
 import { NatureDeTravail } from '../../domain/NatureDeTravail';
 import { NatureDeTravailId } from '../../domain/NatureDeTravailId';
 import { NatureGeree } from '../../domain/NatureGeree';
+import { NatureIntrouvable } from '../../domain/NatureIntrouvable';
 import { NaturesDeTravailPort } from '../../domain/NaturesDeTravailPort';
 import { HttpNaturesDeTravail } from './HttpNaturesDeTravail';
 
@@ -42,14 +43,31 @@ class NaturesHttpBackendFixture implements HttpBackend {
     return new HttpResponse({ status: 201, body: nature });
   }
 
+  private renommer(id: string, body: { libelle: string }): HttpResponse<unknown> | HttpErrorResponse {
+    const nature = this.natures.find(candidate => candidate.id === id);
+    if (nature === undefined) {
+      return new HttpErrorResponse({ status: 404, statusText: 'Not Found', error: { type: `${URN}nature-introuvable` } });
+    }
+    const cle = cleFixture(body.libelle);
+    if (this.natures.some(autre => autre !== nature && cleFixture(autre.libelle) === cle)) {
+      return new HttpErrorResponse({ status: 409, statusText: 'Conflict', error: { type: `${URN}nature-deja-existante` } });
+    }
+    const renommee = { ...nature, libelle: body.libelle.trim() };
+    this.natures = this.natures.map(candidate => (candidate === nature ? renommee : candidate));
+    return new HttpResponse({ status: 200, body: renommee });
+  }
+
   private async answer(request: HttpRequest<unknown>): Promise<HttpResponse<unknown> | HttpErrorResponse> {
     await new Promise(resolve => setTimeout(resolve));
     const url = new URL(request.urlWithParams, 'http://localhost');
-    if (url.pathname !== ROUTE) {
+    if (!url.pathname.startsWith(ROUTE)) {
       return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
     }
     if (request.method === 'POST') {
       return this.enregistrer(request.body as { libelle: string });
+    }
+    if (request.method === 'PUT') {
+      return this.renommer(decodeURIComponent(url.pathname.substring(`${ROUTE}/`.length)), request.body as { libelle: string });
     }
     const page = Number(url.searchParams.get('page') ?? '0');
     const size = Number(url.searchParams.get('size') ?? '20');
@@ -145,6 +163,39 @@ describe.each(adapters)('NaturesDeTravailPort contract, honoured by %s', (_adapt
     ]);
   });
 
+  it('should rename a nature and keep its postes', async () => {
+    harness.declare([tournageFixture]);
+
+    const resultat = await harness.port.renommer(new NatureDeTravailId(tournageFixture.id), new NatureDeTravail('Décolletage'));
+
+    expect(resultat).toEqual({ ok: true, value: undefined });
+    expect(libellesEtPostes(await harness.port.natures())).toEqual([['Décolletage', 2]]);
+  });
+
+  it('should let a nature change only the case of its name', async () => {
+    harness.declare([tournageFixture]);
+
+    const resultat = await harness.port.renommer(new NatureDeTravailId(tournageFixture.id), new NatureDeTravail('TOURNAGE'));
+
+    expect(resultat).toEqual({ ok: true, value: undefined });
+  });
+
+  it('should refuse to rename a nature with the name of another one', async () => {
+    harness.declare([tournageFixture, dessinFixture]);
+
+    const resultat = await harness.port.renommer(new NatureDeTravailId(tournageFixture.id), new NatureDeTravail('dessin'));
+
+    expect(resultat).toEqual({ ok: false, error: new NatureDejaExistante() });
+  });
+
+  it('should refuse to rename a nature that no longer exists', async () => {
+    harness.declare([tournageFixture]);
+
+    const resultat = await harness.port.renommer(new NatureDeTravailId('nature-disparue'), new NatureDeTravail('Décolletage'));
+
+    expect(resultat).toEqual({ ok: false, error: new NatureIntrouvable() });
+  });
+
   it('should refuse a nature whose name already exists, whatever its case and accents', async () => {
     harness.declare([tournageFixture]);
 
@@ -186,6 +237,15 @@ describe('Beyond the contract: HttpNaturesDeTravail', () => {
     expect(await result).toBeInstanceOf(HttpErrorResponse);
   });
 
+  it('should keep an unknown refusal of a renaming as a technical failure', async () => {
+    const result = port
+      .renommer(new NatureDeTravailId('nature-1'), new NatureDeTravail('Rectification'))
+      .catch((failure: unknown) => failure);
+    await whenServerAnswers(409, { type: `${URN}inconnu` }, `${ROUTE}/nature-1`);
+
+    expect(await result).toBeInstanceOf(HttpErrorResponse);
+  });
+
   it('should send the name alone', async () => {
     const result = port.enregistrer(new NatureDeTravail('Rectification'));
     const request = await whenServerAnswers(201, { id: 'nature-1', libelle: 'Rectification', utilisee: false, postes: 0 });
@@ -205,9 +265,9 @@ describe('Beyond the contract: HttpNaturesDeTravail', () => {
   const whenServerFails = async (): Promise<void> => {
     await whenServerAnswers(500, {});
   };
-  const whenServerAnswers = async (status: number, body: object): Promise<TestRequest> => {
+  const whenServerAnswers = async (status: number, body: object, url = ROUTE): Promise<TestRequest> => {
     await new Promise(resolve => setTimeout(resolve));
-    const request = server.expectOne(candidate => candidate.url === ROUTE);
+    const request = server.expectOne(candidate => candidate.url === url);
     request.flush(body, { status, statusText: 'Response' });
     return request;
   };

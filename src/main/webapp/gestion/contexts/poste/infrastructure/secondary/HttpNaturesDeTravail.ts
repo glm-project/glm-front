@@ -10,12 +10,25 @@ import { NatureDejaExistante } from '../../domain/NatureDejaExistante';
 import { NatureDeTravail } from '../../domain/NatureDeTravail';
 import { NatureDeTravailId } from '../../domain/NatureDeTravailId';
 import { NatureGeree } from '../../domain/NatureGeree';
+import { NatureIntrouvable } from '../../domain/NatureIntrouvable';
 import { NaturesDeTravailPort } from '../../domain/NaturesDeTravailPort';
+import { RefusRenommageNature } from '../../domain/RefusRenommageNature';
 
 const URN = 'urn:glm:erreur:nature-de-travail:';
 
 const refusEnregistrement = (urn: string | undefined): NatureDejaExistante | undefined =>
   urn === `${URN}nature-deja-existante` ? new NatureDejaExistante() : undefined;
+
+const refusRenommage = (urn: string | undefined): RefusRenommageNature | undefined => {
+  switch (urn) {
+    case `${URN}nature-deja-existante`:
+      return new NatureDejaExistante();
+    case `${URN}nature-introuvable`:
+      return new NatureIntrouvable();
+    default:
+      return undefined;
+  }
+};
 
 @Injectable()
 export class HttpNaturesDeTravail extends NaturesDeTravailPort {
@@ -36,6 +49,13 @@ export class HttpNaturesDeTravail extends NaturesDeTravailPort {
 
   override enregistrer(libelle: NatureDeTravail): Promise<Result<void, NatureDejaExistante>> {
     return this.execute(this.api.write('/api/natures-de-travail', { body: { libelle: libelle.value } }), refusEnregistrement);
+  }
+
+  override renommer(id: NatureDeTravailId, libelle: NatureDeTravail): Promise<Result<void, RefusRenommageNature>> {
+    return this.execute(
+      this.api.update('/api/natures-de-travail/{id}', { pathParams: { id: id.value }, body: { libelle: libelle.value } }),
+      refusRenommage,
+    );
   }
 
   private async execute<Refus>(

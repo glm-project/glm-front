@@ -84,6 +84,17 @@ describe('Workstation settings in gestion', () => {
     whenSavingNature('Rectification');
 
     thenNatureIsListed('Rectification', '0');
+    thenNatureSavingIsAnnounced('Rectification');
+  });
+
+  it('should rename the chosen nature everywhere on the page', () => {
+    givenReferential(3);
+    whenVisitingSettings();
+    whenFilteringByNature('ponçage');
+    whenRenamingChosenNature('polissage');
+
+    thenNatureIsListed('polissage', '1');
+    thenChosenNatureIs('polissage');
   });
 
   it('should reach workstation settings from the gestion menu', () => {
@@ -199,7 +210,19 @@ const whenSavingNature = (libelle: string): void => {
   cy.get(dataSelector('nature-save')).click();
   cy.wait('@natureCreate');
 };
+const whenRenamingChosenNature = (libelle: string): void => {
+  cy.get(dataSelector('nature-rename')).click();
+  cy.get('#nature-nouveau-libelle').clear();
+  cy.get('#nature-nouveau-libelle').type(libelle);
+  cy.get(dataSelector('nature-rename-save')).click();
+  cy.wait('@natureRename');
+};
 const thenNatureIsListed = (libelle: string, postes: string): void => {
   cy.get(dataSelector('nature-filter')).contains(libelle).parents(dataSelector('nature-filter')).should('contain.text', postes);
+};
+const thenNatureSavingIsAnnounced = (libelle: string): void => {
   cy.get(dataSelector('nature-success')).should('contain.text', libelle);
+};
+const thenChosenNatureIs = (libelle: string): void => {
+  cy.get(dataSelector('postes-selection-title')).invoke('text').invoke('trim').should('eq', libelle);
 };

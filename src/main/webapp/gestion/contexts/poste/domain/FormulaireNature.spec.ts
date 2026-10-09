@@ -26,6 +26,10 @@ describe('FormulaireNature', () => {
     });
   });
 
+  it('should start a renaming from the current name', () => {
+    expect(FormulaireNature.pour(new NatureDeTravail('Soudage')).saisie).toBe('Soudage');
+  });
+
   it('should let a nature keep its own name when renamed', () => {
     const decision = FormulaireNature.vide().avecSaisie('SOUDAGE').decider(naturesFixture, soudageFixture.id);
 

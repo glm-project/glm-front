@@ -20,6 +20,10 @@ export class FormulaireNature {
     return new FormulaireNature('');
   }
 
+  static pour(libelle: NatureDeTravail): FormulaireNature {
+    return new FormulaireNature(libelle.value);
+  }
+
   avecSaisie(saisie: string): FormulaireNature {
     return new FormulaireNature(saisie);
   }
