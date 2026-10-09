@@ -48,6 +48,14 @@ describe('Frame of a fact proposed on a dossier', () => {
     expect(bornes.max).toBe(MAINTENANT);
   });
 
+  it('should hold the clock as it was read when the bound of the end falls on the same instant', () => {
+    const dossier = dossierFixture('2026-09-14T08:00:00-03:00', '2026-09-14T18:00:00Z');
+
+    const bornes = CadreDuFait.depuis(dossier, MAINTENANT).bornes();
+
+    expect(bornes.max).toBe(MAINTENANT);
+  });
+
   it('should compare the bound of the end and the clock beyond the millisecond', () => {
     const dossier = dossierFixture('2026-09-14T08:00:00-03:00', '2026-09-14T18:00:00.000000002Z');
 
