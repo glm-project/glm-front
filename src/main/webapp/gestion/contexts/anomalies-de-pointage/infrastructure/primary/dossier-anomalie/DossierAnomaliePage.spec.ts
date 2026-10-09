@@ -168,6 +168,7 @@ describe('Anomaly dossier page', () => {
 
     thenTextContains('anomalie-retry', 'Réessayer');
     thenAbsent('anomalie-resolution');
+    thenTheManagerStaysOnTheDossier();
   });
 
   it('should reacquire the dossier after the manager explicitly retries an unavailable reading', async () => {
@@ -247,23 +248,34 @@ describe('Anomaly dossier page', () => {
     thenHeadingContains('Camille Martin · Sans poste · lundi 14 septembre à 08:00');
   });
 
-  it('should reject an address missing its suivi without requesting a dossier', async () => {
-    route.paramMap.next(convertToParamMap({}));
+  it('should lead back to the list without requesting a dossier when the address names no pointage', async () => {
+    route.queryParamMap.next(convertToParamMap({ operateur: 'op-camille', page: '2' }));
 
     await whenRendering();
 
-    thenTextContains('anomalie-adresse-invalide', 'L’adresse doit préciser');
-    thenAbsent('anomalie-resolution');
-    expect(read.demandes).toHaveLength(0);
+    thenTheManagerIsLedTo('/anomalies?operateur=op-camille&page=2');
+    thenNoDossierWasRequested();
   });
 
-  it('should say that the addressed pointage no longer opens an automatic end to regularise', async () => {
+  it('should lead back to the list the manager came from, with no screen in between, when the dossier is not found', async () => {
+    givenTheManagerCameFromTheListFiltered({ operateur: 'op-camille', element: 'element-1', page: '2' });
     read.result = { kind: 'INTROUVABLE' };
 
     await whenRendering();
 
-    thenTextContains('anomalie-adresse-obsolete', 'introuvable ou ne relève plus d’une fin automatique à régulariser');
+    thenTheManagerIsLedTo('/anomalies?operateur=op-camille&element=element-1&page=2');
     thenAbsent('anomalie-resolution');
+  });
+
+  it('should lead back to the list when the dossier read again after a retry is not found', async () => {
+    read.failure = new Error('Dossier indisponible');
+    await whenRendering();
+    read.failure = undefined;
+    read.result = { kind: 'INTROUVABLE' };
+
+    await whenRetryingTheReading();
+
+    thenTheManagerIsLedTo('/anomalies');
   });
 
   it('should present an automatic end as an anomaly of pointage and never as a conflict', async () => {
@@ -545,6 +557,20 @@ describe('Anomaly dossier page', () => {
     await fixture.whenStable();
     await roundTripFixture(() => undefined);
     await fixture.whenStable();
+  };
+
+  const whenRetryingTheReading = async (): Promise<void> => {
+    await whenClicking('anomalie-retry');
+    await roundTripFixture(() => undefined);
+    await fixture.whenStable();
+  };
+
+  const thenNoDossierWasRequested = (): void => {
+    expect(read.demandes).toHaveLength(0);
+  };
+
+  const thenTheManagerStaysOnTheDossier = (): void => {
+    expect(TestBed.inject(Router).url).toBe('/');
   };
 
   const thenTheManagerIsLedTo = (url: string): void => {

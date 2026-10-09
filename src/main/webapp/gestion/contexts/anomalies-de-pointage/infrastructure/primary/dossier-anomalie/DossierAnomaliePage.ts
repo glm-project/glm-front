@@ -1,9 +1,9 @@
 import { Component, computed, inject, linkedSignal, resource } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
-import { AdresseDossier } from '../../../domain/dossier/DossierAnomalie';
+import { AdresseDossier, LectureDossier } from '../../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { ResolutionDeFin } from './vues-de-resolution/resolution-de-fin/ResolutionDeFin';
 
@@ -15,6 +15,7 @@ import { ResolutionDeFin } from './vues-de-resolution/resolution-de-fin/Resoluti
 })
 export class DossierAnomaliePage {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly port = inject(AnomaliesReadPort);
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
   private readonly parametres = toSignal(this.route.queryParamMap, { requireSync: true });
@@ -43,8 +44,10 @@ export class DossierAnomaliePage {
   });
   protected readonly dossierRelu = linkedSignal({ source: this.adresse, computation: () => false });
 
-  private read(adresse: AdresseDossier | undefined) {
-    return adresse === undefined ? Promise.resolve(undefined) : this.port.read(adresse);
+  private async read(adresse: AdresseDossier | undefined): Promise<LectureDossier | undefined> {
+    const lecture = adresse === undefined ? undefined : await this.port.read(adresse);
+    if (lecture?.kind !== 'DOSSIER') await this.router.navigate(['/anomalies'], { queryParams: this.retour(), replaceUrl: true });
+    return lecture;
   }
 
   protected reload(): void {

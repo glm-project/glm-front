@@ -54,6 +54,54 @@ describe('Automatic end list in Gestion', () => {
     thenTheAutomaticEndIsListedWithItsPeriod();
   });
 
+  it('should ignore the nature held by the address of an old link', () => {
+    whenVisiting(`/anomalies?nature=CONFLIT&operateur=${operateurFinAutomatiqueFixture}&page=2`);
+
+    thenTheListIsRequested('finsAutomatiques', `operateur=${operateurFinAutomatiqueFixture}&element=&page=1&size=5`);
+    thenTheAutomaticEndIsListedWithItsPeriod();
+  });
+
+  ['fin-automatique-introuvable', 'suivi-d-atelier-introuvable'].forEach(urn => {
+    it(`should lead back to the same filters and page, with no screen in between, when the dossier is not found (${urn})`, () => {
+      givenTheDossierIsNotFound(urn);
+
+      whenVisiting(`/anomalies?operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=2`);
+      whenOpeningTheAutomaticEnd();
+
+      thenTheAddressIs(`?operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=2`);
+      thenTheAutomaticEndIsListedWithItsPeriod();
+      thenNoDossierIsShown();
+    });
+  });
+
+  it('should not bring the manager back to a dossier that is not found when he goes back', () => {
+    givenTheDossierIsNotFound('fin-automatique-introuvable');
+    whenVisiting('/anomalies');
+    whenOpeningTheAutomaticEndThatIsNotFound();
+
+    whenGoingBack();
+
+    thenTheListIsShown();
+    thenTheDossierWasRequestedOnce();
+  });
+
+  it('should lead back to the list when the address of the dossier names no pointage', () => {
+    whenVisiting(`/anomalies/${suiviFinAutomatiqueFixture}?operateur=${operateurFinAutomatiqueFixture}`);
+
+    thenTheListIsShown();
+    thenTheAddressIs(`?operateur=${operateurFinAutomatiqueFixture}`);
+    thenTheAutomaticEndIsListedWithItsPeriod();
+  });
+
+  it('should keep the dossier and offer a retry when reading it fails technically', () => {
+    givenTheDossierFailsTechnically();
+
+    whenVisiting('/anomalies');
+    whenOpeningTheAutomaticEnd();
+
+    thenARetryIsOfferedOnTheDossier();
+  });
+
   it('should keep the filters while paginating the automatic ends and ask the back for each page', () => {
     givenTwelveAutomaticEnds();
 
@@ -205,6 +253,20 @@ describe('Automatic end list in Gestion', () => {
     }).as('dossier');
   };
 
+  const givenTheDossierIsNotFound = (urn: string): void => {
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`, {
+      statusCode: 404,
+      body: { type: `urn:glm:erreur:atelier:${urn}`, title: 'Introuvable', status: 404, detail: 'Introuvable.' },
+    }).as('dossier');
+  };
+
+  const givenTheDossierFailsTechnically = (): void => {
+    cy.intercept('GET', `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`, {
+      statusCode: 500,
+      body: {},
+    });
+  };
+
   const givenTwelveAutomaticEnds = (): void => {
     cy.intercept('GET', '/api/atelier/anomalies*', {
       body: { ...pageFinsAutomatiquesFixture(), totalElementsCount: 12 },
@@ -296,6 +358,34 @@ describe('Automatic end list in Gestion', () => {
 
   const whenOpeningTheAutomaticEnd = (): void => {
     cy.get(dataSelector('fin-automatique-ouvrir')).click();
+  };
+
+  const whenOpeningTheAutomaticEndThatIsNotFound = (): void => {
+    whenOpeningTheAutomaticEnd();
+    cy.wait('@dossier');
+    thenTheAutomaticEndIsListedWithItsPeriod();
+  };
+
+  const thenTheListIsShown = (): void => {
+    cy.location('pathname').should('equal', '/anomalies');
+  };
+
+  const thenARetryIsOfferedOnTheDossier = (): void => {
+    cy.get(dataSelector('anomalie-retry')).should('contain.text', 'Réessayer');
+    cy.location('pathname').should('equal', `/anomalies/${suiviFinAutomatiqueFixture}`);
+  };
+
+  const whenGoingBack = (): void => {
+    cy.go('back');
+  };
+
+  const thenTheDossierWasRequestedOnce = (): void => {
+    cy.get('@dossier.all').should('have.length', 1);
+  };
+
+  const thenNoDossierIsShown = (): void => {
+    cy.get(dataSelector('anomalie-resolution')).should('not.exist');
+    cy.get(dataSelector('anomalie-retour')).should('not.exist');
   };
 
   const whenReturningToTheAnomalies = (): void => {

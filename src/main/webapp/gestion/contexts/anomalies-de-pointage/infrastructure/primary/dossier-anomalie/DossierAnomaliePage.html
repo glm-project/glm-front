@@ -14,14 +14,10 @@
     [operateurs]="operateursConnus()"
     (relectureDemandee)="relire()"
   />
-  } @if (adresse() === undefined) {
-  <p role="alert" data-selector="anomalie-adresse-invalide">{{ libelles.adresseInvalide }}</p>
   } @if (lecture.error()) {
   <div role="alert" class="py-8">
     <p>{{ libelles.erreurLecture }}</p>
     <button type="button" class="bouton mt-3" data-selector="anomalie-retry" (click)="reload()">{{ libelles.reessayer }}</button>
   </div>
-  } @if (resultatLecture(); as resultat) { @if (resultat.kind === 'INTROUVABLE') {
-  <p role="status" class="py-8" data-selector="anomalie-adresse-obsolete">{{ libelles.dossierIntrouvable }}</p>
-  } }
+  }
 </main>

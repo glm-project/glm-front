@@ -74,8 +74,6 @@ export const LIBELLES_ANOMALIES = {
   elementActuelConserve: 'Élément actuel conservé',
   erreurLecture: 'Le dossier n’a pas pu être chargé.',
   reessayer: 'Réessayer',
-  adresseInvalide: 'L’adresse doit préciser un suivi et un pointage.',
-  dossierIntrouvable: 'Cette anomalie est introuvable ou ne relève plus d’une fin automatique à régulariser.',
   retour: 'Retour aux anomalies',
   dossier: 'Dossier d’anomalie de pointage',
   chargementDossier: 'Chargement du dossier…',
