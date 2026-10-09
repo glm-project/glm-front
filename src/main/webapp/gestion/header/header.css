@@ -119,6 +119,14 @@
     background-color 150ms ease-out;
 }
 
+a.action {
+  text-decoration: none;
+}
+
+.action-active {
+  color: var(--color-accent);
+}
+
 .action:hover {
   background: var(--color-sunken);
   color: var(--color-ink);

@@ -63,6 +63,10 @@ describe('Gestion header', () => {
     thenNavigationOffers('gestion-navigation-conflits', false);
   });
 
+  it('should lead to the settings through a named icon, outside the navigation', () => {
+    thenTheSettingsLinkTo('/parametres', 'Paramètres');
+  });
+
   it.each([
     ['gestion-navigation-supervision', '/', 'Supervision'],
     ['gestion-navigation-atelier', '/atelier', 'Atelier'],
@@ -119,6 +123,13 @@ describe('Gestion header', () => {
     expect(link?.textContent).toContain(label);
   };
 
+  const thenTheSettingsLinkTo = (href: string, label: string): void => {
+    const link = document.querySelector(dataSelector('gestion-parametres'));
+    expect(link?.getAttribute('href')).toBe(href);
+    expect(link?.getAttribute('aria-label')).toBe(label);
+    expect(link?.closest(dataSelector('gestion-navigation'))).toBeNull();
+  };
+
   const thenNavigationOffers = (selector: string, offered: boolean): void => {
     expect(document.querySelector(dataSelector(selector)) !== null).toBe(offered);
   };
@@ -153,6 +164,24 @@ describe('Gestion header, according to the realm roles', () => {
     thenAnomaliesAreOffered(true);
   });
 
+  it('should offer the settings destination to a gestionnaire', async () => {
+    await configureHeaderOf([ROLE_GESTIONNAIRE]);
+    const header = await showTheHeader();
+
+    await openTheSession(header);
+
+    thenSettingsAreOffered(true);
+  });
+
+  it('should hide the settings destination from a consultant', async () => {
+    await configureHeaderOf(['ROLE_CONSULTANT']);
+    const header = await showTheHeader();
+
+    await openTheSession(header);
+
+    thenSettingsAreOffered(false);
+  });
+
   it('should hide the anomalies destination from a consultant', async () => {
     await configureHeaderOf(['ROLE_CONSULTANT']);
     const header = await showTheHeader();
@@ -171,6 +200,10 @@ describe('Gestion header, according to the realm roles', () => {
     thenAnomaliesAreOffered(false);
     thenTheOtherDestinationsAreOffered();
   });
+
+  const thenSettingsAreOffered = (offered: boolean): void => {
+    expect(document.querySelector(dataSelector('gestion-parametres')) !== null).toBe(offered);
+  };
 
   const thenAnomaliesAreOffered = (offered: boolean): void => {
     expect(document.querySelector(dataSelector('gestion-navigation-anomalies')) !== null).toBe(offered);

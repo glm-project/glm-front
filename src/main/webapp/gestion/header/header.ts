@@ -42,6 +42,7 @@ const LIBELLES_EN_TETE = {
   navigation: 'Navigation principale',
   menu: 'Menu',
   deconnexion: 'Se déconnecter',
+  parametres: 'Paramètres',
 } as const;
 
 @Component({
@@ -58,11 +59,13 @@ export class GestionHeader {
   private readonly realmRoles = toSignal(from(this.roles.realmRoles()));
 
   protected readonly libelles = LIBELLES_EN_TETE;
-  protected readonly destinations = computed(() => {
+  protected readonly gestionnaire = computed(() => {
     const roles = this.realmRoles();
-    const gestionnaire = roles !== undefined && isReservedToGestionnaire(roles);
-    return DESTINATIONS.filter(destination => gestionnaire || !destination.reserveeAuGestionnaire);
+    return roles !== undefined && isReservedToGestionnaire(roles);
   });
+  protected readonly destinations = computed(() =>
+    DESTINATIONS.filter(destination => this.gestionnaire() || !destination.reserveeAuGestionnaire),
+  );
   protected readonly menuOuvert = signal(false);
 
   protected basculerMenu(): void {
