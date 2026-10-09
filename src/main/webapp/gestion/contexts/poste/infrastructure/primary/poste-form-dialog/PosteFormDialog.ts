@@ -11,6 +11,7 @@ import { PostesPort } from '../../../domain/PostesPort';
 
 export interface PosteFormDialogData {
   readonly poste: PosteDeTravail | null;
+  readonly nature?: NatureDeTravail;
 }
 
 @Component({
@@ -26,7 +27,9 @@ export class PosteFormDialog implements OnInit {
   private readonly errors = inject(ErrorHandlerPort);
 
   protected readonly formulaire = signal(
-    this.data.poste === null ? FormulairePosteDeTravail.pourCreation() : FormulairePosteDeTravail.pourModification(this.data.poste),
+    this.data.poste === null
+      ? FormulairePosteDeTravail.pourCreation().avecNature(this.data.nature?.value ?? '')
+      : FormulairePosteDeTravail.pourModification(this.data.poste),
   );
   protected readonly titre = this.formulaire().id === undefined ? 'Nouveau poste' : 'Modifier le poste';
   protected readonly soumis = signal(false);

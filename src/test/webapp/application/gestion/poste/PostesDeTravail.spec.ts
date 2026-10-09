@@ -69,6 +69,53 @@ describe('Workstation settings in gestion', () => {
 
     thenNatureIsSelected();
   });
+  it('should show the workstations of the chosen nature and keep it in the address', () => {
+    givenReferential(3);
+    whenVisitingSettings();
+    whenFilteringByNature('ponçage');
+
+    thenOnlyWorkstationsAreListed(['Poste 03']);
+    thenAddressNamesNature('nature-poncage');
+  });
+
+  it('should save a new nature and list it with no workstation yet', () => {
+    givenReferential(1);
+    whenVisitingSettings();
+    whenSavingNature('Rectification');
+
+    thenNatureIsListed('Rectification', '0');
+    thenNatureSavingIsAnnounced('Rectification');
+  });
+
+  it('should rename the chosen nature everywhere on the page', () => {
+    givenReferential(3);
+    whenVisitingSettings();
+    whenFilteringByNature('ponçage');
+    whenRenamingChosenNature('polissage');
+
+    thenNatureIsListed('polissage', '1');
+    thenChosenNatureIs('polissage');
+  });
+
+  it('should remove a nature that no workstation carries', () => {
+    givenReferential(1);
+    whenVisitingSettings();
+    whenSavingNature('Rectification');
+    whenFilteringByNature('Rectification');
+    whenRemovingChosenNature();
+
+    thenNatureIsNotListed('Rectification');
+  });
+
+  it('should create a workstation of the chosen nature', () => {
+    const api = givenReferential(3);
+    whenVisitingSettings();
+    whenFilteringByNature('ponçage');
+    whenCreatingWorkstationOfChosenNature('Polisseuse');
+
+    thenWorkstationWasCreatedWithNature(api, 'ponçage');
+  });
+
   it('should reach workstation settings from the gestion menu', () => {
     givenAnEmptyWorkshop();
     whenOpeningFromTheMenu();
@@ -163,4 +210,55 @@ const thenFirstPageOfTwentyIsVisible = (): void => {
 };
 const thenNatureIsSelected = (): void => {
   cy.get(dataSelector('poste-nature')).should('have.value', 'ponçage');
+};
+const whenFilteringByNature = (libelle: string): void => {
+  cy.get(dataSelector('nature-filter')).contains(libelle).click();
+};
+const thenOnlyWorkstationsAreListed = (libelles: string[]): void => {
+  cy.get(dataSelector('poste-row')).should('have.length', libelles.length);
+  for (const libelle of libelles) {
+    cy.get(dataSelector('poste-row')).should('contain.text', libelle);
+  }
+};
+const thenAddressNamesNature = (id: string): void => {
+  cy.location('search').should('eq', '?nature=' + id);
+};
+const whenSavingNature = (libelle: string): void => {
+  cy.get(dataSelector('nature-new')).click();
+  cy.get('#nature-libelle').type(libelle);
+  cy.get(dataSelector('nature-save')).click();
+  cy.wait('@natureCreate');
+};
+const whenRenamingChosenNature = (libelle: string): void => {
+  cy.get(dataSelector('nature-rename')).click();
+  cy.get('#nature-nouveau-libelle').clear();
+  cy.get('#nature-nouveau-libelle').type(libelle);
+  cy.get(dataSelector('nature-rename-save')).click();
+  cy.wait('@natureRename');
+};
+const thenNatureIsListed = (libelle: string, postes: string): void => {
+  cy.get(dataSelector('nature-filter')).contains(libelle).parents(dataSelector('nature-filter')).should('contain.text', postes);
+};
+const thenNatureSavingIsAnnounced = (libelle: string): void => {
+  cy.get(dataSelector('nature-success')).should('contain.text', libelle);
+};
+const thenChosenNatureIs = (libelle: string): void => {
+  cy.get(dataSelector('postes-selection-title')).invoke('text').invoke('trim').should('eq', libelle);
+};
+const whenRemovingChosenNature = (): void => {
+  cy.get(dataSelector('nature-delete')).click();
+  cy.get(dataSelector('nature-delete-confirm')).click();
+  cy.wait('@natureDelete');
+};
+const thenNatureIsNotListed = (libelle: string): void => {
+  cy.get(dataSelector('natures-list')).should('not.contain.text', libelle);
+  cy.location('search').should('eq', '');
+};
+const whenCreatingWorkstationOfChosenNature = (libelle: string): void => {
+  cy.get(dataSelector('nature-new-poste')).click();
+  cy.get(dataSelector('poste-libelle')).type(libelle);
+  whenSaving('posteCreate');
+};
+const thenWorkstationWasCreatedWithNature = (api: PostesApiFixture, nature: string): void => {
+  cy.wrap(api.writes).its(0).its('nature').should('eq', nature);
 };

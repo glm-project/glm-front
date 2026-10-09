@@ -24,6 +24,7 @@ export class PostesApiFixture {
   protectedCode: string | undefined;
   readonly writes: Commande[] = [];
   readonly deletions: string[] = [];
+  natures: { id: string; libelle: string; utilisee: boolean; postes: number }[] = [];
 
   constructor(postes: RestPoste[] = []) {
     this.postes = postes;
@@ -44,9 +45,40 @@ export class PostesApiFixture {
         totalElementsCount: this.postes.length,
       });
     }).as('postesRead');
+    this.installNatures();
     this.installCreation();
     this.installModification();
     this.installDeletion();
+  }
+
+  private installNatures(): void {
+    cy.intercept({ method: 'GET', pathname: '/api/natures-de-travail' }, request => {
+      const natures = new Map(this.natures.map(nature => [nature.id, nature]));
+      for (const poste of this.postes) {
+        const connue = natures.get(poste.natureId);
+        natures.set(poste.natureId, { id: poste.natureId, libelle: poste.nature, utilisee: true, postes: (connue?.postes ?? 0) + 1 });
+      }
+      const content = [...natures.values()].sort((gauche, droite) => gauche.libelle.localeCompare(droite.libelle, 'fr'));
+      request.reply({ content, currentPage: 0, pageSize: Number(request.query['size'] ?? 20), totalElementsCount: content.length });
+    }).as('naturesRead');
+    cy.intercept('POST', '/api/natures-de-travail', request => {
+      const { libelle } = request.body as { libelle: string };
+      const nature = { id: 'nature-' + String(this.natures.length + 1), libelle, utilisee: false, postes: 0 };
+      this.natures.push(nature);
+      request.reply({ statusCode: 201, body: nature });
+    }).as('natureCreate');
+    cy.intercept('PUT', '/api/natures-de-travail/*', request => {
+      const id = request.url.split('/').slice(-1)[0];
+      const { libelle } = request.body as { libelle: string };
+      this.natures = this.natures.map(nature => (nature.id === id ? { ...nature, libelle } : nature));
+      this.postes = this.postes.map(poste => (poste.natureId === id ? { ...poste, nature: libelle } : poste));
+      request.reply({ statusCode: 200, body: { id, libelle, utilisee: true, postes: 0 } });
+    }).as('natureRename');
+    cy.intercept('DELETE', '/api/natures-de-travail/*', request => {
+      const id = request.url.split('/').slice(-1)[0];
+      this.natures = this.natures.filter(nature => nature.id !== id);
+      request.reply({ statusCode: 204 });
+    }).as('natureDelete');
   }
 
   private installCreation(): void {

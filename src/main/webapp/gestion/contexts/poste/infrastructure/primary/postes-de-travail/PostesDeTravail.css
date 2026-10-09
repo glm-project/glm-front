@@ -18,3 +18,18 @@ table {
 .mat-column-actions {
   width: 7rem;
 }
+.postes-disposition {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+.natures-colonne {
+  flex: 1 1 16rem;
+  max-width: 100%;
+  padding: 0.5rem;
+}
+.postes-tableau {
+  flex: 999 1 35rem;
+  min-width: 0;
+}

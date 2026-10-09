@@ -5,21 +5,30 @@ import {
   DEFAULT_PAGINATOR_LABELS,
 } from '@/gestion/shared/design-system/infrastructure/primary/pagination/createPaginatorIntl';
 import { Component, computed, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorIntl, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
+import { ActivatedRoute, Router } from '@angular/router';
+import { map } from 'rxjs';
 import { CoutHoraire } from '../../../domain/CoutHoraire';
+import { NatureDeTravail } from '../../../domain/NatureDeTravail';
+import { NatureGeree } from '../../../domain/NatureGeree';
+import { NaturesDeTravailPort } from '../../../domain/NaturesDeTravailPort';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PostesPort } from '../../../domain/PostesPort';
+import { ColonneDesNatures } from '../colonne-des-natures/ColonneDesNatures';
 import {
   ConfirmationSuppressionPosteDialog,
   ConfirmationSuppressionPosteDialogData,
 } from '../confirmation-suppression-poste-dialog/ConfirmationSuppressionPosteDialog';
+import { EnTeteDesPostes } from '../en-tete-des-postes/EnTeteDesPostes';
 import { PosteFormDialog, PosteFormDialogData } from '../poste-form-dialog/PosteFormDialog';
 
 interface EtatPostes {
   readonly postes: readonly PosteDeTravail[];
+  readonly natures: readonly NatureGeree[];
   readonly totalElementsCount: number;
   readonly page: number;
   readonly taille: number;
@@ -32,7 +41,7 @@ interface EtatPostes {
   host: { 'data-selector': 'postes-page' },
   templateUrl: './PostesDeTravail.html',
   styleUrl: './PostesDeTravail.css',
-  imports: [ErrorMessage, Icon, MatButtonModule, MatTableModule, MatPaginatorModule],
+  imports: [ColonneDesNatures, EnTeteDesPostes, ErrorMessage, Icon, MatButtonModule, MatTableModule, MatPaginatorModule],
   providers: [
     {
       provide: MatPaginatorIntl,
@@ -42,9 +51,13 @@ interface EtatPostes {
 })
 export class PostesDeTravail implements OnInit {
   private readonly port = inject(PostesPort);
+  private readonly naturesPort = inject(NaturesDeTravailPort);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private lecture = 0;
   protected readonly etat = signal<EtatPostes>({
     postes: [],
+    natures: [],
     totalElementsCount: 0,
     page: 0,
     taille: 20,
@@ -54,12 +67,20 @@ export class PostesDeTravail implements OnInit {
   private readonly dialogs = inject(MatDialog);
   private readonly viewContainerRef = inject(ViewContainerRef);
   private readonly currency = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
-  protected readonly colonnes = ['libelle', 'nature', 'coutHoraire', 'actions'];
+  private readonly natureDemandee = toSignal(this.route.queryParamMap.pipe(map(parametres => parametres.get('nature'))), {
+    initialValue: null,
+  });
+  protected readonly natureChoisie = computed(() => this.etat().natures.find(nature => nature.id.value === this.natureDemandee()));
+  protected readonly colonnes = computed(() =>
+    this.natureChoisie() === undefined ? ['libelle', 'nature', 'coutHoraire', 'actions'] : ['libelle', 'coutHoraire', 'actions'],
+  );
 
   protected readonly recherche = signal('');
   protected readonly resultats = computed(() => {
     const recherche = this.recherche().trim().normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr-FR');
-    return this.etat().postes.filter(entry => {
+    const nature = this.natureChoisie();
+    const postes = nature === undefined ? this.etat().postes : this.etat().postes.filter(entry => nature.porte(entry));
+    return postes.filter(entry => {
       const texte = [entry.libelle.value, entry.nature.value];
       return texte.join(' ').normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('fr-FR').includes(recherche);
     });
@@ -67,6 +88,20 @@ export class PostesDeTravail implements OnInit {
   protected readonly affiches = computed(() =>
     this.resultats().slice(this.etat().page * this.etat().taille, (this.etat().page + 1) * this.etat().taille),
   );
+
+  protected choisir(nature: NatureGeree | undefined): void {
+    this.etat.update(etat => ({ ...etat, page: 0 }));
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { nature: nature?.id.value ?? null },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  protected apresSuppression(): void {
+    this.choisir(undefined);
+    this.reload();
+  }
 
   protected rechercher(value: string): void {
     this.recherche.set(value);
@@ -85,9 +120,9 @@ export class PostesDeTravail implements OnInit {
     this.etat.update(etat => ({ ...etat, page: event.pageIndex, taille: event.pageSize }));
   }
 
-  protected openForm(poste: PosteDeTravail | null = null): void {
+  protected openForm(poste: PosteDeTravail | null = null, nature?: NatureDeTravail): void {
     const dialogRef = this.dialogs.open<PosteFormDialog, PosteFormDialogData, boolean>(PosteFormDialog, {
-      data: { poste },
+      data: { poste, ...(nature === undefined ? {} : { nature }) },
       viewContainerRef: this.viewContainerRef,
       width: '36rem',
       maxWidth: 'calc(100vw - 2rem)',
@@ -121,11 +156,12 @@ export class PostesDeTravail implements OnInit {
     const lecture = ++this.lecture;
     this.etat.update(etat => ({ ...etat, chargement: true, echec: false }));
     try {
-      const entries = await this.port.referentiel();
+      const [entries, natures] = await Promise.all([this.port.referentiel(), this.naturesPort.natures()]);
       if (lecture === this.lecture) {
         this.etat.update(etat => ({
           ...etat,
           postes: entries,
+          natures,
           totalElementsCount: entries.length,
         }));
         this.etat.update(etat => ({

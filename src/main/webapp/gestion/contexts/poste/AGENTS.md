@@ -26,6 +26,20 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 - **RequetePostes** : objet de requête paginée portant l'indice de page et le nombre d'éléments par page (`page`, `taille`).
 - **FormulairePosteDeTravail** : modèle riche d'interaction pour la création et la modification, validant les entrées brutes, produisant la commande adéquate et effaçant l'erreur de doublon dès que le libellé est modifié.
 - **PostesPort** : port secondaire exposant la consultation paginée via `RequetePostes`, la collecte des natures uniques de l'atelier, la création (`CommandeCreationPoste`), la modification (`CommandeModificationPoste`) et la suppression protégée par un `Result<T, Refus>`.
+- **NatureDeTravailId** : Value Object de l'identifiant d'une nature du référentiel des natures de travail.
+- **NatureGeree** : une nature telle que la page la présente : identifiant, libellé, nombre de postes qui la portent
+  (champ `postes` de l'API) et usage (`utilisee`). `supprimable` tant que rien ne s'en sert : une nature sans poste
+  reste utilisée si du temps a été pointé sous elle, d'où une corbeille pilotée par `utilisee` et non par `postes`. `porte(poste)` reconnaît ses postes à leur libellé de nature, unique dans l'entreprise.
+- **NaturesDeTravailPort** : port secondaire du référentiel des natures (`/api/natures-de-travail`) : lecture
+  entière, enregistrement, renommage et suppression. Refus : `NatureDejaExistante` (409 `nature-deja-existante`),
+  `NatureIntrouvable` (404 `nature-introuvable`), et à la suppression `NatureUtilisee` (409 `nature-utilisee`, un
+  poste la porte) ou `NaturePointee` (409 `nature-pointee`, définitif).
+- **FormulaireNature** : modèle de la saisie d'une nature. `decider` refuse un nom vide, trop long ou déjà porté
+  par une autre nature (casse, accents et espaces ignorés), signale une nature **ressemblante** tant que la
+  ressemblance n'est pas acceptée, et rend sinon le libellé prêt à enregistrer.
+- **RessemblanceDeNature** : `memeNom` et `ressemble`. Deux noms se ressemblent quand, une fois en minuscules et
+  sans accents, ils partagent leurs 4 premières lettres ou ne diffèrent que de 2 modifications au plus. C'est un
+  avertissement, jamais un blocage.
 - **Refus de commande** : `LibellePosteDejaUtilise` (unicité de libellé en création/modification), `PosteIntrouvable` (poste inexistant en modification/suppression), et `PosteNonSupprimable` (pointages ou habilitations associées en suppression).
 
 ## Responsabilités et invariants
@@ -45,6 +59,22 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 ## Règles locales
 
 Pour les formulaires et la validation des saisies, appliquer l'[ADR 0036](../../../../../../documentation/adr/0036-rich-domain-models-for-form-interactions.md) : la saisie et ses invariants sont portés par un modèle de domaine riche (`FormulairePosteDeTravail`), sans `ReactiveFormsModule`.
+
+## Natures à gauche, postes à droite
+
+La page Postes de travail présente les natures dans une colonne qui sert de filtre (disposition retenue pour
+glm-project/glm-front#267) : « Toutes », puis chaque nature avec son nombre de postes. La nature choisie est
+gardée dans l'adresse (`?nature=<id>`) ; une adresse qui nomme une nature disparue montre tous les postes. Le
+tableau d'une nature choisie n'affiche plus la colonne Nature. « + Nouvelle nature », en bas de la colonne,
+ouvre la saisie sur place : « Enregistrer » (jamais « Déclarer »), puis « Enregistrer quand même » après une
+alerte de ressemblance ; Échap ou Annuler referme sans écrire. Une nature enregistrée relit la page.
+« + Poste de <nature> », dans l'en-tête du tableau d'une nature choisie, ouvre le formulaire du poste avec
+cette nature déjà saisie. « Renommer la nature », à côté, part du nom actuel et rappelle que le
+nouveau nom s'affichera partout, rapports déjà produits compris ; la nature peut reprendre son propre nom avec
+d'autres majuscules ou accents. Une nature disparue entre-temps est signalée et la page relue. La corbeille, à
+côté, n'apparaît que sur une nature supprimable ; la suppression se confirme dans l'en-tête, puis la page revient
+à « Toutes ». Un refus s'affiche sous l'en-tête et la page est relue. Une panne de lecture des natures vaut une panne
+de lecture de la page.
 
 ## Recherche du référentiel
 

@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+.nature-filtre {
+  display: flex;
+  width: 100%;
+  min-height: var(--spacing-touch);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.5rem 0 0.75rem;
+  border-radius: var(--radius-control);
+  color: var(--color-ink);
+  text-align: left;
+}
+.nature-filtre:hover {
+  background: var(--color-sunken);
+}
+.nature-filtre[aria-pressed='true'] {
+  background: var(--color-sunken);
+  font-weight: 700;
+}
