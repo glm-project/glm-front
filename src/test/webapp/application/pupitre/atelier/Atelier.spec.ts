@@ -142,7 +142,7 @@ describe('Pupitre workshop journey', () => {
     const refusal = givenStartingElementWillBeIgnored();
 
     whenStartingElementOptimistically('piece-1');
-    whenServerAnswers(refusal);
+    whenServerAnswersOnceTheElementIsOptimisticallyActive(refusal, 'piece-1');
 
     thenIgnoredPointageLeavesNoTraceOnElementAndHeader('piece-1');
   });
@@ -311,6 +311,14 @@ describe('Pupitre workshop journey', () => {
 
   const whenStartingElementOptimistically = (elementId: string): void => {
     longPressFixture(cy.get(dataSelector(`tile-${elementId}`)).find(dataSelector('primary-target')));
+  };
+
+  const whenServerAnswersOnceTheElementIsOptimisticallyActive = (
+    response: ReturnType<typeof interceptForever>,
+    elementId: string,
+  ): void => {
+    thenElementIsOptimisticallyActive(elementId);
+    whenServerAnswers(response);
   };
 
   const whenServerAnswers = (response: ReturnType<typeof interceptForever>): void => {
