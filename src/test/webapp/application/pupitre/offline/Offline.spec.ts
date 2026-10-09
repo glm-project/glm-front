@@ -1,3 +1,4 @@
+import { referentielApiFixture } from '@test/unit/fixtures/pupitre/atelier/ReferentielApiFixture';
 import { dataSelector } from '../../../utils/DataSelector';
 import { clearPupitreStorageFixture, givenDurablePupitreFixture, pupitreTokenFixture } from '../../../utils/PupitreStorageFixture';
 
@@ -32,7 +33,7 @@ describe('Pupitre offline restart', () => {
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('enrolment');
     cy.intercept('POST', '**/protocol/openid-connect/token', { forceNetworkError: true });
     cy.intercept('GET', '/api/pupitre/referentiel', {
-      body: { genereLe: '2026-09-05T08:05:00Z', operateurs: [], suivis: [], categories: [] },
+      body: referentielApiFixture(),
     }).as('reference');
     cy.intercept('POST', '/api/atelier/suivis/piece/pointages', request => {
       if (online) {

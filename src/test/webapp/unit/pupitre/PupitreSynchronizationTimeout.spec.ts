@@ -14,6 +14,7 @@ import { TestBed } from '@angular/core/testing';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
+import { referentielApiFixture } from '@test/unit/fixtures/pupitre/atelier/ReferentielApiFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 
 const entrepriseFixture = Entreprise.of('entreprise-a');
@@ -210,7 +211,7 @@ describe('Pupitre synchronization over stalled HTTP', () => {
   const whenReferenceRefreshCompletes = async (): Promise<void> => {
     await requestArrived.promise;
     requestArrived = new SignalFixture();
-    http.expectOne('/api/pupitre/referentiel').flush({ genereLe: '2026-09-05T08:05:00Z', operateurs: [], suivis: [] });
+    http.expectOne('/api/pupitre/referentiel').flush(referentielApiFixture());
   };
   const thenGestureIsPending = (state: Awaited<ReturnType<JournauxDuPupitrePort['read']>>, geste: GesteDePointage): void => {
     expect(state.evenements).toEqual([{ geste, etat: 'EN_ATTENTE' }]);

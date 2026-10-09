@@ -1,4 +1,5 @@
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { referentielApiFixture } from '@test/unit/fixtures/pupitre/atelier/ReferentielApiFixture';
 import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { dataSelector } from '../../../utils/DataSelector';
 import { interceptForever } from '../../../utils/Interceptor';
@@ -196,8 +197,7 @@ describe('Pupitre workshop journey', () => {
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('deviceAuthorization');
     cy.intercept('POST', '**/protocol/openid-connect/token', { statusCode: 503, body: {} });
     cy.intercept('GET', '/api/pupitre/referentiel', {
-      body: {
-        genereLe: '2026-09-05T08:05:00Z',
+      body: referentielApiFixture({
         operateurs: referentiel.operateurs,
         suivis: referentiel.suivis.map(suivi => ({
           id: suivi.id,
@@ -215,7 +215,7 @@ describe('Pupitre workshop journey', () => {
           })),
         })),
         categories: referentiel.categories,
-      },
+      }),
     }).as('workshop');
     observeWorkshopWrites();
   };
