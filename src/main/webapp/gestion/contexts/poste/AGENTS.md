@@ -45,7 +45,7 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 ## Responsabilités et invariants
 
 - Le libellé du poste est unique dans l'entreprise. Un refus 409 serveur (`LibellePosteDejaUtilise`) est reporté sur le champ libellé sans fermer le formulaire.
-- La nature du poste est obligatoire et se choisit dans le référentiel des natures (`NaturesDeTravailPort`) : aucune nature ne se crée depuis le formulaire du poste.
+- La nature du poste est obligatoire et se choisit dans le référentiel des natures (`NaturesDeTravailPort`) : aucune nature ne se crée depuis le formulaire du poste. Sans aucune nature, le formulaire le dit et « Ajouter une nature » le referme sur la saisie « + Nouvelle nature » de la colonne.
 - Un poste ne peut pas être supprimé s'il a déjà servi à pointer ou si des opérateurs y sont encore habilités. Le refus 409 (`PosteNonSupprimable`) affiche un message explicatif clair à l'utilisateur.
 - Les opérations d'écriture retournent un `Result<T, Refus>` : les refus métier attendus sont portés par l'état du résultat, tandis que les anomalies techniques imprévues rejettent la promesse.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.

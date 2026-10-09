@@ -46,7 +46,7 @@ export class ColonneDesNatures {
     return this.proche() === undefined ? 'Enregistrer' : 'Enregistrer quand même';
   });
 
-  protected ouvrirAjout(): void {
+  ouvrirAjout(): void {
     this.ajout.set(true);
     this.succes.set(undefined);
     afterNextRender(() => this.host.nativeElement.querySelector<HTMLInputElement>('#nature-libelle')?.focus(), {

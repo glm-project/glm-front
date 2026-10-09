@@ -22,7 +22,7 @@ import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PosteDeTravailId } from '../../../domain/PosteDeTravailId';
 import { PosteIntrouvable } from '../../../domain/PosteIntrouvable';
 import { PostesPort } from '../../../domain/PostesPort';
-import { PosteFormDialog, PosteFormDialogData } from './PosteFormDialog';
+import { PosteFormDialog, PosteFormDialogData, ResultatFormulairePoste } from './PosteFormDialog';
 
 const tournageFixture = new NatureGeree(new NatureDeTravailId('nature-tournage'), new NatureDeTravail('tournage'), {
   utilisee: true,
@@ -41,9 +41,9 @@ describe('PosteFormDialog', () => {
   let port: PostesFixture;
   let natures: NaturesDeTravailFixture;
   let errors: ErrorHandlerFixture;
-  let dialog: MatDialogRef<PosteFormDialog, boolean>;
-  let closed: (boolean | undefined)[];
-  let fermeture: Promise<boolean | undefined>;
+  let dialog: MatDialogRef<PosteFormDialog, ResultatFormulairePoste>;
+  let closed: (ResultatFormulairePoste | undefined)[];
+  let fermeture: Promise<ResultatFormulairePoste | undefined>;
   beforeEach(() => {
     port = new PostesFixture();
     natures = new NaturesDeTravailFixture();
@@ -137,6 +137,25 @@ describe('PosteFormDialog', () => {
     await whenEntering('poste-nature', 'tour');
 
     expect(texts('poste-nature-option')).toEqual([]);
+  });
+
+  it('should invite to add a nature when the referential has none', async () => {
+    givenNoNature();
+
+    await whenOpening();
+
+    expect(text('poste-natures-empty')).toContain("Aucune nature n'est encore enregistrée");
+    expect(isShown('poste-nature')).toBe(false);
+  });
+
+  it('should close to add a nature from the natures column', async () => {
+    givenNoNature();
+    await whenOpening();
+
+    await whenClicking('poste-nature-add');
+    await whenClosed();
+
+    expect(closed).toEqual(['ajouter-une-nature']);
   });
 
   it('should start on the nature given by the page', async () => {
@@ -238,6 +257,10 @@ describe('PosteFormDialog', () => {
     expect(closed).toEqual([false]);
   });
 
+  const givenNoNature = (): void => {
+    natures.liste = [];
+  };
+  const isShown = (selector: string): boolean => document.querySelector(dataSelector(selector)) !== null;
   const givenCreationRefusesAnUnknownNature = (): void => {
     port.creation = err(new NatureInconnue());
   };
@@ -259,7 +282,7 @@ describe('PosteFormDialog', () => {
   };
 
   const whenOpening = async (poste: PosteDeTravail | null = null, nature?: NatureGeree): Promise<void> => {
-    dialog = TestBed.inject(MatDialog).open<PosteFormDialog, PosteFormDialogData, boolean>(PosteFormDialog, {
+    dialog = TestBed.inject(MatDialog).open<PosteFormDialog, PosteFormDialogData, ResultatFormulairePoste>(PosteFormDialog, {
       data: { poste, ...(nature === undefined ? {} : { nature }) },
     });
     fermeture = firstValueFrom(dialog.afterClosed());

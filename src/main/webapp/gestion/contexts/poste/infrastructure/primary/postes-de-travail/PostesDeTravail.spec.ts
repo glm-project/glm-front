@@ -344,6 +344,17 @@ describe('PostesDeTravail page', () => {
       expect(natureField()).toBe('tournage');
     });
 
+    it('should open the nature entry when the poste form asks to add a nature', async () => {
+      givenWorkstations();
+      await whenOpening();
+      await whenClicking('postes-new');
+
+      await whenClicking('poste-nature-add');
+      await whenEveryDialogHasClosed();
+
+      expect(natureEntryIsOpen()).toBe(true);
+    });
+
     it('should invite to declare natures when none exists', async () => {
       givenWorkstations();
 
@@ -441,6 +452,11 @@ describe('PostesDeTravail page', () => {
     const closed = firstValueFrom(dialogs.afterAllClosed);
     dialogs.openDialogs[dialogs.openDialogs.length - 1]?.close(result);
     await closed;
+    await fixture.whenStable();
+  };
+  const natureEntryIsOpen = (): boolean => document.querySelector('#nature-libelle') !== null;
+  const whenEveryDialogHasClosed = async (): Promise<void> => {
+    await firstValueFrom(TestBed.inject(MatDialog).afterAllClosed);
     await fixture.whenStable();
   };
   const whenViewSettles = async (): Promise<void> => {

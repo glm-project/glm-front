@@ -4,7 +4,7 @@ import {
   createPaginatorIntl,
   DEFAULT_PAGINATOR_LABELS,
 } from '@/gestion/shared/design-system/infrastructure/primary/pagination/createPaginatorIntl';
-import { Component, computed, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, viewChild, ViewContainerRef } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -24,7 +24,7 @@ import {
   ConfirmationSuppressionPosteDialogData,
 } from '../confirmation-suppression-poste-dialog/ConfirmationSuppressionPosteDialog';
 import { EnTeteDesPostes } from '../en-tete-des-postes/EnTeteDesPostes';
-import { PosteFormDialog, PosteFormDialogData } from '../poste-form-dialog/PosteFormDialog';
+import { AJOUTER_UNE_NATURE, PosteFormDialog, PosteFormDialogData, ResultatFormulairePoste } from '../poste-form-dialog/PosteFormDialog';
 
 interface EtatPostes {
   readonly postes: readonly PosteDeTravail[];
@@ -54,6 +54,7 @@ export class PostesDeTravail implements OnInit {
   private readonly naturesPort = inject(NaturesDeTravailPort);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly colonne = viewChild.required<ColonneDesNatures>('colonne');
   private lecture = 0;
   protected readonly etat = signal<EtatPostes>({
     postes: [],
@@ -121,14 +122,16 @@ export class PostesDeTravail implements OnInit {
   }
 
   protected openForm(poste: PosteDeTravail | null = null, nature?: NatureChoisie): void {
-    const dialogRef = this.dialogs.open<PosteFormDialog, PosteFormDialogData, boolean>(PosteFormDialog, {
+    const dialogRef = this.dialogs.open<PosteFormDialog, PosteFormDialogData, ResultatFormulairePoste>(PosteFormDialog, {
       data: { poste, ...(nature === undefined ? {} : { nature }) },
       viewContainerRef: this.viewContainerRef,
       width: '36rem',
       maxWidth: 'calc(100vw - 2rem)',
     });
-    dialogRef.afterClosed().subscribe(saved => {
-      if (saved) {
+    dialogRef.afterClosed().subscribe(resultat => {
+      if (resultat === AJOUTER_UNE_NATURE) {
+        this.colonne().ouvrirAjout();
+      } else if (resultat === true) {
         void this.load();
       }
     });

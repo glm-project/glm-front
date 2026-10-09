@@ -13,6 +13,10 @@ import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PostesPort } from '../../../domain/PostesPort';
 import { RefusModificationPoste } from '../../../domain/RefusModificationPoste';
 
+export const AJOUTER_UNE_NATURE = 'ajouter-une-nature';
+
+export type ResultatFormulairePoste = boolean | typeof AJOUTER_UNE_NATURE;
+
 export interface PosteFormDialogData {
   readonly poste: PosteDeTravail | null;
   readonly nature?: NatureChoisie;
@@ -26,7 +30,7 @@ export interface PosteFormDialogData {
 })
 export class PosteFormDialog implements OnInit {
   private readonly data = inject<PosteFormDialogData>(MAT_DIALOG_DATA);
-  private readonly dialog = inject<MatDialogRef<PosteFormDialog, boolean>>(MatDialogRef);
+  private readonly dialog = inject<MatDialogRef<PosteFormDialog, ResultatFormulairePoste>>(MatDialogRef);
   private readonly port = inject(PostesPort);
   private readonly naturesPort = inject(NaturesDeTravailPort);
   private readonly errors = inject(ErrorHandlerPort);
@@ -41,6 +45,7 @@ export class PosteFormDialog implements OnInit {
   protected readonly enregistrement = signal(false);
   protected readonly erreurTechnique = signal(false);
   protected readonly natures = signal<readonly NatureGeree[]>([]);
+  protected readonly naturesLues = signal(false);
   protected readonly suggestions = computed(() => {
     const saisie = this.formulaire().saisie.nature;
     return this.natures().filter(nature => nature.libelle.correspondA(saisie));
@@ -54,8 +59,13 @@ export class PosteFormDialog implements OnInit {
     this.errors.observe(
       this.naturesPort.natures().then(natures => {
         this.natures.set(natures);
+        this.naturesLues.set(true);
       }),
     );
+  }
+
+  protected ajouterUneNature(): void {
+    this.dialog.close(AJOUTER_UNE_NATURE);
   }
 
   protected choisirNature(nature: NatureGeree): void {

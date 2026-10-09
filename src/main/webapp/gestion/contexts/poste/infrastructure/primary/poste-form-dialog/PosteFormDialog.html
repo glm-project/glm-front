@@ -13,6 +13,17 @@
         [error]="soumis() ? formulaire().erreurLibelle() : undefined"
         (valueChanged)="changeLibelle($event)"
       />
+      @if (naturesLues() && natures().length === 0) {
+      <div data-selector="poste-natures-empty">
+        <p class="field-label">Nature <span class="text-ink-muted">(obligatoire)</span></p>
+        <p class="mt-2 text-body-sm text-ink-muted">
+          Aucune nature n'est encore enregistrée : ajoutez-en une, puis revenez créer le poste.
+        </p>
+        <button mat-stroked-button type="button" class="mt-2" (click)="ajouterUneNature()" data-selector="poste-nature-add">
+          Ajouter une nature
+        </button>
+      </div>
+      } @else {
       <div>
         <label for="poste-nature" class="field-label">Nature <span class="text-ink-muted">(obligatoire)</span></label>
         <input
@@ -39,6 +50,7 @@
           {{ soumis() ? formulaire().erreurNature() : '' }}
         </p>
       </div>
+      }
       <glm-text-field
         fieldId="poste-cout"
         name="coutHoraire"
