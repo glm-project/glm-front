@@ -537,6 +537,22 @@ describe('Anomaly dossier page', () => {
       thenTheHandleHoldsAt(new Date(2026, 8, 14, 22, 30));
     });
 
+    it.each(['Home', 'End', 'ArrowLeft'])(
+      'should leave the handle without hour and the validation unavailable when %s is pressed and no whole minute separates the start from the bound',
+      async touche => {
+        read.result = {
+          kind: 'DOSSIER',
+          dossier: { ...dossierFinAutomatiqueFixture(), borneDeFin: instantLocalFixture(new Date(2026, 8, 14, 8, 0, 30)) },
+        };
+        await whenRendering();
+
+        await whenPressingOnTheHandle(touche);
+
+        thenTheHandleHoldsNoHour();
+        thenTheValidationIsUnavailableAs('Valider la fin');
+      },
+    );
+
     it('should move the placed handle by the minute with the arrow keys', async () => {
       await whenRendering();
       await whenPressingOnTheHandle('ArrowLeft');

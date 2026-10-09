@@ -18,9 +18,18 @@ const cibleDe = (demande: DemandeDeDeplacement, courant: string, plancher: numbe
   }
 };
 
+const minutesEntieres = (bornes: BornesDeLaFin): { readonly plancher: number; readonly plafond: number } => ({
+  plancher: new InstantPointage(bornes.min).firstWholeMinute(),
+  plafond: Date.parse(bornes.max),
+});
+
+export const uneMinuteEntiereEntre = (bornes: BornesDeLaFin): boolean => {
+  const { plancher, plafond } = minutesEntieres(bornes);
+  return plancher <= plafond;
+};
+
 export const instantDeplace = (demande: DemandeDeDeplacement, courant: string, bornes: BornesDeLaFin): string => {
-  const plancher = new InstantPointage(bornes.min).firstWholeMinute();
-  const plafond = Date.parse(bornes.max);
+  const { plancher, plafond } = minutesEntieres(bornes);
   if (plancher > plafond) return toOffsetIsoString(new Date(courant));
   const cible = cibleDe(demande, courant, plancher, plafond);
   return toOffsetIsoString(new Date(Math.min(Math.max(cible, plancher), plafond)));

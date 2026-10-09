@@ -8,7 +8,7 @@ import { filtreAnomaliesDemande } from '../../../../../domain/dossier/FiltreAnom
 import { InstantPointage } from '../../../../../domain/dossier/InstantPointage';
 import { OperateurAnomalie } from '../../../../../domain/dossier/OperateurAnomalie';
 import { EnTeteDuDossier } from '../../../en-tete-du-dossier/EnTeteDuDossier';
-import { instantDeplace } from '../../../frise-dossier/DeplacementDeLaPoignee';
+import { instantDeplace, uneMinuteEntiereEntre } from '../../../frise-dossier/DeplacementDeLaPoignee';
 import {
   bornesDuFait,
   DeplacementDemande,
@@ -75,7 +75,8 @@ export class ResolutionDeFin {
 
   protected placer({ demande }: PlacementDemande): void {
     this.lireLHorloge();
-    this.instant.set(instantDeplace(demande, this.maintenant(), bornesDuFait(this.dossier(), this.maintenant())));
+    const bornes = bornesDuFait(this.dossier(), this.maintenant());
+    this.instant.set(uneMinuteEntiereEntre(bornes) ? instantDeplace(demande, this.maintenant(), bornes) : '');
   }
 
   protected async valider(): Promise<void> {
