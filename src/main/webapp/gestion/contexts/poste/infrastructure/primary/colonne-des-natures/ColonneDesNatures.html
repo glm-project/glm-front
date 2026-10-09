@@ -1,0 +1,34 @@
+<nav aria-labelledby="natures-heading" data-selector="natures">
+  <h2 id="natures-heading" class="px-2 pb-2 pt-1 text-label text-ink-muted">Natures</h2>
+  <ul class="flex flex-col gap-0.5" data-selector="natures-list">
+    <li>
+      <button
+        type="button"
+        class="nature-filtre"
+        [attr.aria-pressed]="choisie() === undefined"
+        (click)="choisir.emit(undefined)"
+        data-selector="nature-filter-all"
+      >
+        <span class="flex-1">Toutes</span>
+        <span class="text-body-sm text-ink-muted">{{ total() }}</span>
+      </button>
+    </li>
+    @for (nature of natures(); track nature.id.value) {
+    <li>
+      <button
+        type="button"
+        class="nature-filtre"
+        [attr.aria-pressed]="nature === choisie()"
+        (click)="choisir.emit(nature)"
+        data-selector="nature-filter"
+      >
+        <span class="flex-1" data-selector="nature-filter-label">{{ nature.libelle.value }}</span>
+        <span class="text-body-sm text-ink-muted" data-selector="nature-filter-count">{{ nature.postes }}</span>
+      </button>
+    </li>
+    }
+  </ul>
+  @if (lue() && natures().length === 0) {
+  <p class="px-2 py-3 text-body-sm text-ink-muted" data-selector="natures-empty">Aucune nature enregistrée.</p>
+  }
+</nav>

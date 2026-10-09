@@ -17,6 +17,7 @@ import { NatureGeree } from '../../../domain/NatureGeree';
 import { NaturesDeTravailPort } from '../../../domain/NaturesDeTravailPort';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PostesPort } from '../../../domain/PostesPort';
+import { ColonneDesNatures } from '../colonne-des-natures/ColonneDesNatures';
 import {
   ConfirmationSuppressionPosteDialog,
   ConfirmationSuppressionPosteDialogData,
@@ -38,7 +39,7 @@ interface EtatPostes {
   host: { 'data-selector': 'postes-page' },
   templateUrl: './PostesDeTravail.html',
   styleUrl: './PostesDeTravail.css',
-  imports: [ErrorMessage, Icon, MatButtonModule, MatTableModule, MatPaginatorModule],
+  imports: [ColonneDesNatures, ErrorMessage, Icon, MatButtonModule, MatTableModule, MatPaginatorModule],
   providers: [
     {
       provide: MatPaginatorIntl,
