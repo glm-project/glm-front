@@ -14,6 +14,16 @@ type WriteRoute = { [Route in keyof paths]: paths[Route]['post'] extends Operati
 type UpdateRoute = { [Route in keyof paths]: paths[Route]['put'] extends Operation ? Route : never }[keyof paths];
 type DeleteRoute = { [Route in keyof paths]: paths[Route]['delete'] extends Operation ? Route : never }[keyof paths];
 
+type ImageRoute = {
+  [Route in keyof paths]: paths[Route]['get'] extends { responses: { 200: { content: { 'image/png': unknown } } } } ? Route : never;
+}[keyof paths];
+
+type UploadRoute = {
+  [Route in keyof paths]: paths[Route]['put'] extends { requestBody?: { content: { 'multipart/form-data': unknown } } } ? Route : never;
+}[keyof paths];
+
+type UploadPart<Route extends UploadRoute> = keyof NonNullable<paths[Route]['put']['requestBody']>['content']['multipart/form-data'];
+
 type ReadOperation<Route extends ReadRoute> = paths[Route]['get'];
 type WriteOperation<Route extends WriteRoute> = paths[Route]['post'];
 type UpdateOperation<Route extends UpdateRoute> = paths[Route]['put'];
@@ -36,6 +46,8 @@ type QueryParameters<Op> = Op extends { parameters: { query?: infer Values } }
   : never;
 
 type RequestBody<Op> = Op extends { requestBody: { content: { 'application/json': infer Body } } } ? { body: Body } : { body?: never };
+
+type ImageRequest<Route extends ImageRoute> = PathParameters<paths[Route]['get']>;
 
 type ReadRequest<Route extends ReadRoute> = PathParameters<ReadOperation<Route>> & QueryParameters<ReadOperation<Route>>;
 
@@ -78,6 +90,19 @@ export class ApiClient {
         .get<ResponseBody<ReadOperation<Route>>>(buildUrlFor(route, pathParams), { params: buildParamsFrom(queryParams) })
         .pipe(timeout(NETWORK_TIMEOUT_MS)),
     );
+  }
+
+  readImage<Route extends ImageRoute>(route: Route, request: ImageRequest<Route>): Promise<Blob> {
+    const { pathParams } = request as RawRequest;
+
+    return firstValueFrom(this.http.get(buildUrlFor(route, pathParams), { responseType: 'blob' }).pipe(timeout(NETWORK_TIMEOUT_MS)));
+  }
+
+  upload<Route extends UploadRoute>(route: Route, part: UploadPart<Route>, file: Blob): Promise<ResponseBody<paths[Route]['put']>> {
+    const body = new FormData();
+    body.append(String(part), file, String(part));
+
+    return firstValueFrom(this.http.put<ResponseBody<paths[Route]['put']>>(route, body).pipe(timeout(NETWORK_TIMEOUT_MS)));
   }
 
   write<Route extends WriteRoute>(route: Route, request: WriteRequest<Route>): Promise<ResponseBody<WriteOperation<Route>>> {

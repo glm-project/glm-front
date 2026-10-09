@@ -1,0 +1,17 @@
+:host {
+  display: block;
+}
+
+.marque-glm {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.marque-glm-fond {
+  fill: var(--color-accent);
+}
+
+.marque-glm-moule {
+  fill: var(--color-on-accent);
+}

@@ -48,6 +48,78 @@
         }
       </form>
     </section>
+
+    <section class="gestion-carte reglage" aria-labelledby="parametres-logo">
+      <h2 id="parametres-logo" class="text-section">{{ libelles.logo }}</h2>
+      <p class="text-body-sm text-ink-muted">{{ libelles.logoAide }}</p>
+      <div class="logo-ligne">
+        <figure class="apercu">
+          <div class="case-logo">
+            @if (image(); as image) {
+            <img [src]="image.adresse" [alt]="libelles.logoAlternative" width="50" height="50" data-selector="logo-apercu" />
+            } @else {
+            <glm-marque-glm data-selector="logo-glm" />
+            }
+          </div>
+          <figcaption class="text-label text-ink-muted" data-selector="logo-legende">
+            {{ image() === undefined ? libelles.logoGlm : libelles.tailleReelle }}
+          </figcaption>
+        </figure>
+        <ul class="regles text-body-sm text-ink-muted">
+          @for (regle of libelles.regles; track regle) {
+          <li>{{ regle }}</li>
+          }
+        </ul>
+      </div>
+      @if (imageIndisponible()) {
+      <p role="alert" class="text-body-sm text-danger" data-selector="logo-indisponible">{{ libelles.logoIndisponible }}</p>
+      } @if (refusLogo(); as refus) {
+      <p role="alert" class="refus-logo text-body-sm text-danger" data-selector="logo-refus">{{ refus }}</p>
+      }
+      <div class="flex flex-wrap items-center gap-3">
+        <input
+          #selecteur
+          type="file"
+          class="selecteur"
+          accept="image/png,image/jpeg"
+          tabindex="-1"
+          aria-hidden="true"
+          data-selector="logo-fichier"
+          (change)="choisirLogo(selecteur.files); selecteur.value = ''"
+        />
+        <button mat-stroked-button type="button" [disabled]="depot()" (click)="selecteur.click()" data-selector="logo-choisir">
+          {{ depot() ? libelles.depotEnCours : libelles.choisirLogo }}
+        </button>
+        @if (logo() !== undefined) { @if (confirmationDuRetrait()) {
+        <button
+          mat-flat-button
+          type="button"
+          class="confirmation-destructive"
+          [disabled]="retrait()"
+          (click)="confirmerLeRetrait()"
+          data-selector="logo-retrait-confirmer"
+        >
+          {{ retrait() ? libelles.retraitEnCours : libelles.confirmerRetrait }}
+        </button>
+        <button mat-button type="button" [disabled]="retrait()" (click)="annulerLeRetrait()" data-selector="logo-retrait-annuler">
+          {{ libelles.annulerRetrait }}
+        </button>
+        } @else {
+        <button mat-button type="button" class="retrait" (click)="demanderLeRetrait()" data-selector="logo-retirer">
+          {{ libelles.retirer }}
+        </button>
+        } } @if (logoEnregistre()) {
+        <span role="status" class="text-body-sm text-ok" data-selector="logo-enregistre">{{ libelles.logoEnregistre }}</span>
+        } @if (logoRetire()) {
+        <span role="status" class="text-body-sm text-ok" data-selector="logo-retire">{{ libelles.logoRetire }}</span>
+        }
+      </div>
+      @if (erreurRetrait()) {
+      <p role="alert" class="text-body-sm text-danger" data-selector="logo-erreur-retrait">{{ libelles.erreurRetrait }}</p>
+      } @if (erreurDepot()) {
+      <p role="alert" class="text-body-sm text-danger" data-selector="logo-erreur-technique">{{ libelles.erreurDepot }}</p>
+      }
+    </section>
   </div>
   }
 </main>

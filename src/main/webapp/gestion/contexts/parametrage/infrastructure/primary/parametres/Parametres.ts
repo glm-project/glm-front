@@ -1,10 +1,14 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
+import { MarqueGlm } from '@/gestion/shared/design-system/infrastructure/primary/marque-glm/MarqueGlm';
 import { TextField } from '@/gestion/shared/design-system/infrastructure/primary/text-field/TextField';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { FichierDeLogo } from '../../../domain/FichierDeLogo';
 import { FormulaireDureeMaxDActivite } from '../../../domain/FormulaireDureeMaxDActivite';
+import { ImageDuLogo } from '../../../domain/ImageDuLogo';
 import { ParametragePort } from '../../../domain/ParametragePort';
+import { VersionDuLogo } from '../../../domain/VersionDuLogo';
 import { LIBELLES_PARAMETRES } from '../LibellesParametrage';
 
 const HEURE_DE_DEBUT_DE_L_EXEMPLE = 8;
@@ -14,7 +18,7 @@ const HEURE_DE_DEBUT_DE_L_EXEMPLE = 8;
   host: { 'data-selector': 'parametres' },
   templateUrl: './Parametres.html',
   styleUrl: './Parametres.css',
-  imports: [ErrorMessage, TextField, MatButtonModule],
+  imports: [ErrorMessage, MarqueGlm, TextField, MatButtonModule],
 })
 export class Parametres implements OnInit {
   private readonly port = inject(ParametragePort);
@@ -27,6 +31,17 @@ export class Parametres implements OnInit {
   protected readonly enregistrement = signal(false);
   protected readonly enregistree = signal(false);
   protected readonly erreurTechnique = signal(false);
+  protected readonly image = signal<ImageDuLogo | undefined>(undefined);
+  protected readonly imageIndisponible = signal(false);
+  protected readonly depot = signal(false);
+  protected readonly refusLogo = signal<string | undefined>(undefined);
+  protected readonly logoEnregistre = signal(false);
+  protected readonly erreurDepot = signal(false);
+  protected readonly logo = signal<VersionDuLogo | undefined>(undefined);
+  protected readonly confirmationDuRetrait = signal(false);
+  protected readonly retrait = signal(false);
+  protected readonly logoRetire = signal(false);
+  protected readonly erreurRetrait = signal(false);
   protected readonly erreur = computed(() => this.formulaire().erreur());
   protected readonly exemple = computed(() => {
     const duree = this.formulaire().produireDuree();
@@ -51,16 +66,92 @@ export class Parametres implements OnInit {
     this.errors.observe(this.save());
   }
 
+  protected choisirLogo(fichiers: FileList | null): void {
+    const choisi = fichiers?.item(0);
+    if (!(choisi instanceof Blob)) return;
+    this.errors.observe(this.deposer(choisi));
+  }
+
+  protected demanderLeRetrait(): void {
+    this.confirmationDuRetrait.set(true);
+    this.logoRetire.set(false);
+    this.erreurRetrait.set(false);
+  }
+
+  protected annulerLeRetrait(): void {
+    this.confirmationDuRetrait.set(false);
+  }
+
+  protected confirmerLeRetrait(): void {
+    this.errors.observe(this.retirer());
+  }
+
+  private async retirer(): Promise<void> {
+    this.retrait.set(true);
+    try {
+      await this.port.retirerLogo();
+      this.confirmationDuRetrait.set(false);
+      await this.afficherLogo(undefined);
+      this.logoRetire.set(true);
+    } catch (failure) {
+      this.erreurRetrait.set(true);
+      this.errors.handleError(failure);
+    } finally {
+      this.retrait.set(false);
+    }
+  }
+
+  private async deposer(choisi: Blob): Promise<void> {
+    this.refusLogo.set(undefined);
+    this.logoEnregistre.set(false);
+    this.logoRetire.set(false);
+    this.erreurDepot.set(false);
+    const fichier = new FichierDeLogo(new Uint8Array(await choisi.arrayBuffer()));
+    const refus = fichier.refus();
+    if (refus !== undefined) {
+      this.refusLogo.set(refus);
+      return;
+    }
+    this.depot.set(true);
+    try {
+      const resultat = await this.port.deposerLogo(fichier);
+      if (resultat.ok) {
+        await this.afficherLogo(resultat.value);
+        this.logoEnregistre.set(true);
+      } else {
+        this.refusLogo.set(this.libelles.refusServeur(resultat.error.message));
+      }
+    } catch (failure) {
+      this.erreurDepot.set(true);
+      this.errors.handleError(failure);
+    } finally {
+      this.depot.set(false);
+    }
+  }
+
   private async load(): Promise<void> {
     this.chargement.set(true);
     this.echec.set(false);
     try {
       const parametrage = await this.port.parametrage();
       this.formulaire.set(FormulaireDureeMaxDActivite.depuis(parametrage.dureeMaxDActivite));
+      this.chargement.set(false);
+      await this.afficherLogo(parametrage.logo);
     } catch {
       this.echec.set(true);
-    } finally {
       this.chargement.set(false);
+    }
+  }
+
+  private async afficherLogo(version: VersionDuLogo | undefined): Promise<void> {
+    this.logo.set(version);
+    this.image.set(undefined);
+    this.imageIndisponible.set(false);
+    if (version === undefined) return;
+    try {
+      this.image.set(await this.port.imageDuLogo(version));
+    } catch {
+      this.imageIndisponible.set(true);
     }
   }
 

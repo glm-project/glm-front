@@ -68,6 +68,26 @@ describe('ApiClient', () => {
     thenItHandedBack(await lecture, UNE_PAGE_DOPERATEURS);
   });
 
+  it('should hand back an image as the bytes the server sent, on the address of its version', async () => {
+    const lecture = whenReadingTheLogo();
+
+    const requete = await whenTheServerSendsAnImage(new Blob(['png'], { type: 'image/png' }));
+
+    thenItReached(requete, '/api/parametrage/logo/0123456789abcdef');
+    expect(requete.request.responseType).toBe('blob');
+    expect(await (await lecture).text()).toBe('png');
+  });
+
+  it('should send a file in the part the route names, and hand back the answer', async () => {
+    const envoi = api.upload('/api/parametrage/logo', 'logo', new Blob(['png'], { type: 'image/png' }));
+
+    const requete = await whenTheServerAnswers({ version: '0123456789abcdef' });
+
+    thenItReached(requete, '/api/parametrage/logo');
+    thenItSentTheFile(requete, 'logo', 'png');
+    expect(await envoi).toEqual({ version: '0123456789abcdef' });
+  });
+
   it('should repeat a parameter the caller gave several values', async () => {
     const lecture = whenReadingWorkshopElementsInProgress();
 
@@ -178,6 +198,18 @@ describe('ApiClient', () => {
 
   const whenReadingOperators = (): Promise<unknown> => api.read('/api/operateurs', { queryParams: { size: PLEINE_PAGE } });
 
+  const whenReadingTheLogo = (): Promise<Blob> =>
+    api.readImage('/api/parametrage/logo/{version}', { pathParams: { version: '0123456789abcdef' } });
+
+  const whenTheServerSendsAnImage = async (image: Blob): Promise<TestRequest> => {
+    await unTourDeBoucle();
+
+    const requete = serveur.expectOne(() => true);
+    requete.flush(image);
+
+    return requete;
+  };
+
   const whenReadingWorkshopElementsInProgress = (): Promise<unknown> =>
     api.read('/api/atelier/suivis', { queryParams: { etats: ['EN_ATTENTE', 'EN_COURS'], size: PLEINE_PAGE } });
 
@@ -216,6 +248,13 @@ describe('ApiClient', () => {
 
   const thenItReached = (requete: TestRequest, url: string): void => {
     expect(requete.request.urlWithParams).toBe(url);
+  };
+
+  const thenItSentTheFile = (requete: TestRequest, part: string, contenu: string): void => {
+    expect(requete.request.method).toBe('PUT');
+    const fichier = (requete.request.body as FormData).get(part) as File;
+    expect(fichier.name).toBe(part);
+    expect(fichier.size).toBe(contenu.length);
   };
 
   const thenItSent = (requete: TestRequest, body: unknown): void => {
