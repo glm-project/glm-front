@@ -66,11 +66,11 @@ describe('Automatic end list in Gestion', () => {
       givenTheDossierIsNotFound(urn);
 
       whenVisiting(`/anomalies?operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=2`);
-      whenOpeningTheAutomaticEnd();
+      whenOpeningTheAutomaticEndThatIsNotFound();
 
+      thenNoDossierIsShown();
       thenTheAddressIs(`?operateur=${operateurFinAutomatiqueFixture}&element=${elementFinAutomatiqueFixture}&page=2`);
       thenTheAutomaticEndIsListedWithItsPeriod();
-      thenNoDossierIsShown();
     });
   });
 
@@ -363,7 +363,7 @@ describe('Automatic end list in Gestion', () => {
   const whenOpeningTheAutomaticEndThatIsNotFound = (): void => {
     whenOpeningTheAutomaticEnd();
     cy.wait('@dossier');
-    thenTheAutomaticEndIsListedWithItsPeriod();
+    thenNoDossierIsShown();
   };
 
   const thenTheListIsShown = (): void => {
