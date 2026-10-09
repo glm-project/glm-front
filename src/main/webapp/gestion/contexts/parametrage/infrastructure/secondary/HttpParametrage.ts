@@ -1,13 +1,18 @@
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
 import { DureeMaxDActivite } from '../../domain/DureeMaxDActivite';
+import { FichierDeLogo } from '../../domain/FichierDeLogo';
 import { ImageDuLogo } from '../../domain/ImageDuLogo';
+import { LogoRefuse } from '../../domain/LogoRefuse';
 import { Parametrage } from '../../domain/Parametrage';
 import { ParametragePort } from '../../domain/ParametragePort';
 import { VersionDuLogo } from '../../domain/VersionDuLogo';
 
 const EN_HEURES = /^PT(\d+)H$/;
+const LOGO_INVALIDE = 'urn:glm:erreur:parametrage:logo-invalide';
 
 const enLigne = async (image: Blob): Promise<ImageDuLogo> => {
   const octets = new Uint8Array(await image.arrayBuffer());
@@ -54,6 +59,17 @@ export class HttpParametrage extends ParametragePort {
     } catch (failure) {
       this.errors.handleError(failure);
       throw failure;
+    }
+  }
+
+  override async deposerLogo(fichier: FichierDeLogo): Promise<Result<VersionDuLogo, LogoRefuse>> {
+    try {
+      const logo = await this.api.upload('/api/parametrage/logo', 'logo', new Blob([fichier.octets]));
+      return ok(new VersionDuLogo(logo.version));
+    } catch (failure) {
+      const refus = findApiErrorIn(failure);
+      if (refus?.urn !== LOGO_INVALIDE) throw failure;
+      return err(new LogoRefuse(refus.message));
     }
   }
 }

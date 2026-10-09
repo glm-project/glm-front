@@ -2,6 +2,7 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { pngFixture } from '@test/unit/fixtures/gestion/parametrage/ImagesFixture';
 import { ParametrageFixture } from '@test/unit/fixtures/gestion/parametrage/ParametrageFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
@@ -146,6 +147,89 @@ describe('Parametres page', () => {
     expect(field().value).toBe('13');
   });
 
+  it('should send a PNG of 50 × 50 pixels as soon as it is chosen, then show it', async () => {
+    await whenOpening();
+
+    await whenChoosing(pngFixture(50, 50));
+
+    expect(port.depots).toHaveLength(1);
+    expect(text('logo-enregistre')).toBe('Logo enregistré.');
+    thenTheLogoIsShownAtRealSize(requiredFixture(port.logo, 'logo déposé').image.adresse);
+  });
+
+  it('should refuse an image of the wrong size without sending it, saying what it measures', async () => {
+    await whenOpening();
+
+    await whenChoosing(pngFixture(120, 80));
+
+    expect(text('logo-refus')).toBe('Le logo doit mesurer 50 × 50 pixels (reçu : 120 × 80).');
+    expect(port.depots).toEqual([]);
+  });
+
+  it('should show the reason the server refused the logo', async () => {
+    givenTheServerRefusesLogos('format inattendu');
+    await whenOpening();
+
+    await whenChoosing(pngFixture(50, 50));
+
+    expect(text('logo-refus')).toBe('Le logo a été refusé : format inattendu');
+    expect(text('logo-enregistre')).toBe('');
+  });
+
+  it('should say the logo was not sent after a technical failure, and report it', async () => {
+    givenTheDepositFails();
+    await whenOpening();
+
+    await whenChoosing(pngFixture(50, 50));
+
+    expect(text('logo-erreur-technique')).toBe('Le logo n’a pas pu être envoyé. Vérifiez la connexion puis réessayez.');
+    expect(errors.errors).toEqual([new Error('panne')]);
+  });
+
+  it('should send nothing when the choice of a file is cancelled', async () => {
+    await whenOpening();
+
+    await whenCancellingTheChoice();
+
+    expect(port.depots).toEqual([]);
+  });
+
+  it('should open the file picker from the button', async () => {
+    await whenOpening();
+    const ouverture = givenThePickerIsWatched();
+
+    await whenClicking('logo-choisir');
+
+    expect(ouverture).toHaveBeenCalledTimes(1);
+  });
+
+  const givenTheServerRefusesLogos = (message: string): void => {
+    port.refusDuServeur = message;
+  };
+  const givenTheDepositFails = (): void => {
+    port.depotFailure = new Error('panne');
+  };
+  const givenThePickerIsWatched = (): ReturnType<typeof vi.fn> => {
+    const ouverture = vi.fn();
+    selecteur().click = ouverture;
+    return ouverture;
+  };
+  const whenChoosing = async (octets: Uint8Array<ArrayBuffer>): Promise<void> => {
+    await whenSelecting([new File([octets], 'logo.png', { type: 'image/png' })]);
+  };
+  const whenCancellingTheChoice = async (): Promise<void> => {
+    await whenSelecting(null);
+  };
+  const whenSelecting = async (fichiers: readonly File[] | null): Promise<void> => {
+    const input = selecteur();
+    const liste = fichiers === null ? null : Object.assign([...fichiers], { item: (rang: number): File | null => fichiers[rang] ?? null });
+    Object.defineProperty(input, 'files', { configurable: true, value: liste });
+    input.dispatchEvent(new Event('change'));
+    await whenViewSettles();
+    await whenViewSettles();
+  };
+  const selecteur = (): HTMLInputElement =>
+    requiredFixture(document.querySelector<HTMLInputElement>(dataSelector('logo-fichier')), 'logo-fichier');
   const thenTheGlmLogoIsShown = (): void => {
     expect(document.querySelector(dataSelector('logo-glm'))).not.toBeNull();
   };

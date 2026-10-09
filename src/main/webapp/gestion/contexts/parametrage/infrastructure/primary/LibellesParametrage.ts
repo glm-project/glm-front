@@ -27,4 +27,9 @@ export const LIBELLES_PARAMETRES = {
   logoGlm: 'Logo GLM',
   logoIndisponible: 'Le logo n’a pas pu être affiché. Rechargez la page pour réessayer.',
   regles: ['Image PNG ou JPEG', '50 × 50 pixels exactement', '20 Ko au plus'],
+  choisirLogo: 'Choisir une image…',
+  depotEnCours: 'Envoi du logo…',
+  logoEnregistre: 'Logo enregistré.',
+  refusServeur: (message: string): string => `Le logo a été refusé : ${message}`,
+  erreurDepot: 'Le logo n’a pas pu être envoyé. Vérifiez la connexion puis réessayez.',
 } as const;

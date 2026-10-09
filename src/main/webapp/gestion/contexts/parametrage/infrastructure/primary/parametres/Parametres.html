@@ -73,6 +73,29 @@
       </div>
       @if (imageIndisponible()) {
       <p role="alert" class="text-body-sm text-danger" data-selector="logo-indisponible">{{ libelles.logoIndisponible }}</p>
+      } @if (refusLogo(); as refus) {
+      <p role="alert" class="refus-logo text-body-sm text-danger" data-selector="logo-refus">{{ refus }}</p>
+      }
+      <div class="flex flex-wrap items-center gap-3">
+        <input
+          #selecteur
+          type="file"
+          class="selecteur"
+          accept="image/png,image/jpeg"
+          tabindex="-1"
+          aria-hidden="true"
+          data-selector="logo-fichier"
+          (change)="choisirLogo(selecteur.files); selecteur.value = ''"
+        />
+        <button mat-stroked-button type="button" [disabled]="depot()" (click)="selecteur.click()" data-selector="logo-choisir">
+          {{ depot() ? libelles.depotEnCours : libelles.choisirLogo }}
+        </button>
+        @if (logoEnregistre()) {
+        <span role="status" class="text-body-sm text-ok" data-selector="logo-enregistre">{{ libelles.logoEnregistre }}</span>
+        }
+      </div>
+      @if (erreurDepot()) {
+      <p role="alert" class="text-body-sm text-danger" data-selector="logo-erreur-technique">{{ libelles.erreurDepot }}</p>
       }
     </section>
   </div>

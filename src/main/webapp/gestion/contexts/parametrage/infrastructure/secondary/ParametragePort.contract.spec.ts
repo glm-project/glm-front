@@ -4,10 +4,13 @@ import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { pngFixture } from '@test/unit/fixtures/gestion/parametrage/ImagesFixture';
 import { ParametrageFixture } from '@test/unit/fixtures/gestion/parametrage/ParametrageFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { DureeMaxDActivite } from '../../domain/DureeMaxDActivite';
+import { FichierDeLogo } from '../../domain/FichierDeLogo';
 import { ImageDuLogo } from '../../domain/ImageDuLogo';
+import { LogoRefuse } from '../../domain/LogoRefuse';
 import { Parametrage } from '../../domain/Parametrage';
 import { ParametragePort } from '../../domain/ParametragePort';
 import { VersionDuLogo } from '../../domain/VersionDuLogo';
@@ -21,6 +24,7 @@ interface ParametrageHarness {
   readonly port: ParametragePort;
   readonly settle: () => Promise<void>;
   readonly donnerLeLogo: () => void;
+  readonly refuserLesLogos: (message: string) => void;
 }
 
 const bytesOf = (texte: string): Uint8Array<ArrayBuffer> => Uint8Array.from(texte, caractere => caractere.codePointAt(0) ?? 0);
@@ -39,20 +43,35 @@ const createHttpHarness = (): ParametrageHarness => {
   const server = TestBed.inject(HttpTestingController);
   let duree = 'PT13H';
   let logo = false;
-  const answer = (request: TestRequest): void => {
+  let refus: string | undefined;
+  const answerDepot = (request: TestRequest): void => {
+    if (refus === undefined) {
+      logo = true;
+      request.flush({ version: VERSION });
+      return;
+    }
+    request.flush({ type: 'urn:glm:erreur:parametrage:logo-invalide', message: refus }, { status: 400, statusText: 'Bad Request' });
+  };
+  const answerImage = (request: TestRequest): void => {
+    const courant = logo && request.request.url.endsWith(VERSION);
+    if (courant) {
+      request.flush(new Blob([bytesOf(OCTETS_PNG)], { type: 'image/png' }));
+      return;
+    }
+    request.flush(new Blob(), { status: 404, statusText: 'Not Found' });
+  };
+  const answerParametrage = (request: TestRequest): void => {
     if (request.request.method === 'PUT') {
       duree = (request.request.body as { dureeMaxDActivite: string }).dureeMaxDActivite;
     }
-    if (request.request.url.startsWith('/api/parametrage/logo/')) {
-      const courant = logo && request.request.url.endsWith(VERSION);
-      if (courant) {
-        request.flush(new Blob([bytesOf(OCTETS_PNG)], { type: 'image/png' }));
-      } else {
-        request.flush(new Blob(), { status: 404, statusText: 'Not Found' });
-      }
-      return;
-    }
     request.flush(logo ? { dureeMaxDActivite: duree, logo: { version: VERSION } } : { dureeMaxDActivite: duree });
+  };
+  const answerFor = (url: string): ((request: TestRequest) => void) => {
+    if (url === '/api/parametrage/logo') return answerDepot;
+    return url.startsWith('/api/parametrage/logo/') ? answerImage : answerParametrage;
+  };
+  const answer = (request: TestRequest): void => {
+    answerFor(request.request.url)(request);
   };
   const settle = async (): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));
@@ -65,16 +84,23 @@ const createHttpHarness = (): ParametrageHarness => {
     donnerLeLogo: () => {
       logo = true;
     },
+    refuserLesLogos: message => {
+      refus = message;
+    },
   };
 };
 
 const createFixtureHarness = (): ParametrageHarness => {
   const fixture = new ParametrageFixture();
+  fixture.versionDeposee = new VersionDuLogo(VERSION);
   return {
     port: fixture,
     settle: () => Promise.resolve(),
     donnerLeLogo: () => {
       fixture.logo = { version: new VersionDuLogo(VERSION), image: new ImageDuLogo(IMAGE_EN_LIGNE) };
+    },
+    refuserLesLogos: message => {
+      fixture.refusDuServeur = message;
     },
   };
 };
@@ -120,6 +146,26 @@ describe.each(adapters)('ParametragePort contract, honoured by %s', (_adapter, c
 
     expect(version).toEqual(new VersionDuLogo(VERSION));
     expect(await image).toEqual(new ImageDuLogo(IMAGE_EN_LIGNE));
+  });
+
+  it('should make a deposited logo the current one', async () => {
+    const depot = harness.port.deposerLogo(new FichierDeLogo(pngFixture(50, 50)));
+    await harness.settle();
+
+    const lecture = harness.port.parametrage();
+    await harness.settle();
+
+    expect(await depot).toEqual({ ok: true, value: new VersionDuLogo(VERSION) });
+    expect((await lecture).logo).toEqual(new VersionDuLogo(VERSION));
+  });
+
+  it('should hand back the reason a logo was refused', async () => {
+    harness.refuserLesLogos('Le logo doit mesurer 50 x 50 pixels (recu : 120 x 80)');
+
+    const depot = harness.port.deposerLogo(new FichierDeLogo(pngFixture(50, 50)));
+    await harness.settle();
+
+    expect(await depot).toEqual({ ok: false, error: new LogoRefuse('Le logo doit mesurer 50 x 50 pixels (recu : 120 x 80)') });
   });
 
   it('should not read the image of a version that is no longer the current one', async () => {
@@ -191,6 +237,21 @@ describe('Beyond the contract: HttpParametrage', () => {
 
     expect(await image).toBeInstanceOf(HttpErrorResponse);
     expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should send the logo bytes in the logo part', async () => {
+    const depot = port.deposerLogo(new FichierDeLogo(pngFixture(50, 50)));
+    const request = await whenServerAnswers('/api/parametrage/logo', 200, { version: VERSION });
+
+    await depot;
+    expect(new Uint8Array(await ((request.request.body as FormData).get('logo') as File).arrayBuffer())).toEqual(pngFixture(50, 50));
+  });
+
+  it('should keep an unknown refusal of a logo as a technical failure', async () => {
+    const depot = port.deposerLogo(new FichierDeLogo(pngFixture(50, 50))).catch((failure: unknown) => failure);
+    await whenServerAnswers('/api/parametrage/logo', 409, { type: 'urn:glm:erreur:parametrage:inconnu' });
+
+    expect(await depot).toBeInstanceOf(HttpErrorResponse);
   });
 
   it('should let a refused write reject as a technical failure', async () => {

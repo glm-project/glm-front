@@ -47,3 +47,17 @@
   padding-left: 1.1rem;
   list-style: disc;
 }
+
+.selecteur {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.refus-logo {
+  padding: 0.75rem;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-control);
+}

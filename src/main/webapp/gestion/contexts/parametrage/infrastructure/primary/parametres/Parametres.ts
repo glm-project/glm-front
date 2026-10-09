@@ -4,6 +4,7 @@ import { MarqueGlm } from '@/gestion/shared/design-system/infrastructure/primary
 import { TextField } from '@/gestion/shared/design-system/infrastructure/primary/text-field/TextField';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { FichierDeLogo } from '../../../domain/FichierDeLogo';
 import { FormulaireDureeMaxDActivite } from '../../../domain/FormulaireDureeMaxDActivite';
 import { ImageDuLogo } from '../../../domain/ImageDuLogo';
 import { ParametragePort } from '../../../domain/ParametragePort';
@@ -32,6 +33,10 @@ export class Parametres implements OnInit {
   protected readonly erreurTechnique = signal(false);
   protected readonly image = signal<ImageDuLogo | undefined>(undefined);
   protected readonly imageIndisponible = signal(false);
+  protected readonly depot = signal(false);
+  protected readonly refusLogo = signal<string | undefined>(undefined);
+  protected readonly logoEnregistre = signal(false);
+  protected readonly erreurDepot = signal(false);
   protected readonly erreur = computed(() => this.formulaire().erreur());
   protected readonly exemple = computed(() => {
     const duree = this.formulaire().produireDuree();
@@ -54,6 +59,39 @@ export class Parametres implements OnInit {
   protected enregistrer(event: Event): void {
     event.preventDefault();
     this.errors.observe(this.save());
+  }
+
+  protected choisirLogo(fichiers: FileList | null): void {
+    const choisi = fichiers?.item(0);
+    if (!(choisi instanceof Blob)) return;
+    this.errors.observe(this.deposer(choisi));
+  }
+
+  private async deposer(choisi: Blob): Promise<void> {
+    this.refusLogo.set(undefined);
+    this.logoEnregistre.set(false);
+    this.erreurDepot.set(false);
+    const fichier = new FichierDeLogo(new Uint8Array(await choisi.arrayBuffer()));
+    const refus = fichier.refus();
+    if (refus !== undefined) {
+      this.refusLogo.set(refus);
+      return;
+    }
+    this.depot.set(true);
+    try {
+      const resultat = await this.port.deposerLogo(fichier);
+      if (resultat.ok) {
+        await this.afficherLogo(resultat.value);
+        this.logoEnregistre.set(true);
+      } else {
+        this.refusLogo.set(this.libelles.refusServeur(resultat.error.message));
+      }
+    } catch (failure) {
+      this.erreurDepot.set(true);
+      this.errors.handleError(failure);
+    } finally {
+      this.depot.set(false);
+    }
   }
 
   private async load(): Promise<void> {

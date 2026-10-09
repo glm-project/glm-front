@@ -78,6 +78,16 @@ describe('ApiClient', () => {
     expect(await (await lecture).text()).toBe('png');
   });
 
+  it('should send a file in the part the route names, and hand back the answer', async () => {
+    const envoi = api.upload('/api/parametrage/logo', 'logo', new Blob(['png'], { type: 'image/png' }));
+
+    const requete = await whenTheServerAnswers({ version: '0123456789abcdef' });
+
+    thenItReached(requete, '/api/parametrage/logo');
+    thenItSentTheFile(requete, 'logo', 'png');
+    expect(await envoi).toEqual({ version: '0123456789abcdef' });
+  });
+
   it('should repeat a parameter the caller gave several values', async () => {
     const lecture = whenReadingWorkshopElementsInProgress();
 
@@ -238,6 +248,13 @@ describe('ApiClient', () => {
 
   const thenItReached = (requete: TestRequest, url: string): void => {
     expect(requete.request.urlWithParams).toBe(url);
+  };
+
+  const thenItSentTheFile = (requete: TestRequest, part: string, contenu: string): void => {
+    expect(requete.request.method).toBe('PUT');
+    const fichier = (requete.request.body as FormData).get(part) as File;
+    expect(fichier.name).toBe(part);
+    expect(fichier.size).toBe(contenu.length);
   };
 
   const thenItSent = (requete: TestRequest, body: unknown): void => {
