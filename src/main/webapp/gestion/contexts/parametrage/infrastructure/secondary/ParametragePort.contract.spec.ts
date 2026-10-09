@@ -5,15 +5,25 @@ import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@a
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { ParametrageFixture } from '@test/unit/fixtures/gestion/parametrage/ParametrageFixture';
+import { requiredFixture } from '@test/utils/RequiredFixture';
 import { DureeMaxDActivite } from '../../domain/DureeMaxDActivite';
+import { ImageDuLogo } from '../../domain/ImageDuLogo';
 import { Parametrage } from '../../domain/Parametrage';
 import { ParametragePort } from '../../domain/ParametragePort';
+import { VersionDuLogo } from '../../domain/VersionDuLogo';
 import { HttpParametrage } from './HttpParametrage';
+
+const VERSION = '0123456789abcdef';
+const OCTETS_PNG = '\u0089PNG';
+const IMAGE_EN_LIGNE = `data:image/png;base64,${btoa(OCTETS_PNG)}`;
 
 interface ParametrageHarness {
   readonly port: ParametragePort;
   readonly settle: () => Promise<void>;
+  readonly donnerLeLogo: () => void;
 }
+
+const bytesOf = (texte: string): Uint8Array<ArrayBuffer> => Uint8Array.from(texte, caractere => caractere.codePointAt(0) ?? 0);
 
 const createHttpHarness = (): ParametrageHarness => {
   TestBed.resetTestingModule();
@@ -28,19 +38,46 @@ const createHttpHarness = (): ParametrageHarness => {
   });
   const server = TestBed.inject(HttpTestingController);
   let duree = 'PT13H';
+  let logo = false;
+  const answer = (request: TestRequest): void => {
+    if (request.request.method === 'PUT') {
+      duree = (request.request.body as { dureeMaxDActivite: string }).dureeMaxDActivite;
+    }
+    if (request.request.url.startsWith('/api/parametrage/logo/')) {
+      const courant = logo && request.request.url.endsWith(VERSION);
+      if (courant) {
+        request.flush(new Blob([bytesOf(OCTETS_PNG)], { type: 'image/png' }));
+      } else {
+        request.flush(new Blob(), { status: 404, statusText: 'Not Found' });
+      }
+      return;
+    }
+    request.flush(logo ? { dureeMaxDActivite: duree, logo: { version: VERSION } } : { dureeMaxDActivite: duree });
+  };
   const settle = async (): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));
-    for (const request of server.match(() => true)) {
-      if (request.request.method === 'PUT') {
-        duree = (request.request.body as { dureeMaxDActivite: string }).dureeMaxDActivite;
-      }
-      request.flush({ dureeMaxDActivite: duree });
-    }
+    server.match(() => true).forEach(answer);
+    await new Promise(resolve => setTimeout(resolve));
   };
-  return { port: TestBed.inject(HttpParametrage), settle };
+  return {
+    port: TestBed.inject(HttpParametrage),
+    settle,
+    donnerLeLogo: () => {
+      logo = true;
+    },
+  };
 };
 
-const createFixtureHarness = (): ParametrageHarness => ({ port: new ParametrageFixture(), settle: () => Promise.resolve() });
+const createFixtureHarness = (): ParametrageHarness => {
+  const fixture = new ParametrageFixture();
+  return {
+    port: fixture,
+    settle: () => Promise.resolve(),
+    donnerLeLogo: () => {
+      fixture.logo = { version: new VersionDuLogo(VERSION), image: new ImageDuLogo(IMAGE_EN_LIGNE) };
+    },
+  };
+};
 
 const adapters: [string, () => ParametrageHarness][] = [
   ['HttpParametrage', createHttpHarness],
@@ -54,11 +91,11 @@ describe.each(adapters)('ParametragePort contract, honoured by %s', (_adapter, c
     harness = createHarness();
   });
 
-  it('should read thirteen hours for a company that never set the duration', async () => {
+  it('should read thirteen hours and no logo for a company that set nothing', async () => {
     const lecture = harness.port.parametrage();
     await harness.settle();
 
-    expect(await lecture).toEqual(new Parametrage(new DureeMaxDActivite(13)));
+    expect(await lecture).toEqual(new Parametrage(new DureeMaxDActivite(13), undefined));
   });
 
   it('should read back the duration the manager set', async () => {
@@ -69,7 +106,32 @@ describe.each(adapters)('ParametragePort contract, honoured by %s', (_adapter, c
     const lecture = harness.port.parametrage();
     await harness.settle();
 
-    expect(await lecture).toEqual(new Parametrage(new DureeMaxDActivite(10)));
+    expect((await lecture).dureeMaxDActivite).toEqual(new DureeMaxDActivite(10));
+  });
+
+  it('should read the version of the logo, then its image inline', async () => {
+    harness.donnerLeLogo();
+    const lecture = harness.port.parametrage();
+    await harness.settle();
+    const version = requiredFixture((await lecture).logo, 'version du logo');
+
+    const image = harness.port.imageDuLogo(version);
+    await harness.settle();
+
+    expect(version).toEqual(new VersionDuLogo(VERSION));
+    expect(await image).toEqual(new ImageDuLogo(IMAGE_EN_LIGNE));
+  });
+
+  it('should not read the image of a version that is no longer the current one', async () => {
+    harness.donnerLeLogo();
+
+    const image = harness.port.imageDuLogo(new VersionDuLogo('fedcba9876543210')).then(
+      () => 'lue',
+      () => 'refusee',
+    );
+    await harness.settle();
+
+    expect(await image).toBe('refusee');
   });
 });
 
@@ -120,6 +182,14 @@ describe('Beyond the contract: HttpParametrage', () => {
     await whenServerAnswers('/api/parametrage', 200, { dureeMaxDActivite: 'PT8H30M' });
 
     expect(await lecture).toEqual(new Error('Durée max d’activité illisible en heures entières : PT8H30M'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should report a failed image read once and reject', async () => {
+    const image = port.imageDuLogo(new VersionDuLogo(VERSION)).catch((failure: unknown) => failure);
+    await whenServerAnswers(`/api/parametrage/logo/${VERSION}`, 500, new Blob());
+
+    expect(await image).toBeInstanceOf(HttpErrorResponse);
     expect(errorHandler.errors).toHaveLength(1);
   });
 

@@ -20,4 +20,11 @@ export const LIBELLES_PARAMETRES = {
   enregistrement: 'Enregistrement…',
   enregistree: 'Durée enregistrée.',
   erreurEnregistrement: 'La durée n’a pas pu être enregistrée. Vérifiez la connexion puis réessayez.',
+  logo: 'Logo de l’entreprise',
+  logoAide: 'Il s’affiche en haut de la supervision, du pupitre et des comptes rendus PDF, à la place du logo GLM.',
+  logoAlternative: 'Logo de l’entreprise',
+  tailleReelle: 'Taille réelle',
+  logoGlm: 'Logo GLM',
+  logoIndisponible: 'Le logo n’a pas pu être affiché. Rechargez la page pour réessayer.',
+  regles: ['Image PNG ou JPEG', '50 × 50 pixels exactement', '20 Ko au plus'],
 } as const;

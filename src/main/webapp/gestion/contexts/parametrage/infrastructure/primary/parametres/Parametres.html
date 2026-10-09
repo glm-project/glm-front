@@ -48,6 +48,33 @@
         }
       </form>
     </section>
+
+    <section class="gestion-carte reglage" aria-labelledby="parametres-logo">
+      <h2 id="parametres-logo" class="text-section">{{ libelles.logo }}</h2>
+      <p class="text-body-sm text-ink-muted">{{ libelles.logoAide }}</p>
+      <div class="logo-ligne">
+        <figure class="apercu">
+          <div class="case-logo">
+            @if (image(); as image) {
+            <img [src]="image.adresse" [alt]="libelles.logoAlternative" width="50" height="50" data-selector="logo-apercu" />
+            } @else {
+            <glm-marque-glm data-selector="logo-glm" />
+            }
+          </div>
+          <figcaption class="text-label text-ink-muted" data-selector="logo-legende">
+            {{ image() === undefined ? libelles.logoGlm : libelles.tailleReelle }}
+          </figcaption>
+        </figure>
+        <ul class="regles text-body-sm text-ink-muted">
+          @for (regle of libelles.regles; track regle) {
+          <li>{{ regle }}</li>
+          }
+        </ul>
+      </div>
+      @if (imageIndisponible()) {
+      <p role="alert" class="text-body-sm text-danger" data-selector="logo-indisponible">{{ libelles.logoIndisponible }}</p>
+      }
+    </section>
   </div>
   }
 </main>

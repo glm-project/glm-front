@@ -10,3 +10,40 @@
   gap: 1rem;
   padding: 1.25rem;
 }
+
+.logo-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.apercu {
+  display: grid;
+  justify-items: center;
+  gap: 0.375rem;
+  margin: 0;
+}
+
+.case-logo {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 6px;
+  background: var(--color-sunken);
+}
+
+.case-logo img,
+.case-logo glm-marque-glm {
+  width: 50px;
+  height: 50px;
+}
+
+.regles {
+  margin: 0;
+  padding-left: 1.1rem;
+  list-style: disc;
+}

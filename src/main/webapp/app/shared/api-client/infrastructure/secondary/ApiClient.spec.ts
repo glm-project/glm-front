@@ -68,6 +68,16 @@ describe('ApiClient', () => {
     thenItHandedBack(await lecture, UNE_PAGE_DOPERATEURS);
   });
 
+  it('should hand back an image as the bytes the server sent, on the address of its version', async () => {
+    const lecture = whenReadingTheLogo();
+
+    const requete = await whenTheServerSendsAnImage(new Blob(['png'], { type: 'image/png' }));
+
+    thenItReached(requete, '/api/parametrage/logo/0123456789abcdef');
+    expect(requete.request.responseType).toBe('blob');
+    expect(await (await lecture).text()).toBe('png');
+  });
+
   it('should repeat a parameter the caller gave several values', async () => {
     const lecture = whenReadingWorkshopElementsInProgress();
 
@@ -177,6 +187,18 @@ describe('ApiClient', () => {
   const unTourDeBoucle = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
 
   const whenReadingOperators = (): Promise<unknown> => api.read('/api/operateurs', { queryParams: { size: PLEINE_PAGE } });
+
+  const whenReadingTheLogo = (): Promise<Blob> =>
+    api.readImage('/api/parametrage/logo/{version}', { pathParams: { version: '0123456789abcdef' } });
+
+  const whenTheServerSendsAnImage = async (image: Blob): Promise<TestRequest> => {
+    await unTourDeBoucle();
+
+    const requete = serveur.expectOne(() => true);
+    requete.flush(image);
+
+    return requete;
+  };
 
   const whenReadingWorkshopElementsInProgress = (): Promise<unknown> =>
     api.read('/api/atelier/suivis', { queryParams: { etats: ['EN_ATTENTE', 'EN_COURS'], size: PLEINE_PAGE } });

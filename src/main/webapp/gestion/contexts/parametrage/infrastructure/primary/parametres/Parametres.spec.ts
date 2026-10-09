@@ -6,8 +6,12 @@ import { ParametrageFixture } from '@test/unit/fixtures/gestion/parametrage/Para
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { DureeMaxDActivite } from '../../../domain/DureeMaxDActivite';
+import { ImageDuLogo } from '../../../domain/ImageDuLogo';
 import { ParametragePort } from '../../../domain/ParametragePort';
+import { VersionDuLogo } from '../../../domain/VersionDuLogo';
 import { Parametres } from './Parametres';
+
+const LOGO_FIXTURE = { version: new VersionDuLogo('0123456789abcdef'), image: new ImageDuLogo('data:image/png;base64,iVBORw0K') };
 
 describe('Parametres page', () => {
   let fixture: ComponentFixture<Parametres>;
@@ -116,6 +120,46 @@ describe('Parametres page', () => {
     expect(text('parametres-error')).toContain('Impossible de charger les paramètres.');
   });
 
+  it('should show the GLM logo while the company has none', async () => {
+    await whenOpening();
+
+    thenTheGlmLogoIsShown();
+    expect(text('logo-legende')).toBe('Logo GLM');
+  });
+
+  it('should show the company logo at its real size', async () => {
+    givenTheLogo();
+
+    await whenOpening();
+
+    thenTheLogoIsShownAtRealSize('data:image/png;base64,iVBORw0K');
+    expect(text('logo-legende')).toBe('Taille réelle');
+  });
+
+  it('should say that the logo could not be shown, keeping the settings usable', async () => {
+    givenTheLogo();
+    givenTheImageFails();
+
+    await whenOpening();
+
+    expect(text('logo-indisponible')).toBe('Le logo n’a pas pu être affiché. Rechargez la page pour réessayer.');
+    expect(field().value).toBe('13');
+  });
+
+  const thenTheGlmLogoIsShown = (): void => {
+    expect(document.querySelector(dataSelector('logo-glm'))).not.toBeNull();
+  };
+  const thenTheLogoIsShownAtRealSize = (adresse: string): void => {
+    const apercu = requiredFixture(document.querySelector<HTMLImageElement>(dataSelector('logo-apercu')), 'logo-apercu');
+    expect(apercu.getAttribute('src')).toBe(adresse);
+    expect(apercu.width).toBe(50);
+  };
+  const givenTheLogo = (): void => {
+    port.logo = LOGO_FIXTURE;
+  };
+  const givenTheImageFails = (): void => {
+    port.imageFailure = new Error('panne');
+  };
   const givenTheDuration = (heures: number): void => {
     port.duree = new DureeMaxDActivite(heures);
   };
