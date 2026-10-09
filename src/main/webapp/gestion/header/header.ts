@@ -1,5 +1,6 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
+import { LogoDeLEntreprise } from '@/gestion/contexts/parametrage/infrastructure/primary/logo-de-l-entreprise/LogoDeLEntreprise';
 import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
 import { isReservedToGestionnaire } from '@/gestion/shared/authentication/infrastructure/primary/gestionnaire';
 import { MarqueGlm } from '@/gestion/shared/design-system/infrastructure/primary/marque-glm/MarqueGlm';
@@ -51,7 +52,7 @@ const LIBELLES_EN_TETE = {
   host: { 'data-selector': 'gestion-header' },
   templateUrl: './header.html',
   styleUrl: './header.css',
-  imports: [Icon, MarqueGlm, RouterLink, RouterLinkActive],
+  imports: [Icon, LogoDeLEntreprise, MarqueGlm, RouterLink, RouterLinkActive],
 })
 export class GestionHeader {
   readonly heading = input.required<string>();
@@ -60,6 +61,7 @@ export class GestionHeader {
   private readonly realmRoles = toSignal(from(this.roles.realmRoles()));
 
   protected readonly libelles = LIBELLES_EN_TETE;
+  protected readonly sessionOuverte = computed(() => this.realmRoles() !== undefined);
   protected readonly gestionnaire = computed(() => {
     const roles = this.realmRoles();
     return roles !== undefined && isReservedToGestionnaire(roles);

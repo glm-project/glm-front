@@ -8,6 +8,7 @@ import { routes } from './app.route';
 import { App } from './app/app';
 import { authProvider } from './auth.provider';
 import { gestionHttpProvider } from './http.provider';
+import { parametrageProvider } from './parametrage.provider';
 
 import { environment } from './environments/environment';
 
@@ -16,7 +17,7 @@ if (environment.production) {
 }
 
 bootstrapApplication(App, {
-  providers: [gestionHttpProvider, provideRouter(routes), provideErrorHandler(ConsoleErrorHandler), authProvider],
+  providers: [gestionHttpProvider, provideRouter(routes), provideErrorHandler(ConsoleErrorHandler), authProvider, parametrageProvider],
 }).catch((err: unknown) => {
   console.error(err);
 });
