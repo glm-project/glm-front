@@ -1,4 +1,4 @@
-import { TotalDeDuree } from '../duree/TotalDeDuree';
+import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { ElementReleveId } from '../element/ElementReleveId';
 import { IntervalleDActivite } from '../element/IntervalleDActivite';
 import { JourCalendaire } from '../semaine/JourCalendaire';
@@ -6,14 +6,14 @@ import { PointageDElement } from './PointageDElement';
 
 export interface FicheDuJour {
   readonly jour: JourCalendaire;
-  readonly operationnelTotal: TotalDeDuree;
+  readonly operationnelTotal: DureeTravaillee;
   readonly intervalles: readonly IntervalleDActivite[];
   readonly pointages: readonly PointageDElement[];
 }
 
 export class JourDeReleve {
   readonly jour: JourCalendaire;
-  readonly operationnelTotal: TotalDeDuree;
+  readonly operationnelTotal: DureeTravaillee;
   readonly intervalles: readonly IntervalleDActivite[];
   readonly pointages: readonly PointageDElement[];
 

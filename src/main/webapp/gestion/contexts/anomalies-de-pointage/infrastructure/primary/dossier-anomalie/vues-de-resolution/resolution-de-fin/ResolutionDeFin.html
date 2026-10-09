@@ -1,79 +1,37 @@
 <div data-selector="anomalie-resolution">
   <glm-en-tete-du-dossier [dossier]="dossier()" [now]="now()" />
-  @if (autreFinAutomatique(); as autre) {
-  <p class="mb-4 text-body-sm">
-    <a
-      class="text-accent underline"
-      data-selector="anomalie-resolution-autre-fin"
-      [routerLink]="['/anomalies', dossier().ligne.adresse.suivi.suivi]"
-      [queryParams]="{ ...retour(), pointage: autre.ouvrant.pointage }"
-      >{{ libelles.autresFinsAutomatiques(autresFinsAutomatiques().length) }}</a
-    >
-  </p>
-  }
   <glm-section-de-frise
     [dossier]="dossier()"
     [now]="now()"
     [operateur]="operateur()"
     [poignee]="poignee()"
     [placement]="placement()"
-    [lectureSeule]="true"
     (deplacementDemande)="deplacer($event)"
     (placementDemande)="placer($event)"
-    (poigneeRelachee)="relacher()"
   />
-  <glm-statut-de-l-operation
-    [operation]="operation()"
-    [retour]="retour()"
-    (verificationDemandee)="verifier()"
-    (repriseDemandee)="reprendre()"
-  />
-  @if (recu(); as recu) {
+  @if (regularisee(); as heure) {
+  <p class="mt-4 text-body font-semibold" role="status" data-selector="anomalie-resolution-regularisee">
+    {{ libelles.regularisee(heure) }}
+  </p>
   <button
     type="button"
     class="bouton bouton-principal mt-4"
     data-selector="anomalie-resolution-suivante"
     [attr.aria-busy]="rechercheEnCours()"
     [disabled]="rechercheEnCours()"
-    (click)="passerALaSuivante(recu)"
+    (click)="passerALaSuivante()"
   >
     {{ libelles.anomalieSuivante }}
   </button>
-  } @if (!enregistre()) { @if (activiteOuverte(); as ligne) {
-  <p class="mt-3 text-body-sm" data-selector="anomalie-resolution-activite-ouverte">{{ ligne }}</p>
-  }
-  <ul class="mt-3 text-body-sm text-danger" aria-live="polite" data-selector="anomalie-resolution-validation">
-    @for (erreur of erreurs(); track erreur) {
-    <li>{{ libellesDesErreurs[erreur] }}</li>
-    }
-  </ul>
-  @if (verification()) {
-  <p class="mt-4 text-body-sm text-ink-muted" role="status" data-selector="anomalie-resolution-verification">{{ libelles.verification }}</p>
-  } @if (apercu(); as apercu) {
-  <p class="mt-4 text-body font-semibold" data-selector="anomalie-resolution-apercu">{{ resume(apercu) }}</p>
-  <details class="mt-2" data-selector="anomalie-resolution-detail">
-    <summary class="min-h-touch cursor-pointer py-3 text-body-sm font-semibold" data-selector="anomalie-resolution-detail-ouvrir">
-      {{ libelles.voirLeDetail }}
-    </summary>
-    @if (apercu.apres.consequences.length > 0) {
-    <div data-selector="anomalie-resolution-consequences">
-      @for (consequence of apercu.apres.consequences; track consequence) {
-      <p class="mt-2 text-body-sm">{{ consequence }}</p>
-      }
-    </div>
-    }
-    <glm-comparaison-des-journaux [avant]="apercu.avant" [apres]="apercu.apres" [now]="now()" [avecMotif]="false" />
-  </details>
-  } @if (echec()) {
-  <button type="button" class="bouton mt-4" data-selector="anomalie-resolution-reessayer" (click)="reessayer()">
-    {{ libelles.reessayerLApercu }}
-  </button>
+  } @else { @if (message(); as message) {
+  <p class="mt-4 text-body-sm text-danger" role="alert" data-selector="anomalie-resolution-refus">{{ message }}</p>
   }
   <button
     type="button"
     class="bouton bouton-principal mt-4"
     data-selector="anomalie-resolution-valider"
     [disabled]="!validable()"
+    [attr.aria-busy]="etat().kind === 'EN_COURS'"
     (click)="valider()"
   >
     {{ libelleDeValider() }}

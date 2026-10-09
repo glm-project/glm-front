@@ -1,7 +1,6 @@
 import { DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
+import { OperateurAnomalie } from '../../domain/dossier/OperateurAnomalie';
 import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
-import { PosteAnomalieId } from '../../domain/dossier/PosteAnomalieId';
-import { OperateurAnomalie, ReferentielAnomalies } from '../../domain/dossier/ReferentielAnomalies';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
 
 export const operateurPresente = (nom: string): string => nom || LIBELLES_ANOMALIES.operateurNonResolu;
@@ -14,36 +13,13 @@ export const postePresente = (libelle: string, posteId: string | undefined): str
 export const operateurNomme = (operateur: OperateurAnomalie): string =>
   operateur.code === undefined ? operateur.nom : `${operateur.nom} · ${operateur.code}`;
 
-const operateurSansNom = (referentiel: ReferentielAnomalies | undefined): string =>
-  referentiel === undefined ? LIBELLES_ANOMALIES.operateurActuelConserve : operateurPresente('');
-
-const posteSansLibelle = (poste: string, referentiel: ReferentielAnomalies | undefined): string =>
-  referentiel === undefined && poste !== '' ? LIBELLES_ANOMALIES.posteActuelConserve : postePresente('', poste);
-
 const nomConnuDeLOperateur = (
   operateur: string,
-  referentiel: ReferentielAnomalies | undefined,
+  operateurs: readonly OperateurAnomalie[] | undefined,
   journal: readonly PointageAnomalie[],
 ): string | undefined =>
-  referentiel?.operateur(new OperateurAnomalieId(operateur))?.nom
+  operateurs?.find(candidat => candidat.id.equals(new OperateurAnomalieId(operateur)))?.nom
   ?? journal.find(pointage => pointage.fait.operateur === operateur && pointage.operateurNom !== '')?.operateurNom;
 
-export const operateurDeLActe = (
-  operateur: string,
-  referentiel: ReferentielAnomalies | undefined,
-  journal: readonly PointageAnomalie[],
-): string => nomConnuDeLOperateur(operateur, referentiel, journal) ?? operateurSansNom(referentiel);
-
-export const operateurDuDossier = (dossier: DossierAnomalie, referentiel: ReferentielAnomalies | undefined): string | undefined =>
-  dossier.ligne.operateur || nomConnuDeLOperateur(dossier.operateur.operateur, referentiel, dossier.journal);
-
-export const posteDeLActe = (
-  poste: string,
-  referentiel: ReferentielAnomalies | undefined,
-  journal: readonly PointageAnomalie[],
-): string => {
-  const libelle =
-    referentiel?.poste(new PosteAnomalieId(poste))?.libelle
-    ?? journal.find(pointage => pointage.fait.poste === poste && pointage.posteLibelle !== '')?.posteLibelle;
-  return libelle ?? posteSansLibelle(poste, referentiel);
-};
+export const operateurDuDossier = (dossier: DossierAnomalie, operateurs: readonly OperateurAnomalie[] | undefined): string | undefined =>
+  dossier.operateurNom || nomConnuDeLOperateur(dossier.operateur.operateur, operateurs, dossier.journal);

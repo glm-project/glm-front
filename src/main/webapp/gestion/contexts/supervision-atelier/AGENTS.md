@@ -2,8 +2,8 @@
 
 Ce contexte appartient exclusivement à `gestion`. Il classe les opérateurs déclarés selon leurs activités
 interprétables en cours. L'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md)
-fixe le temps opérationnel et les séquences en conflit. La supervision lit la projection complète du
-backend ; l'adapter InMemory conserve les démonstrations.
+fixe le temps opérationnel. La supervision lit la projection complète du backend ; l'adapter InMemory
+conserve les démonstrations.
 
 ## Langage
 
@@ -15,18 +15,15 @@ Il porte ses métiers, les natures de travail pour lesquelles il est habilité ;
 Les libellés sont « Au travail » et « Sans activité ».
 
 **Activité de supervision** : activité rattachée à un opérateur, portant un objet, une catégorie, un début,
-un état et facultativement un poste. Les états sont `EN_COURS`, `TERMINEE`, `TERMINEE_AUTOMATIQUEMENT` et
-`A_RESOUDRE`. Une activité NC ou sur un OF Perso en cours place aussi l'opérateur Au travail.
+un état, une échéance et facultativement un poste. Les états sont `EN_COURS`, `TERMINEE` et
+`TERMINEE_AUTOMATIQUEMENT`. Une activité NC ou sur un OF Perso en cours place aussi l'opérateur Au travail.
 
 **Fin automatique** : état interprété par le backend avec son échéance et sa fin retenue. La vue affiche
-la fin retenue reçue. La démonstration calcule une échéance à début + 13 heures écoulées, borne inclusive,
-puis évalue son état à l'instant d'évaluation, sans produire de pointage. Une activité ainsi terminée
-quitte les activités courantes et porte un signalement sur la carte de l'opérateur.
-
-**Séquence en conflit** : séquence identifiée dont les activités nécessitent une décision du gestionnaire.
-Le port la fournit séparément des activités interprétables, y compris quand elle ne porte aucune activité
-à résoudre. La supervision la rend sans en déduire une activité courante. Les activités interprétables
-indépendantes du même opérateur restent rendues.
+la fin retenue reçue. L'échéance est toujours reçue du serveur, qui la tire de la durée maximale du
+paramétrage : la supervision ne calcule ni échéance ni durée. L'adapter InMemory pose lui-même les échéances
+de sa démonstration, sans produire de pointage, et le domaine évalue leur état à l'instant d'évaluation.
+Une activité ainsi terminée quitte les activités courantes et porte un signalement sur la carte de
+l'opérateur.
 
 **Poste de supervision** : poste d'une activité, avec son identifiant, son libellé et facultativement sa
 nature de travail. Les activités s'ordonnent par libellé de poste, celles sans poste en dernier, puis par
@@ -48,27 +45,26 @@ un élément manquant ne constitue jamais un OF Perso.
 **Instant** : date et heure absolues validées, indépendantes du fuseau de représentation. Le début d'une
 activité, son échéance, sa fin retenue et l'évaluation utilisent cette valeur, normalisée en UTC.
 Les fractions ISO de une à neuf décimales sont conservées sans perte : l'ordre des instants et l'échéance
-inclusive restent exacts jusqu'à la nanoseconde, y compris dans la même milliseconde. Le calcul de
-l'échéance de démonstration à treize heures conserve également la fraction du début.
+inclusive restent exacts jusqu'à la nanoseconde, y compris dans la même milliseconde.
 
 **Catégorie d'activité** : `TRAVAIL` ou `NON_CONFORMITE`. La NC est une surcouche de l'activité courante,
-jamais un couloir. Une activité à résoudre ne contribue pas au signal NC interprété.
+jamais un couloir.
 
-**Opérateur à vérifier** : opérateur portant une fin automatique ou une séquence en conflit.
+**Opérateur à vérifier** : opérateur portant au moins une fin automatique. Le signalement « à vérifier »
+de la carte ne désigne que cela.
 
 **Résultat de supervision** : évaluation exploitable avec les opérateurs ordonnés, ou inexploitable si
-une activité, y compris dans une séquence en conflit, n'a pas d'opérateur identifiable.
+une activité n'a pas d'opérateur identifiable.
 
 ## Responsabilités et invariants
 
 - Chaque opérateur déclaré figure exactement une fois. Les deux couloirs existent toujours, dans l'ordre
   Au travail puis Sans activité, même vides. Les opérateurs sont triés par nom, prénom et identifiant.
-- Les activités terminées ou à résoudre ne déterminent pas le couloir et ne comptent pas dans le signal NC.
+- Les activités terminées ne déterminent pas le couloir et ne comptent pas dans le signal NC.
 - La pause et sa mémoire appartiennent au seul pupitre qui l'a prise. Des fins simultanées ne prouvent
   aucune pause ; une activité ouverte ailleurs ou une fin encore à publier conserve son état reçu.
   La supervision n'invente aucun état suspendu ni couloir sans source. Chaque reprise crée un nouvel
   instant de début pour l'activité rendue.
-- Les séquences en conflit restent visibles et à vérifier après l'échéance ; la borne automatique ne les tranche pas.
 - Les métiers sont affichés quand aucune activité interprétable n'est en cours.
 - La supervision affiche des instants, jamais une durée comptabilisée.
 - L'instant d'évaluation est obligatoire ; les instants invalides ou dépourvus de fuseau sont refusés.
@@ -81,7 +77,7 @@ une activité, y compris dans une séquence en conflit, n'a pas d'opérateur ide
   l'écran que lorsqu'aucune vue exploitable n'est affichée ; une erreur remplace toujours la vue.
 - Ce contexte acquiert la vue par un seul port et ne partage aucun modèle métier avec `pupitre`.
 - La composition normale lie le port à HTTP sur la route de supervision. Chaque lecture recharge
-  opérateurs, activités et conflits sans cache ni repli de démonstration. Le backend fournit une réponse
+  opérateurs et activités sans cache ni repli de démonstration. Le backend fournit une réponse
   complète non paginée sous READ COMMITTED ; l'évaluation commune ne garantit pas un instantané transactionnel.
 - L'adapter secondaire signale une panne technique une fois par `ErrorHandlerPort`, puis rejette la lecture.
   Une fin automatique sans fin retenue est une réponse non représentable et rejette également la lecture.
@@ -97,6 +93,5 @@ la couleur de la NC. Leur classement est amendé par l'ADR 0047.
 ## Accès à la vérification
 
 Le nom d'une personne ouvre son relevé. Chaque fin automatique ouvre le relevé de cette personne à la
-semaine ISO et au jour de la fin retenue, dans le fuseau du navigateur. Une activité en conflit utilise
-son début reçu ; une séquence sans activité ouvre le relevé sans inventer une date. Les liens ne promettent
-aucune correction. Un couloir vide conserve son titre, son nombre et son sens dans une ligne compacte.
+semaine ISO et au jour de la fin retenue, dans le fuseau du navigateur. Les liens ne promettent aucune
+correction. Un couloir vide conserve son titre, son nombre et son sens dans une ligne compacte.

@@ -8,6 +8,8 @@ import {
 } from './JournalDuPupitre';
 import { projectReferentiel } from './JournalDuPupitreProjection';
 
+const dureeMaximaleFixtureEnMs = 13 * 60 * 60 * 1000;
+
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
 
 const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
@@ -25,11 +27,11 @@ const operateurJeanFixture: OperateurDuPupitre = {
 };
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [operateurJeanFixture],
-  suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
+  suivis: [{ id: 'piece', nom: 'OF-1', categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const debutGesteFixture: GesteDePointage = {
-  intention: 'OUVERTURE',
   nature: 'POINTAGE',
   operateurId: 'jean',
   suiviId: 'piece',
@@ -39,179 +41,31 @@ const debutGesteFixture: GesteDePointage = {
 };
 const debutFixture: EvenementDuJournal = { geste: debutGesteFixture, etat: 'EN_ATTENTE' };
 describe('JournalDuPupitreProjection', () => {
-  it.each([undefined, 'tour'])(
-    'should expose the stale target and replacement at workstation %s without applying FIN to the replacement',
-    posteId => {
-      const state: JournalDuPupitre = {
-        ...givenEvents([]),
-        referentiel: {
-          ...referenceFixture,
-          suivis: [
-            {
-              ...requiredFixture(referenceFixture.suivis[0], 'element'),
-              activites: [
-                {
-                  operateurId: 'jean',
-                  categorie: 'TRAVAIL',
-                  depuis: '2026-09-05T10:00:00Z',
-                  ...(posteId === undefined ? {} : { posteId }),
-                  ouverture: 'b',
-                  echeance: '2026-09-05T23:00:00Z',
-                },
-                {
-                  operateurId: 'marie',
-                  categorie: 'TRAVAIL',
-                  ouverture: 'autre-operateur',
-                  depuis: '2026-09-05T10:00:00Z',
-                  echeance: '2026-09-05T23:00:00Z',
-                  ...(posteId === undefined ? {} : { posteId }),
-                },
-                {
-                  operateurId: 'jean',
-                  categorie: 'NON_CONFORMITE',
-                  ouverture: 'autre-poste',
-                  posteId: 'fraiseuse',
-                  depuis: '2026-09-05T10:00:00Z',
-                  echeance: '2026-09-05T23:00:00Z',
-                },
-              ],
-            },
-          ],
-        },
-        evenements: [
-          {
-            etat: 'EN_ATTENTE',
-            geste: {
-              ...debutGesteFixture,
-              ...(posteId === undefined ? {} : { posteId }),
-              id: 'fin-a',
-              intention: 'FIN',
-              type: 'FIN',
-              cible: 'a',
-              dateDeSurvenue: '2026-09-05T11:00:00Z',
-            },
-          },
-        ],
-      };
-
-      const projection = whenProjecting(state);
-
-      expect(projection?.suivis[0]?.conflits).toStrictEqual([
-        { operateurId: 'jean', ...(posteId === undefined ? {} : { posteId }), activites: ['a', 'b'], pointages: ['fin-a'] },
-      ]);
-      expect(projection?.suivis[0]?.activites.map(activite => activite.ouverture)).toEqual(['autre-operateur', 'autre-poste']);
-      expect(projection?.suivis[0]?.etat).toBe('EN_COURS');
-    },
-  );
-
-  it.each(['2026-09-05T11:00:00Z', '2026-09-05T11:01:00Z'])(
-    'should not interpret an opening at %s as replacing a target strictly before FIN at 11:00',
-    depuis => {
-      const replacement = {
-        operateurId: 'jean',
-        categorie: 'TRAVAIL' as const,
-        ouverture: 'b',
-        depuis,
-        echeance: '2026-09-06T00:00:00Z',
-        posteId: 'tour',
-      };
-      const state: JournalDuPupitre = {
-        ...givenEvents([
-          {
-            etat: 'EN_ATTENTE',
-            geste: {
-              ...debutGesteFixture,
-              id: 'fin-a',
-              intention: 'FIN',
-              type: 'FIN',
-              cible: 'a',
-              posteId: 'tour',
-              dateDeSurvenue: '2026-09-05T11:00:00Z',
-            },
-          },
-        ]),
-        referentiel: {
-          ...referenceFixture,
-          suivis: [{ ...requiredFixture(referenceFixture.suivis[0], 'item'), activites: [replacement] }],
-        },
-      };
-
-      const projected = whenProjecting(state);
-
-      expect(projected?.suivis[0]?.activites).toEqual([replacement]);
-      expect(projected?.suivis[0]?.conflits).toEqual([]);
-    },
-  );
-
-  it('should retain unrelated current activities when an accepted publication diagnoses only some of them', () => {
-    const activity = (ouverture: string, operateurId: string) => ({
-      operateurId,
-      ouverture,
-      categorie: 'TRAVAIL' as const,
-      depuis: '2026-09-05T08:00:00Z',
-      echeance: '2026-09-05T21:00:00Z',
-    });
-    const preserved = activity('c', 'lea');
-    const conflits = [
-      { activites: ['b'], pointages: ['fin-a'] },
-      { activites: ['ailleurs'], pointages: ['autre-pointage'] },
-    ];
-    const state: JournalDuPupitre = {
-      ...givenEvents([
-        { etat: 'ACCEPTE', conflits, geste: { ...debutGesteFixture, id: 'fin-a', intention: 'FIN', type: 'FIN', cible: 'a' } },
-      ]),
-      referentiel: {
-        ...referenceFixture,
-        suivis: [
-          { ...requiredFixture(referenceFixture.suivis[0], 'item'), activites: [activity('a', 'jean'), activity('b', 'marie'), preserved] },
-        ],
-      },
-    };
-
-    const projected = whenProjecting(state);
-
-    expect(projected?.suivis[0]?.activites).toEqual([preserved]);
-    expect(projected?.suivis[0]?.conflits).toEqual(conflits);
-    expect(projected?.suivis[0]?.etat).toBe('EN_COURS');
-  });
-
-  it('should retain the accepted publication conflict before a canonical refresh and suppress its optimistic activity', () => {
-    const conflit = { activites: ['debut'], pointages: ['debut'] };
-    const state = givenEvents([{ geste: debutGesteFixture, etat: 'ACCEPTE', conflits: [conflit] }]);
-
-    const projection = whenProjecting(state);
-
-    expect(projection?.suivis[0]?.conflits).toEqual([conflit]);
-    expect(projection?.suivis[0]?.activites).toEqual([]);
-  });
-
-  it('should ignore an old accepted conflict once the canonical reference contains its gesture', () => {
+  it('should ignore an accepted event once the canonical reference contains its gesture', () => {
     const state = {
-      ...givenEvents([{ geste: debutGesteFixture, etat: 'ACCEPTE', conflits: [{ activites: ['debut'], pointages: ['debut'] }] }]),
+      ...givenEvents([{ geste: debutGesteFixture, etat: 'ACCEPTE' }]),
       referentiel: {
         ...referenceFixture,
-        suivis: [{ ...requiredFixture(referenceFixture.suivis[0], 'item'), evenements: ['debut'], conflits: [] }],
+        suivis: [{ ...requiredFixture(referenceFixture.suivis[0], 'item'), evenements: ['debut'] }],
       },
     };
 
     const projected = whenProjecting(state);
 
-    expect(projected?.suivis[0]?.conflits).toEqual([]);
     expect(projected?.suivis[0]?.activites).toEqual([]);
   });
 
-  it('should never turn an unknown targeted transition into a new opening', () => {
+  it('should never turn a finish without an activity on its key into an opening', () => {
     const state = givenEvents([
       {
         etat: 'EN_ATTENTE',
-        geste: { ...debutGesteFixture, id: 'transition', intention: 'TRANSITION', type: 'NON_CONFORMITE', cible: 'inconnue' },
+        geste: { ...debutGesteFixture, id: 'fin-sans-activite', type: 'FIN' },
       },
     ]);
 
     const projected = whenProjecting(state);
 
     expect(projected?.suivis[0]?.activites).toEqual([]);
-    expect(projected?.suivis[0]?.conflits).toEqual([]);
   });
 
   it('should reconstruct an offline activity and its original starting time', () => {
@@ -223,10 +77,49 @@ describe('JournalDuPupitreProjection', () => {
     thenActivityHasNoPoste(projection);
   });
 
-  it('should change category on non conformity and stop on finish', () => {
+  it.each(['DEBUT', 'NON_CONFORMITE'] as const)(
+    'should let a %s opening replace an activity of its key once the activity is past its deadline',
+    type => {
+      const state = givenEventsAfterAnActivityExpired([givenOpeningAt(type, '2026-09-05T20:30:00Z')]);
+
+      const projection = whenProjecting(state);
+
+      thenOnlyActivityIs(projection, type === 'DEBUT' ? 'TRAVAIL' : 'NON_CONFORMITE', '2026-09-05T20:30:00Z');
+    },
+  );
+
+  it('should free a key at the very instant of its deadline and keep it busy a moment before', () => {
+    const atDeadline = givenEventsAfterAnActivityExpired([givenOpeningAt('DEBUT', '2026-09-05T20:00:00Z')]);
+    const beforeDeadline = givenEventsAfterAnActivityExpired([givenOpeningAt('DEBUT', '2026-09-05T19:59:59Z')]);
+
+    const freed = whenProjecting(atDeadline);
+    const busy = whenProjecting(beforeDeadline);
+
+    thenOnlyActivityIs(freed, 'TRAVAIL', '2026-09-05T20:00:00Z');
+    thenOnlyActivityIs(busy, 'TRAVAIL', '2026-09-05T07:00:00Z');
+  });
+
+  it('should give a locally opened activity the deadline of the maximum duration received with the reference', () => {
+    const state = givenEventsUnderAMaximumDurationOf(8, [debutFixture]);
+
+    const projection = whenProjecting(state);
+
+    thenOnlyActivityDeadlineIs(projection, '2026-09-05T16:00:00.000Z');
+  });
+
+  it('should free a key once the maximum duration received has elapsed since its local opening', () => {
+    const state = givenEventsUnderAMaximumDurationOf(8, [debutFixture, givenOpeningAt('DEBUT', '2026-09-05T16:00:00Z')]);
+
+    const projection = whenProjecting(state);
+
+    thenOnlyActivityIs(projection, 'TRAVAIL', '2026-09-05T16:00:00Z');
+  });
+
+  it('should open a non conformity only after the finish of the work, and stop on finish', () => {
+    const finDuTravail = givenPointage('FIN');
     const nonConformite = givenPointage('NON_CONFORMITE');
-    const afterCategoryChange = givenEvents([debutFixture, nonConformite]);
-    const afterFinish = givenEvents([debutFixture, nonConformite, givenPointage('FIN')]);
+    const afterCategoryChange = givenEvents([debutFixture, finDuTravail, nonConformite]);
+    const afterFinish = givenEvents([debutFixture, finDuTravail, nonConformite, givenPointage('FIN', 'fin-de-la-non-conformite')]);
 
     const projection = whenProjecting(afterCategoryChange);
     const finished = whenProjecting(afterFinish);
@@ -235,13 +128,18 @@ describe('JournalDuPupitreProjection', () => {
     thenStateIs(finished, 'INTERROMPU', 0);
   });
 
+  it.each(['NON_CONFORMITE', 'DEBUT'] as const)('should ignore a %s opening on a key whose activity is already in progress', type => {
+    const state = givenEvents([debutFixture, givenOpeningAt(type, '2026-09-05T08:30:00Z')]);
+
+    const projection = whenProjecting(state);
+
+    thenActivityIs(projection, 'TRAVAIL', '2026-09-05T08:00:00Z');
+    thenStateIs(projection, 'EN_COURS', 1);
+  });
+
   it('should keep other operators active when one finishes', () => {
     const other = givenAnotherOperatorAtWork();
-    const state = givenEvents([
-      debutFixture,
-      other,
-      { ...givenPointage('FIN'), geste: { ...debutGesteFixture, id: 'fin', intention: 'FIN', type: 'FIN', cible: 'debut' } },
-    ]);
+    const state = givenEvents([debutFixture, other, { ...givenPointage('FIN'), geste: { ...debutGesteFixture, id: 'fin', type: 'FIN' } }]);
 
     const projection = whenProjecting(state);
 
@@ -255,7 +153,12 @@ describe('JournalDuPupitreProjection', () => {
     const first = givenWorkstationPointage('DEBUT', firstPoste);
     const other = givenWorkstationPointage('DEBUT', otherPoste);
     const afterStart = givenEvents([first, other]);
-    const afterCategoryChange = givenEvents([first, other, givenWorkstationPointage('NON_CONFORMITE', firstPoste)]);
+    const afterCategoryChange = givenEvents([
+      first,
+      other,
+      givenWorkstationPointage('FIN', firstPoste, 'fin-avant-nc'),
+      givenWorkstationPointage('NON_CONFORMITE', firstPoste),
+    ]);
     const afterFinish = givenEvents([first, other, givenWorkstationPointage('FIN', firstPoste)]);
 
     const started = whenProjecting(afterStart);
@@ -304,6 +207,33 @@ describe('JournalDuPupitreProjection', () => {
     evenements,
     connecte: true,
   });
+  const givenEventsAfterAnActivityExpired = (evenements: EvenementDuJournal[]): JournalDuPupitre => ({
+    referentiel: {
+      ...referenceFixture,
+      suivis: [
+        {
+          ...requiredFixture(referenceFixture.suivis[0], 'item'),
+          etat: 'EN_COURS',
+          activites: [
+            {
+              ouverture: 'ancienne',
+              echeance: '2026-09-05T20:00:00Z',
+              operateurId: 'jean',
+              categorie: 'TRAVAIL',
+              depuis: '2026-09-05T07:00:00Z',
+              posteId: 'tour',
+            },
+          ],
+        },
+      ],
+    },
+    evenements: evenements.map(evenement => ({ ...evenement, geste: { ...evenement.geste, posteId: 'tour' } })),
+    connecte: true,
+  });
+  const givenEventsUnderAMaximumDurationOf = (heures: number, evenements: EvenementDuJournal[]): JournalDuPupitre => ({
+    ...givenEvents(evenements),
+    referentiel: { ...referenceFixture, dureeMaximaleDActiviteEnMs: heures * 60 * 60 * 1000 },
+  });
   const givenNoDownloadedReference = (): JournalDuPupitre => ({ evenements: [], connecte: true });
   const givenAnotherOperatorAtWork = (): EvenementDuJournal => ({
     ...debutFixture,
@@ -321,24 +251,22 @@ describe('JournalDuPupitreProjection', () => {
       debutFixture,
     ],
   });
-  const givenPointage = (type: 'FIN' | 'NON_CONFORMITE'): EvenementDuJournal => ({
+  const givenPointage = (type: 'FIN' | 'NON_CONFORMITE', id = type === 'FIN' ? 'fin' : 'nc'): EvenementDuJournal => ({
     etat: 'EN_ATTENTE',
-    geste:
-      type === 'FIN'
-        ? { ...debutGesteFixture, id: 'fin', intention: 'FIN', type, cible: 'nc' }
-        : { ...debutGesteFixture, id: 'nc', intention: 'TRANSITION', type, cible: 'debut' },
+    geste: { ...debutGesteFixture, id, type },
   });
-  const givenWorkstationPointage = (type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', posteId: string | undefined): EvenementDuJournal => {
+  const givenOpeningAt = (type: 'DEBUT' | 'NON_CONFORMITE', dateDeSurvenue: string): EvenementDuJournal => ({
+    etat: 'EN_ATTENTE',
+    geste: { ...debutGesteFixture, id: `${type}-${dateDeSurvenue}`, type, dateDeSurvenue },
+  });
+  const givenWorkstationPointage = (
+    type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE',
+    posteId: string | undefined,
+    id = `${type}-${posteId ?? 'sans-poste'}`,
+  ): EvenementDuJournal => {
     const poste = posteId === undefined ? {} : { posteId };
-    const identite = { ...debutGesteFixture, ...poste, id: `${type}-${posteId ?? 'sans-poste'}` };
-    const cible = `DEBUT-${posteId ?? 'sans-poste'}`;
-    const geste = pointageAt(identite, type, cible);
-    return { etat: 'EN_ATTENTE', geste };
-  };
-  const pointageAt = (identite: typeof debutGesteFixture, type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', cible: string): GesteDePointage => {
-    if (type === 'DEBUT') return identite;
-    if (type === 'FIN') return { ...identite, intention: 'FIN', type, cible };
-    return { ...identite, intention: 'TRANSITION', type, cible };
+    const identite = { ...debutGesteFixture, ...poste, id };
+    return { etat: 'EN_ATTENTE', geste: { ...identite, type } };
   };
   const whenProjecting = (state: JournalDuPupitre): ReferentielDuPupitre | undefined => projectReferentiel(state);
   const thenWorkstationsAreActive = (projection: ReferentielDuPupitre | undefined, postes: (string | undefined)[]): void => {
@@ -378,6 +306,15 @@ describe('JournalDuPupitreProjection', () => {
   const thenActivityIs = (projection: ReferentielDuPupitre | undefined, categorie: string, depuis: string): void => {
     const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
     expect(requiredFixture(suivi.activites[0], 'projected activity')).toMatchObject({ operateurId: 'jean', categorie, depuis });
+  };
+  const thenOnlyActivityIs = (projection: ReferentielDuPupitre | undefined, categorie: string, depuis: string): void => {
+    const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
+    expect(suivi.activites).toHaveLength(1);
+    thenActivityIs(projection, categorie, depuis);
+  };
+  const thenOnlyActivityDeadlineIs = (projection: ReferentielDuPupitre | undefined, echeance: string): void => {
+    const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
+    expect(suivi.activites.map(activite => activite.echeance)).toEqual([echeance]);
   };
   const thenActivityHasNoPoste = (projection: ReferentielDuPupitre | undefined): void => {
     const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');

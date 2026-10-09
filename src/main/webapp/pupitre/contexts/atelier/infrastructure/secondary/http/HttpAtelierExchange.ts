@@ -3,18 +3,18 @@ import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiC
 import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import {
-  ConflitDuPupitre,
   GesteDePointage,
   OperateurDuPupitre,
   ReferentielDuPupitre,
   SuiviDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { inject, Injectable } from '@angular/core';
 
 import { toRefusDAtelier } from '../toRefusDAtelier';
+import { dureeEnMillisecondes } from './dureeIso8601';
 
 type RestActiviteDuPupitre = components['schemas']['RestActiviteDuPupitre'];
 type RestOperateurDuPupitre = components['schemas']['RestOperateurDuPupitre'];
@@ -44,13 +44,6 @@ const toActivite = (activite: RestActiviteDuPupitre): SuiviDuPupitre['activites'
   ...(activite.poste === undefined ? {} : { posteId: activite.poste }),
 });
 
-const toConflit = (conflit: components['schemas']['RestConflitDuPupitre']): SuiviDuPupitre['conflits'][number] => ({
-  operateurId: conflit.operateur,
-  activites: conflit.activites,
-  pointages: conflit.pointages,
-  ...(conflit.poste === undefined ? {} : { posteId: conflit.poste }),
-});
-
 const toSuiviWithoutReference = (suivi: RestSuiviDuPupitre): SuiviDuPupitre => ({
   id: suivi.id,
   nom: suivi.nom,
@@ -58,18 +51,10 @@ const toSuiviWithoutReference = (suivi: RestSuiviDuPupitre): SuiviDuPupitre => (
   categorie: suivi.categorie,
   evenements: [],
   activites: suivi.activites.map(toActivite),
-  conflits: suivi.conflits.map(toConflit),
 });
 
 const toSuivi = (suivi: RestSuiviDuPupitre): SuiviDuPupitre =>
   suivi.reference === undefined ? toSuiviWithoutReference(suivi) : { ...toSuiviWithoutReference(suivi), reference: suivi.reference };
-
-const toDiagnostic = (conflit: components['schemas']['RestSequenceEnConflit']): ConflitDuPupitre => ({
-  activites: conflit.activites,
-  pointages: conflit.pointages,
-  ...(conflit.operateur === undefined ? {} : { operateurId: conflit.operateur.id }),
-  ...(conflit.poste === undefined ? {} : { posteId: conflit.poste.id }),
-});
 
 @Injectable()
 export class HttpAtelierExchange extends AtelierExchangePort {
@@ -83,13 +68,14 @@ export class HttpAtelierExchange extends AtelierExchangePort {
       operateurs: referentiel.operateurs.map(toOperateur),
       suivis: referentiel.suivis.map(toSuivi),
       categories: referentiel.categories,
+      dureeMaximaleDActiviteEnMs: dureeEnMillisecondes(referentiel.dureeMaximaleDActivite),
     };
   }
 
-  override async send(geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> {
+  override async send(geste: GesteDePointage): Promise<Result<void, RefusDePublication>> {
     try {
-      const publication = await this.write(geste);
-      return ok({ conflits: publication.conflits.map(toDiagnostic) });
+      await this.write(geste);
+      return ok(undefined);
     } catch (failure: unknown) {
       const refusal = findApiErrorIn(failure);
       if (refusal !== undefined) {
@@ -113,7 +99,7 @@ export class HttpAtelierExchange extends AtelierExchangePort {
     const body = { id: geste.id, dateDeSurvenue: geste.dateDeSurvenue, operateur: geste.operateurId };
     const request = {
       pathParams: { id: geste.suiviId },
-      body: { ...body, type: geste.type, intention: geste.intention, ...(geste.intention === 'OUVERTURE' ? {} : { cible: geste.cible }) },
+      body: { ...body, type: geste.type },
     };
     if (geste.posteId === undefined) {
       return this.api.write('/api/atelier/suivis/{id}/pointages', request);

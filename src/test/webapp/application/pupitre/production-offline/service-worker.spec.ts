@@ -1,5 +1,6 @@
 import type { GesteDePointage, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
 import type { ProductionPupitreFixture } from './fixtures/main';
@@ -14,7 +15,6 @@ const gestureFixture: GesteDePointage = {
   dateDeSurvenue: dateFixture,
   operateurId: 'operator-1',
   suiviId: 'workshop-item-1',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
 const finishFixture: GesteDePointage = {
@@ -23,15 +23,14 @@ const finishFixture: GesteDePointage = {
   dateDeSurvenue: '2026-09-05T08:15:00Z',
   operateurId: 'operator-1',
   suiviId: 'workshop-item-1',
-  intention: 'FIN',
   type: 'FIN',
-  cible: idFixture,
 };
 const acceptedFinishFixture = { geste: finishFixture, etat: 'ACCEPTE' } as const;
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'operator-1', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
-  suivis: [{ conflits: [], id: 'workshop-item-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] }],
+  suivis: [{ id: 'workshop-item-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] }],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const otherCompanyFixture = 'entreprise-b';
 const otherCompanyGestureFixture: GesteDePointage = {
@@ -40,9 +39,7 @@ const otherCompanyGestureFixture: GesteDePointage = {
   dateDeSurvenue: '2026-09-05T10:00:00Z',
   operateurId: 'other-company-operator',
   suiviId: 'other-company-item',
-  intention: 'TRANSITION',
   type: 'NON_CONFORMITE',
-  cible: '09d88f99-1094-4a13-b1ea-bd206ee388fa',
 };
 const otherCompanyReferenceFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'other-company-operator', nom: 'Martin', prenom: 'Marie', identifiant: '049', postes: [] }],
@@ -61,11 +58,11 @@ const otherCompanyReferenceFixture: ReferentielDuPupitre = {
           echeance: '2026-09-05T22:00:00Z',
         },
       ],
-      conflits: [],
       evenements: [],
     },
   ],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const serviceWorkerSessions: string[] = [];
 let documentBeforeUpdate: Document | undefined;
@@ -120,7 +117,7 @@ describe('Production pupitre offline restart', () => {
     whenRestoringTheBrowserNetwork();
   });
 
-  it('should preserve targeted gestures for two companies through offline restarts and publish only the selected company FIFO', () => {
+  it('should preserve gestures for two companies through offline restarts and publish only the selected company FIFO', () => {
     whenBootingTheProductionPupitre();
     whenReadingOnlinePupitre('initial', 1);
     whenWaitingForServiceWorkerActivation();
@@ -354,7 +351,7 @@ const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
     expect(state.pushes).to.deep.equal([
       {
         authorization: `Bearer ${tokenFixture}`,
-        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1', type: 'DEBUT', intention: 'OUVERTURE' },
+        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1', type: 'DEBUT' },
       },
     ]);
   });
@@ -364,7 +361,7 @@ const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
     .should('deep.equal', [
       {
         authorization: `Bearer ${tokenFixture}`,
-        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1', type: 'DEBUT', intention: 'OUVERTURE' },
+        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1', type: 'DEBUT' },
       },
       {
         authorization: `Bearer ${tokenFixture}`,
@@ -373,8 +370,6 @@ const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
           dateDeSurvenue: '2026-09-05T08:15:00Z',
           operateur: 'operator-1',
           type: 'FIN',
-          intention: 'FIN',
-          cible: '59ef737b-c3dd-47f8-8e63-4d5526a17df3',
         },
       },
     ]);

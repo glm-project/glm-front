@@ -3,9 +3,7 @@ import { CategorieActivite, ValeurCategorieActivite } from '../activite/Categori
 import { CategorieDElement } from '../activite/CategorieDElement';
 import { ElementTravaille } from '../activite/ElementTravaille';
 import { IdentifiantActivite } from '../activite/IdentifiantActivite';
-import { IdentifiantSequence } from '../activite/IdentifiantSequence';
 import { ReferenceDElement } from '../activite/ReferenceDElement';
-import { SequenceEnConflit } from '../activite/SequenceEnConflit';
 import { Instant } from '../instant/Instant';
 import { IdentifiantOperateur } from '../operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../operateur/OperateurDeclare';
@@ -32,27 +30,6 @@ describe('SupervisionDeLAtelier', () => {
       evaluation: new Instant('2026-09-13T21:00:00.123456789Z'),
       operateurs: [operateur],
       activites: [activite],
-      sequencesEnConflit: [],
-    });
-
-    expect(couloirDe(exploitableFixture(resultat), operateur)).toBe('AU_TRAVAIL');
-  });
-
-  it('should preserve the opening nanoseconds when deriving the demonstration deadline after thirteen elapsed hours', () => {
-    const operateur = operateurFixture('op-demo-nanosecond');
-    const activite = new ActiviteDeSupervision({
-      id: new IdentifiantActivite('demo-nanosecond-deadline'),
-      operateurId: operateur.id,
-      objet: MOULE_1015,
-      categorie: new CategorieActivite('TRAVAIL'),
-      debut: new Instant('2026-09-13T08:00:00.123456790Z'),
-    });
-
-    const resultat = SupervisionDeLAtelier.determine({
-      evaluation: new Instant('2026-09-13T21:00:00.123456789Z'),
-      operateurs: [operateur],
-      activites: [activite],
-      sequencesEnConflit: [],
     });
 
     expect(couloirDe(exploitableFixture(resultat), operateur)).toBe('AU_TRAVAIL');
@@ -91,7 +68,6 @@ describe('SupervisionDeLAtelier', () => {
         evaluation: new Instant(evaluation),
         operateurs: [operateur],
         activites: [activite],
-        sequencesEnConflit: [],
       });
 
       const supervision = exploitableFixture(resultat);
@@ -115,7 +91,6 @@ describe('SupervisionDeLAtelier', () => {
       evaluation: new Instant('1969-12-31T23:59:59.999999989Z'),
       operateurs: [operateur],
       activites: [activite],
-      sequencesEnConflit: [],
     });
 
     expect(couloirDe(exploitableFixture(resultat), operateur)).toBe('AU_TRAVAIL');
@@ -136,82 +111,9 @@ describe('SupervisionDeLAtelier', () => {
       evaluation: new Instant('2026-09-13T21:30:00Z'),
       operateurs: [operateur],
       activites: [activite],
-      sequencesEnConflit: [],
     });
 
     expect(couloirDe(exploitableFixture(resultat), operateur)).toBe('AU_TRAVAIL');
-  });
-
-  it('should reject a conflicting activity whose operator cannot be identified', () => {
-    const operateur = operateurFixture('op-conflict');
-    const activite = new ActiviteDeSupervision({
-      id: new IdentifiantActivite('orphan-conflict'),
-      operateurId: undefined,
-      objet: MOULE_1015,
-      categorie: new CategorieActivite('TRAVAIL'),
-      debut: MAINTENANT,
-      etat: 'A_RESOUDRE',
-    });
-    const sequence = new SequenceEnConflit({
-      id: new IdentifiantSequence('sequence-orphan'),
-      operateurId: operateur.id,
-      activites: [activite],
-    });
-
-    const resultat = SupervisionDeLAtelier.determine({
-      evaluation: MAINTENANT,
-      operateurs: [operateur],
-      activites: [],
-      sequencesEnConflit: [sequence],
-    });
-
-    expect(inexploitableFixture(resultat)).toBe('ACTIVITE_SANS_OPERATEUR_IDENTIFIABLE');
-  });
-
-  it('should keep a conflicting sequence visible without interpreting a current activity', () => {
-    const operateur = operateurFixture('op-conflict');
-    const activite = activiteFixture(operateur, 'NON_CONFORMITE');
-    const sequence = new SequenceEnConflit({ id: new IdentifiantSequence('sequence-1'), operateurId: operateur.id, activites: [activite] });
-
-    const supervision = exploitableFixture(
-      SupervisionDeLAtelier.determine({
-        evaluation: new Instant('2026-09-14T09:00:00Z'),
-        operateurs: [operateur],
-        activites: [],
-        sequencesEnConflit: [sequence],
-      }),
-    );
-
-    expect(couloirDe(supervision, operateur)).toBe('SANS_ACTIVITE');
-    expect(supervision.operateurs[0]?.sequencesEnConflit).toEqual([sequence]);
-    expect(supervision.operateurs[0]?.activites).toEqual([]);
-    expect(supervision.operateursEnNonConformite()).toEqual([]);
-    expect(supervision.operateursAVerifier().map(supervise => supervise.operateur.id.value)).toEqual(['op-conflict']);
-  });
-
-  it('should associate a conflicting sequence only with its declared operator', () => {
-    const proprietaire = operateurFixture('op-1');
-    const autreOperateur = operateurFixture('op-2');
-    const sequence = new SequenceEnConflit({
-      id: new IdentifiantSequence('sequence-owned'),
-      operateurId: proprietaire.id,
-      activites: [activiteFixture(proprietaire)],
-    });
-
-    const supervision = exploitableFixture(
-      SupervisionDeLAtelier.determine({
-        evaluation: MAINTENANT,
-        operateurs: [autreOperateur, proprietaire],
-        activites: [],
-        sequencesEnConflit: [sequence],
-      }),
-    );
-
-    expect(supervision.operateurs).toMatchObject([
-      { operateur: proprietaire, sequencesEnConflit: [sequence] },
-      { operateur: autreOperateur, sequencesEnConflit: [] },
-    ]);
-    expect(supervision.operateursAVerifier().map(supervise => supervise.operateur.id.value)).toEqual(['op-1']);
   });
 
   it('should exclude a completed activity from current work and automatic-end warnings', () => {
@@ -222,11 +124,12 @@ describe('SupervisionDeLAtelier', () => {
       objet: MOULE_1015,
       categorie: new CategorieActivite('NON_CONFORMITE'),
       debut: new Instant('2026-09-13T08:00:00Z'),
+      echeance: ECHEANCE,
       etat: 'TERMINEE',
     });
 
     const supervision = exploitableFixture(
-      SupervisionDeLAtelier.determine({ evaluation: MAINTENANT, sequencesEnConflit: [], operateurs: [operateur], activites: [activite] }),
+      SupervisionDeLAtelier.determine({ evaluation: MAINTENANT, operateurs: [operateur], activites: [activite] }),
     );
 
     expect(couloirDe(supervision, operateur)).toBe('SANS_ACTIVITE');
@@ -234,13 +137,12 @@ describe('SupervisionDeLAtelier', () => {
     expect(supervision.operateursAVerifier()).toEqual([]);
   });
 
-  it('should stop counting an activity as current at exactly thirteen elapsed hours', () => {
+  it('should stop counting an activity as current at its acquired deadline', () => {
     const operateur = operateurFixture('op-expired');
     const activite = activiteFixture(operateur);
 
     const resultat = SupervisionDeLAtelier.determine({
       evaluation: new Instant('2026-09-13T21:30:00Z'),
-      sequencesEnConflit: [],
       operateurs: [operateur],
       activites: [activite],
     });
@@ -265,41 +167,31 @@ describe('SupervisionDeLAtelier', () => {
       objet: MOULE_1015,
       categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:00:00Z'),
+      echeance: ECHEANCE,
     });
     const activites = [activite];
-    const activitesEnConflit = [activiteFixture(operateur, 'NON_CONFORMITE')];
-    const sequence = new SequenceEnConflit({
-      id: new IdentifiantSequence('copied-sequence'),
-      operateurId: operateur.id,
-      activites: activitesEnConflit,
-    });
-    const sequencesEnConflit = [sequence];
     const terminee = new ActiviteDeSupervision({
       id: new IdentifiantActivite('copied-automatic-end'),
       operateurId: operateur.id,
       objet: MOULE_1015,
       categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-12T08:00:00Z'),
+      echeance: ECHEANCE,
       etat: 'TERMINEE_AUTOMATIQUEMENT',
     });
     const termineesAutomatiquement = [terminee];
-    const supervise = new OperateurSupervise(operateur, { activites, termineesAutomatiquement, sequencesEnConflit });
+    const supervise = new OperateurSupervise(operateur, { activites, termineesAutomatiquement });
 
     activites.length = 0;
-    activitesEnConflit.length = 0;
-    sequencesEnConflit.length = 0;
     termineesAutomatiquement.length = 0;
 
     expect(supervise.activites).toEqual([activite]);
     expect(supervise.activitesTermineesAutomatiquement).toEqual([terminee]);
-    expect(supervise.sequencesEnConflit).toEqual([sequence]);
-    expect(sequence.activites.map(enConflit => enConflit.id.value)).toEqual(['act-op-1-NON_CONFORMITE']);
   });
 
   it('should produce an empty supervision when no operators are declared', () => {
     const resultat = SupervisionDeLAtelier.determine({
       evaluation: new Instant('2026-09-13T09:00:00Z'),
-      sequencesEnConflit: [],
       operateurs: [],
       activites: [],
     });
@@ -315,7 +207,6 @@ describe('SupervisionDeLAtelier', () => {
 
     const resultat = SupervisionDeLAtelier.determine({
       evaluation: MAINTENANT,
-      sequencesEnConflit: [],
       operateurs: [martin, bernardClaude, dupont, bernardAlexandre],
       activites: [],
     });
@@ -334,7 +225,6 @@ describe('SupervisionDeLAtelier', () => {
 
     const resultat = SupervisionDeLAtelier.determine({
       evaluation: new Instant('2026-09-13T09:00:00Z'),
-      sequencesEnConflit: [],
       operateurs: [secondHomonyme, premierHomonyme],
       activites: [],
     });
@@ -354,6 +244,7 @@ describe('SupervisionDeLAtelier', () => {
       objet: MOULE_1015,
       categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:00:00Z'),
+      echeance: ECHEANCE,
       poste: posteFixture('Poste-1'),
     });
     const secondeActivite = new ActiviteDeSupervision({
@@ -362,6 +253,7 @@ describe('SupervisionDeLAtelier', () => {
       objet: MOULE_1015,
       categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T09:30:00Z'),
+      echeance: ECHEANCE,
       poste: posteFixture('Poste-2'),
     });
     const activiteMartin = new ActiviteDeSupervision({
@@ -370,12 +262,12 @@ describe('SupervisionDeLAtelier', () => {
       objet: MOULE_1015,
       categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:15:00Z'),
+      echeance: ECHEANCE,
       poste: posteFixture('Poste-3'),
     });
 
     const resultat = SupervisionDeLAtelier.determine({
       evaluation: MAINTENANT,
-      sequencesEnConflit: [],
       operateurs: [dupont, martin],
       activites: [premiereActivite, secondeActivite, activiteMartin],
     });
@@ -406,6 +298,7 @@ describe('SupervisionDeLAtelier', () => {
       objet: MOULE_1015,
       categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:00:00Z'),
+      echeance: ECHEANCE,
     });
 
     expect(activiteSansPoste.poste).toBeUndefined();
@@ -419,11 +312,11 @@ describe('SupervisionDeLAtelier', () => {
       objet: MOULE_1015,
       categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:00:00Z'),
+      echeance: ECHEANCE,
     });
 
     const resultat = SupervisionDeLAtelier.determine({
       evaluation: new Instant('2026-09-13T09:00:00Z'),
-      sequencesEnConflit: [],
       operateurs: [operateur],
       activites: [activiteSansOperateur],
     });
@@ -441,11 +334,11 @@ describe('SupervisionDeLAtelier', () => {
       objet: MOULE_1015,
       categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:00:00Z'),
+      echeance: ECHEANCE,
     });
 
     const resultat = SupervisionDeLAtelier.determine({
       evaluation: new Instant('2026-09-13T09:00:00Z'),
-      sequencesEnConflit: [],
       operateurs: [operateur],
       activites: [activiteInconnue],
     });
@@ -501,7 +394,7 @@ describe('SupervisionDeLAtelier', () => {
   it('should expose the evaluation instant it was determined at', () => {
     const maintenant = new Instant('2026-09-24T07:10:00Z');
 
-    const resultat = SupervisionDeLAtelier.determine({ evaluation: maintenant, sequencesEnConflit: [], operateurs: [], activites: [] });
+    const resultat = SupervisionDeLAtelier.determine({ evaluation: maintenant, operateurs: [], activites: [] });
 
     expect(exploitableFixture(resultat).instantDEvaluation).toBe(maintenant);
   });
@@ -543,6 +436,7 @@ describe('SupervisionDeLAtelier', () => {
       objet: new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF Perso' }),
       categorie: new CategorieActivite('TRAVAIL'),
       debut: new Instant('2026-09-13T08:30:00Z'),
+      echeance: ECHEANCE,
     });
 
     const supervision = supervisionFixture([operateur], [ofPerso]);
@@ -566,6 +460,7 @@ function inexploitableFixture(resultat: ResultatSupervision): MotifSupervisionIn
 }
 
 const MAINTENANT = new Instant('2026-09-13T09:00:00Z');
+const ECHEANCE = new Instant('2026-09-13T21:30:00Z');
 
 const posteFixture = (libelle: string): PosteDeSupervision =>
   new PosteDeSupervision({ id: new IdentifiantPoste(`poste-${libelle}`), libelle });
@@ -586,6 +481,7 @@ const activiteFixture = (operateur: OperateurDeclare, categorie: ValeurCategorie
     objet: MOULE_1015,
     categorie: new CategorieActivite(categorie),
     debut: new Instant('2026-09-13T08:30:00Z'),
+    echeance: ECHEANCE,
   });
 
 const activiteSurPosteFixture = (
@@ -599,11 +495,12 @@ const activiteSurPosteFixture = (
     objet: MOULE_1015,
     categorie: new CategorieActivite('TRAVAIL'),
     debut: new Instant(`2026-09-13T${debut}:00Z`),
+    echeance: ECHEANCE,
     ...(poste === undefined ? {} : { poste: posteFixture(poste) }),
   });
 
 function supervisionFixture(operateurs: readonly OperateurDeclare[], activites: readonly ActiviteDeSupervision[]): SupervisionDeLAtelier {
-  return exploitableFixture(SupervisionDeLAtelier.determine({ evaluation: MAINTENANT, sequencesEnConflit: [], operateurs, activites }));
+  return exploitableFixture(SupervisionDeLAtelier.determine({ evaluation: MAINTENANT, operateurs, activites }));
 }
 
 function operateursDuCouloir(supervision: SupervisionDeLAtelier, couloir: CouloirDeSupervision): readonly string[] {

@@ -4,16 +4,14 @@ export const CODES_DE_REFUS_D_ATELIER = [
   'poste-de-travail-introuvable',
   'operateur-non-habilite',
   'suivi-d-atelier-cloture',
-  'transition-d-atelier-interdite',
   'saisie-concurrente',
-  'activite-visee-introuvable',
-  'activite-visee-incoherente',
+  'pointage-ignore',
 ] as const;
 
 export type CodeDeRefusDAtelier = (typeof CODES_DE_REFUS_D_ATELIER)[number];
 
 export class MotifDeRefus {
-  private constructor(private readonly code: CodeDeRefusDAtelier | undefined) {}
+  private constructor(private readonly motif: CodeDeRefusDAtelier | undefined) {}
 
   static none(): MotifDeRefus {
     return new MotifDeRefus(undefined);
@@ -23,7 +21,15 @@ export class MotifDeRefus {
     return new MotifDeRefus(code);
   }
 
+  code(): CodeDeRefusDAtelier | undefined {
+    return this.motif;
+  }
+
   is(code: CodeDeRefusDAtelier): boolean {
-    return this.code === code;
+    return this.motif === code;
+  }
+
+  isShownToTheOperator(): boolean {
+    return this.is('suivi-d-atelier-cloture');
   }
 }

@@ -173,15 +173,10 @@ const thenTheCardsTellTheirTimesActivitiesAndAnomalies = (): void => {
   thenTextIs(cardOf('op-marchand').find(dataSelector('supervision-anomalie')), 'Activité terminée automatiquement · fin 03:20');
   cardOf('op-marchand').find(dataSelector('supervision-activite')).should('not.exist');
   thenVisibleTextIs(cardOf('op-dumas'), 'Dumas Julien Aucune activité en cours Métiers : Sciage, Tournage');
-  thenTextIs(cardOf('op-schmitt').find(dataSelector('supervision-sequence-en-conflit')), 'Séquence en conflit · Sans poste');
   thenTextIs(cardOf('op-chevalier').find(dataSelector('supervision-activite-element')), 'OF OF Perso');
   thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-element')), 'OF OF-2026-000048');
   thenTextIs(cardOf('op-vidal').find(dataSelector('supervision-activite-poste')), 'Sans poste');
-  cardOf('op-perrin').find(dataSelector('supervision-sequence-en-conflit')).should('contain.text', 'Séquence en conflit · Tour 1');
-  thenTextIs(cardOf('op-perrin').find(dataSelector('supervision-conflit-activite')), 'OF 3006 · À résoudre');
   cardOf('op-morel').find(dataSelector('supervision-activite')).should('have.length', 2);
-  cardOf('op-morel').find(dataSelector('supervision-sequence-en-conflit')).should('contain.text', 'Séquence en conflit · Erodeuse F');
-  thenTextIs(cardOf('op-morel').find(dataSelector('supervision-conflit-activite')), 'OF OF Perso · À résoudre');
 };
 
 const thenVisibleTextIs = (element: Cypress.Chainable<JQuery>, attendu: string): void => {

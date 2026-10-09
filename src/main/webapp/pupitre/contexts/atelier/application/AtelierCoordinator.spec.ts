@@ -13,13 +13,14 @@ import {
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
-import { CODES_DE_REFUS_D_ATELIER, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
+import { CodeDeRefusDAtelier, CODES_DE_REFUS_D_ATELIER, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { identifiantFixture } from '@test/unit/fixtures/pupitre/atelier/IdentifiantFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { elementsDeLaZoneFixture } from '@test/unit/fixtures/pupitre/atelier/VueDePointageFixture';
@@ -44,8 +45,9 @@ const referenceFixture: ReferentielDuPupitre = {
       postes: [{ id: 'tour', libelle: 'Tour' }],
     },
   ],
-  suivis: [{ conflits: [], id: 'piece', nom: 'OF-1', categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
+  suivis: [{ id: 'piece', nom: 'OF-1', categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const ouvertureFixture: GesteDePointage = {
   nature: 'POINTAGE',
@@ -53,7 +55,6 @@ const ouvertureFixture: GesteDePointage = {
   dateDeSurvenue: '2026-09-05T08:00:00Z',
   operateurId: 'jean',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
 const identityRootFixture = '11111111-1111-4111-8111-111111111111';
@@ -198,7 +199,7 @@ class ServerFixture extends AtelierExchangePort {
     }
     return this.reference;
   }
-  override async send(geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> {
+  override async send(geste: GesteDePointage): Promise<Result<void, RefusDePublication>> {
     await roundTrip();
     this.chronology.push(geste.id);
     this.beforeSend?.();
@@ -211,7 +212,7 @@ class ServerFixture extends AtelierExchangePort {
       throw failure;
     }
     this.journal.push(structuredClone(geste));
-    return ok({ conflits: [] });
+    return ok(undefined);
   }
   override async reread(): Promise<void> {
     await roundTrip();
@@ -257,17 +258,45 @@ describe('AtelierCoordinator', () => {
     await thenQueueHas(1);
   });
 
-  it('should commit only the activity gestures in local business order', async () => {
+  it('should commit only the activity gestures in local business order, an opening on the busy key staying without local effect', async () => {
     await givenAnOpenWindow();
 
     await whenStartingAndReportingNonConformity();
 
     await thenNatureOrderIs(['POINTAGE', 'POINTAGE']);
-    thenActivityIs('NON_CONFORMITE');
+    thenActivityIs('TRAVAIL');
     await thenQueueHasUniqueStableIdentities();
   });
 
-  it('should retain two simultaneous tile captures in acquisition order and stop only the activity they leave open', async () => {
+  it('should send the finish of the work before the non conformity, both at the same time', async () => {
+    await givenWorkStartedOffline();
+    givenAuthorizedAccess();
+    whenBusinessTimeBecomes('2026-09-05T08:00:01Z');
+
+    await whenPointingAt('piece', 'SECONDAIRE');
+    await whenSynchronizing();
+
+    thenTheServerReceived(['DEBUT@2026-09-05T08:00:00.000Z', 'FIN@2026-09-05T08:00:01.000Z', 'NON_CONFORMITE@2026-09-05T08:00:01.000Z']);
+  });
+
+  it('should send the finish of the non conformity before the work, both at the same time', async () => {
+    await givenNonConformityReportedDuringWork();
+    givenAuthorizedAccess();
+    whenBusinessTimeBecomes('2026-09-05T08:00:02Z');
+
+    await whenPointingAt('piece', 'SECONDAIRE');
+    await whenSynchronizing();
+
+    thenTheServerReceived([
+      'DEBUT@2026-09-05T08:00:00.000Z',
+      'FIN@2026-09-05T08:00:01.000Z',
+      'NON_CONFORMITE@2026-09-05T08:00:01.000Z',
+      'FIN@2026-09-05T08:00:02.000Z',
+      'DEBUT@2026-09-05T08:00:02.000Z',
+    ]);
+  });
+
+  it('should retain two simultaneous tile captures in acquisition order and stop the activity the second one left open', async () => {
     await givenTwoActiveWorkstations();
     givenSequentialGestureIdentities();
     const storage = givenDelayedLocalWrite();
@@ -275,12 +304,12 @@ describe('AtelierCoordinator', () => {
     const finishing = whenPointingAt('piece-tour', 'PRINCIPALE');
     await whenCaptureHasReachedStorage(storage);
     whenBusinessTimeBecomes('2026-09-05T08:00:01Z');
-    const transitioning = whenPointingAt('piece-fraiseuse', 'SECONDAIRE');
+    const secondaire = whenPointingAt('piece-fraiseuse', 'SECONDAIRE');
     whenBusinessTimeBecomes('2026-09-05T08:00:02Z');
     const stopping = whenStoppingEverything();
     const beforeRelease = await readQueuedGestures();
     whenBusinessTimeBecomes('2026-09-05T08:00:03Z');
-    await whenReleasingLocalWrite(storage, finishing, transitioning, stopping);
+    await whenReleasingLocalWrite(storage, finishing, secondaire, stopping);
     const gestures = await readQueuedGestures();
 
     expect(beforeRelease).toEqual([]);
@@ -292,9 +321,7 @@ describe('AtelierCoordinator', () => {
         operateurId: 'jean',
         suiviId: 'piece-tour',
         posteId: 'tour',
-        intention: 'FIN',
         type: 'FIN',
-        cible: 'activite-fixture-34',
       },
       {
         nature: 'POINTAGE',
@@ -303,25 +330,30 @@ describe('AtelierCoordinator', () => {
         operateurId: 'jean',
         suiviId: 'piece-fraiseuse',
         posteId: 'fraiseuse',
-        intention: 'TRANSITION',
-        type: 'NON_CONFORMITE',
-        cible: 'activite-fixture-35',
+        type: 'FIN',
       },
       {
         nature: 'POINTAGE',
         id: '33333333-3333-4333-8333-333333333333',
+        dateDeSurvenue: '2026-09-05T08:00:01.000Z',
+        operateurId: 'jean',
+        suiviId: 'piece-fraiseuse',
+        posteId: 'fraiseuse',
+        type: 'NON_CONFORMITE',
+      },
+      {
+        nature: 'POINTAGE',
+        id: '44444444-4444-4444-8444-444444444444',
         dateDeSurvenue: '2026-09-05T08:00:02.000Z',
         operateurId: 'jean',
         suiviId: 'piece-fraiseuse',
         posteId: 'fraiseuse',
-        intention: 'FIN',
         type: 'FIN',
-        cible: futureIdentityRootFixture,
       },
     ]);
   });
 
-  it('should append every targeted personal finish as one global stop batch', async () => {
+  it('should append every personal finish as one global stop batch', async () => {
     await givenTwoActiveWorkstations();
 
     await whenStoppingEverything();
@@ -497,7 +529,7 @@ describe('AtelierCoordinator', () => {
     await thenPendingGesturesAre(['DEBUT:piece-tour:tour']);
   });
 
-  it('should keep projecting a pending transition on the reference activity once its published opening is forgotten', async () => {
+  it('should keep projecting a pending non conformity on the reference activity once its published opening is forgotten', async () => {
     await givenAnOpenWindow();
     await whenStarting();
     givenAuthorizedAccess();
@@ -507,8 +539,8 @@ describe('AtelierCoordinator', () => {
 
     await whenSynchronizing();
 
-    await thenQueueHas(1);
-    await thenPendingGesturesAre(['NON_CONFORMITE:piece:tour']);
+    await thenQueueHas(2);
+    await thenPendingGesturesAre(['FIN:piece:tour', 'NON_CONFORMITE:piece:tour']);
     thenActivityIs('NON_CONFORMITE');
   });
 
@@ -602,7 +634,6 @@ describe('AtelierCoordinator', () => {
         operateurId: 'jean',
         suiviId: 'piece',
         posteId: 'fraiseuse',
-        intention: 'OUVERTURE',
         type: 'DEBUT',
       },
     ]);
@@ -719,10 +750,10 @@ describe('AtelierCoordinator', () => {
     await thenRefusalIs('saisie-concurrente');
   });
 
-  it('should preserve a stable target refusal after one concurrent retry', async () => {
+  it('should preserve a stable business refusal after one concurrent retry', async () => {
     await givenPendingOpening();
     givenAuthorizedAccess();
-    givenServerFailures(refusalFixture('saisie-concurrente'), refusalFixture('activite-visee-introuvable'));
+    givenServerFailures(refusalFixture('saisie-concurrente'), refusalFixture('operateur-non-habilite'));
 
     await whenSynchronizing();
 
@@ -1053,9 +1084,7 @@ describe('AtelierCoordinator', () => {
         operateurId: 'jean',
         suiviId: 'piece-tour',
         posteId: 'tour',
-        intention: 'FIN',
         type: 'FIN',
-        cible: 'activite-fixture-34',
       },
       {
         nature: 'POINTAGE',
@@ -1064,9 +1093,7 @@ describe('AtelierCoordinator', () => {
         operateurId: 'jean',
         suiviId: 'piece-fraiseuse',
         posteId: 'fraiseuse',
-        intention: 'FIN',
         type: 'FIN',
-        cible: 'activite-fixture-35',
         suspension: { pause: futureIdentityRootFixture, reouverture: 'DEBUT' },
       },
     ]);
@@ -1230,7 +1257,8 @@ describe('AtelierCoordinator', () => {
     vi.spyOn(crypto, 'randomUUID')
       .mockReturnValueOnce(identityRootFixture)
       .mockReturnValueOnce(futureIdentityRootFixture)
-      .mockReturnValueOnce('33333333-3333-4333-8333-333333333333');
+      .mockReturnValueOnce('33333333-3333-4333-8333-333333333333')
+      .mockReturnValueOnce('44444444-4444-4444-8444-444444444444');
   };
   const givenDelayedLocalWrite = (): ReturnType<ApplicationJournalFixture['delayNextAppend']> => journal.delayNextAppend();
   const whenCaptureHasReachedStorage = (storage: ReturnType<ApplicationJournalFixture['delayNextAppend']>): Promise<void> =>
@@ -1386,7 +1414,6 @@ describe('AtelierCoordinator', () => {
               posteId: 'tour',
             },
           ],
-          conflits: [],
         },
         {
           ...suivi,
@@ -1402,7 +1429,6 @@ describe('AtelierCoordinator', () => {
               posteId: 'fraiseuse',
             },
           ],
-          conflits: [],
         },
       ],
     };
@@ -1410,6 +1436,11 @@ describe('AtelierCoordinator', () => {
   const givenTwoActiveWorkstations = async (): Promise<void> => {
     await givenCachedReference(twoActiveWorkstationsReference());
     await givenAnOpenWindow();
+  };
+  const givenNonConformityReportedDuringWork = async (): Promise<void> => {
+    await givenWorkStartedOffline();
+    whenBusinessTimeBecomes('2026-09-05T08:00:01Z');
+    await whenPointingAt('piece', 'SECONDAIRE');
   };
   const givenWorkStartedOffline = async (): Promise<void> => {
     await givenAnOpenWindow();
@@ -1541,6 +1572,9 @@ describe('AtelierCoordinator', () => {
   const thenAcceptedBatchesAre = (batches: string[][]): void => {
     expect(journal.acceptedBatches).toEqual(batches);
   };
+  const thenTheServerReceived = (gestes: string[]): void => {
+    expect(serveur.journal.map(({ type, dateDeSurvenue }) => `${type}@${dateDeSurvenue}`)).toEqual(gestes);
+  };
   const thenAllActivitiesRemain = (): void => {
     expect(etatHorsLigne.referentiel()?.suivis.flatMap(suivi => suivi.activites)).toHaveLength(2);
   };
@@ -1628,7 +1662,7 @@ describe('AtelierCoordinator', () => {
     return requiredFixture(accepted[0], 'accepted opening').value.id;
   };
   const thenOpeningBelongsTo = (operateurId: string): void => {
-    expect(serveur.journal).toEqual([expect.objectContaining({ nature: 'POINTAGE', operateurId, intention: 'OUVERTURE', type: 'DEBUT' })]);
+    expect(serveur.journal).toEqual([expect.objectContaining({ nature: 'POINTAGE', operateurId, type: 'DEBUT' })]);
   };
   const thenOpeningAndPointageAreRefused = async (opening: Promise<unknown>, pointage: Promise<void>): Promise<void> => {
     await Promise.all([thenFails(opening, 'deja ouverte'), thenFails(pointage, 'habilitations')]);
@@ -1645,12 +1679,13 @@ describe('AtelierCoordinator', () => {
   const thenChronologyIs = (events: string[]): void => {
     expect(serveur.chronology).toEqual(events);
   };
-  const thenRefusalIs = async (code: string): Promise<void> => {
+  const thenRefusalIs = async (code: CodeDeRefusDAtelier): Promise<void> => {
     const diagnostics = (await journal.read(Entreprise.of('entreprise-a'))).evenements.filter(event => event.etat === 'REFUSE');
     expect(diagnostics).toHaveLength(1);
     expect(requiredFixture(diagnostics[0], 'diagnostic').refus).toEqual({
       code: `urn:glm:erreur:atelier:${code}`,
       message: 'cause conservee',
+      motif: code,
     });
   };
   const thenDiagnosticsCountIs = async (count: number): Promise<void> => {

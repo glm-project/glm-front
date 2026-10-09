@@ -1,6 +1,6 @@
 import { Component, computed, input, output } from '@angular/core';
+import { OperateurAnomalie } from '../../../domain/dossier/OperateurAnomalie';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
-import { OperateurAnomalie } from '../../../domain/dossier/ReferentielAnomalies';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { operateurNomme } from '../PresentationIdentites';
 import { ChoixRecherchable, LibellesSelecteurRecherchable, SelecteurRecherchable } from '../selecteur-recherchable/SelecteurRecherchable';

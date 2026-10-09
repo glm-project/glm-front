@@ -1,9 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiError, findApiErrorIn } from './findApiErrorIn';
 
-const URN = 'urn:glm:erreur:atelier:transition-d-atelier-interdite';
-const MESSAGE = "L'evenement FIN de 33333333-3333-3333-3333-333333333333 du 2026-09-21T10:00:00Z est refuse : l'activite est ABSENTE";
-const TITRE = "transition d'atelier interdite";
+const URN = 'urn:glm:erreur:atelier:pointage-ignore';
+const MESSAGE = 'Le pointage 33333333-3333-3333-3333-333333333333 du 2026-09-21T10:00:00Z est ignore';
+const TITRE = 'pointage ignore';
 
 describe('findApiErrorIn', () => {
   it('should read the stable code and the message the domain wrote', () => {

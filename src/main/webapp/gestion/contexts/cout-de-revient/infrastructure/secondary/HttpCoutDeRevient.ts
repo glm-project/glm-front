@@ -11,13 +11,11 @@ import { ElementChiffreId } from '../../domain/element/ElementChiffreId';
 import { ElementDisponible } from '../../domain/element/ElementDisponible';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
-import { TotalDeMontant } from '../../domain/montant/TotalDeMontant';
 import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
 import { ElementCite } from '../../domain/pointage/ElementCite';
 import { OperateurCite } from '../../domain/pointage/OperateurCite';
 import { PartDePointage } from '../../domain/pointage/PartDePointage';
 import { PointageDeCout } from '../../domain/pointage/PointageDeCout';
-import { PointageEnConflit } from '../../domain/pointage/PointageEnConflit';
 import { PosteCite } from '../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient } from '../../domain/rapport/CoutDeRevient';
@@ -28,7 +26,6 @@ import { DureePassee } from '../../domain/temps/DureePassee';
 import { InstantDeTravail } from '../../domain/temps/InstantDeTravail';
 import { PeriodeDeTravail } from '../../domain/temps/PeriodeDeTravail';
 import { TempsPasse } from '../../domain/temps/TempsPasse';
-import { TotalDeTemps } from '../../domain/temps/TotalDeTemps';
 
 type RestRapport = components['schemas']['RestCoutDeRevient'];
 type RestLigne = components['schemas']['RestLigneDeCout'];
@@ -42,15 +39,11 @@ type RestPoste = components['schemas']['RestPosteDuCout'];
 const ROUTE = '/api/couts-de-revient/{elementId}';
 const ELEMENT_INCONNU = 404;
 
-const toDuree = (total: components['schemas']['RestDureeDuCout'] | undefined, chemin: string): TotalDeTemps => {
-  const lu = required(total, chemin);
-  return lu.complete ? TotalDeTemps.complet(new DureePassee(required(lu.valeur, `${chemin}.valeur`))) : TotalDeTemps.incomplet();
-};
+const toDuree = (total: components['schemas']['RestDureeDuCout'] | undefined, chemin: string): DureePassee =>
+  new DureePassee(required(required(total, chemin).valeur, `${chemin}.valeur`));
 
-const toMontant = (total: components['schemas']['RestMontantDuCout'] | undefined, chemin: string): TotalDeMontant => {
-  const lu = required(total, chemin);
-  return lu.complete ? TotalDeMontant.complet(new Montant(required(lu.valeur, `${chemin}.valeur`))) : TotalDeMontant.incomplet();
-};
+const toMontant = (total: components['schemas']['RestMontantDuCout'] | undefined, chemin: string): Montant =>
+  new Montant(required(required(total, chemin).valeur, `${chemin}.valeur`));
 
 const toTemps = (temps: RestTemps | undefined, chemin: string): TempsPasse => {
   const lu = required(temps, chemin);
@@ -72,9 +65,6 @@ const toCout = (cout: RestCout | undefined, chemin: string): Cout => {
 
 const toNature = (nature: string | undefined): NatureDOperation | undefined =>
   nature === undefined ? undefined : new NatureDOperation(nature);
-
-const toInstant = (instant: string | undefined): InstantDeTravail | undefined =>
-  instant === undefined ? undefined : new InstantDeTravail(instant);
 
 const toTarif = (tarif: number | undefined): Montant | undefined => (tarif === undefined ? undefined : new Montant(tarif));
 
@@ -98,10 +88,9 @@ const toPart = (part: RestPart): PartDePointage =>
     debut: new InstantDeTravail(required(part.debut, 'part.debut')),
     fin: new InstantDeTravail(required(part.fin, 'part.fin')),
     duree: new DureePassee(required(part.duree, 'part.duree')),
-    diviseur: part.diviseur,
+    diviseur: required(part.diviseur, 'part.diviseur'),
     mainDOeuvre: toMontant(part.mainDOeuvre, 'part.mainDOeuvre'),
     paralleles: required(part.paralleles, 'part.paralleles').map(toActivite),
-    bloquants: required(part.bloquants, 'part.bloquants').map(toActivite),
   });
 
 const toPointage = (pointage: RestPointage): PointageDeCout => {
@@ -111,21 +100,15 @@ const toPointage = (pointage: RestPointage): PointageDeCout => {
     operateur: new OperateurCite(required(operateur.id, 'pointage.operateur.id'), operateur.prenom, operateur.nom),
     poste: toPoste(pointage.poste),
     categorie: required(pointage.categorie, 'pointage.categorie'),
-    periode: new PeriodeDeTravail(new InstantDeTravail(required(pointage.debut, 'pointage.debut')), toInstant(pointage.fin)),
-    finAuPlusTard: toInstant(pointage.finAuPlusTard),
+    periode: new PeriodeDeTravail(
+      new InstantDeTravail(required(pointage.debut, 'pointage.debut')),
+      new InstantDeTravail(required(pointage.fin, 'pointage.fin')),
+    ),
     duree: toDuree(pointage.duree, 'pointage.duree'),
     coutHoraire: toTarif(pointage.coutHoraire),
     tauxHoraire: toTarif(pointage.tauxHoraire),
     cout: toCout(pointage.cout, 'pointage.cout'),
     parts: required(pointage.parts, 'pointage.parts').map(toPart),
-    contradictoires: required(pointage.contradictoires, 'pointage.contradictoires').map(
-      fait =>
-        new PointageEnConflit(
-          required(fait.id, 'contradictoire.id'),
-          required(fait.type, 'contradictoire.type'),
-          new InstantDeTravail(required(fait.survenue, 'contradictoire.survenue')),
-        ),
-    ),
   });
 };
 

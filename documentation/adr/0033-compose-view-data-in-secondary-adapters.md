@@ -7,6 +7,8 @@ Accepted following the review of [PR 138](https://github.com/glm-project/glm-fro
 Amends [0031](0031-own-workshop-supervision-in-gestion.md): the supervision application consumes one data
 read port; its secondary adapter acquires the complete projection directly, without intermediate
 source ports. The InMemory configuration also implements only this port.
+Amended by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md): the supervision read no longer carries
+conflicting sequences, and no correction changes what the next read shows.
 Complements [0013](0013-keep-business-decisions-in-rich-domain-models.md): business interpretation remains
 in the domain while acquisition details stay behind the read port.
 Complements [0025](0025-route-runtime-errors-through-error-handler-port.md): a view acquisition adapter
@@ -51,9 +53,9 @@ Test acquisition through the component's rendered HTML and refresh button; keep 
 secondary contract in their own suites.
 
 The supervision HTTP adapter reads `GET /api/atelier/supervision` through `ApiClient`. Each acquisition
-reloads the complete, unpaged projection: declared operators, interpreted activities and conflicting
-sequences. It keeps no mounted operator cache, so edits and corrections appear on the next successful
-read. A failure rejects instead of reusing an earlier reference or demonstration. The backend supplies the
+reloads the complete, unpaged projection: declared operators and interpreted activities with their
+deadline. It keeps no mounted operator cache, so edits appear on the next successful read. A failure rejects
+instead of reusing an earlier reference or demonstration. The backend supplies the
 common evaluation, deadlines and retained automatic ends; the front classifies and orders the received
 data without interpreting raw journals. The primary uses that evaluation for both lanes and freshness.
 READ COMMITTED permits concurrent commits between projection queries; a common evaluation is not a

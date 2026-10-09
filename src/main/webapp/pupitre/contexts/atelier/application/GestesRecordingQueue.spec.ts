@@ -11,6 +11,7 @@ import {
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { Injector } from '@angular/core';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { identifiantFixture } from '@test/unit/fixtures/pupitre/atelier/IdentifiantFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { IntentionGlobaleInitiee } from '../domain/designation/IntentionGlobaleInitiee';
@@ -30,7 +31,6 @@ const vueFixture: JournalDuPupitre = {
     ],
     suivis: [
       {
-        conflits: [],
         id: 'moule-1015',
         nom: 'PR-2026-000015',
         reference: '1015',
@@ -50,6 +50,7 @@ const vueFixture: JournalDuPupitre = {
       },
     ],
     categories: [],
+    dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
   },
 };
 
@@ -104,8 +105,6 @@ describe('GestesRecordingQueue', () => {
       kind: 'GESTES',
       capture: () => [
         {
-          intention: 'FIN',
-          cible: 'activite-fixture-31',
           id: 'pointage-1',
           dateDeSurvenue: '2026-09-05T09:00:00Z',
           operateurId: 'jean',
@@ -130,8 +129,6 @@ describe('GestesRecordingQueue', () => {
       kind: 'GESTES',
       capture: () => [
         {
-          intention: 'FIN',
-          cible: 'activite-fixture-32',
           id: 'pointage-1',
           dateDeSurvenue: '2026-09-05T09:00:00Z',
           operateurId: 'jean',
@@ -196,8 +193,6 @@ describe('GestesRecordingQueue', () => {
   const thenGesturesAreSuspensionsOf = (gestures: readonly GesteDePointage[], pause: string): void => {
     expect(gestures).toEqual([
       expect.objectContaining({
-        intention: 'FIN',
-        cible: 'activite-fixture-30',
         nature: 'POINTAGE',
         suiviId: 'moule-1015',
         type: 'FIN',

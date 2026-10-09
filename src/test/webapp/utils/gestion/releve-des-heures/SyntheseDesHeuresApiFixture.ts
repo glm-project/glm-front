@@ -26,12 +26,12 @@ const datesDe = (annee: number, semaine: number): string[] => {
 const joursDeSynthese = (annee: number, semaine: number): RestJour[] =>
   datesDe(annee, semaine).map((jour, rang) => ({
     jour,
-    dureeOperationnelle: { complete: true, valeur: rang === 0 ? 'PT2H' : 'PT0S' },
+    dureeOperationnelle: { valeur: rang === 0 ? 'PT2H' : 'PT0S' },
     pointages:
       rang === 0
         ? [
-            { id: 'debut-1', type: 'DEBUT', intention: 'OUVERTURE', dateDeSurvenue: `${jour}T08:00:00Z`, element: 'element-1' },
-            { id: 'fin-1', type: 'FIN', intention: 'FIN', cible: 'debut-1', dateDeSurvenue: `${jour}T10:00:00Z`, element: 'element-1' },
+            { id: 'debut-1', type: 'DEBUT', dateDeSurvenue: `${jour}T08:00:00Z`, element: 'element-1' },
+            { id: 'fin-1', type: 'FIN', dateDeSurvenue: `${jour}T10:00:00Z`, element: 'element-1' },
           ]
         : [],
   }));
@@ -151,8 +151,7 @@ export class SyntheseDesHeuresApiFixture {
 export const syntheseFixture = (annee: number, semaine: number): RestSynthese => ({
   annee,
   semaine,
-  dureeOperationnelleTotale: { complete: true, valeur: 'PT2H' },
-  conflits: [],
+  dureeOperationnelleTotale: { valeur: 'PT2H' },
   evaluation: '2026-09-26T10:30:00Z',
   operateur: OPERATEUR,
   jours: joursDeSynthese(annee, semaine),
@@ -161,8 +160,8 @@ export const syntheseFixture = (annee: number, semaine: number): RestSynthese =>
       id: 'element-1',
       categorie: 'MOULE',
       nom: 'Moule 1015',
-      duree: { complete: true, valeur: 'PT2H' },
-      dureeNonConformite: { complete: true, valeur: 'PT0S' },
+      duree: { valeur: 'PT2H' },
+      dureeNonConformite: { valeur: 'PT0S' },
       postes: [],
     },
   ],

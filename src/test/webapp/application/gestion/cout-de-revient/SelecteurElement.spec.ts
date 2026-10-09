@@ -428,9 +428,9 @@ describe('Navigation between cost reports', () => {
                 ...rapport,
                 evaluation: '2026-05-14T12:00:00Z',
                 cout: {
-                  machine: { complete: true, valeur: 600 },
-                  mainDOeuvre: { complete: true, valeur: 100 },
-                  total: { complete: true, valeur: 700 },
+                  machine: { valeur: 600 },
+                  mainDOeuvre: { valeur: 100 },
+                  total: { valeur: 700 },
                 },
               },
         );
@@ -453,9 +453,9 @@ describe('Navigation between cost reports', () => {
   const mouldEvaluationFixture = (reads: number): Pick<ReturnType<typeof coutDeRevientFixture>, 'evaluation' | 'cout'> => ({
     evaluation: reads === 1 ? '2026-05-12T12:00:00Z' : '2026-05-15T12:00:00Z',
     cout: {
-      machine: { complete: true, valeur: reads === 1 ? 500 : 600 },
-      mainDOeuvre: { complete: true, valeur: 20 },
-      total: { complete: true, valeur: reads === 1 ? 520 : 620 },
+      machine: { valeur: reads === 1 ? 500 : 600 },
+      mainDOeuvre: { valeur: 20 },
+      total: { valeur: reads === 1 ? 520 : 620 },
     },
   });
   const whenVisitingTheFirstReport = (): void => {

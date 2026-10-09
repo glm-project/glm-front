@@ -39,8 +39,8 @@ interface CorpsOperateur {
   tauxHoraire?: number;
 }
 
-const tourFixture: RestPoste = { id: 'tour-1', libelle: 'Tour 1', nature: 'tournage' };
-const scieFixture: RestPoste = { id: 'scie-1', libelle: 'Scie 1', nature: 'sciage' };
+const tourFixture: RestPoste = { id: 'tour-1', libelle: 'Tour 1', nature: 'tournage', natureId: 'nature-tournage' };
+const scieFixture: RestPoste = { id: 'scie-1', libelle: 'Scie 1', nature: 'sciage', natureId: 'nature-sciage' };
 
 const naturesDe = (postes: readonly RestPoste[]): string[] =>
   [...new Set(postes.map(poste => poste.nature))].sort((left, right) => left.localeCompare(right, 'fr'));
@@ -179,7 +179,7 @@ const createHttpHarness = (): OperateursHarness => {
   };
 };
 
-const toDomainPoste = (poste: RestPoste): PosteHabilitable =>
+const toDomainPoste = (poste: Pick<RestPoste, 'id' | 'libelle' | 'nature'>): PosteHabilitable =>
   new PosteHabilitable(new PosteHabilitableId(poste.id), { libelle: poste.libelle, nature: poste.nature });
 
 const createFixtureHarness = (): OperateursHarness => {
@@ -484,7 +484,10 @@ describe('Beyond the contract: HttpOperateurs', () => {
     await whenServerFails('/api/postes-de-travail?page=1&size=100');
     const failure = await result;
     const retry = port.postesHabilitables();
-    await whenCatalogueAnswers([...pleinePageFixture(), { id: 'p-100', libelle: 'Poste 100', nature: 'soudage' }]);
+    await whenCatalogueAnswers([
+      ...pleinePageFixture(),
+      { id: 'p-100', libelle: 'Poste 100', nature: 'soudage', natureId: 'nature-soudage' },
+    ]);
 
     expect(failure).toBeInstanceOf(HttpErrorResponse);
     expect((await retry).map(poste => poste.id.value)).toContain('p-100');
@@ -529,7 +532,12 @@ describe('Beyond the contract: HttpOperateurs', () => {
   });
 
   const pleinePageFixture = (): RestPoste[] =>
-    Array.from({ length: 100 }, (_, index) => ({ id: `p-${index}`, libelle: `Poste ${index}`, nature: 'tournage' }));
+    Array.from({ length: 100 }, (_, index) => ({
+      id: `p-${index}`,
+      libelle: `Poste ${index}`,
+      nature: 'tournage',
+      natureId: 'nature-tournage',
+    }));
 
   const whenCommandStarts = (action: 'creer' | 'modifier' | 'supprimer') => {
     const communs = attributs('Dupont', 'Jean', { postes: ['tour-1'] });

@@ -11,23 +11,15 @@
     >
     }
   </div>
-  @if (phraseDeContexte(dossier(), now(), operateur()); as contexte) {
-  <p class="mb-3 text-body-sm text-ink-muted" data-selector="anomalie-frise-contexte">{{ contexte }}</p>
-  }
   <glm-frise-dossier
     [dossier]="dossier()"
     [now]="now()"
-    [selection]="selection()"
     [poignee]="poignee()"
     [placement]="placement()"
-    [apercu]="apercu()"
-    [lectureSeule]="lectureSeule()"
-    (selectionDemandee)="selectionDemandee.emit($event)"
     (deplacementDemande)="deplacementDemande.emit($event)"
     (placementDemande)="placementDemande.emit($event)"
-    (poigneeRelachee)="poigneeRelachee.emit()"
   />
   @if (placement()) {
-  <p class="mt-2 text-body-sm text-ink-muted" data-selector="anomalie-frise-aide">{{ aideDePlacement() }}</p>
+  <p class="mt-2 text-body-sm text-ink-muted" data-selector="anomalie-frise-aide">{{ libelles.frise.placerLaFinReelle }}</p>
   }
 </section>

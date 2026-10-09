@@ -1,4 +1,6 @@
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
+import { referentielApiFixture } from '@test/utils/pupitre/ReferentielApiFixture';
 import { dataSelector } from '../../../utils/DataSelector';
 import { longPressFixture } from '../../../utils/LongPressFixture';
 import { clearPupitreStorageFixture, givenEnrolledPupitreFixture } from '../../../utils/PupitreStorageFixture';
@@ -8,7 +10,6 @@ const referentielFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
   suivis: [
     {
-      conflits: [],
       id: 'piece-1',
       nom: '204',
       etat: 'EN_ATTENTE',
@@ -18,6 +19,7 @@ const referentielFixture: ReferentielDuPupitre = {
     },
   ],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 
 const SEMAINE_EN_COURS = 38;
@@ -33,22 +35,21 @@ const syntheseFixture = (semaine: number, evaluation: string) => ({
   semaine,
   operateur: { id: 'jean', nom: 'Dupont', prenom: 'Jean' },
   evaluation,
-  dureeOperationnelleTotale: { complete: true, valeur: 'PT7H45M' },
-  conflits: [],
+  dureeOperationnelleTotale: { valeur: 'PT7H45M' },
   elements: [
     {
       id: 'of-1',
       categorie: 'OF',
       nom: 'OF-2026-001240',
       reference: String(1202 + semaine),
-      duree: { complete: true, valeur: 'PT7H45M' },
-      dureeNonConformite: { complete: true, valeur: 'PT0S' },
+      duree: { valeur: 'PT7H45M' },
+      dureeNonConformite: { valeur: 'PT0S' },
       postes: [{ poste: { id: 'fraiseuse', libelle: 'Fraiseuse' }, nature: 'Fraisage' }],
     },
   ],
   jours: joursDe(semaine).map((jour, rang) => ({
     jour,
-    dureeOperationnelle: { complete: true, valeur: rang === 0 ? 'PT7H45M' : 'PT0S' },
+    dureeOperationnelle: { valeur: rang === 0 ? 'PT7H45M' : 'PT0S' },
   })),
 });
 
@@ -148,12 +149,12 @@ describe('Pupitre my pointages journey', () => {
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('deviceAuthorization');
     cy.intercept('POST', '**/protocol/openid-connect/token', { statusCode: 503, body: {} });
     cy.intercept('GET', '/api/pupitre/referentiel', {
-      body: {
+      body: referentielApiFixture({
         genereLe: '2026-09-17T05:00:00Z',
         operateurs: referentielFixture.operateurs,
-        suivis: [{ id: 'piece-1', nom: '204', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], conflits: [] }],
+        suivis: [{ id: 'piece-1', nom: '204', etat: 'EN_ATTENTE', categorie: 'OF', activites: [] }],
         categories: ['OF'],
-      },
+      }),
     }).as('workshop');
     cy.intercept('GET', '/api/syntheses-des-heures/jean*', request => {
       request.reply({ body: syntheseFixture(Number(request.query['semaine']), String(request.query['evaluation'])) });

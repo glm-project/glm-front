@@ -8,9 +8,7 @@ import { CategorieActivite } from '../../../domain/activite/CategorieActivite';
 import { CategorieDElement } from '../../../domain/activite/CategorieDElement';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
-import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
 import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
-import { SequenceEnConflit } from '../../../domain/activite/SequenceEnConflit';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
@@ -23,7 +21,6 @@ type RestOperateur = components['schemas']['RestOperateurDeSupervision'];
 type RestElement = components['schemas']['RestElementDeSupervision'];
 type RestPoste = components['schemas']['RestPosteDeSupervision'];
 type RestActivite = components['schemas']['RestActiviteDeSupervision'];
-type RestDescription = components['schemas']['RestDescriptionDActiviteDeSupervision'];
 
 const toOperateur = (operateur: RestOperateur): OperateurDeclare =>
   new OperateurDeclare({
@@ -47,13 +44,13 @@ const toPoste = (poste: RestPoste): PosteDeSupervision =>
     ...(poste.nature === undefined ? {} : { nature: new NatureDeTravail(poste.nature) }),
   });
 
-const toDescription = (activite: RestDescription): DescriptionActivite => ({
+const toDescription = (activite: RestActivite): DescriptionActivite => ({
   id: new IdentifiantActivite(activite.id),
   operateurId: new IdentifiantOperateur(activite.operateurId),
   objet: toElement(activite.element),
   categorie: new CategorieActivite(activite.categorie),
   debut: new Instant(activite.debut),
-  echeance: new Instant(activite.echeance),
+  echeance: new Instant(required(activite.echeance, 'activite.echeance')),
   ...(activite.poste === undefined ? {} : { poste: toPoste(activite.poste) }),
 });
 
@@ -79,15 +76,6 @@ export class HttpDonneesDeSupervision extends DonneesDeSupervisionPort {
         evaluation: new Instant(response.evaluation),
         operateurs: response.operateurs.map(toOperateur),
         activites: response.activites.map(toActivite),
-        sequencesEnConflit: response.sequencesEnConflit.map(
-          sequence =>
-            new SequenceEnConflit({
-              id: new IdentifiantSequence(sequence.id),
-              operateurId: new IdentifiantOperateur(sequence.operateurId),
-              activites: sequence.activites.map(activite => new ActiviteDeSupervision({ ...toDescription(activite), etat: 'A_RESOUDRE' })),
-              ...(sequence.poste === undefined ? {} : { poste: toPoste(sequence.poste) }),
-            }),
-        ),
       };
     } catch (failure) {
       this.errors.handleError(failure);

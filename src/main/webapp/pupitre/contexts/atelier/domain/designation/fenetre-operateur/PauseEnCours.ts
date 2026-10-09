@@ -1,11 +1,5 @@
-import { GesteSuspendu, SuspensionJournalisee, suspensionsOfTheLastPause } from '../../journal-du-pupitre/DernierePause';
-import {
-  ActiviteDuPupitre,
-  JournalDuPupitre,
-  ReferentielDuPupitre,
-  SuiviDuPupitre,
-  TypeDOuverture,
-} from '../../journal-du-pupitre/JournalDuPupitre';
+import { SuspensionJournalisee, suspensionsOfTheLastPause } from '../../journal-du-pupitre/DernierePause';
+import { ActiviteDuPupitre, JournalDuPupitre, ReferentielDuPupitre, TypeDOuverture } from '../../journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '../../journal-du-pupitre/JournalDuPupitreProjection';
 
 export interface ActiviteSuspendue {
@@ -25,19 +19,12 @@ const toActiviteSuspendue = ({ geste: { suiviId, posteId, suspension } }: Suspen
 const occupiesTheSamePlace = (emplacement: Emplacement, autre: Emplacement): boolean =>
   emplacement.suiviId === autre.suiviId && emplacement.posteId === autre.posteId;
 
-const isActionnable = (activite: ActiviteDuPupitre, suivi: SuiviDuPupitre, operateurId: string, instant: number): boolean =>
-  activite.operateurId === operateurId
-  && instant < Date.parse(activite.echeance)
-  && !suivi.conflits.some(conflit => conflit.activites.includes(activite.ouverture));
-
-const suspensionInterpretable = (referentiel: ReferentielDuPupitre, geste: GesteSuspendu): boolean =>
-  !referentiel.suivis.some(suivi => suivi.conflits.some(conflit => conflit.pointages.includes(geste.id)));
+const isActionnable = (activite: ActiviteDuPupitre, operateurId: string, instant: number): boolean =>
+  activite.operateurId === operateurId && instant < Date.parse(activite.echeance);
 
 const openActivitiesOf = (referentiel: ReferentielDuPupitre, operateurId: string, instant: number): readonly Emplacement[] =>
   referentiel.suivis.flatMap(suivi =>
-    suivi.activites
-      .filter(activite => isActionnable(activite, suivi, operateurId, instant))
-      .map(activite => ({ ...activite, suiviId: suivi.id })),
+    suivi.activites.filter(activite => isActionnable(activite, operateurId, instant)).map(activite => ({ ...activite, suiviId: suivi.id })),
   );
 
 const wasRefusedAt = (suspensions: readonly SuspensionJournalisee[], emplacement: Emplacement): boolean =>
@@ -55,7 +42,6 @@ const reopenableIn =
   ({ geste, refusee }: SuspensionJournalisee): boolean =>
     !refusee
     && referentiel.suivis.some(suivi => suivi.id === geste.suiviId)
-    && suspensionInterpretable(referentiel, geste)
     && holdsWorkstation(referentiel, operateurId, geste.posteId)
     && !ouvertes.some(ouverte => occupiesTheSamePlace(ouverte, geste));
 

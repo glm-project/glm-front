@@ -23,6 +23,7 @@ import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/Device
 import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { JournauxDeLAtelierFixture } from '@test/unit/fixtures/pupitre/enrolement/JournauxDeLAtelierFixture';
 
@@ -51,7 +52,6 @@ const serveurFixture: AtelierExchangePort = {
 
 const baseSuivis: SuiviDuPupitre[] = [
   ...Array.from({ length: 48 }, (_, index) => ({
-    conflits: [],
     id: `moule-${index + 1}`,
     nom: `PR-2026-${String(index + 1).padStart(6, '0')}`,
     reference: String(1015 + index),
@@ -61,7 +61,6 @@ const baseSuivis: SuiviDuPupitre[] = [
     evenements: [],
   })),
   ...Array.from({ length: new URLSearchParams(location.search).has('many') ? 72 : 21 }, (_, index) => ({
-    conflits: [],
     id: `of-${index + 1}`,
     nom: `OF-2026-${String(index + 1).padStart(6, '0')}`,
     reference: String(204 + index),
@@ -87,6 +86,7 @@ const referentielFixture = {
   ],
   suivis: baseSuivis,
   categories: ['MOULE', 'OF'],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 
 const parameters = new URLSearchParams(location.search);

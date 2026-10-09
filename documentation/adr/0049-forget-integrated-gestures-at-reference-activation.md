@@ -11,6 +11,8 @@ journal's size no longer depends on past activity.
 always holds the last pause of each operator, and TOUT ARRÊTER no longer retains accepted history.
 `Amends` [ADR 0047](0047-count-only-finished-activities.md): TOUT ARRÊTER keeps pending and refused gestures, and the
 accepted ones only while they are still the last gesture of their operator or carry the last pause.
+`Amended by` [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md): the pupitre keeps the refusals a server ignore produces
+(`pointage-ignore`) in this journal without showing them; only the closure refusal reaches the operator.
 
 ## Context
 
@@ -47,8 +49,7 @@ REPRENDRE reopens. Everything else is already in the reference the server comput
 
 Activating a complete reference is one pure domain function, `afterActivatingReferentiel`, applied to the journal
 read inside the same IndexedDB transaction that stores the reference: the cleanup and the activation commit
-together or not at all. A failed reference read activates nothing and cleans nothing, and keeps the diagnostics of
-accepted conflicts that the journal already holds.
+together or not at all. A failed reference read activates nothing and cleans nothing.
 
 The function visits every event, keeping the order, and decides for each:
 

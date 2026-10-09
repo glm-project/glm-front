@@ -31,11 +31,11 @@ import {
 } from './DecisionDePointage';
 import { IdentiteOperateurDesigne, OperateurDesigne } from './OperateurDesigne';
 import { ActiviteSuspendue, PauseEnCours } from './PauseEnCours';
-import { LotDeTransitions, TransitionDePointage } from './TransitionDePointage';
+import { LotDePointagesDemandes, PointageDemande } from './PointageDemande';
 import { ElementDePointage, VueDePointage, zonesDePointage } from './VueDePointage';
 
-const toTransition = ({ reouverture, posteId }: ActiviteSuspendue): TransitionDePointage =>
-  posteId === undefined ? { intention: 'OUVERTURE', type: reouverture } : { intention: 'OUVERTURE', type: reouverture, posteId };
+const toPointageDemande = ({ reouverture, posteId }: ActiviteSuspendue): PointageDemande =>
+  posteId === undefined ? { type: reouverture } : { type: reouverture, posteId };
 
 interface ActivitePersonnelleConnue {
   readonly suiviId: string;
@@ -124,20 +124,7 @@ export class FenetreOperateur {
       categorie: suivi.categorie,
     }));
     const sorted = [...elements].sort((left, right) => left.element.numero.compare(right.element.numero));
-    return {
-      conflits: this.conflitsPersonnels(),
-      zones: zonesDePointage(sorted, referentiel?.categories ?? []),
-    };
-  }
-
-  private conflitsPersonnels(): VueDePointage['conflits'] {
-    return (projectReferentiel(this.etat.vue)?.suivis ?? [])
-      .filter(suivi => suivi.conflits.some(conflit => this.conflitConcerneOperateur(conflit.operateurId)))
-      .map(suivi => ({ id: suivi.id, numero: NumeroDElement.from(suivi) }));
-  }
-
-  private conflitConcerneOperateur(operateurId: string | undefined): boolean {
-    return operateurId === undefined || this.etat.operateurDesigne.owns(operateurId);
+    return { zones: zonesDePointage(sorted, referentiel?.categories ?? []) };
   }
 
   afterDeciding(suiviId: string, cible: CibleDePointage, identify: () => IdentiteDuGeste, instant: number): DecisionResult {
@@ -147,7 +134,7 @@ export class FenetreOperateur {
     const numero = NumeroDElement.from(suivi);
     const decision =
       activities.kind === 'ACTIF'
-        ? fenetre.gestes(suiviId, numero, activities.transitions, identify)
+        ? fenetre.gestes(suiviId, numero, activities.pointages, identify)
         : fenetre.ouverture(suiviId, numero, cible, identify);
     return { fenetre: fenetre.with({ contextesParGeste: fenetre.contextesOf(decision) }), decision };
   }
@@ -163,12 +150,7 @@ export class FenetreOperateur {
     const suivi = fenetre.requireSuivi(suiviId);
     if (fenetre.activitesFor(suivi).decide(cible).kind === 'ACTIF') throw new Error("L'élément est déjà actif pour cet opérateur.");
     fenetre.etat.operateurDesigne.assertPoste(posteId);
-    const decision = fenetre.gestes(
-      suiviId,
-      NumeroDElement.from(suivi),
-      { premiere: { intention: 'OUVERTURE', type: fenetre.openingTypeFor(cible), posteId }, suivantes: [] },
-      identify,
-    );
+    const decision = fenetre.gestes(suiviId, NumeroDElement.from(suivi), [{ type: fenetre.openingTypeFor(cible), posteId }], identify);
     return {
       fenetre: fenetre.with({ refusVisible: undefined, contextesParGeste: decision.contextesParGeste }),
       decision,
@@ -184,7 +166,7 @@ export class FenetreOperateur {
   }
   afterReconciling(entreprise: Entreprise, vue: JournalDuPupitre): FenetreOperateur {
     if (!this.belongsTo(entreprise)) return this;
-    const refus = new EvenementsDuJournal(vue.evenements).latestRefusalAmong(this.etat.contextesParGeste.gesteIds());
+    const refus = new EvenementsDuJournal(vue.evenements).latestShownRefusalAmong(this.etat.contextesParGeste.gesteIds());
     const contexte = refus === undefined ? undefined : this.etat.contextesParGeste.contexteOf(refus.geste.id);
     return this.with({
       vue,
@@ -239,7 +221,7 @@ export class FenetreOperateur {
   }
   prepareReprise(identify: () => IdentiteDuGeste): LotDeGestesDAtelier {
     const reouvertures = (this.pauseEnCours()?.activitesARouvrir() ?? []).map(activite =>
-      this.toPointage(activite.suiviId, toTransition(activite), identify()),
+      this.toPointage(activite.suiviId, toPointageDemande(activite), identify()),
     );
     if (reouvertures.length === 0) return this.sansGeste();
     return {
@@ -275,9 +257,7 @@ export class FenetreOperateur {
   private finDe(suiviId: string, activite: ActiviteDuPupitre, identite: IdentiteDuGeste): GesteDePointage {
     return this.toPointage(
       suiviId,
-      activite.posteId === undefined
-        ? { intention: 'FIN', type: 'FIN', cible: activite.ouverture }
-        : { intention: 'FIN', type: 'FIN', cible: activite.ouverture, posteId: activite.posteId },
+      activite.posteId === undefined ? { type: 'FIN' } : { type: 'FIN', posteId: activite.posteId },
       identite,
     );
   }
@@ -303,16 +283,15 @@ export class FenetreOperateur {
     const ouverture = this.etat.operateurDesigne.decideOuverture(this.openingTypeFor(cible));
     return ouverture.kind === 'CHOIX_POSTE_REQUIS'
       ? { kind: ouverture.kind, numero, postes: ouverture.postes }
-      : this.gestes(suiviId, numero, { premiere: ouverture.transition, suivantes: [] }, identify);
+      : this.gestes(suiviId, numero, [ouverture.pointage], identify);
   }
   private gestes(
     suiviId: string,
     numero: NumeroDElement,
-    transitions: LotDeTransitions,
+    demandes: LotDePointagesDemandes,
     identify: () => IdentiteDuGeste,
   ): LotDeGestesDAtelier {
-    const first = this.toPointage(suiviId, transitions.premiere, identify());
-    const pointages = [first, ...transitions.suivantes.map(t => this.toPointage(suiviId, t, identify()))];
+    const pointages = demandes.map(demande => this.toPointage(suiviId, demande, identify()));
     return {
       kind: 'GESTES',
       capture: () => pointages,
@@ -320,8 +299,8 @@ export class FenetreOperateur {
       intention: this.etat.intention,
     };
   }
-  private toPointage(suiviId: string, transition: TransitionDePointage, identite: IdentiteDuGeste): GesteDePointage {
-    return { ...identite, ...transition, suiviId, operateurId: this.etat.operateurDesigne.id(), nature: 'POINTAGE' };
+  private toPointage(suiviId: string, demande: PointageDemande, identite: IdentiteDuGeste): GesteDePointage {
+    return { ...identite, ...demande, suiviId, operateurId: this.etat.operateurDesigne.id(), nature: 'POINTAGE' };
   }
   private requireSuivi(suiviId: string): SuiviDuPupitre {
     const suivi = projectReferentiel(this.etat.vue)?.suivis.find(candidate => candidate.id === suiviId);

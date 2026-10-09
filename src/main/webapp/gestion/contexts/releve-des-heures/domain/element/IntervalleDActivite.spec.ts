@@ -26,22 +26,6 @@ const ficheFixture = (fiche: Partial<FicheDIntervalle>): FicheDIntervalle => ({
 });
 
 describe('IntervalleDActivite', () => {
-  it('should keep an unresolved activity distinct from one still in progress', () => {
-    const intervalle = new IntervalleDActivite(
-      ficheFixture({
-        fin: undefined,
-        activite: {
-          id: new ActiviteReleveId('ouverture-a'),
-          debut: instantFixture('08:20'),
-          etat: 'A_RESOUDRE',
-          finAuPlusTard: instantFixture('17:00'),
-        },
-      }),
-    );
-
-    expect(intervalle.estEnCours()).toBe(false);
-  });
-
   it('should refuse an interval ending before it starts', () => {
     expect(() => new IntervalleDActivite(ficheFixture({ debut: instantFixture('08:20'), fin: instantFixture('08:19') }))).toThrow(
       'L’intervalle reçu du serveur finit avant de commencer.',

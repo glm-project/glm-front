@@ -14,16 +14,11 @@ import { SyntheseDesHeuresFixture } from '@test/unit/fixtures/gestion/releve-des
 import { dataSelector } from '@test/utils/DataSelector';
 import { BehaviorSubject, EMPTY } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ElementReleveId } from '../../../domain/element/ElementReleveId';
-import { PosteReleveId } from '../../../domain/element/PosteReleveId';
 import { ActiviteReleveId } from '../../../domain/releve/ActiviteReleveId';
-import { CibleDePointage } from '../../../domain/releve/CibleDePointage';
 import { IdentiteOperateur } from '../../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../../domain/releve/InstantDeReleve';
 import { OperateurReleveId } from '../../../domain/releve/OperateurReleveId';
-import { PointageReleveId } from '../../../domain/releve/PointageReleveId';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
-import { SequenceEnConflit } from '../../../domain/releve/SequenceEnConflit';
 import { SyntheseDesHeuresPort } from '../../../domain/releve/SyntheseDesHeuresPort';
 import { SemaineISO } from '../../../domain/semaine/SemaineISO';
 import { SyntheseDesHeures } from './SyntheseDesHeures';
@@ -465,109 +460,6 @@ describe('Synthese des heures component', () => {
     expect(texte('synthese-operationnel-total')).toBe('12 h 00');
   });
 
-  it('should name an unresolved activity on every received possible day without a certain duration or a progress bar', async () => {
-    const origine = {
-      id: new ActiviteReleveId('a'),
-      debut: instantFixture(0, [8, 0]),
-      etat: 'A_RESOUDRE' as const,
-      finAuPlusTard: instantFixture(1, [17, 0]),
-    };
-    givenReleve(
-      releveFixture(
-        SEMAINE_EN_COURS,
-        {
-          0: { operationnelle: false, intervalles: [{ debut: [8, 0], activite: origine }] },
-          1: { operationnelle: false, intervalles: [{ debut: [0, 0], activite: origine }] },
-        },
-        { operationnelle: false },
-        [elementFixture({ duree: false })],
-      ),
-    );
-
-    await whenEcranAffiche();
-
-    expect(textes('synthese-activite-etat')).toEqual(['À résoudre', 'À résoudre']);
-    expect(barresDe('a-resoudre').map(barre => barre.style.width)).toEqual(['', '']);
-    expect(textes('synthese-operationnel-jour').slice(0, 2)).toEqual(['Incomplet', 'Incomplet']);
-    expect(barresDe('en-cours')).toHaveLength(0);
-    expect(titresDe(barresDe('a-resoudre')).every(titre => titre.includes('À résoudre'))).toBe(true);
-  });
-
-  it.each([false, true])(
-    'should show a conflict and its targeted facts without deriving total completeness from the conflict (%s)',
-    async incomplet => {
-      const conflit = new SequenceEnConflit(
-        new CibleDePointage(new ElementReleveId('element-1'), new PosteReleveId('poste-0')),
-        incomplet ? [new ActiviteReleveId('a'), new ActiviteReleveId('nc-b')] : [],
-        [new PointageReleveId('nc-b'), new PointageReleveId('fin-a'), new PointageReleveId('hors-semaine')],
-      );
-      givenReleve(
-        releveFixture(
-          SEMAINE_EN_COURS,
-          {
-            0: {
-              operationnelle: incomplet ? false : 'PT2H',
-              pointagesDElement: [
-                {
-                  id: 'nc-b',
-                  type: 'NON_CONFORMITE',
-                  heure: [12, 0],
-                  poste: 'poste-0',
-                  intention: { type: 'TRANSITION', activiteVisee: new ActiviteReleveId('a') },
-                },
-                {
-                  id: 'fin-a',
-                  type: 'FIN',
-                  heure: [17, 0],
-                  poste: 'poste-0',
-                  intention: { type: 'FIN', activiteVisee: new ActiviteReleveId('a') },
-                },
-              ],
-            },
-          },
-          { operationnelle: incomplet ? false : 'PT2H' },
-          [elementFixture({ reference: '1015', duree: incomplet ? false : 'PT2H', postes: [['DMU 50', undefined]] })],
-          [conflit],
-        ),
-      );
-
-      await whenEcranAffiche();
-
-      expect(texte('synthese-conflits-titre')).toBe('Séquences en conflit');
-      expect(textes('synthese-conflit-element')).toEqual(['MOULE 1015 · DMU 50']);
-      expect(textes('synthese-conflit-fait')).toEqual([
-        'Non-conformité 12:00 · Transition de l’activité a · nc-b',
-        'Fin 17:00 · Fin de l’activité a · fin-a',
-        'Pointage hors-semaine',
-      ]);
-      expect(texte('synthese-operationnel-total')).toBe(incomplet ? 'Incomplet' : '2 h 00');
-      expect(textes('synthese-conflit-activites')).toEqual(incomplet ? ['Activités concernées : a, nc-b'] : []);
-    },
-  );
-
-  it.each([
-    [false, 'PT1H', 'Incomplet', 'NC 1 h 00'],
-    ['PT2H', false, '2 h 00', 'NC Incomplet'],
-    [false, false, 'Incomplet', 'NC Incomplet'],
-  ] as const)(
-    'should display an incomplete work or NC total without a partial number (%s, %s)',
-    async (travail, nc, attendu, attenduNC) => {
-      givenReleve(
-        releveFixture(SEMAINE_EN_COURS, { 0: { operationnelle: false } }, { operationnelle: false }, [
-          elementFixture({ duree: travail, dureeNonConformite: nc }),
-        ]),
-      );
-
-      await whenEcranAffiche();
-
-      expect(texte('synthese-operationnel-total')).toBe('Incomplet');
-      expect(textes('synthese-operationnel-jour')[0]).toBe('Incomplet');
-      expect(textes('synthese-element-total')).toEqual([attendu]);
-      expect(textes('synthese-element-nc')).toEqual([attenduNC]);
-      expect(titres('synthese-operationnel-total')).toEqual(['']);
-    },
-  );
-
   it.each([
     ['at the automatic deadline', 8, 21, 'TERMINEE_AUTOMATIQUEMENT', 'PT13H', undefined, '13 h 00', true],
     ['on a later read', 8, 21, 'TERMINEE_AUTOMATIQUEMENT', 'PT13H', undefined, '13 h 00', true],
@@ -596,16 +488,7 @@ describe('Synthese des heures component', () => {
               intervalles: [{ debut: [debut, 0], ...(fin === undefined ? {} : { fin: [fin, 0] as const }), activite: origine }],
               pointagesDElement: [
                 { id: 'a', type: 'DEBUT', heure: [debut, 0] },
-                ...(finBrute === undefined
-                  ? []
-                  : [
-                      {
-                        id: 'fin-a',
-                        type: 'FIN' as const,
-                        heure: [finBrute, 0] as const,
-                        intention: { type: 'FIN' as const, activiteVisee: new ActiviteReleveId('a') },
-                      },
-                    ]),
+                ...(finBrute === undefined ? [] : [{ id: 'fin-a', type: 'FIN' as const, heure: [finBrute, 0] as const }]),
               ],
             },
           },
@@ -1781,99 +1664,6 @@ describe('Synthese des heures component', () => {
     expect(texte('synthese-semaine-libelle')).toContain('Semaine 37');
     expect(texte('synthese-operationnel-total')).toBe('2 h 00');
     expect(portFixture.demandes.map(demande => demande.semaine.numero)).toEqual([38, 37]);
-  });
-
-  it('should name an opening fact in a conflict without a workstation', async () => {
-    const conflit = new SequenceEnConflit(
-      new CibleDePointage(new ElementReleveId('element-1'), undefined),
-      [new ActiviteReleveId('a')],
-      [new PointageReleveId('a')],
-    );
-    givenReleve(
-      releveFixture(
-        SEMAINE_EN_COURS,
-        { 0: { pointagesDElement: [{ id: 'a', type: 'DEBUT', heure: [8, 0] }] } },
-        {},
-        [elementFixture({ reference: '1015' })],
-        [conflit],
-      ),
-    );
-
-    await whenEcranAffiche();
-
-    expect(textes('synthese-conflit-element')).toEqual(['MOULE 1015']);
-    expect(textes('synthese-conflit-fait')).toEqual(['Début 08:00 · Ouverture · a']);
-  });
-
-  it('should replace the conflict and incomplete total with the corrected report received on a new reading', async () => {
-    const conflit = new SequenceEnConflit(
-      new CibleDePointage(new ElementReleveId('element-1'), undefined),
-      [new ActiviteReleveId('a')],
-      [new PointageReleveId('a')],
-    );
-    givenReleve(
-      releveFixture(
-        SEMAINE_EN_COURS,
-        {
-          0: {
-            operationnelle: false,
-            intervalles: [
-              {
-                debut: [8, 0],
-                activite: {
-                  id: new ActiviteReleveId('a'),
-                  debut: instantFixture(0, [8, 0]),
-                  etat: 'A_RESOUDRE',
-                  finAuPlusTard: undefined,
-                },
-              },
-            ],
-            pointagesDElement: [{ id: 'a', type: 'DEBUT', heure: [8, 0] }],
-          },
-        },
-        { operationnelle: false },
-        [elementFixture({ duree: false })],
-        [conflit],
-      ),
-    );
-    givenSemaineSemee(new SemaineISO(2026, 37));
-
-    await whenEcranAffiche();
-    const avant = [texte('synthese-operationnel-total'), present('synthese-conflits-titre')];
-    givenReleve(
-      releveFixture(
-        SEMAINE_EN_COURS,
-        {
-          0: {
-            operationnelle: 'PT2H',
-            intervalles: [
-              {
-                debut: [8, 0],
-                fin: [10, 0],
-                activite: {
-                  id: new ActiviteReleveId('a'),
-                  debut: instantFixture(0, [8, 0]),
-                  fin: instantFixture(0, [10, 0]),
-                  etat: 'TERMINEE',
-                },
-              },
-            ],
-          },
-        },
-        { operationnelle: 'PT2H' },
-        [elementFixture({ duree: 'PT2H' })],
-      ),
-    );
-    await whenAnotherWeekIsOpened({ annee: '2026', semaine: '37', jour: '2026-09-08' });
-    await whenAnotherWeekIsOpened({ annee: '2026', semaine: '38', jour: '2026-09-14' });
-
-    expect([avant, texte('synthese-operationnel-total'), present('synthese-conflits-titre'), textes('synthese-activite-etat')]).toEqual([
-      ['Incomplet', true],
-      '2 h 00',
-      false,
-      [],
-    ]);
-    expect(portFixture.demandes.map(demande => demande.semaine.numero)).toEqual([38, 37, 38]);
   });
 
   const givenReadingInFlight = (releve: ReleveDesHeures): (() => void) => {

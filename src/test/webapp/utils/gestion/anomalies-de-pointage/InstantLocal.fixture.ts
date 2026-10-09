@@ -14,8 +14,3 @@ export const instantLocalWithOffsetFixture = (local: Date, fraction = ''): strin
   const decimals = fraction === '' ? '' : `.${fraction}`;
   return `${date}T${time}${decimals}${offset}`;
 };
-
-export const instantFieldTextsFixture = (local: Date): Readonly<{ date: string; time: string }> => ({
-  date: `${twoDigits(local.getDate())}/${twoDigits(local.getMonth() + 1)}/${local.getFullYear()}`,
-  time: `${twoDigits(local.getHours())}:${twoDigits(local.getMinutes())}:${twoDigits(local.getSeconds())}`,
-});

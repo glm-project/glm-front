@@ -73,7 +73,7 @@ something stays, with a status that says what died.
 - [0030 — Shape scenarios at lint](0030-shape-scenarios-at-lint.md) — branchless scenarios everywhere and, on
   domain specs, nothing acting after the first assertion
 - [0031 — Own workshop supervision in Gestion](0031-own-workshop-supervision-in-gestion.md) — dedicated
-  `supervision-atelier` context in Gestion to interpret declared operators, current activities and conflicts
+  `supervision-atelier` context in Gestion to interpret declared operators and current activities
 - [0032 — Limit constructor parameters](0032-limit-constructor-parameters.md) — at most three constructor
   parameters, with named immutable construction contracts for additional data
 - [0033 — Compose view data in secondary adapters](0033-compose-view-data-in-secondary-adapters.md) — one
@@ -115,9 +115,9 @@ something stays, with a status that says what died.
   a finish marked with its suspension, REPRENDRE restarts them, and the server never hears of a pause
 
 - [0047 — Comptabiliser les activités terminées et signaler leurs fins automatiques](0047-count-only-finished-activities.md) —
-  décisions appliquées aux consommateurs et au contrat final épinglé : fin automatique corrigible et immédiatement comptabilisée,
-  activités en cours exclues du coût et du diviseur, durée indicative conservée au pupitre,
-  séquences en conflit à résoudre par le gestionnaire et totaux concernés incomplets
+  décisions appliquées aux consommateurs et au contrat final épinglé : fin automatique régularisable et immédiatement
+  comptabilisée, activités en cours exclues du coût et du diviseur, durée indicative conservée au pupitre ; ses
+  séquences en conflit et ses totaux incomplets sont remplacés par l'ADR 0054
 
 - [0048 — Relire les données de Gestion sur le serveur à chaque acquisition](0048-request-gestion-data-from-the-server-every-time.md) —
   aucun cache de réponses métier pour l'instant dans Gestion / Supervision, politique HTTP propre au front
@@ -132,8 +132,8 @@ something stays, with a status that says what died.
 
 - [0051 — Format dates through one shared convention](0051-format-dates-through-one-shared-convention.md) —
   `app/shared/date-format` owns locale, hour cycle and named formats (instant in local time, calendar day in
-  UTC), gestion's Material adapter parses strictly, skipped hours are refused, and lint closes `Intl`,
-  `toLocale*String`, `DatePipe` and the `date` pipe elsewhere
+  UTC), and lint closes `Intl`, `toLocale*String`, `DatePipe` and the `date` pipe elsewhere; the Material date
+  adapter it described was removed on 2026-10-08
 
 - [0052 — Réserver les anomalies au gestionnaire par les rôles de la session](0052-reserve-anomalies-to-the-gestionnaire.md) —
   un `RolesPort` à promesse qui reste en attente si l'authentification échoue, un garde `canMatch` qui ne renvoie
@@ -141,4 +141,9 @@ something stays, with a status that says what died.
 
 - [0053 — Remplacer le type d'élément par les catégories de l'entreprise](0053-replace-the-element-type-with-company-categories.md) —
   un Value Object de catégorie par contexte affiché tel quel, aucune lecture de `type` déprécié, l'ordre lu au
-  back pour les boutons, les filtres et les zones du pupitre, le journal stocké traduit à la lecture
+  back pour les boutons, les filtres et les zones du pupitre ; la traduction du journal stocké est retirée avec la clé `v2`
+
+- [0054 — Ignorer à la réception les pointages incohérents](0054-ignore-incoherent-pointages-at-reception.md) —
+  le serveur juge chaque pointage sur l'état de sa clé (opérateur, suivi, poste) et ignore ce qui ne s'accorde pas ;
+  trois pointages au pupitre, gestes composés FIN puis ouverture, durée maximale reçue du référentiel, une seule
+  anomalie pour le gestionnaire (la fin automatique) et plus de conflit nulle part ; il remplace les conflits de 0047

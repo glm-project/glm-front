@@ -5,7 +5,7 @@ import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre
 import { GesteDePointage, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { DeviceAuthentication } from '@/pupitre/shared/authentication/infrastructure/secondary/device/DeviceAuthentication';
@@ -16,6 +16,7 @@ import { HttpBackend, HttpEvent, HttpRequest, HttpResponse } from '@angular/comm
 import { Injector } from '@angular/core';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { Observable, Subject } from 'rxjs';
@@ -27,7 +28,6 @@ const gesteFixture: GesteDePointage = {
   operateurId: 'jean',
   nature: 'POINTAGE',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
 
@@ -136,7 +136,7 @@ class AtelierExchangeFixture extends AtelierExchangePort {
     return barrier;
   }
 
-  override async send(): Promise<Result<PublicationAcceptee, RefusDePublication>> {
+  override async send(): Promise<Result<void, RefusDePublication>> {
     this.tokenDuringReplay = this.authentication().currentToken();
     const barrier = this.nextSend;
     this.nextSend = undefined;
@@ -144,10 +144,10 @@ class AtelierExchangeFixture extends AtelierExchangePort {
       this.chronology.push('replay-started');
       await barrier.hold();
       this.chronology.push('replay-finished');
-      return ok({ conflits: [] });
+      return ok(undefined);
     }
     this.chronology.push('replay');
-    return ok({ conflits: [] });
+    return ok(undefined);
   }
 
   override reread(): Promise<void> {
@@ -155,7 +155,7 @@ class AtelierExchangeFixture extends AtelierExchangePort {
   }
 
   override referentiel(): Promise<ReferentielDuPupitre> {
-    return Promise.resolve({ operateurs: [], suivis: [], categories: [] });
+    return Promise.resolve({ operateurs: [], suivis: [], categories: [], dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs });
   }
 }
 

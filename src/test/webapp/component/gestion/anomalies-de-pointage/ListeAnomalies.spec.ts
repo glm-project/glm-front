@@ -1,26 +1,23 @@
-import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
 import {
-  autreElementFixture,
-  autreElementNomFixture,
-  autreOperateurFixture,
-  autreOperateurNomFixture,
-  elementFixture,
-  elementNomFixture,
-  elementReferenceFixture,
-  givenTheElements,
-  givenTheReferentiel,
-  ligneFixture,
-} from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
+  autreElementFinAutomatiqueFixture,
+  autreOperateurFinAutomatiqueFixture,
+  givenTheElementsFinsAutomatiques,
+  givenTheReferentielFinsAutomatiques,
+  pageFinsAutomatiquesFixture,
+} from '../../../utils/gestion/anomalies-de-pointage/FinsAutomatiquesHttp.fixture';
 
-describe('Conflict list in Gestion', () => {
+const AUTRE_ELEMENT_NOM = 'Bielle';
+const AUTRE_ELEMENT_REFERENCE = 'B-12';
+const AUTRE_OPERATEUR_NOM = 'Alex Durand · 012';
+
+describe('Automatic end list in Gestion', () => {
   beforeEach(() => {
-    givenTheReferentiel();
-    givenTheElements();
-    cy.intercept('GET', '/api/atelier/anomalies*', {
-      body: { lignes: [ligneFixture], total: 1, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesAnomalies'],
-    });
+    givenTheReferentielFinsAutomatiques();
+    givenTheElementsFinsAutomatiques();
+    cy.intercept('GET', '/api/atelier/anomalies*', { body: pageFinsAutomatiquesFixture() });
   });
+
   it('should keep the wide list inside an accessible scroll region on a narrow screen', () => {
     whenVisitingAt(320);
 
@@ -32,27 +29,27 @@ describe('Conflict list in Gestion', () => {
     whenVisitingAt(1280);
     whenApplyingTheChosenOperatorAndElement();
 
-    thenNoConflictMatchesTheFilters();
+    thenNoAutomaticEndMatchesTheFilters();
   });
 
   it('should choose the element by its designation with the picker, without showing its identifier', () => {
     whenVisitingAt(1280);
-    whenChoosingTheElement(autreElementNomFixture);
+    whenChoosingTheElement(AUTRE_ELEMENT_NOM);
 
-    thenTheElementFilterNames(autreElementNomFixture);
-    thenTheFiltersNeverShow(autreElementFixture);
+    thenTheElementFilterNames(`${AUTRE_ELEMENT_NOM} · ${AUTRE_ELEMENT_REFERENCE}`);
+    thenTheFiltersNeverShow(autreElementFinAutomatiqueFixture);
   });
 
   it('should find an element by its reference and name it with that reference', () => {
     whenVisitingAt(1280);
-    whenSearchingTheElement('m-042');
+    whenSearchingTheElement('b-12');
 
-    thenOnlyTheElementIsProposed(`${elementNomFixture} · ${elementReferenceFixture}`);
+    thenOnlyTheElementIsProposed(`${AUTRE_ELEMENT_NOM} · ${AUTRE_ELEMENT_REFERENCE}`);
   });
 
   it('should name all the elements once the manager chooses that entry', () => {
     whenVisitingAt(1280);
-    whenChoosingTheElement(autreElementNomFixture);
+    whenChoosingTheElement(AUTRE_ELEMENT_NOM);
     whenChoosingTheElement('Tous les éléments');
 
     thenTheElementFilterNames('Tous les éléments');
@@ -60,14 +57,14 @@ describe('Conflict list in Gestion', () => {
 
   it('should choose the operator by name with the picker', () => {
     whenVisitingAt(1280);
-    whenChoosingTheOperator(autreOperateurNomFixture);
+    whenChoosingTheOperator(AUTRE_OPERATEUR_NOM);
 
-    thenTheOperatorFilterNames(autreOperateurNomFixture);
+    thenTheOperatorFilterNames(AUTRE_OPERATEUR_NOM);
   });
 
   it('should name all the operators once the manager chooses that entry', () => {
     whenVisitingAt(1280);
-    whenChoosingTheOperator(autreOperateurNomFixture);
+    whenChoosingTheOperator(AUTRE_OPERATEUR_NOM);
     whenChoosingTheOperator('Tous les opérateurs');
 
     thenTheOperatorFilterNames('Tous les opérateurs');
@@ -76,13 +73,11 @@ describe('Conflict list in Gestion', () => {
   const whenApplyingTheChosenOperatorAndElement = (): void => {
     cy.intercept(
       'GET',
-      `/api/atelier/anomalies?nature=CONFLIT&operateur=${autreOperateurFixture}&element=${elementFixture}&page=0&size=5`,
-      {
-        body: { lignes: [], total: 0, complete: true, page: 0, size: 5 } satisfies components['schemas']['RestPageDesAnomalies'],
-      },
+      `/api/atelier/anomalies?operateur=${autreOperateurFinAutomatiqueFixture}&element=${autreElementFinAutomatiqueFixture}&page=0&size=5`,
+      { body: pageFinsAutomatiquesFixture([]) },
     );
-    whenChoosingTheOperator(autreOperateurNomFixture);
-    whenChoosingTheElement(`${elementNomFixture} · ${elementReferenceFixture}`);
+    whenChoosingTheOperator(AUTRE_OPERATEUR_NOM);
+    whenChoosingTheElement(`${AUTRE_ELEMENT_NOM} · ${AUTRE_ELEMENT_REFERENCE}`);
     cy.get(dataSelector('anomalies-filtrer')).click();
   };
 
@@ -117,9 +112,9 @@ describe('Conflict list in Gestion', () => {
     cy.get(dataSelector('anomalies-filtre-operateur')).should('have.text', libelle);
   };
 
-  const thenNoConflictMatchesTheFilters = (): void => {
-    cy.get(dataSelector('anomalies-vide-filtre')).should('contain.text', 'Aucun conflit ne correspond');
-    cy.get(dataSelector('conflit-ligne')).should('not.exist');
+  const thenNoAutomaticEndMatchesTheFilters = (): void => {
+    cy.get(dataSelector('anomalies-vide-filtre')).should('contain.text', 'Aucune fin automatique ne correspond');
+    cy.get(dataSelector('fin-automatique-ligne')).should('not.exist');
     cy.get(dataSelector('anomalies-vide')).should('not.exist');
   };
 
@@ -127,7 +122,7 @@ describe('Conflict list in Gestion', () => {
     { selector: 'anomalies-filtre-operateur', description: 'operator filter' },
     { selector: 'anomalies-filtre-element', description: 'element filter' },
     { selector: 'anomalies-filtrer', description: 'filtering action' },
-    { selector: 'conflit-ouvrir', description: 'dossier link' },
+    { selector: 'fin-automatique-ouvrir', description: 'dossier link' },
   ];
 
   focusControls.forEach(({ selector, description }) => {
@@ -166,7 +161,7 @@ describe('Conflict list in Gestion', () => {
 
   const whenVisitingAt = (width: number): void => {
     cy.viewport(width, 900);
-    cy.visit('/anomalies?nature=CONFLIT');
+    cy.visit('/anomalies');
   };
 
   const thenTheTableOwnsItsHorizontalScroll = (): void => {

@@ -10,15 +10,10 @@ import { elementFixture, releveFixture } from '@test/unit/fixtures/gestion/relev
 import { SyntheseDesHeuresFixture } from '@test/unit/fixtures/gestion/releve-des-heures/SyntheseDesHeuresFixture';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
 import { vi } from 'vitest';
-import { ElementReleveId } from '../../domain/element/ElementReleveId';
-import { ActiviteReleveId } from '../../domain/releve/ActiviteReleveId';
-import { CibleDePointage } from '../../domain/releve/CibleDePointage';
 import { IdentiteOperateur } from '../../domain/releve/IdentiteOperateur';
 import { OperateurDuReleve } from '../../domain/releve/OperateurDuReleve';
 import { OperateurReleveId } from '../../domain/releve/OperateurReleveId';
-import { PointageReleveId } from '../../domain/releve/PointageReleveId';
 import { ReleveDesHeures } from '../../domain/releve/ReleveDesHeures';
-import { SequenceEnConflit } from '../../domain/releve/SequenceEnConflit';
 import { DemandeDeReleve, SyntheseDesHeuresPort } from '../../domain/releve/SyntheseDesHeuresPort';
 import { SemaineISO } from '../../domain/semaine/SemaineISO';
 import { HttpSyntheseDesHeures } from './HttpSyntheseDesHeures';
@@ -53,8 +48,7 @@ const syntheseFixture = (): RestSynthese => ({
   semaine: 38,
   operateur: { id: OPERATEUR, nom: 'Dupont', prenom: 'Jean' },
   evaluation: EVALUATION,
-  dureeOperationnelleTotale: { complete: true, valeur: 'PT57H30M' },
-  conflits: [],
+  dureeOperationnelleTotale: { valeur: 'PT57H30M' },
   elements: [
     {
       id: 'element-1',
@@ -62,21 +56,20 @@ const syntheseFixture = (): RestSynthese => ({
       nom: 'Moule',
       reference: '1015',
       description: 'Carter',
-      duree: { complete: true, valeur: 'PT15H30M' },
-      dureeNonConformite: { complete: true, valeur: 'PT50M' },
+      duree: { valeur: 'PT15H30M' },
+      dureeNonConformite: { valeur: 'PT50M' },
       postes: [{ poste: { id: 'poste-1', libelle: 'DMU 50' }, nature: 'Fraisage' }],
     },
   ],
   jours: SEMAINE.jours().map((jour, rang) => ({
     jour: jour.value,
-    dureeOperationnelle: { complete: true, valeur: rang === 0 ? 'PT2H' : 'PT0S' },
+    dureeOperationnelle: { valeur: rang === 0 ? 'PT2H' : 'PT0S' },
     pointages:
       rang === 0
         ? [
             {
               id: 'debut-a',
               type: 'DEBUT',
-              intention: 'OUVERTURE',
               dateDeSurvenue: '2026-09-14T08:00:00Z',
               element: 'element-1',
               poste: 'poste-1',
@@ -304,66 +297,33 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
   it('should transport the week total without adding the day totals', async () => {
     const releve = await harness.port.synthese(DEMANDE);
 
-    expect(releve?.operationnelTotal.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 3450 } });
-    expect(releve?.jours[0]?.operationnelTotal.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 120 } });
+    expect(releve?.operationnelTotal).toMatchObject({ minutes: 3450 });
+    expect(releve?.jours[0]?.operationnelTotal).toMatchObject({ minutes: 120 });
   });
 
   it('should transport element totals and their independent nonconformity', async () => {
     const releve = await harness.port.synthese(DEMANDE);
 
-    expect(releve?.elements[0]?.duree.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 930 } });
-    expect(releve?.elements[0]?.dureeNonConformite.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 50 } });
+    expect(releve?.elements[0]?.duree).toMatchObject({ minutes: 930 });
+    expect(releve?.elements[0]?.dureeNonConformite).toMatchObject({ minutes: 50 });
     expect(releve?.elements[0]?.numero()).toBe('1015');
     expect(releve?.elements[0]?.postes[0]?.libelle).toBe('DMU 50');
   });
 
-  it('should retain clocking identity and explicit intention in the journal', async () => {
+  it('should retain clocking identity in the journal', async () => {
     const releve = await harness.port.synthese(DEMANDE);
 
-    expect(releve?.jours[0]?.pointages[0]).toMatchObject({ id: { value: 'debut-a' }, type: 'DEBUT', intention: { type: 'OUVERTURE' } });
+    expect(releve?.jours[0]?.pointages[0]).toMatchObject({ id: { value: 'debut-a' }, type: 'DEBUT' });
     expect(releve?.jours[1]?.estVide()).toBe(true);
   });
 
-  it('should keep incomplete totals without a numerical value and leave complete NC independent', async () => {
-    const synthese = syntheseFixture();
-    harness.seed(
-      releveFixture(SEMAINE, { 0: { operationnelle: false } }, { operationnelle: false }, [
-        elementFixture({ duree: false, dureeNonConformite: 'PT1H' }),
-      ]),
-      {
-        ...synthese,
-        dureeOperationnelleTotale: { complete: false, valeur: 'PT99H' },
-        elements: [
-          {
-            ...requiredFixture(synthese.elements[0]),
-            duree: { complete: false, valeur: 'PT99H' },
-            dureeNonConformite: { complete: true, valeur: 'PT1H' },
-          },
-        ],
-        jours: requiredFixture(synthese.jours).map((jour, rang) =>
-          rang === 0 ? { ...jour, dureeOperationnelle: { complete: false } } : jour,
-        ),
-      },
-      feuilleFixture(),
-    );
-
-    const releve = await harness.port.synthese(DEMANDE);
-
-    expect(releve?.operationnelTotal.snapshot()).toEqual({ complete: false });
-    expect(releve?.jours[0]?.operationnelTotal.snapshot()).toEqual({ complete: false });
-    expect(releve?.elements[0]?.duree.snapshot()).toEqual({ complete: false });
-    expect(releve?.elements[0]?.dureeNonConformite.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 60 } });
-  });
-
-  it('should keep a target activity identity distinct from the clocking element and preserve the received journal order', async () => {
+  it('should preserve the received journal order and the element of each clocking', async () => {
     const synthese = syntheseFixture();
     const pointages: components['schemas']['RestPointageDeSyntheseDesHeures'][] = [
-      { id: 'fin-a', type: 'FIN', intention: 'FIN', cible: 'a', element: 'element-1', dateDeSurvenue: '2026-09-14T17:00:00Z' },
+      { id: 'fin-a', type: 'FIN', element: 'element-1', dateDeSurvenue: '2026-09-14T17:00:00Z' },
       {
         id: 'nc-b',
         type: 'NON_CONFORMITE',
-        intention: 'TRANSITION',
-        cible: 'a',
         element: 'element-1',
         dateDeSurvenue: '2026-09-14T12:00:00Z',
       },
@@ -372,13 +332,8 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
       releveFixture(SEMAINE, {
         0: {
           pointagesDElement: [
-            { id: 'fin-a', type: 'FIN', heure: [17, 0], intention: { type: 'FIN', activiteVisee: new ActiviteReleveId('a') } },
-            {
-              id: 'nc-b',
-              type: 'NON_CONFORMITE',
-              heure: [12, 0],
-              intention: { type: 'TRANSITION', activiteVisee: new ActiviteReleveId('a') },
-            },
+            { id: 'fin-a', type: 'FIN', heure: [17, 0] },
+            { id: 'nc-b', type: 'NON_CONFORMITE', heure: [12, 0] },
           ],
         },
       }),
@@ -388,39 +343,10 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
 
     const releve = await harness.port.synthese(DEMANDE);
 
-    expect(
-      releve?.jours[0]?.pointages.map(pointage => [pointage.id.value, pointage.type, pointage.cible.element.value, pointage.intention]),
-    ).toEqual([
-      ['fin-a', 'FIN', 'element-1', { type: 'FIN', activiteVisee: new ActiviteReleveId('a') }],
-      ['nc-b', 'NON_CONFORMITE', 'element-1', { type: 'TRANSITION', activiteVisee: new ActiviteReleveId('a') }],
+    expect(releve?.jours[0]?.pointages.map(pointage => [pointage.id.value, pointage.type, pointage.cible.element.value])).toEqual([
+      ['fin-a', 'FIN', 'element-1'],
+      ['nc-b', 'NON_CONFORMITE', 'element-1'],
     ]);
-  });
-
-  it('should keep a received conflict without unresolved activities and without changing a complete total', async () => {
-    const synthese = syntheseFixture();
-    const conflit = new SequenceEnConflit(
-      new CibleDePointage(new ElementReleveId('element-1'), undefined),
-      [],
-      [new PointageReleveId('fin-annulee')],
-    );
-    harness.seed(
-      releveFixture(SEMAINE, {}, { operationnelle: 'PT2H' }, [elementFixture()], [conflit]),
-      {
-        ...synthese,
-        dureeOperationnelleTotale: { complete: true, valeur: 'PT2H' },
-        conflits: [{ element: 'element-1', activites: [], pointages: ['fin-annulee'] }],
-      },
-      feuilleFixture(),
-    );
-
-    const releve = await harness.port.synthese(DEMANDE);
-
-    expect(releve?.conflits[0]).toMatchObject({
-      cible: { element: { value: 'element-1' } },
-      activites: [],
-      pointages: [{ value: 'fin-annulee' }],
-    });
-    expect(releve?.operationnelTotal.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 120 } });
   });
 
   it('should answer nothing for an unknown operator', async () => {
@@ -653,58 +579,50 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
   });
 
   it.each([
-    ['TERMINEE_AUTOMATIQUEMENT', '2026-09-14T11:00:00Z', undefined, 'PT11H', 660],
-    ['EN_COURS', undefined, undefined, 'PT0S', 0],
-    ['A_RESOUDRE', undefined, '2026-09-15T17:00:00Z', undefined, undefined],
-    ['A_RESOUDRE', undefined, undefined, undefined, undefined],
-  ] as const)(
-    'should translate the origin state %s and its effective or possible end without manufacturing one',
-    async (etat, fin, finAuPlusTard, duree, minutes) => {
-      const source = { ...sansChamp(activiteTermineeFixture(), 'poste'), debut: '2026-09-14T00:00:00Z' };
-      const feuille = feuilleFixture();
-      const synthese = syntheseFixture();
-      const result = port.synthese(DEMANDE);
-      whenBothRoutesAnswer(
-        { ...synthese, dureeOperationnelleTotale: duree === undefined ? { complete: false } : { complete: true, valeur: duree } },
-        {
-          ...feuille,
-          jours: requiredFixture(feuille.jours).map((jour, rang) =>
-            rang === 0
-              ? {
-                  ...jour,
-                  activites: [
-                    {
-                      ...withoutEnd(source),
+    ['TERMINEE_AUTOMATIQUEMENT', '2026-09-14T11:00:00Z', 'PT11H', 660],
+    ['EN_COURS', undefined, 'PT0S', 0],
+  ] as const)('should translate the origin state %s and its effective end without manufacturing one', async (etat, fin, duree, minutes) => {
+    const source = { ...sansChamp(activiteTermineeFixture(), 'poste'), debut: '2026-09-14T00:00:00Z' };
+    const feuille = feuilleFixture();
+    const synthese = syntheseFixture();
+    const result = port.synthese(DEMANDE);
+    whenBothRoutesAnswer(
+      { ...synthese, dureeOperationnelleTotale: { valeur: duree } },
+      {
+        ...feuille,
+        jours: requiredFixture(feuille.jours).map((jour, rang) =>
+          rang === 0
+            ? {
+                ...jour,
+                activites: [
+                  {
+                    ...withoutEnd(source),
+                    ...(fin === undefined ? {} : { fin }),
+                    activite: {
+                      id: 'origine-hors-journal',
+                      debut: '2026-09-13T22:00:00Z',
+                      etat,
                       ...(fin === undefined ? {} : { fin }),
-                      activite: {
-                        id: 'origine-hors-journal',
-                        debut: '2026-09-13T22:00:00Z',
-                        etat,
-                        ...(fin === undefined ? {} : { fin }),
-                        ...(finAuPlusTard === undefined ? {} : { finAuPlusTard }),
-                      },
                     },
-                  ],
-                }
-              : jour,
-          ),
-        },
-      );
+                  },
+                ],
+              }
+            : jour,
+        ),
+      },
+    );
 
-      const releve = await result;
+    const releve = await result;
 
-      expect(releve?.jours[0]?.intervalles[0]?.activite).toMatchObject({
-        id: { value: 'origine-hors-journal' },
-        debut: { value: new Date('2026-09-13T22:00:00Z') },
-        etat,
-      });
-      expect(releve?.jours[0]?.intervalles[0]?.poste).toBeUndefined();
-      expect(releve?.jours[0]?.intervalles[0]?.fin?.value.toISOString()).toBe(fin === undefined ? undefined : '2026-09-14T11:00:00.000Z');
-      expect(releve?.operationnelTotal.snapshot()).toMatchObject(
-        duree === undefined ? { complete: false } : { complete: true, valeur: { minutes } },
-      );
-    },
-  );
+    expect(releve?.jours[0]?.intervalles[0]?.activite).toMatchObject({
+      id: { value: 'origine-hors-journal' },
+      debut: { value: new Date('2026-09-13T22:00:00Z') },
+      etat,
+    });
+    expect(releve?.jours[0]?.intervalles[0]?.poste).toBeUndefined();
+    expect(releve?.jours[0]?.intervalles[0]?.fin?.value.toISOString()).toBe(fin === undefined ? undefined : '2026-09-14T11:00:00.000Z');
+    expect(releve?.operationnelTotal).toMatchObject({ minutes });
+  });
 
   it('should attach time sheet portions by date even when its days are returned in reverse order', async () => {
     const feuille = feuilleFixture();
@@ -739,7 +657,7 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
 
   it('should reject an unreadable complete duration once', async () => {
     const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    whenBothRoutesAnswer({ ...syntheseFixture(), dureeOperationnelleTotale: { complete: true, valeur: 'P1D' } }, feuilleFixture());
+    whenBothRoutesAnswer({ ...syntheseFixture(), dureeOperationnelleTotale: { valeur: 'P1D' } }, feuilleFixture());
 
     expect(await result).toEqual(new Error('La durée « P1D » reçue du serveur n’est pas une durée de travail.'));
     expect(errorHandler.errors).toHaveLength(1);
@@ -798,47 +716,6 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
 
     expect(await result).toEqual(new Error('activite.fin manque dans la réponse du serveur'));
     expect(errorHandler.errors).toHaveLength(1);
-  });
-
-  it('should reject a complete total missing its value', async () => {
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    whenBothRoutesAnswer({ ...syntheseFixture(), dureeOperationnelleTotale: { complete: true } }, feuilleFixture());
-
-    expect(await result).toEqual(new Error('duree.valeur manque dans la réponse du serveur'));
-    expect(errorHandler.errors).toHaveLength(1);
-  });
-
-  it('should reject a targeted clocking missing its target activity', async () => {
-    const synthese = syntheseFixture();
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    whenBothRoutesAnswer(
-      {
-        ...synthese,
-        jours: requiredFixture(synthese.jours).map((jour, rang) =>
-          rang === 0
-            ? { ...jour, pointages: [{ ...requiredFixture(requiredFixture(jour.pointages)[0]), type: 'FIN', intention: 'FIN' }] }
-            : jour,
-        ),
-      },
-      feuilleFixture(),
-    );
-
-    expect(await result).toEqual(new Error('pointage.cible manque dans la réponse du serveur'));
-    expect(errorHandler.errors).toHaveLength(1);
-  });
-
-  it('should translate the element and workstation of a conflict independently of its activity references', async () => {
-    const result = port.synthese(DEMANDE);
-    whenBothRoutesAnswer(
-      { ...syntheseFixture(), conflits: [{ element: 'element-1', poste: 'poste-1', activites: ['a', 'b'], pointages: ['fin-a'] }] },
-      feuilleFixture(),
-    );
-
-    expect((await result)?.conflits[0]).toMatchObject({
-      cible: { element: { value: 'element-1' }, poste: { value: 'poste-1' } },
-      activites: [{ value: 'a' }, { value: 'b' }],
-      pointages: [{ value: 'fin-a' }],
-    });
   });
 
   const givenEvaluationAt = (instant: string): void => {

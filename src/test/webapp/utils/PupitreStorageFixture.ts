@@ -1,4 +1,5 @@
 import type { EvenementDuJournal, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 
 interface DurablePupitreFixture {
   entreprise: string;
@@ -41,7 +42,7 @@ const persistPupitreFixture = (window: Cypress.AUTWindow, fixture: StoredPupitre
           referentiel: fixture.referentiel,
           evenements: fixture.evenements,
         },
-        `atelier-activites-v1:${fixture.entreprise}`,
+        `atelier-activites-v2:${fixture.entreprise}`,
       );
       transaction.oncomplete = () => {
         database.close();
@@ -59,7 +60,7 @@ export const givenDurablePupitreFixture = (fixture: DurablePupitreFixture): void
   cy.window().then(window =>
     persistPupitreFixture(window, {
       entreprise: fixture.entreprise,
-      referentiel: { operateurs: [], suivis: [], categories: [] },
+      referentiel: { operateurs: [], suivis: [], categories: [], dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs },
       evenements: [
         {
           etat: 'EN_ATTENTE',
@@ -69,7 +70,6 @@ export const givenDurablePupitreFixture = (fixture: DurablePupitreFixture): void
             operateurId: fixture.geste.operateurId,
             nature: 'POINTAGE',
             suiviId: 'piece',
-            intention: 'OUVERTURE',
             type: 'DEBUT',
           },
         },

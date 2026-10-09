@@ -1,3 +1,5 @@
+import { MotifDeRefus } from '../refus/MotifDeRefus';
+import { RefusDePublication } from '../refus/RefusDePublication';
 import {
   afterLocalCapture,
   EMPTY_JOURNAL_DU_PUPITRE,
@@ -5,12 +7,14 @@ import {
   EvenementsDuJournal,
   GesteDePointage,
   JournalDuPupitre,
+  refusePublication,
   snapshotDuJournal,
 } from './JournalDuPupitre';
 
+const dureeMaximaleFixtureEnMs = 13 * 60 * 60 * 1000;
+
 const gesteFixture = (id: string): GesteDePointage => ({
   nature: 'POINTAGE',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
   id,
   operateurId: 'jean',
@@ -19,12 +23,30 @@ const gesteFixture = (id: string): GesteDePointage => ({
 });
 
 describe('JournalDuPupitre', () => {
+  it('should record on a refused event the normalized reason the adapter recognized, beside the diagnostic code and message', () => {
+    const refus = new RefusDePublication('code-de-diagnostic', 'Pointage ignoré', MotifDeRefus.from('pointage-ignore'));
+
+    const evenement = refusePublication(gesteFixture('ignore'), refus);
+
+    expect(evenement).toEqual({
+      geste: gesteFixture('ignore'),
+      etat: 'REFUSE',
+      refus: { code: 'code-de-diagnostic', message: 'Pointage ignoré', motif: 'pointage-ignore' },
+    });
+  });
+
+  it('should record no reason on a refused event whose code the adapter did not recognize', () => {
+    const refus = new RefusDePublication('code-inconnu', 'Refus');
+
+    const evenement = refusePublication(gesteFixture('inconnu'), refus);
+
+    expect(evenement).toEqual({ geste: gesteFixture('inconnu'), etat: 'REFUSE', refus: { code: 'code-inconnu', message: 'Refus' } });
+  });
+
   it('should stop only the designated operator resumption while retaining every prior journal event', () => {
     const suspended = (operateurId: string): GesteDePointage => ({
       nature: 'POINTAGE',
-      intention: 'FIN',
       type: 'FIN',
-      cible: 'ouverture-' + operateurId,
       id: 'fin-' + operateurId,
       operateurId,
       suiviId: 'piece',
@@ -47,23 +69,20 @@ describe('JournalDuPupitre', () => {
     expect(journal.pausesArretees).toEqual(['pause-ancienne']);
   });
 
-  it('should copy the stopped pauses and accepted conflict diagnostics independently', () => {
+  it('should copy the stopped pauses and accepted events independently', () => {
     const journal: JournalDuPupitre = {
       connecte: true,
       pausesArretees: ['pause'],
       evenements: [
         {
           etat: 'ACCEPTE',
-          conflits: [{ activites: ['ouverture'], pointages: ['contradiction'] }],
           geste: {
             id: 'contradiction',
             dateDeSurvenue: '2026-09-05T09:00:00Z',
             operateurId: 'jean',
             suiviId: 'piece',
             nature: 'POINTAGE',
-            intention: 'FIN',
             type: 'FIN',
-            cible: 'ouverture',
           },
         },
       ],
@@ -76,12 +95,10 @@ describe('JournalDuPupitre', () => {
     expect(copy.evenements[0]).not.toBe(journal.evenements[0]);
     const event = copy.evenements[0];
     expect(event?.etat).toBe('ACCEPTE');
-    expect(event).toMatchObject({ conflits: [{ activites: ['ouverture'], pointages: ['contradiction'] }] });
   });
 
   it('should copy accepted events', () => {
     const pointage: GesteDePointage = {
-      intention: 'OUVERTURE',
       id: 'pt-1',
       dateDeSurvenue: '2026-09-05T08:00:00Z',
       nature: 'POINTAGE',
@@ -107,7 +124,6 @@ describe('JournalDuPupitre', () => {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
           {
-            conflits: [],
             id: 'suivi-1',
             nom: 'OF-1',
             etat: 'EN_COURS',
@@ -117,6 +133,7 @@ describe('JournalDuPupitre', () => {
           },
         ],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
 
@@ -141,7 +158,6 @@ describe('JournalDuPupitre', () => {
         ],
         suivis: [
           {
-            conflits: [],
             id: 'suivi-1',
             nom: 'OF-1',
             etat: 'EN_COURS',
@@ -159,6 +175,7 @@ describe('JournalDuPupitre', () => {
           },
         ],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
       evenements: [
         {
@@ -166,7 +183,6 @@ describe('JournalDuPupitre', () => {
             id: 'arr-1',
             dateDeSurvenue: '2026-09-05T08:00:00Z',
             nature: 'POINTAGE',
-            intention: 'OUVERTURE',
             type: 'DEBUT',
             suiviId: 'suivi-1',
             operateurId: 'jean',
@@ -178,7 +194,6 @@ describe('JournalDuPupitre', () => {
             id: 'ref-1',
             dateDeSurvenue: '2026-09-05T08:00:00Z',
             nature: 'POINTAGE',
-            intention: 'OUVERTURE',
             type: 'DEBUT',
             suiviId: 'suivi-1',
             operateurId: 'jean',

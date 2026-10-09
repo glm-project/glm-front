@@ -1,5 +1,5 @@
 import { TypeDOuverture } from '../../journal-du-pupitre/JournalDuPupitre';
-import { TransitionDePointage } from './TransitionDePointage';
+import { PointageDemande } from './PointageDemande';
 
 export interface PosteAChoisir {
   readonly id: string;
@@ -8,7 +8,7 @@ export interface PosteAChoisir {
 
 export type DecisionDOuverture =
   | { readonly kind: 'CHOIX_POSTE_REQUIS'; readonly postes: readonly PosteAChoisir[] }
-  | { readonly kind: 'TRANSITION'; readonly transition: TransitionDePointage };
+  | { readonly kind: 'OUVERTURE'; readonly pointage: PointageDemande };
 
 export class HabilitationsDePoste {
   private constructor(private readonly postes: readonly PosteAChoisir[]) {}
@@ -21,8 +21,8 @@ export class HabilitationsDePoste {
     if (this.postes.length > 1) return { kind: 'CHOIX_POSTE_REQUIS', postes: this.postes };
     const posteId = this.postes[0]?.id;
     return {
-      kind: 'TRANSITION',
-      transition: posteId === undefined ? { intention: 'OUVERTURE', type } : { intention: 'OUVERTURE', type, posteId },
+      kind: 'OUVERTURE',
+      pointage: posteId === undefined ? { type } : { type, posteId },
     };
   }
 

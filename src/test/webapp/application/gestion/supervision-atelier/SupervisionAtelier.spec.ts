@@ -20,7 +20,6 @@ const connectedWorkshopFixture: RestSupervision = {
       etat: 'EN_COURS',
     },
   ],
-  sequencesEnConflit: [],
 };
 
 const idleConnectedWorkshopFixture: RestSupervision = { ...connectedWorkshopFixture, activites: [] };
@@ -45,7 +44,6 @@ const workshopWithWarningsFixture: RestSupervision = {
       finRetenue: new Date(2026, 8, 23, 21).toISOString(),
     },
   ],
-  sequencesEnConflit: [{ id: 'sequence-to-correct', operateurId: 'op-connected-serin', activites: [] }],
 };
 
 describe('Supervision atelier in back office', () => {
@@ -216,16 +214,13 @@ const thenTheErrorWasDisplayedAndFreshCardsAreVisible = (): void => {
 const whenRefreshingAfterBackendCorrection = (): void => {
   cy.wait('@supervisionRead');
   cy.get(dataSelector('supervision-anomalie')).invoke('text').as('automaticWarningBeforeCorrection', { type: 'static' });
-  cy.get(dataSelector('supervision-sequence-en-conflit')).invoke('text').as('conflictBeforeCorrection', { type: 'static' });
   cy.then(() => apiFixture.replace(idleConnectedWorkshopFixture));
   whenRefreshingTheWorkshop();
 };
 
 const thenTheCorrectedWorkshopHasNoWarnings = (): void => {
   cy.get('@automaticWarningBeforeCorrection').should('contain', 'Activité terminée automatiquement');
-  cy.get('@conflictBeforeCorrection').should('contain', 'Séquence en conflit');
   cy.get(dataSelector('supervision-anomalie')).should('not.exist');
-  cy.get(dataSelector('supervision-sequence-en-conflit')).should('not.exist');
   cy.get(dataSelector('supervision-signal-a-verifier')).should('have.text', '0 à vérifier');
   cy.get(dataSelector('supervision-couloir-sans-activite'))
     .find(dataSelector('supervision-operateur-nom'))
@@ -289,11 +284,8 @@ const thenTheActivityAndAnomaliesRemainVisible = (): void => {
     .find(dataSelector('supervision-carte'))
     .filter('[data-operateur-id="op-perrin"]')
     .within(() => {
-      cy.get(dataSelector('supervision-sequence-en-conflit')).should('contain.text', 'Séquence en conflit').and('contain.text', 'OF 3006');
       cy.get(dataSelector('supervision-activite')).should('not.exist');
     });
   cy.get(dataSelector('supervision-signal-nc')).should('contain.text', '2 en NC').and('contain.text', 'Garnier Thomas, Morel Inès');
-  cy.get(dataSelector('supervision-signal-a-verifier'))
-    .should('contain.text', '4 à vérifier')
-    .and('contain.text', 'Marchand Kevin, Morel Inès, Perrin Loïc, Schmitt Yanis');
+  cy.get(dataSelector('supervision-signal-a-verifier')).should('contain.text', '1 à vérifier').and('contain.text', 'Marchand Kevin');
 };

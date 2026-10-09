@@ -17,45 +17,24 @@
   font-size: var(--text-body-sm);
 }
 [data-selector='anomalie-activite'][role='img'],
-[data-selector='anomalie-pointage'][role='img'] {
+[data-selector='anomalie-pointage'][role='img'],
+[data-selector='anomalie-cloture'][role='img'] {
   pointer-events: none;
-}
-button:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-button[aria-pressed='true'] {
-  outline: 2px solid var(--color-ink);
-  outline-offset: 2px;
 }
 .repere {
   width: var(--spacing-touch);
   flex-direction: column;
   justify-content: center;
   padding: 0;
-  transform: translateX(-50%);
   line-height: 1.1;
 }
-.repere[data-ancrage='GAUCHE'] {
-  transform: none;
-}
-.repere[data-ancrage='DROITE'] {
-  transform: translateX(-100%);
+.cloture {
+  width: 4.25rem;
+  padding: 0;
 }
 .repere[data-non-conformite='true'] {
   border-color: var(--color-ink);
   background: var(--color-nc);
-}
-.repere[data-en-cause='true'] {
-  border: 2px solid var(--color-danger);
-  color: var(--color-danger);
-}
-.repere[data-en-cause='true'][data-non-conformite='true'] {
-  color: var(--color-ink);
-}
-.repere[data-annule='true'] :is([data-selector='anomalie-pointage-symbole'], time),
-.repere[data-deplace='true'] time {
-  text-decoration: line-through;
 }
 [data-selector='anomalie-poignee'] {
   transform: translateX(-50%);
@@ -69,10 +48,6 @@ button[aria-pressed='true'] {
   background: var(--color-surface);
   color: var(--color-ink);
 }
-[data-selector='anomalie-poignee'][aria-disabled='true'] {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
 [data-selector='anomalie-frise-placement'] {
   border-block: 1px dashed var(--color-border-strong);
   background: color-mix(in srgb, var(--color-accent) 8%, transparent);
@@ -85,16 +60,13 @@ button[aria-pressed='true'] {
   border-width: 2px;
   font-weight: 600;
 }
-[data-en-ligne='true'] [data-selector='anomalie-activite'] {
+[data-selector='anomalie-activite'] {
   padding-left: calc(var(--spacing-touch) + 0.5rem);
 }
-[data-en-ligne='true'] [data-selector='anomalie-activite'][data-fin='RECUE'] {
-  padding-right: calc(var(--spacing-touch) + 0.5rem);
-}
-[data-en-ligne='true'] [data-selector='anomalie-activite'][data-fin='PROPOSEE'] {
+[data-selector='anomalie-activite'][data-fin='PROPOSEE'] {
   padding-right: calc(var(--spacing-touch) / 2 + 0.5rem);
 }
-[data-selector='anomalie-frise-fin-recue'] {
+[data-selector='anomalie-frise-fin-automatique'] {
   border-left: 2px dashed var(--color-warn);
 }
 .barre[data-categorie='TRAVAIL'] {
@@ -107,28 +79,6 @@ button[aria-pressed='true'] {
   background: var(--color-nc);
   color: var(--color-ink);
 }
-.barre:not([data-categorie]) {
-  border-style: dashed;
-  background: var(--color-sunken);
-}
-.barre[data-etat='A_RESOUDRE'] {
-  background-color: var(--color-surface);
-  background-image: repeating-linear-gradient(
-    135deg,
-    transparent 0 0.45rem,
-    color-mix(in srgb, var(--color-ink) 22%, transparent) 0.45rem 0.9rem
-  );
-  color: var(--color-ink);
-}
-.barre[data-etat='ANNULEE'],
-.barre[data-etat='REMPLACEE'] {
-  opacity: 0.55;
-}
-.barre[data-fin='RECUE'] {
-  border-right-width: 4px;
-  border-right-style: solid;
-  border-right-color: var(--color-ink);
-}
 .barre[data-fin='AUTOMATIQUE']::after {
   position: absolute;
   top: 0;
@@ -137,30 +87,4 @@ button[aria-pressed='true'] {
   width: 1.75rem;
   background: var(--gestion-hachure-fin-automatique);
   content: '';
-}
-.barre[data-fin='OUVERTE'] {
-  border-right-style: dotted;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-[data-selector='anomalie-frise-apres'] {
-  border-top: 1px dashed var(--color-border-strong);
-}
-[data-selector='anomalie-frise-apres-titre'] {
-  padding: 0.25rem 0.5rem;
-  color: var(--color-ink);
-  font-size: var(--text-label);
-  font-weight: 600;
-}
-.repere[data-fait-de-l-acte='true'] {
-  border: 2px solid var(--color-ok);
-  background: color-mix(in srgb, var(--color-ok) 18%, var(--color-surface));
-}
-.repere[data-fait-de-l-acte='true'][data-non-conformite='true'] {
-  background: var(--color-nc);
-}
-.barre[data-modifiee='true'] {
-  box-shadow:
-    0 0 0 2px var(--color-surface),
-    0 0 0 4px var(--color-ink);
 }

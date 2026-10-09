@@ -24,23 +24,30 @@ import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@a
 import { TestBed } from '@angular/core/testing';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
-import { elementsDeLaZoneFixture } from '@test/unit/fixtures/pupitre/atelier/VueDePointageFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { IDBFactory } from 'fake-indexeddb';
 
 const entrepriseFixture = Entreprise.of('entreprise-a');
-const transitionFixture: GesteDePointage = {
+const nonConformiteFixture: GesteDePointage = {
   nature: 'POINTAGE',
   id: '4e12c8ad-cf5e-4fb5-b526-372dfc21a001',
   dateDeSurvenue: '2026-09-05T12:00:00Z',
   operateurId: 'jean',
   suiviId: 'piece',
   posteId: 'tour',
-  intention: 'TRANSITION',
   type: 'NON_CONFORMITE',
-  cible: 'ouverture-a',
+};
+const finALaMemeHeureFixture: GesteDePointage = {
+  nature: 'POINTAGE',
+  id: '9b0d6a42-7c1e-4f55-a0d3-5a1c2e8f3003',
+  dateDeSurvenue: '2026-09-05T12:00:00Z',
+  operateurId: 'jean',
+  suiviId: 'piece',
+  posteId: 'tour',
+  type: 'FIN',
 };
 const finFixture: GesteDePointage = {
   nature: 'POINTAGE',
@@ -49,27 +56,28 @@ const finFixture: GesteDePointage = {
   operateurId: 'jean',
   suiviId: 'piece',
   posteId: 'tour',
-  intention: 'FIN',
   type: 'FIN',
-  cible: 'ouverture-a',
 };
-const transitionBodyFixture = {
+const nonConformiteBodyFixture = {
   id: '4e12c8ad-cf5e-4fb5-b526-372dfc21a001',
   dateDeSurvenue: '2026-09-05T12:00:00Z',
   operateur: 'jean',
   poste: 'tour',
-  intention: 'TRANSITION',
   type: 'NON_CONFORMITE',
-  cible: 'ouverture-a',
+};
+const finALaMemeHeureBodyFixture = {
+  id: '9b0d6a42-7c1e-4f55-a0d3-5a1c2e8f3003',
+  dateDeSurvenue: '2026-09-05T12:00:00Z',
+  operateur: 'jean',
+  poste: 'tour',
+  type: 'FIN',
 };
 const finBodyFixture = {
   id: '1f7e0c56-4059-4b3f-8972-0b4e3f17a002',
   dateDeSurvenue: '2026-09-05T17:00:00Z',
   operateur: 'jean',
   poste: 'tour',
-  intention: 'FIN',
   type: 'FIN',
-  cible: 'ouverture-a',
 };
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
@@ -89,11 +97,11 @@ const referenceFixture: ReferentielDuPupitre = {
           echeance: '2026-09-06T01:00:00Z',
         },
       ],
-      conflits: [],
       evenements: [],
     },
   ],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const publicationFixture = {
   id: 'piece',
@@ -105,90 +113,7 @@ const publicationFixture = {
   engagePar: 'gestionnaire',
   activitesEnCours: [],
   journal: [],
-  conflits: [{ activites: ['ouverture-a', 'remplacante-b'], pointages: [transitionFixture.id, finFixture.id] }],
 } satisfies components['schemas']['RestSuiviDAtelier'];
-const conflitFixture = { activites: ['ouverture-a', 'remplacante-b'], pointages: [transitionFixture.id, finFixture.id] };
-const independentConflictFixture = { operateurId: 'jean', activites: [], pointages: ['contradiction-independante'] };
-const independentReferenceFixture: ReferentielDuPupitre = {
-  ...referenceFixture,
-  suivis: [
-    ...referenceFixture.suivis,
-    {
-      id: 'piece-independante',
-      nom: 'OF-2',
-      categorie: 'MOULE',
-      etat: 'EN_COURS',
-      activites: [
-        {
-          operateurId: 'jean',
-          ouverture: 'ouverture-independante',
-          categorie: 'TRAVAIL',
-          depuis: '2026-09-05T16:00:00Z',
-          echeance: '2026-09-06T05:00:00Z',
-        },
-      ],
-      conflits: [],
-      evenements: [],
-    },
-    {
-      id: 'conflit-independant',
-      nom: 'OF-3',
-      categorie: 'MOULE',
-      etat: 'EN_ATTENTE',
-      activites: [],
-      conflits: [independentConflictFixture],
-      evenements: [],
-    },
-  ],
-};
-const resolvedReferenceFixture = {
-  genereLe: '2026-09-05T18:00:00Z',
-  operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
-  suivis: [
-    {
-      id: 'piece',
-      nom: 'OF-1',
-      categorie: 'MOULE',
-      etat: 'EN_COURS',
-      activites: [
-        {
-          operateur: 'jean',
-          poste: 'tour',
-          ouverture: 'ouverture-canonique',
-          categorie: 'TRAVAIL',
-          depuis: '2026-09-05T17:30:00Z',
-          echeance: '2026-09-06T06:30:00Z',
-        },
-      ],
-      conflits: [],
-    },
-    {
-      id: 'piece-independante',
-      nom: 'OF-2',
-      categorie: 'MOULE',
-      etat: 'EN_COURS',
-      activites: [
-        {
-          operateur: 'jean',
-          ouverture: 'ouverture-independante',
-          categorie: 'TRAVAIL',
-          depuis: '2026-09-05T16:00:00Z',
-          echeance: '2026-09-06T05:00:00Z',
-        },
-      ],
-      conflits: [],
-    },
-    {
-      id: 'conflit-independant',
-      nom: 'OF-3',
-      categorie: 'MOULE',
-      etat: 'EN_ATTENTE',
-      activites: [],
-      conflits: [{ operateur: 'jean', activites: [], pointages: ['contradiction-independante'] }],
-    },
-  ],
-  categories: ['MOULE', 'OF'],
-} satisfies components['schemas']['RestReferentielDuPupitre'];
 
 describe('Durable pupitre HTTP exchange', () => {
   let journal: JournauxDuPupitrePort;
@@ -244,9 +169,14 @@ describe('Durable pupitre HTTP exchange', () => {
   });
 
   it.each([
-    { order: 'transition then finish', gestes: [transitionFixture, finFixture], bodies: [transitionBodyFixture, finBodyFixture] },
-    { order: 'finish then transition', gestes: [finFixture, transitionFixture], bodies: [finBodyFixture, transitionBodyFixture] },
-  ])('should retain FIFO and the targeted body through one concurrent retry in $order', async ({ gestes, bodies }) => {
+    { order: 'non conformity then finish', gestes: [nonConformiteFixture, finFixture], bodies: [nonConformiteBodyFixture, finBodyFixture] },
+    { order: 'finish then non conformity', gestes: [finFixture, nonConformiteFixture], bodies: [finBodyFixture, nonConformiteBodyFixture] },
+    {
+      order: 'finish then non conformity at the same time',
+      gestes: [finALaMemeHeureFixture, nonConformiteFixture],
+      bodies: [finALaMemeHeureBodyFixture, nonConformiteBodyFixture],
+    },
+  ])('should retain FIFO and the original body through one concurrent retry in $order', async ({ gestes, bodies }) => {
     await givenPersistedGestures(gestes);
 
     await whenRestartingAndReplayingWithConcurrency();
@@ -259,22 +189,22 @@ describe('Durable pupitre HTTP exchange', () => {
       { method: 'POST', url: '/api/atelier/suivis/piece/pointages', body: bodies[1] },
       { method: 'GET', url: '/api/pupitre/referentiel', body: null },
     ]);
-    expect(restored.evenements).toEqual(gestes.map(geste => ({ geste, etat: 'ACCEPTE', conflits: [conflitFixture] })));
+    expect(restored.evenements).toEqual(gestes.map(geste => ({ geste, etat: 'ACCEPTE' })));
     expect(restored.referentiel).toEqual(referenceFixture);
     expect(restored.connecte).toBe(true);
   });
 
   it.each([
     {
-      order: 'transition then finish',
-      gestes: [transitionFixture, finFixture],
-      bodies: [transitionBodyFixture, finBodyFixture],
-      code: 'activite-visee-incoherente',
+      order: 'non conformity then finish',
+      gestes: [nonConformiteFixture, finFixture],
+      bodies: [nonConformiteBodyFixture, finBodyFixture],
+      code: 'poste-de-travail-introuvable',
     },
     {
-      order: 'finish then transition',
-      gestes: [finFixture, transitionFixture],
-      bodies: [finBodyFixture, transitionBodyFixture],
+      order: 'finish then non conformity',
+      gestes: [finFixture, nonConformiteFixture],
+      bodies: [finBodyFixture, nonConformiteBodyFixture],
       code: 'saisie-concurrente',
     },
   ])('should retain the final $code refusal and continue FIFO in $order without another retry', async ({ gestes, bodies, code }) => {
@@ -291,74 +221,16 @@ describe('Durable pupitre HTTP exchange', () => {
       { method: 'GET', url: '/api/pupitre/referentiel', body: null },
     ]);
     expect(restored.evenements).toEqual([
-      { geste: gestes[0], etat: 'REFUSE', refus: { code: `urn:glm:erreur:atelier:${code}`, message: 'Final refusal' } },
-      { geste: gestes[1], etat: 'ACCEPTE', conflits: [conflitFixture] },
+      { geste: gestes[0], etat: 'REFUSE', refus: { code: `urn:glm:erreur:atelier:${code}`, message: 'Final refusal', motif: code } },
+      { geste: gestes[1], etat: 'ACCEPTE' },
     ]);
     expect(restored.referentiel).toEqual(referenceFixture);
     expect(restored.connecte).toBe(true);
   });
 
-  it('should restore an accepted conflict after a failed refresh and reconcile only the resolved sequence without replaying it', async () => {
-    await journal.saveReferentiel(entrepriseFixture, independentReferenceFixture);
-    await journal.append(entrepriseFixture, [finFixture]);
-
-    await whenAcceptingTheGestureBeforeRefreshFails();
-    const beforeResolution = await whenRestartingJournal();
-    const conflictedWindow = windowOf(entrepriseFixture, beforeResolution);
-    const independentFinish = finishesOf(conflictedWindow, 'piece-independante');
-    const beforeResolutionView = conflictedWindow.pointage();
-    await whenResolvingTheReferenceAfterRestart();
-    const afterResolution = await whenRestartingJournal();
-    const resolvedWindow = windowOf(entrepriseFixture, afterResolution);
-    const canonicalFinish = finishesOf(resolvedWindow, 'piece');
-    const afterResolutionView = resolvedWindow.pointage();
-
-    expect(beforeResolution.evenements).toEqual([{ geste: finFixture, etat: 'ACCEPTE', conflits: [conflitFixture] }]);
-    expect(beforeResolution.referentiel).toEqual(independentReferenceFixture);
-    expect(beforeResolutionView.conflits.map(conflit => conflit.id)).toEqual(['piece', 'conflit-independant']);
-    expect(independentFinish).toEqual([
-      {
-        nature: 'POINTAGE',
-        id: 'fin-canonique',
-        dateDeSurvenue: '2026-09-05T18:00:00Z',
-        operateurId: 'jean',
-        suiviId: 'piece-independante',
-        intention: 'FIN',
-        type: 'FIN',
-        cible: 'ouverture-independante',
-      },
-    ]);
-    expect(exchanges).toEqual([
-      { method: 'POST', url: '/api/atelier/suivis/piece/pointages', body: finBodyFixture },
-      { method: 'GET', url: '/api/pupitre/referentiel', body: null },
-      { method: 'GET', url: '/api/pupitre/referentiel', body: null },
-    ]);
-    expect(afterResolution.evenements).toEqual(beforeResolution.evenements);
-    expect(afterResolution.referentiel?.suivis[0]?.evenements).toEqual([finFixture.id]);
-    expect(afterResolutionView.conflits.map(conflit => conflit.id)).toEqual(['conflit-independant']);
-    expect(
-      elementsDeLaZoneFixture(afterResolutionView, 'MOULE')
-        .filter(element => element.isActive())
-        .map(element => element.id),
-    ).toEqual(['piece', 'piece-independante']);
-    expect(canonicalFinish).toEqual([
-      {
-        nature: 'POINTAGE',
-        id: 'fin-canonique',
-        dateDeSurvenue: '2026-09-05T18:00:00Z',
-        operateurId: 'jean',
-        suiviId: 'piece',
-        posteId: 'tour',
-        intention: 'FIN',
-        type: 'FIN',
-        cible: 'ouverture-canonique',
-      },
-    ]);
-  });
-
-  it('should isolate two persisted company bodies, pending work, references, conflicts and resumption through alternation and restart', async () => {
-    const beforeA = await givenACompanyWithPauseConflictAndPendingFinish('entreprise-a', '2026-09-05T17:00:00Z');
-    const beforeB = await givenACompanyWithPauseConflictAndPendingFinish('entreprise-b', '2026-09-05T18:00:00Z');
+  it('should isolate two persisted company bodies, pending work, references and resumption through alternation and restart', async () => {
+    const beforeA = await givenACompanyWithPauseAndPendingFinish('entreprise-a', '2026-09-05T17:00:00Z');
+    const beforeB = await givenACompanyWithPauseAndPendingFinish('entreprise-b', '2026-09-05T18:00:00Z');
 
     await journal.append(entrepriseFixture, [], 'jean');
     await whenPublishingCompany('entreprise-b');
@@ -383,9 +255,7 @@ describe('Durable pupitre HTTP exchange', () => {
           dateDeSurvenue: '2026-09-05T18:00:00Z',
           operateur: 'marie',
           poste: 'tour',
-          intention: 'FIN',
           type: 'FIN',
-          cible: 'activite-entreprise-b',
         },
       },
       { method: 'GET', url: '/api/pupitre/referentiel', body: null },
@@ -397,9 +267,7 @@ describe('Durable pupitre HTTP exchange', () => {
           dateDeSurvenue: '2026-09-05T17:00:00Z',
           operateur: 'marie',
           poste: 'tour',
-          intention: 'FIN',
           type: 'FIN',
-          cible: 'activite-entreprise-a',
         },
       },
       { method: 'GET', url: '/api/pupitre/referentiel', body: null },
@@ -412,39 +280,23 @@ describe('Durable pupitre HTTP exchange', () => {
     await journal.saveReferentiel(entrepriseFixture, referenceFixture);
     await journal.append(entrepriseFixture, gestes);
   };
-  const givenACompanyWithPauseConflictAndPendingFinish = async (company: string, occurrence: string): Promise<JournalDuPupitre> => {
+  const givenACompanyWithPauseAndPendingFinish = async (company: string, occurrence: string): Promise<JournalDuPupitre> => {
     const entreprise = Entreprise.of(company);
     const suspension: GesteDePointage = {
       ...finFixture,
       id: `suspension-${company}`,
       dateDeSurvenue: '2026-09-05T12:00:00Z',
-      cible: `activite-suspendue-${company}`,
       suspension: { pause: `pause-${company}`, reouverture: 'NON_CONFORMITE' },
-    };
-    const conflictOpening: GesteDePointage = {
-      nature: 'POINTAGE',
-      id: `conflit-${company}`,
-      dateDeSurvenue: '2026-09-05T13:00:00Z',
-      operateurId: 'marie',
-      suiviId: 'autre-piece',
-      intention: 'OUVERTURE',
-      type: 'DEBUT',
     };
     const pending: GesteDePointage = {
       ...finFixture,
       id: '90807c80-0588-4d6a-a002-fc355de16530',
       dateDeSurvenue: occurrence,
       operateurId: 'marie',
-      cible: `activite-${company}`,
     };
     await journal.saveReferentiel(entreprise, companyReferenceFixture(company));
-    await journal.append(entreprise, [suspension, conflictOpening, pending]);
+    await journal.append(entreprise, [suspension, pending]);
     await journal.saveResult(entreprise, { geste: suspension, etat: 'ACCEPTE' });
-    await journal.saveResult(entreprise, {
-      geste: conflictOpening,
-      etat: 'ACCEPTE',
-      conflits: [{ operateurId: 'marie', activites: [], pointages: [conflictOpening.id] }],
-    });
     return journal.read(entreprise);
   };
   const companyReferenceFixture = (company: string): ReferentielDuPupitre => ({
@@ -468,12 +320,11 @@ describe('Durable pupitre HTTP exchange', () => {
             echeance: '2026-09-05T21:00:00Z',
           },
         ],
-        conflits: [],
         evenements: [],
       },
-      { id: 'autre-piece', nom: `Conflit-${company}`, categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], conflits: [], evenements: [] },
     ],
     categories: [],
+    dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
   });
   const afterAcceptingLastCompanyGesture = (before: JournalDuPupitre): JournalDuPupitre => ({
     ...before,
@@ -520,27 +371,13 @@ describe('Durable pupitre HTTP exchange', () => {
     const reference = await whenNextRequestArrives();
     reference.flush('Reference unavailable', { status: 503, statusText: 'Service unavailable' });
   };
-  const whenAcceptingTheGestureBeforeRefreshFails = async (): Promise<void> => {
-    const replay = synchronization.synchronize(() => undefined);
-    const publication = await whenNextRequestArrives();
-    publication.flush(publicationFixture, { status: 201, statusText: 'Created' });
-    await whenReferenceRefreshFails();
-    await replay;
-  };
   const whenPublishingCompany = async (company: string): Promise<void> => {
     tenant = company;
     const replay = synchronization.synchronize(() => undefined);
     const publication = await whenNextRequestArrives();
-    publication.flush({ ...publicationFixture, conflits: [] }, { status: 200, statusText: 'OK' });
+    publication.flush(publicationFixture, { status: 200, statusText: 'OK' });
     await whenReferenceRefreshFails();
     await replay;
-  };
-  const whenResolvingTheReferenceAfterRestart = async (): Promise<void> => {
-    synchronization = TestBed.runInInjectionContext(() => new PupitreSynchronization());
-    const exchange = synchronization.synchronize(() => undefined);
-    const reference = await whenNextRequestArrives();
-    reference.flush(resolvedReferenceFixture);
-    await exchange;
   };
   const windowOf = (entreprise: Entreprise, state: JournalDuPupitre): FenetreOperateur =>
     FenetreOperateur.open(
@@ -550,14 +387,4 @@ describe('Durable pupitre HTTP exchange', () => {
       Date.parse('2026-09-05T18:00:00Z'),
       new IdentiteDeFenetre(1),
     );
-  const finishesOf = (window: FenetreOperateur, suiviId: string): readonly GesteDePointage[] => {
-    const decision = window.afterDeciding(
-      suiviId,
-      'PRINCIPALE',
-      () => ({ id: 'fin-canonique', dateDeSurvenue: '2026-09-05T18:00:00Z' }),
-      Date.parse('2026-09-05T18:00:00Z'),
-    ).decision;
-    if (decision.kind !== 'GESTES') throw new Error('Missing targeted finish fixture.');
-    return decision.capture();
-  };
 });

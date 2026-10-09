@@ -8,12 +8,10 @@ import {
   localCalendarDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
-import { TotalDeDuree } from '../../domain/duree/TotalDeDuree';
 import { CategorieDActivite } from '../../domain/element/CategorieDActivite';
 import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
 import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
-import { IntentionDePointage, PointageDElement } from '../../domain/releve/PointageDElement';
 import { TypeDePointage } from '../../domain/releve/TypeDePointage';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
 import { SemaineISO } from '../../domain/semaine/SemaineISO';
@@ -36,17 +34,6 @@ const POINTAGES: Record<TypeDePointage, string> = {
 };
 
 const CATEGORIES_D_ACTIVITE: Record<CategorieDActivite, string> = { TRAVAIL: 'travail', NON_CONFORMITE: 'non-conformité' };
-
-const intentionDe = (intention: IntentionDePointage): string => {
-  switch (intention.type) {
-    case 'OUVERTURE':
-      return 'Ouverture';
-    case 'TRANSITION':
-      return `Transition de l’activité ${intention.activiteVisee.value}`;
-    case 'FIN':
-      return `Fin de l’activité ${intention.activiteVisee.value}`;
-  }
-};
 
 const posteEtNature = (poste: PosteDeLElement): string =>
   poste.nature === undefined ? poste.libelle : `${poste.libelle} · ${poste.nature}`;
@@ -111,7 +98,6 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   legende: {
     travail: 'Travail',
     nonConformite: 'Non-conformité',
-    aResoudre: 'À résoudre',
     enCours: 'En cours',
     finAutomatique: 'Fin automatique',
     debut: 'Début pointé',
@@ -119,11 +105,6 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     fin: 'Fin pointée',
   },
 
-  conflits: 'Séquences en conflit',
-  activitesConcernees: (ids: readonly string[]): string => `Activités concernées : ${ids.join(', ')}`,
-  faitConcerne: (pointage: PointageDElement): string =>
-    `${POINTAGES[pointage.type]} ${heure(pointage.instant)} · ${intentionDe(pointage.intention)} · ${pointage.id.value}`,
-  pointageConcerne: (id: string): string => `Pointage ${id}`,
   chargement: 'Chargement du temps opérationnel…',
   echec: 'Impossible de charger le temps opérationnel de la semaine. Vérifiez la connexion puis réessayez.',
   reessayer: 'Réessayer',
@@ -134,14 +115,8 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   semaine: (semaine: SemaineISO): string =>
     `Semaine ${semaine.numero} · ${formatCalendarDayRange(semaine.lundi().value, semaine.dimanche().value)}`,
   identite: (nom: string, prenom: string): string => `${prenom} ${nom.toLocaleUpperCase('fr-FR')}`,
-  duree: (total: TotalDeDuree): string => {
-    const lecture = total.snapshot();
-    return lecture.complete ? formatDuree(lecture.valeur) : 'Incomplet';
-  },
-  nonConformite: (total: TotalDeDuree): string => {
-    const lecture = total.snapshot();
-    return lecture.complete ? `NC ${formatDuree(lecture.valeur)}` : 'NC Incomplet';
-  },
+  duree: formatDuree,
+  nonConformite: (duree: DureeTravaillee): string => `NC ${formatDuree(duree)}`,
   jour: (jour: JourCalendaire): string => formatCalendarDayShort(jour.value),
   nomDElement: nomDeLElement,
   heure,
@@ -156,8 +131,6 @@ export const LIBELLES_RELEVE_DES_HEURES = {
     const enonce = `${nomDeLElement(element)}, ${formatCalendarDayLong(jour.value)}, ${heure(debut)} à ${heure(fin)}, ${CATEGORIES_D_ACTIVITE[categorie]}`;
     return enonce;
   },
-  enonceDActiviteAResoudre: ({ element, jour, categorie }: FormeDActiviteEnCours): string =>
-    `${nomDeLElement(element)}, ${formatCalendarDayLong(jour.value)}, ${CATEGORIES_D_ACTIVITE[categorie]}, À résoudre`,
   finAutomatique: (fin: InstantDeReleve): string => `Fin automatique à ${heure(fin)} · Anomalie`,
   activiteEnCours: (debut: InstantDeReleve, jour: JourCalendaire): string => `En cours depuis ${debutDOrigine(debut, jour)}`,
   enonceDActiviteEnCours: ({ element, jour, categorie, debut }: FormeDActiviteEnCours): string =>

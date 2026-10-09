@@ -68,7 +68,7 @@ describe('API relay', () => {
     const pointage = {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: '{"id":"932c0c0b-a676-408d-8f82-e9b56ad7791c","operateur":"0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d","intention":"OUVERTURE","type":"DEBUT"}',
+      body: '{"id":"932c0c0b-a676-408d-8f82-e9b56ad7791c","operateur":"0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d","type":"DEBUT"}',
     };
 
     await whenTheBrowserAsks(
@@ -79,10 +79,7 @@ describe('API relay', () => {
 
     assert.deepEqual(
       [reached[0].method, await reached[0].text()],
-      [
-        'POST',
-        '{"id":"932c0c0b-a676-408d-8f82-e9b56ad7791c","operateur":"0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d","intention":"OUVERTURE","type":"DEBUT"}',
-      ],
+      ['POST', '{"id":"932c0c0b-a676-408d-8f82-e9b56ad7791c","operateur":"0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d","type":"DEBUT"}'],
     );
   });
 
@@ -93,7 +90,7 @@ describe('API relay', () => {
   });
 
   it('should answer with what the API answered', async () => {
-    const refusal = new Response('{"type":"urn:glm:erreur:atelier:identifiant-evenement-reutilise"}', { status: 409 });
+    const refusal = new Response('{"type":"urn:glm:erreur:atelier:pointage-ignore"}', { status: 409 });
     const { forward } = givenAnApiAnswering(refusal);
 
     const answer = await whenTheBrowserAsks(

@@ -1,14 +1,13 @@
 # Relevé des heures
 
 Ce contexte de `gestion` porte le relevé hebdomadaire du **temps opérationnel** d'une personne.
-Il est lecteur : les corrections et le traitement des anomalies de pointage, conflits et fins automatiques,
-appartiennent au contexte `anomalies-de-pointage`.
+Il est lecteur : la régularisation des fins automatiques appartient au contexte `anomalies-de-pointage`.
 La route `/operateurs/:operateur/heures`, le composant `SyntheseDesHeures` et le port
 `SyntheseDesHeuresPort` conservent leur nom pour garder les liens partagés.
 
 L'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md) possède les
-règles de comptabilisation. Le back interprète les faits, décide des échéances, des anomalies et des
-complétudes ; ce contexte restitue les résultats reçus.
+règles de comptabilisation. Le back interprète les faits et décide des échéances et des anomalies ; ce
+contexte restitue les résultats reçus.
 
 ## Acquisition
 
@@ -20,7 +19,7 @@ ISO équivalentes sont acceptées. Ce paramètre technique reste hors de l'URL d
 L'évaluation commune garantit la même décision d'expiration ; une écriture entre les lectures peut encore
 modifier les faits reçus, sans instantané historique ni transaction commune.
 
-La synthèse porte les totaux, les éléments, les pointages bruts et les séquences en conflit. La feuille
+La synthèse porte les totaux, les éléments et les pointages bruts. La feuille
 porte les portions calendaires des activités et leur origine interprétée. Garder les types générés dans
 le secondaire et reconstituer les valeurs du contexte avant le retour du port.
 
@@ -43,23 +42,17 @@ Une adresse invalide au montage n'acquiert ni relevé ni liste.
 - **Relevé** : les sept jours de la semaine ISO demandée, dans l'ordre calendaire. Vérifier la semaine
   rendue par chaque source, la correspondance des jours et les références élément/poste des faits.
   La feuille peut rendre ses jours dans un ordre différent ; leur date possède le rapprochement.
-- **Total de durée** : complet avec une `DureeTravaillee`, zéro compris, ou incomplet sans valeur numérique.
-  Le cumul opérationnel compte chaque élément : deux éléments terminés en parallèle pendant une heure
-  donnent deux heures. Les chiffres et les complétudes viennent du serveur ; aucune somme des jours,
-  éléments ou portions ne refait le total. Travail et NC gardent leur complétude indépendante.
+- **Total de durée** : une `DureeTravaillee`, zéro compris. Le cumul opérationnel compte chaque élément :
+  deux éléments terminés en parallèle pendant une heure donnent deux heures. Les chiffres viennent du
+  serveur ; aucune somme des jours, éléments ou portions ne refait le total.
 - **Portion d'activité** : début et éventuelle fin de ce qui appartient au jour rendu. Une portion ne
   remplace pas l'activité d'origine. Refuser une portion finissant avant son début ; zéro est accepté.
 - **Activité d'origine** : `ActiviteReleveId`, début d'origine et état explicite. `TERMINEE` et
   `TERMINEE_AUTOMATIQUEMENT` portent une fin effective. `EN_COURS` ne porte aucune fin effective.
-  `A_RESOUDRE` est une autre variante ; son éventuelle `finAuPlusTard` borne une incertitude et ne devient
-  jamais une durée certaine. Le front ne fabrique aucune fin à minuit, à l'évaluation ou à treize heures.
-- **Pointage** : `PointageReleveId`, instant absolu, type et intention reçus. Une ouverture crée une
-  activité ; transition et fin gardent l'`ActiviteReleveId` visé. `CibleDePointage` conserve son sens
-  élément/poste ; elle n'est pas l'identité d'activité. Garder l'ordre du journal donné par le serveur.
-- **Séquence en conflit** : cible élément/poste, identités d'activités et de pointages concernés, reçues
-  séparément. Un conflit sans activité à résoudre reste visible et ne rend pas un total incomplet de lui-même.
-  Une identité d'ouverture ou de fait hors du journal hebdomadaire reste valide ; son absence dans ce journal
-  ne rompt pas le contrat. Les références élément/poste garanties restent contrôlées.
+  Le front ne fabrique aucune fin à minuit, à l'évaluation ou à l'échéance.
+- **Pointage** : `PointageReleveId`, instant absolu et type reçus (`DEBUT`, `NON_CONFORMITE`, `FIN`). Le
+  pointage ne porte ni intention ni activité visée. `CibleDePointage` ne désigne que l'élément et le poste
+  du pointage ; elle n'est pas l'identité d'une activité. Garder l'ordre du journal donné par le serveur.
 - **Jour vide** : ni pointage ni intervalle. Une portion traversant un jour sans pointage le rend non vide.
 - Les valeurs du domaine sont immuables et le domaine ne lit aucune horloge. La semaine en cours et
   aujourd'hui se déduisent du jour fourni par le primaire.
@@ -78,11 +71,6 @@ Il possède ses identifiants et reçoit les noms utiles des rapports. Le lien de
 - Une activité en cours est une indication ponctuelle, sans barre étirée jusqu'à l'heure de lecture.
   Nommer son début d'origine, avec le jour lorsqu'il diffère du jour rendu : dimanche 22 h reste dimanche
   22 h dans la portion du lundi. Elle ne reçoit aucune durée comptabilisée par le front.
-- Une activité à résoudre est indiquée comme **À résoudre** sur chacun des jours rendus de sa plage possible,
-  sans barre de durée certaine. Un total incomplet affiche **Incomplet**, sans chiffre partiel dans le
-  texte, l'infobulle ou le texte accessible. Une valeur complète d'une autre catégorie reste chiffrée.
-- Exposer les séquences en conflit et leurs faits ciblés en lecture, avec les identités reçues lorsqu'un
-  fait n'appartient pas au journal de la semaine. Les commandes de correction restent hors de cet écran.
 - Les intervalles contigus travail/NC/travail se dessinent bout à bout. Un élément travaillé en parallèle
   se dédouble en sous-lignes par poste pour toute la semaine ; conserver une sous-ligne Sans poste pour ses
   portions ou marqueurs sans poste. Les totaux ne se dédoublent pas et ne sont pas recalculés.
@@ -123,8 +111,8 @@ Le jour consulté conserve son état dans l'URL, sans agrandir sa colonne. Le d�
 figurent sous la semaine ; sur mobile, sept liens donnent accès aux jours sans défiler la frise.
 Le détail conserve un axe normalement 6–22 h, étendu au jour entier pour une borne nocturne ou à minuit.
 Une fin à minuit du lendemain ferme la portion à 1 440 minutes, sans fabriquer cette fin.
-Les mentions longues de fin automatique et de conflit restent accessibles dans les barres, le détail et
-le panneau À vérifier. Leur résumé dans la semaine ne doit pas dilater ses lignes.
+Les mentions longues de fin automatique restent accessibles dans les barres, le détail et
+le panneau À vérifier, qui ne liste que des fins automatiques. Leur résumé dans la semaine ne doit pas dilater ses lignes.
 
 Le serveur découpe dans son calendrier : une activité terminée 20–08 h donne 4 h puis 8 h ; dimanche
 22–lundi 03 h donne 2 h puis 3 h, dans les deux semaines ISO. Minuit répartit les portions et ne produit

@@ -149,6 +149,7 @@ export const postesFixture = (nombre: number): RestPoste[] =>
     id: 'poste-' + String(index + 1),
     libelle: 'Poste ' + (index < 9 ? '0' + String(index + 1) : String(index + 1)),
     nature: index === nombre - 1 ? 'ponçage' : 'tournage',
+    natureId: index === nombre - 1 ? 'nature-poncage' : 'nature-tournage',
   }));
 
 export const operateursFixture = (nombre: number): RestOperateur[] =>

@@ -2,8 +2,7 @@ import { DureeTravaillee } from './duree/DureeTravaillee';
 
 export type CategorieDePointage = 'TRAVAIL' | 'NON_CONFORMITE';
 
-export type EtatDeLigne =
-  { readonly etat: 'TERMINEE' | 'TERMINEE_AUTOMATIQUEMENT'; readonly fin: Date } | { readonly etat: 'EN_COURS' | 'A_RESOUDRE' };
+export type EtatDeLigne = { readonly etat: 'TERMINEE' | 'TERMINEE_AUTOMATIQUEMENT'; readonly fin: Date } | { readonly etat: 'EN_COURS' };
 
 export interface ActiviteDeLaLigne {
   readonly element: string;

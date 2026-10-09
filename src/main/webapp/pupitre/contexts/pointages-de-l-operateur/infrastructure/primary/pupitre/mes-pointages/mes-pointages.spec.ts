@@ -77,15 +77,6 @@ describe('Mes pointages screen', () => {
     ]);
   });
 
-  it('should show an incomplete week total without any figure', async () => {
-    givenTheCurrentWeek(semaineFixture(SEMAINE_EN_COURS, { 0: { total: false, lignes: [LUNDI] } }, false));
-
-    await whenShowingMyPointages();
-
-    thenTextOf('total-semaine', ['—']);
-    thenClockedDaysAre([['jour-2026-10-05', 'Lun. 5 oct.', '— à vérifier']]);
-  });
-
   it('should detail today by default, with its server total and each clocked portion', async () => {
     givenTheCurrentWeek(semaineEnCoursFixture());
 
@@ -142,7 +133,7 @@ describe('Mes pointages screen', () => {
     thenExplanationsAre(['2 activités en cours : comptées quand vous les arrêterez.']);
   });
 
-  it('should count and flag a clocking ended automatically after 13 hours', async () => {
+  it('should count and flag a clocking ended automatically at its deadline', async () => {
     givenTheCurrentWeek(
       semaineFixture(
         SEMAINE_EN_COURS,
@@ -167,38 +158,8 @@ describe('Mes pointages screen', () => {
     await whenShowingMyPointages();
 
     thenLinesAre([['1236', 'Fraiseuse', '06:00 → 19:00', '13 h 00 fin automatique']]);
-    thenExplanationsAre(['Un pointage n’a pas été arrêté : il s’est terminé tout seul après 13 h. Signalez-le au responsable.']);
+    thenExplanationsAre(['Un pointage n’a pas été arrêté : il s’est terminé tout seul à son échéance. Signalez-le au responsable.']);
     thenClockedDaysAre([['jour-2026-10-08', 'Jeu. 8 oct. · aujourd’hui', '13 h 00 fin automatique']]);
-  });
-
-  it('should show no figure for a day and a week whose clocking must be checked', async () => {
-    givenTheCurrentWeek(
-      semaineFixture(
-        SEMAINE_EN_COURS,
-        {
-          3: {
-            total: false,
-            lignes: [
-              ligneFixture({ element: '1233', poste: 'Fraiseuse', debut: new Date(2026, 9, 8, 7), fin: new Date(2026, 9, 8, 12) }),
-              ligneFixture({ element: '1233', poste: 'Fraiseuse', debut: new Date(2026, 9, 8, 13), aVerifier: true }),
-            ],
-          },
-        },
-        false,
-      ),
-    );
-
-    await whenShowingMyPointages();
-
-    thenTextOf('total-jour-affiche', ['—']);
-    thenTextOf('libelle-total-jour', ['à vérifier']);
-    thenLinesAre([
-      ['1233', 'Fraiseuse', '07:00 → 12:00', '5 h 00'],
-      ['1233', 'Fraiseuse', '13:00 → ?', 'à vérifier'],
-    ]);
-    thenExplanationsAre(['Un pointage n’a pas de fin connue : le responsable doit le corriger avant que le total s’affiche.']);
-    thenTextOf('note-semaine', ['à vérifier par le responsable']);
-    thenClockedDaysAre([['jour-2026-10-08', 'Jeu. 8 oct. · aujourd’hui', '— à vérifier']]);
   });
 
   it('should read and show the previous week when going back', async () => {
