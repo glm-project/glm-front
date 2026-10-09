@@ -15,6 +15,7 @@ const posteFixture = (nature: string): PosteDeTravail =>
   new PosteDeTravail(new PosteDeTravailId('tour-1'), {
     libelle: new LibellePoste('Tour 1'),
     nature: new NatureDeTravail(nature),
+    natureId: new NatureDeTravailId('nature-' + nature),
     coutHoraire: new CoutHoraire(45.5),
   });
 

@@ -3,7 +3,7 @@ import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiC
 import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Page } from '@/app/shared/pagination/domain/Page';
-import { buildPageFrom, PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
+import { buildPageFrom } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
 import { collectAllPages } from '@/app/shared/pagination/infrastructure/secondary/collectAllPages';
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
@@ -13,6 +13,7 @@ import { CoutHoraire } from '../../domain/CoutHoraire';
 import { LibellePoste } from '../../domain/LibellePoste';
 import { LibellePosteDejaUtilise } from '../../domain/LibellePosteDejaUtilise';
 import { NatureDeTravail } from '../../domain/NatureDeTravail';
+import { NatureDeTravailId } from '../../domain/NatureDeTravailId';
 import { PosteDeTravail } from '../../domain/PosteDeTravail';
 import { PosteDeTravailId } from '../../domain/PosteDeTravailId';
 import { PosteIntrouvable } from '../../domain/PosteIntrouvable';
@@ -26,12 +27,13 @@ const toPoste = (poste: components['schemas']['RestPosteDeTravail']): PosteDeTra
   new PosteDeTravail(new PosteDeTravailId(poste.id), {
     libelle: new LibellePoste(poste.libelle),
     nature: new NatureDeTravail(poste.nature),
+    natureId: new NatureDeTravailId(poste.natureId),
     coutHoraire: poste.coutHoraire === undefined ? undefined : new CoutHoraire(poste.coutHoraire),
   });
 
 const toRequest = (commande: CommandeCreationPoste | CommandeModificationPoste): components['schemas']['RestCreationPosteDeTravail'] => ({
   libelle: commande.libelle.value,
-  nature: commande.nature.value,
+  natureId: commande.natureId.value,
   ...(commande.coutHoraire === undefined ? {} : { coutHoraire: commande.coutHoraire.value }),
 });
 
@@ -65,8 +67,6 @@ const refusSuppression = (urn: string | undefined): RefusSuppressionPoste | unde
   }
 };
 
-const pageManquante = (extrait: Page<PosteDeTravail>, lus: number): boolean => extrait.elements.length === 0 && lus < extrait.totalCount;
-
 @Injectable()
 export class HttpPostes extends PostesPort {
   private readonly api = inject(ApiClient);
@@ -86,42 +86,6 @@ export class HttpPostes extends PostesPort {
 
   override async postes(requete: RequetePostes): Promise<Page<PosteDeTravail>> {
     return await this.fetchPage(requete);
-  }
-
-  override async natures(): Promise<readonly NatureDeTravail[]> {
-    try {
-      return await this.readAllNatures();
-    } catch (failure) {
-      this.errors.handleError(failure);
-      throw failure;
-    }
-  }
-
-  private async readAllNatures(): Promise<readonly NatureDeTravail[]> {
-    const natures = new Map<string, NatureDeTravail>();
-    let page = 0;
-    let lus = 0;
-    let total: number;
-    do {
-      const extrait = await this.fetchPage(new RequetePostes(page, PAGE_SIZE));
-      total = extrait.totalCount;
-      lus += extrait.elements.length;
-      if (pageManquante(extrait, lus)) {
-        throw new Error('Le référentiel des natures est incomplet.');
-      }
-      this.collectNatures(natures, extrait.elements);
-      page += 1;
-    } while (lus < total);
-    return [...natures.values()].sort((left, right) => left.compare(right));
-  }
-
-  private collectNatures(natures: Map<string, NatureDeTravail>, elements: readonly PosteDeTravail[]): void {
-    for (const poste of elements) {
-      const cle = poste.nature.cleNormalisee();
-      if (!natures.has(cle)) {
-        natures.set(cle, poste.nature);
-      }
-    }
   }
 
   private async fetchPage(requete: RequetePostes): Promise<Page<PosteDeTravail>> {

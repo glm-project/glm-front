@@ -2,20 +2,12 @@ import { components } from '@/app/generated/schema';
 type RestPoste = components['schemas']['RestPosteDeTravail'];
 type Commande = components['schemas']['RestCreationPosteDeTravail'];
 
-interface CommandeAvecLibelleDeNature {
-  readonly libelle: string;
-  readonly nature?: string;
-  readonly natureId?: string;
-  readonly coutHoraire?: number;
-}
+type NatureDuReferentiel = components['schemas']['RestNatureDeTravail'];
 
-const posteDe = (id: string, commande: CommandeAvecLibelleDeNature): RestPoste => ({
-  id,
-  libelle: commande.libelle,
-  nature: commande.nature ?? '',
-  natureId: commande.natureId ?? 'nature-' + (commande.nature ?? ''),
-  ...(commande.coutHoraire === undefined ? {} : { coutHoraire: commande.coutHoraire }),
-});
+const naturesParDefaut = (): NatureDuReferentiel[] => [
+  { id: 'nature-tournage', libelle: 'tournage', utilisee: false, postes: 0 },
+  { id: 'nature-poncage', libelle: 'ponçage', utilisee: false, postes: 0 },
+];
 
 export class PostesApiFixture {
   postes: RestPoste[];
@@ -24,7 +16,7 @@ export class PostesApiFixture {
   protectedCode: string | undefined;
   readonly writes: Commande[] = [];
   readonly deletions: string[] = [];
-  natures: { id: string; libelle: string; utilisee: boolean; postes: number }[] = [];
+  natures: NatureDuReferentiel[] = naturesParDefaut();
 
   constructor(postes: RestPoste[] = []) {
     this.postes = postes;
@@ -49,6 +41,19 @@ export class PostesApiFixture {
     this.installCreation();
     this.installModification();
     this.installDeletion();
+  }
+
+  private posteDe(id: string, commande: Commande): RestPoste {
+    const natureId = commande.natureId ?? '';
+    const libelle =
+      this.natures.find(nature => nature.id === natureId)?.libelle ?? this.postes.find(poste => poste.natureId === natureId)?.nature ?? '';
+    return {
+      id,
+      libelle: commande.libelle,
+      nature: libelle,
+      natureId,
+      ...(commande.coutHoraire === undefined ? {} : { coutHoraire: commande.coutHoraire }),
+    };
   }
 
   private installNatures(): void {
@@ -93,7 +98,7 @@ export class PostesApiFixture {
         request.reply({ statusCode: 409, body: { type: 'urn:glm:erreur:poste-de-travail:libelle-deja-utilise' } });
         return;
       }
-      const poste = posteDe('created-poste', commande);
+      const poste = this.posteDe('created-poste', commande);
       this.postes.push(poste);
       request.reply({ statusCode: 201, body: poste });
     }).as('posteCreate');
@@ -104,7 +109,7 @@ export class PostesApiFixture {
       const commande = request.body as Commande;
       const id = request.url.split('/').slice(-1)[0];
       this.writes.push(commande);
-      this.postes = this.postes.map(poste => (poste.id === id ? posteDe(id, commande) : poste));
+      this.postes = this.postes.map(poste => (poste.id === id ? this.posteDe(id, commande) : poste));
       request.reply({ statusCode: 200, body: this.postes.find(poste => poste.id === id) });
     }).as('posteUpdate');
   }

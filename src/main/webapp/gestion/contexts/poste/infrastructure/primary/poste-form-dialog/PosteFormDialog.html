@@ -29,12 +29,12 @@
           aria-describedby="poste-nature-help poste-nature-error"
           data-selector="poste-nature"
         />
-        <mat-autocomplete #natures="matAutocomplete" (optionSelected)="changeNature($event.option.viewValue)">
-          @for (nature of suggestions(); track nature.value) {
-          <mat-option [value]="nature.value" data-selector="poste-nature-option">{{ nature.value }}</mat-option>
+        <mat-autocomplete #natures="matAutocomplete" [displayWith]="libelleDe" (optionSelected)="choisirNature($event.option.value)">
+          @for (nature of suggestions(); track nature.id.value) {
+          <mat-option [value]="nature" data-selector="poste-nature-option">{{ nature.libelle.value }}</mat-option>
           }
         </mat-autocomplete>
-        <p id="poste-nature-help" class="mt-2 text-body-sm text-ink-muted">Choisissez une nature existante ou saisissez-en une nouvelle.</p>
+        <p id="poste-nature-help" class="mt-2 text-body-sm text-ink-muted">Tapez pour filtrer, puis choisissez une nature dans la liste.</p>
         <p id="poste-nature-error" class="field-error" aria-live="polite" data-selector="poste-nature-error">
           {{ soumis() ? formulaire().erreurNature() : '' }}
         </p>

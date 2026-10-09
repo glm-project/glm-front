@@ -16,16 +16,16 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 
 ## Modèle de domaine
 
-- **PosteDeTravail** : agrégat racine représentant un poste déclaré, portant son identifiant immuable, son libellé, sa nature et son coût horaire éventuel.
+- **PosteDeTravail** : agrégat racine représentant un poste déclaré, portant son identifiant immuable, son libellé, sa nature (libellé courant et `natureId`) et son coût horaire éventuel.
 - **PosteDeTravailId** : Value Object représentant l'identifiant unique et immuable d'un poste.
 - **LibellePoste** : Value Object garantissant un libellé textuel non vide et borné à 100 caractères.
 - **NatureDeTravail** : Value Object garantissant un métier non vide et borné à 50 caractères, avec comparaison et correspondance insensible à la casse.
 - **CoutHoraire** : Value Object représentant une valeur monétaire horaire strictement positive.
-- **CommandeCreationPoste** : commande encapsulant les attributs validés pour la création d'un nouveau poste (`libelle`, `nature`, `coutHoraire`).
-- **CommandeModificationPoste** : commande encapsulant l'identifiant et les attributs validés pour la modification d'un poste existant (`id`, `libelle`, `nature`, `coutHoraire`).
+- **CommandeCreationPoste** : commande encapsulant les attributs validés pour la création d'un nouveau poste (`libelle`, `nature`, `natureId`, `coutHoraire`) ; seul `natureId` part au serveur.
+- **CommandeModificationPoste** : commande encapsulant l'identifiant et les attributs validés pour la modification d'un poste existant (`id`, `libelle`, `nature`, `natureId`, `coutHoraire`).
 - **RequetePostes** : objet de requête paginée portant l'indice de page et le nombre d'éléments par page (`page`, `taille`).
-- **FormulairePosteDeTravail** : modèle riche d'interaction pour la création et la modification, validant les entrées brutes, produisant la commande adéquate et effaçant l'erreur de doublon dès que le libellé est modifié.
-- **PostesPort** : port secondaire exposant la consultation paginée via `RequetePostes`, la collecte des natures uniques de l'atelier, la création (`CommandeCreationPoste`), la modification (`CommandeModificationPoste`) et la suppression protégée par un `Result<T, Refus>`.
+- **FormulairePosteDeTravail** : modèle riche d'interaction pour la création et la modification, validant les entrées brutes, produisant la commande adéquate et effaçant l'erreur de doublon dès que le libellé est modifié. La nature est une **liste fermée** : le texte saisi ne fait que filtrer, seule une `NatureChoisie` du référentiel (`choisirNature`) rend le formulaire valide, et modifier le texte la désélectionne.
+- **PostesPort** : port secondaire exposant la consultation paginée via `RequetePostes`, la création (`CommandeCreationPoste`), la modification (`CommandeModificationPoste`) et la suppression protégée par un `Result<T, Refus>`.
 - **NatureDeTravailId** : Value Object de l'identifiant d'une nature du référentiel des natures de travail.
 - **NatureGeree** : une nature telle que la page la présente : identifiant, libellé, nombre de postes qui la portent
   (champ `postes` de l'API) et usage (`utilisee`). `supprimable` tant que rien ne s'en sert : une nature sans poste
@@ -45,7 +45,7 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 ## Responsabilités et invariants
 
 - Le libellé du poste est unique dans l'entreprise. Un refus 409 serveur (`LibellePosteDejaUtilise`) est reporté sur le champ libellé sans fermer le formulaire.
-- La nature du poste est obligatoire ; elle guide l'autocomplétion sur les métiers déjà existants dans l'atelier.
+- La nature du poste est obligatoire et se choisit dans le référentiel des natures (`NaturesDeTravailPort`) : aucune nature ne se crée depuis le formulaire du poste.
 - Un poste ne peut pas être supprimé s'il a déjà servi à pointer ou si des opérateurs y sont encore habilités. Le refus 409 (`PosteNonSupprimable`) affiche un message explicatif clair à l'utilisateur.
 - Les opérations d'écriture retournent un `Result<T, Refus>` : les refus métier attendus sont portés par l'état du résultat, tandis que les anomalies techniques imprévues rejettent la promesse.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.

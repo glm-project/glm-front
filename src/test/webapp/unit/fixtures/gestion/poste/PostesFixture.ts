@@ -3,7 +3,6 @@ import { ok, Result } from '@/app/shared/result/domain/Result';
 import { CommandeCreationPoste } from '@/gestion/contexts/poste/domain/CommandeCreationPoste';
 import { CommandeModificationPoste } from '@/gestion/contexts/poste/domain/CommandeModificationPoste';
 import { LibellePosteDejaUtilise } from '@/gestion/contexts/poste/domain/LibellePosteDejaUtilise';
-import { NatureDeTravail } from '@/gestion/contexts/poste/domain/NatureDeTravail';
 import { PosteDeTravail } from '@/gestion/contexts/poste/domain/PosteDeTravail';
 import { PosteDeTravailId } from '@/gestion/contexts/poste/domain/PosteDeTravailId';
 import { PostesPort } from '@/gestion/contexts/poste/domain/PostesPort';
@@ -44,17 +43,6 @@ export class PostesFixture extends PostesPort {
       this.lectureDifferee
       ?? Promise.resolve(new Page(this.liste.slice(requete.page * requete.taille, (requete.page + 1) * requete.taille), this.liste.length))
     );
-  }
-
-  override natures(): Promise<readonly NatureDeTravail[]> {
-    const distinct = new Map<string, NatureDeTravail>();
-    for (const poste of this.liste) {
-      const cle = poste.nature.cleNormalisee();
-      if (!distinct.has(cle)) {
-        distinct.set(cle, poste.nature);
-      }
-    }
-    return Promise.resolve([...distinct.values()].sort((left, right) => left.compare(right)));
   }
 
   override async creer(commande: CommandeCreationPoste): Promise<Result<void, LibellePosteDejaUtilise>> {

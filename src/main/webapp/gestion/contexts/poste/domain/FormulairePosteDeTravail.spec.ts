@@ -3,6 +3,7 @@ import { FormulairePosteDeTravail } from './FormulairePosteDeTravail';
 import { LibellePoste } from './LibellePoste';
 import { LibellePosteDejaUtilise } from './LibellePosteDejaUtilise';
 import { NatureDeTravail } from './NatureDeTravail';
+import { NatureDeTravailId } from './NatureDeTravailId';
 import { PosteDeTravail } from './PosteDeTravail';
 import { PosteDeTravailId } from './PosteDeTravailId';
 import { PosteIntrouvable } from './PosteIntrouvable';
@@ -15,6 +16,7 @@ describe('FormulairePosteDeTravail', () => {
     const poste = new PosteDeTravail(new PosteDeTravailId('tour-1'), {
       libelle: new LibellePoste('Tour 1'),
       nature: new NatureDeTravail('tournage'),
+      natureId: new NatureDeTravailId('nature-tournage'),
       coutHoraire,
     });
     const formulaire = FormulairePosteDeTravail.pourModification(poste);
@@ -28,6 +30,7 @@ describe('FormulairePosteDeTravail', () => {
         id: { value: 'tour-1' },
         libelle: { value: 'Tour 1' },
         nature: { value: 'tournage' },
+        natureId: { value: 'nature-tournage' },
         coutHoraire: attendu === undefined ? undefined : { value: attendu },
       },
     });
@@ -91,7 +94,7 @@ describe('FormulairePosteDeTravail', () => {
     ['45,5', 45.5],
   ])('should produce a validated creation command from entries with hourly cost %s', (cout, attendu) => {
     const initial = FormulairePosteDeTravail.pourCreation();
-    const formulaire = initial.avecLibelle('  Tour 1 ').avecNature(' tournage ').avecCoutHoraire(cout);
+    const formulaire = initial.avecLibelle('  Tour 1 ').choisirNature(tournageFixture).avecCoutHoraire(cout);
     const commande = formulaire.produireCommande();
 
     expect(formulaire.estValide()).toBe(true);
@@ -101,13 +104,14 @@ describe('FormulairePosteDeTravail', () => {
         type: 'CREATION',
         libelle: { value: 'Tour 1' },
         nature: { value: 'tournage' },
+        natureId: { value: 'nature-tournage' },
         coutHoraire: attendu === undefined ? undefined : { value: attendu },
       },
     });
   });
 
   it.each(['0', '-0.01', 'abc', 'Infinity', '1e999'])('should report an invalid hourly cost without producing a command: %s', cout => {
-    const formulaire = FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').avecNature('tournage').avecCoutHoraire(cout);
+    const formulaire = FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').choisirNature(tournageFixture).avecCoutHoraire(cout);
     const commande = formulaire.produireCommande();
 
     expect(formulaire.estValide()).toBe(false);
@@ -117,17 +121,37 @@ describe('FormulairePosteDeTravail', () => {
     expect(commande.ok).toBe(false);
   });
 
-  it.each([
-    ['', 'tournage'],
-    ['a'.repeat(101), 'tournage'],
-    ['Tour 1', ''],
-    ['Tour 1', 'a'.repeat(51)],
-  ])('should refuse an invalid label or nature (%s, %s)', (libelle, nature) => {
-    const formulaire = FormulairePosteDeTravail.pourCreation().avecLibelle(libelle).avecNature(nature);
-    const commande = formulaire.produireCommande();
+  it.each(['', 'a'.repeat(101)])('should refuse an invalid label %j', libelle => {
+    const formulaire = FormulairePosteDeTravail.pourCreation().avecLibelle(libelle).choisirNature(tournageFixture);
 
     expect(formulaire.estValide()).toBe(false);
-    expect(commande.ok).toBe(false);
+    expect(formulaire.produireCommande().ok).toBe(false);
+  });
+
+  it('should refuse a nature typed without choosing it from the list', () => {
+    const formulaire = FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').avecNature('tournage');
+
+    expect(formulaire.erreurNature()).toBe('Choisissez une nature dans la liste.');
+    expect(formulaire.produireCommande().ok).toBe(false);
+  });
+
+  it('should forget the chosen nature once its name is edited', () => {
+    const formulaire = formulaireValideFixture().avecNature('tournag');
+
+    expect(formulaire.erreurNature()).toBe('Choisissez une nature dans la liste.');
+  });
+
+  it('should keep the chosen nature while its name is unchanged', () => {
+    const formulaire = formulaireValideFixture().avecNature('tournage');
+
+    expect(formulaire.erreurNature()).toBeUndefined();
+  });
+
+  it('should start a creation on the nature given by the page', () => {
+    const formulaire = FormulairePosteDeTravail.pourCreation(tournageFixture).avecLibelle('Tour 1');
+
+    expect(formulaire.saisie.nature).toBe('tournage');
+    expect(formulaire.estValide()).toBe(true);
   });
 
   it('should start creation with empty entries and refuse an incomplete command', () => {
@@ -139,7 +163,7 @@ describe('FormulairePosteDeTravail', () => {
       ok: false,
       error: {
         libelle: 'Le libellé est obligatoire et limité à 100 caractères.',
-        nature: 'La nature est obligatoire et limitée à 50 caractères.',
+        nature: 'Choisissez une nature dans la liste.',
         coutHoraire: undefined,
         enregistrement: undefined,
       },
@@ -147,5 +171,7 @@ describe('FormulairePosteDeTravail', () => {
   });
 });
 
+const tournageFixture = { id: new NatureDeTravailId('nature-tournage'), libelle: new NatureDeTravail('tournage') };
+
 const formulaireValideFixture = (): FormulairePosteDeTravail =>
-  FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').avecNature('tournage');
+  FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').choisirNature(tournageFixture);

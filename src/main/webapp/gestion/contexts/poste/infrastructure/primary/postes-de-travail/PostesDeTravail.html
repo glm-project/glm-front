@@ -41,7 +41,7 @@
         [total]="etat().postes.length"
         (modifiee)="reload()"
         (supprimee)="apresSuppression()"
-        (nouveauPoste)="openForm(null, $event.libelle)"
+        (nouveauPoste)="openForm(null, $event)"
       />
       @if (etat().chargement) {
       <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="postes-loading">

@@ -13,7 +13,7 @@ import { MatTableModule } from '@angular/material/table';
 import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { CoutHoraire } from '../../../domain/CoutHoraire';
-import { NatureDeTravail } from '../../../domain/NatureDeTravail';
+import { NatureChoisie } from '../../../domain/NatureChoisie';
 import { NatureGeree } from '../../../domain/NatureGeree';
 import { NaturesDeTravailPort } from '../../../domain/NaturesDeTravailPort';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
@@ -120,7 +120,7 @@ export class PostesDeTravail implements OnInit {
     this.etat.update(etat => ({ ...etat, page: event.pageIndex, taille: event.pageSize }));
   }
 
-  protected openForm(poste: PosteDeTravail | null = null, nature?: NatureDeTravail): void {
+  protected openForm(poste: PosteDeTravail | null = null, nature?: NatureChoisie): void {
     const dialogRef = this.dialogs.open<PosteFormDialog, PosteFormDialogData, boolean>(PosteFormDialog, {
       data: { poste, ...(nature === undefined ? {} : { nature }) },
       viewContainerRef: this.viewContainerRef,

@@ -25,11 +25,13 @@ import { PostesDeTravail } from './PostesDeTravail';
 const tourFixture = new PosteDeTravail(new PosteDeTravailId('tour-1'), {
   libelle: new LibellePoste('Tour 1'),
   nature: new NatureDeTravail('tournage'),
+  natureId: new NatureDeTravailId('nature-tournage'),
   coutHoraire: new CoutHoraire(45.5),
 });
 const scieFixture = new PosteDeTravail(new PosteDeTravailId('scie-1'), {
   libelle: new LibellePoste('Scie 1'),
   nature: new NatureDeTravail('sciage'),
+  natureId: new NatureDeTravailId('nature-sciage'),
   coutHoraire: undefined,
 });
 
@@ -176,6 +178,7 @@ describe('PostesDeTravail page', () => {
       new PosteDeTravail(tourFixture.id, {
         libelle: new LibellePoste('Tour Modifié'),
         nature: tourFixture.nature,
+        natureId: tourFixture.natureId,
         coutHoraire: tourFixture.coutHoraire,
       }),
     ];
@@ -414,6 +417,7 @@ describe('PostesDeTravail page', () => {
         new PosteDeTravail(new PosteDeTravailId(String(index)), {
           libelle: new LibellePoste('Poste ' + String(index + 1)),
           nature: new NatureDeTravail('tournage'),
+          natureId: new NatureDeTravailId('nature-tournage'),
           coutHoraire: undefined,
         }),
     );

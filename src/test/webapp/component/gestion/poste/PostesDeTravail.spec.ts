@@ -35,7 +35,7 @@ describe('Workstation interactions and rendering', () => {
     whenVisitingSettings();
     whenOpeningCreation();
     whenReplacing('poste-libelle', 'Tour 1');
-    whenReplacing('poste-nature', 'tournage');
+    whenPickingNature('tournage');
     whenSubmittingInvalidEntries();
     whenTryingToDismissPendingSave();
     whenCompletingCreation(response);
@@ -196,7 +196,7 @@ const whenReplacing = (selector: string, value: string): void => {
 const whenCreating = (libelle: string, nature: string, cout: string): void => {
   whenOpeningCreation();
   whenReplacing('poste-libelle', libelle);
-  whenReplacing('poste-nature', nature);
+  whenPickingNature(nature);
   whenReplacing('poste-cout', cout);
   whenSaving('posteCreate');
 };
@@ -236,7 +236,7 @@ const thenDeletionIsRefused = (): void => {
 };
 const thenValidationIsVisible = (api: PostesApiFixture): void => {
   cy.get(dataSelector('poste-libelle-error')).should('contain.text', 'obligatoire');
-  cy.get(dataSelector('poste-nature-error')).should('contain.text', 'obligatoire');
+  cy.get(dataSelector('poste-nature-error')).should('contain.text', 'Choisissez une nature dans la liste.');
   cy.get(dataSelector('poste-cout-error')).should('contain.text', 'strictement positif');
   cy.wrap(api.writes).should('be.empty');
 };
@@ -260,4 +260,9 @@ const thenMobileFormIsUsable = (): void => {
   cy.get(dataSelector('poste-save')).should('be.visible');
   cy.get(dataSelector('poste-cancel')).should('be.visible');
   cy.screenshot('postes-form-mobile', { capture: 'viewport' });
+};
+const whenPickingNature = (libelle: string): void => {
+  cy.get(dataSelector('poste-nature')).clear();
+  cy.get(dataSelector('poste-nature')).type(libelle.slice(0, 3));
+  cy.get(dataSelector('poste-nature-option')).contains(libelle).click();
 };
