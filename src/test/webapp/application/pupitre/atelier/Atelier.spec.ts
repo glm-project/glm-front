@@ -136,6 +136,17 @@ describe('Pupitre workshop journey', () => {
     thenRefusalReconcilesElementAndHeader('piece-1', '204', 'Pointage refusé par le serveur');
   });
 
+  it('should remove an optimistic pointage without any message when the server ignores it', () => {
+    givenAnEnrolledPupitre(referentielFixture);
+    whenDesignatingOperator049();
+    const refusal = givenStartingElementWillBeIgnored();
+
+    whenStartingElementOptimistically('piece-1');
+    whenServerAnswers(refusal);
+
+    thenIgnoredPointageLeavesNoTraceOnElementAndHeader('piece-1');
+  });
+
   it('should show a pause optimistically while the server response is pending', () => {
     givenAnEnrolledPupitre(referentielActifFixture);
     whenDesignatingOperator049();
@@ -283,13 +294,16 @@ describe('Pupitre workshop journey', () => {
     cy.wait('@pointage');
   };
 
-  const givenStartingElementWillBeRefused = (): ReturnType<typeof interceptForever> => {
+  const givenStartingElementWillBeRefused = (): ReturnType<typeof interceptForever> =>
+    givenStartingElementWillBeAnsweredBy('urn:glm:erreur:atelier:suivi-d-atelier-cloture');
+
+  const givenStartingElementWillBeIgnored = (): ReturnType<typeof interceptForever> =>
+    givenStartingElementWillBeAnsweredBy('urn:glm:erreur:atelier:pointage-ignore');
+
+  const givenStartingElementWillBeAnsweredBy = (urn: string): ReturnType<typeof interceptForever> => {
     pendingResponse = interceptForever(
       { method: 'POST', url: '/api/atelier/suivis/piece-1/pointages' },
-      {
-        statusCode: 409,
-        body: { type: 'urn:glm:erreur:atelier:transition-d-atelier-interdite', message: 'Pointage refusé par le serveur' },
-      },
+      { statusCode: 409, body: { type: urn, message: 'Pointage refusé par le serveur' } },
       'refusedPointage',
     );
     return pendingResponse;
@@ -316,7 +330,7 @@ describe('Pupitre workshop journey', () => {
       { method: 'POST', url: '/api/atelier/suivis/piece-active-1/pointages' },
       {
         statusCode: 409,
-        body: { type: 'urn:glm:erreur:atelier:transition-d-atelier-interdite', message: 'Pause refusée par le serveur' },
+        body: { type: 'urn:glm:erreur:atelier:suivi-d-atelier-cloture', message: 'Pause refusée par le serveur' },
       },
       'refusedSuspension',
     );
@@ -388,6 +402,14 @@ describe('Pupitre workshop journey', () => {
       .find(dataSelector('duration'))
       .should('not.exist');
     cy.get(dataSelector('header-message')).should('contain.text', context).and('contain.text', message);
+  };
+
+  const thenIgnoredPointageLeavesNoTraceOnElementAndHeader = (elementId: string): void => {
+    cy.wait('@refusedPointage');
+    cy.get(dataSelector(`tile-${elementId}`))
+      .find(dataSelector('duration'))
+      .should('not.exist');
+    cy.get(dataSelector('header-message')).should('be.empty');
   };
 
   const thenTheOperatorIsOptimisticallyOnPause = (): void => {

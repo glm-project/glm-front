@@ -24,6 +24,7 @@ import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@a
 import { TestBed } from '@angular/core/testing';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
@@ -100,6 +101,7 @@ const referenceFixture: ReferentielDuPupitre = {
     },
   ],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const publicationFixture = {
   id: 'piece',
@@ -197,7 +199,7 @@ describe('Durable pupitre HTTP exchange', () => {
       order: 'non conformity then finish',
       gestes: [nonConformiteFixture, finFixture],
       bodies: [nonConformiteBodyFixture, finBodyFixture],
-      code: 'activite-visee-incoherente',
+      code: 'poste-de-travail-introuvable',
     },
     {
       order: 'finish then non conformity',
@@ -322,6 +324,7 @@ describe('Durable pupitre HTTP exchange', () => {
       },
     ],
     categories: [],
+    dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
   });
   const afterAcceptingLastCompanyGesture = (before: JournalDuPupitre): JournalDuPupitre => ({
     ...before,

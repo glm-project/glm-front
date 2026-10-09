@@ -202,17 +202,16 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   it('should expose every stable business refusal, including codes outside the old allowlist', async () => {
     const refused = whenSending(ouvertureFixture);
 
-    await whenServerRefusesWrite('urn:glm:erreur:atelier:identifiant-evenement-reutilise', 'collision');
+    await whenServerRefusesWrite('urn:glm:erreur:atelier:evenement-anterieur-a-l-engagement', 'collision');
 
     await thenBusinessRefusalIs(refused);
   });
 
   it.each<[string, ReplayDecision]>([
     ['urn:glm:erreur:atelier:saisie-concurrente', 'RELIRE_ET_REJOUER'],
-    ['urn:glm:erreur:atelier:activite-visee-introuvable', 'PROPAGER'],
-    ['urn:glm:erreur:atelier:activite-visee-incoherente', 'PROPAGER'],
+    ['urn:glm:erreur:atelier:pointage-ignore', 'PROPAGER'],
+    ['urn:glm:erreur:atelier:suivi-d-atelier-cloture', 'PROPAGER'],
     ['urn:glm:erreur:autre:saisie-concurrente', 'PROPAGER'],
-    ['urn:glm:erreur:atelier:identifiant-evenement-reutilise', 'PROPAGER'],
   ])('should supply a domain refusal allowing %s to decide %s', async (code, decision) => {
     const refused = whenSending(ouvertureFixture);
 
@@ -343,7 +342,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   const thenBusinessRefusalIs = async (operation: Promise<Result<void, RefusDePublication>>): Promise<void> => {
     const result = await operation;
     expect(result.ok).toBe(false);
-    expect(result).toMatchObject({ error: { code: 'urn:glm:erreur:atelier:identifiant-evenement-reutilise', message: 'collision' } });
+    expect(result).toMatchObject({ error: { code: 'urn:glm:erreur:atelier:evenement-anterieur-a-l-engagement', message: 'collision' } });
   };
   const thenReplayDecisionIs = async (
     operation: Promise<Result<void, RefusDePublication>>,

@@ -8,6 +8,7 @@ import {
   JournalDuPupitre,
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { projectReferentiel } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitreProjection';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
@@ -28,6 +29,21 @@ const referenceFixture: ReferentielDuPupitre = {
   categories: [],
   dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
+const suiviSansActiviteFixture = {
+  id: 'piece',
+  nom: 'OF-1',
+  categorie: 'MOULE',
+  etat: 'EN_ATTENTE',
+  activites: [],
+  evenements: [],
+} as const;
+const activiteDuServeurFixture = {
+  operateurId: 'jean',
+  categorie: 'TRAVAIL',
+  depuis: '2026-09-05T07:30:00Z',
+  ouverture: 'ouverture-du-serveur',
+  echeance: '2026-09-05T20:30:00.000Z',
+} as const;
 const gesteFixture: GesteDePointage = {
   id: 'arrivee',
   dateDeSurvenue: '2026-09-05T08:00:00Z',
@@ -435,6 +451,17 @@ describe('PupitreSynchronization', () => {
     thenNoTechnicalFailureWasReported();
   });
 
+  it('should drop the local effect of an ignored pointage and settle on the referential, keeping the refusal in the journal', async () => {
+    await givenAPendingOpeningOnAPieceWithoutActivity();
+    givenAnAuthorizedSession();
+    givenTheServerIgnoresThePointageAndShowsItsOwnActivity();
+
+    await whenSynchronizing();
+
+    thenOnlyTheActivityOfTheServerRemains();
+    thenEventRefused('urn:glm:erreur:atelier:pointage-ignore', 'Pointage ignoré');
+  });
+
   it('should mark disconnected when unexpected technical failure occurs during exchange', async () => {
     await givenASelectedCompanyWithPendingWork();
     givenAnAuthorizedSession();
@@ -630,6 +657,18 @@ describe('PupitreSynchronization', () => {
     };
   };
 
+  const givenAPendingOpeningOnAPieceWithoutActivity = async (): Promise<void> => {
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), { ...referenceFixture, suivis: [suiviSansActiviteFixture] });
+    await journal.append(Entreprise.of('entreprise-a'), [gesteFixture]);
+  };
+  const givenTheServerIgnoresThePointageAndShowsItsOwnActivity = (): void => {
+    server.onSend = () =>
+      err(new RefusDePublication('urn:glm:erreur:atelier:pointage-ignore', 'Pointage ignoré', MotifDeRefus.from('pointage-ignore')));
+    server.onReferentiel = (): ReferentielDuPupitre => ({
+      ...referenceFixture,
+      suivis: [{ ...suiviSansActiviteFixture, etat: 'EN_COURS', activites: [activiteDuServeurFixture] }],
+    });
+  };
   const givenUnauthorizedGestureRefusal = (): void => {
     server.onSend = () => err(new RefusDePublication('refus-invalide', 'Opérateur non habilité'));
   };
@@ -722,6 +761,10 @@ describe('PupitreSynchronization', () => {
   };
   const thenEventAccepted = (): void => {
     expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE' }]);
+  };
+  const thenOnlyTheActivityOfTheServerRemains = (): void => {
+    const projected = exposed === undefined ? undefined : projectReferentiel(exposed);
+    expect(projected?.suivis[0]?.activites).toEqual([activiteDuServeurFixture]);
   };
   const thenEventRefused = (code: string, message: string): void => {
     expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'REFUSE', refus: { code, message } }]);

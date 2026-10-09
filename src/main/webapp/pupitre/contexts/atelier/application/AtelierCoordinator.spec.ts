@@ -750,10 +750,10 @@ describe('AtelierCoordinator', () => {
     await thenRefusalIs('saisie-concurrente');
   });
 
-  it('should preserve a stable target refusal after one concurrent retry', async () => {
+  it('should preserve a stable business refusal after one concurrent retry', async () => {
     await givenPendingOpening();
     givenAuthorizedAccess();
-    givenServerFailures(refusalFixture('saisie-concurrente'), refusalFixture('activite-visee-introuvable'));
+    givenServerFailures(refusalFixture('saisie-concurrente'), refusalFixture('operateur-non-habilite'));
 
     await whenSynchronizing();
 

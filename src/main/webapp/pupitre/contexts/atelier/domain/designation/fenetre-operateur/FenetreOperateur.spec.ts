@@ -56,6 +56,8 @@ const travailALaFraiseuseFixture: ActiviteDuPupitre = {
   posteId: 'fraiseuse',
 };
 
+const POINTAGE_IGNORE = 'urn:glm:erreur:atelier:pointage-ignore';
+const SUIVI_CLOTURE = 'urn:glm:erreur:atelier:suivi-d-atelier-cloture';
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
@@ -619,6 +621,25 @@ describe('FenetreOperateur', () => {
     thenLatestRefusalNamesTheElement();
   });
 
+  it('should never expose the refusal of an ignored pointage', () => {
+    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+
+    whenReconciling(givenTheGesturesWereRefusedWith(gestures, [POINTAGE_IGNORE, POINTAGE_IGNORE]));
+
+    thenNoRefusalIsVisible();
+  });
+
+  it.each([
+    ['ignored then closed', [POINTAGE_IGNORE, SUIVI_CLOTURE]],
+    ['closed then ignored', [SUIVI_CLOTURE, POINTAGE_IGNORE]],
+  ])('should expose the closed element refusal of a lot whose other pointage was %s', (_order, codes) => {
+    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+
+    whenReconciling(givenTheGesturesWereRefusedWith(gestures, codes));
+
+    thenLatestRefusalNamesTheElement();
+  });
+
   it('should stop exposing a refusal as soon as another intent starts', () => {
     const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
     whenReconciling(givenTheDecisionWasRefused(gestures));
@@ -1110,6 +1131,18 @@ describe('FenetreOperateur', () => {
       geste,
       etat: 'REFUSE',
       refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." },
+    })),
+  });
+  const messageOf = (code: string): { code: string; message: string } => ({
+    code,
+    message: code === POINTAGE_IGNORE ? 'Le pointage est ignoré.' : "L'élément a été clôturé.",
+  });
+  const givenTheGesturesWereRefusedWith = (gestures: readonly GesteDePointage[], codes: readonly string[]): JournalDuPupitre => ({
+    ...structuredClone(vueFixture),
+    evenements: gestures.map((geste, index) => ({
+      geste,
+      etat: 'REFUSE',
+      refus: messageOf(requiredFixture(codes[index], 'refusal code')),
     })),
   });
   const givenTheDecisionWasRefusedAfterTheElementDisappeared = (

@@ -166,7 +166,7 @@ export class FenetreOperateur {
   }
   afterReconciling(entreprise: Entreprise, vue: JournalDuPupitre): FenetreOperateur {
     if (!this.belongsTo(entreprise)) return this;
-    const refus = new EvenementsDuJournal(vue.evenements).latestRefusalAmong(this.etat.contextesParGeste.gesteIds());
+    const refus = new EvenementsDuJournal(vue.evenements).latestShownRefusalAmong(this.etat.contextesParGeste.gesteIds());
     const contexte = refus === undefined ? undefined : this.etat.contextesParGeste.contexteOf(refus.geste.id);
     return this.with({
       vue,

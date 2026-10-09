@@ -93,7 +93,7 @@ describe('API relay', () => {
   });
 
   it('should answer with what the API answered', async () => {
-    const refusal = new Response('{"type":"urn:glm:erreur:atelier:identifiant-evenement-reutilise"}', { status: 409 });
+    const refusal = new Response('{"type":"urn:glm:erreur:atelier:pointage-ignore"}', { status: 409 });
     const { forward } = givenAnApiAnswering(refusal);
 
     const answer = await whenTheBrowserAsks(

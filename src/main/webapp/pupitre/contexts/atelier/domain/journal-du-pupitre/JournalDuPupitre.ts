@@ -1,3 +1,5 @@
+import { MotifDeRefus } from '../refus/MotifDeRefus';
+
 export type EtatDAtelier = 'EN_ATTENTE' | 'EN_COURS' | 'INTERROMPU';
 export type TypeDePointage = 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
 
@@ -122,10 +124,10 @@ export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre =
       }),
 });
 
-const isRefusalAmong =
+const isShownRefusalAmong =
   (gesteIds: ReadonlySet<string>) =>
   (evenement: EvenementDuJournal): evenement is EvenementRefuse =>
-    evenement.etat === 'REFUSE' && gesteIds.has(evenement.geste.id);
+    evenement.etat === 'REFUSE' && gesteIds.has(evenement.geste.id) && MotifDeRefus.fromUrn(evenement.refus.code).isShownToTheOperator();
 
 export class EvenementsDuJournal {
   private readonly evenements: readonly EvenementDuJournal[];
@@ -146,8 +148,8 @@ export class EvenementsDuJournal {
     return this.evenements.some(evenement => evenement.geste.id === gesteId);
   }
 
-  latestRefusalAmong(gesteIds: ReadonlySet<string>): EvenementRefuse | undefined {
-    return [...this.evenements].reverse().find(isRefusalAmong(gesteIds));
+  latestShownRefusalAmong(gesteIds: ReadonlySet<string>): EvenementRefuse | undefined {
+    return [...this.evenements].reverse().find(isShownRefusalAmong(gesteIds));
   }
 }
 
