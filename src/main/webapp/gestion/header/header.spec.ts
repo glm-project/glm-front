@@ -6,12 +6,17 @@ import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/
 
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
+import { ParametrageFixture } from '@test/unit/fixtures/gestion/parametrage/ParametrageFixture';
 import { dataSelector } from '@test/utils/DataSelector';
+import { ImageDuLogo } from '../contexts/parametrage/domain/ImageDuLogo';
+import { ParametragePort } from '../contexts/parametrage/domain/ParametragePort';
+import { VersionDuLogo } from '../contexts/parametrage/domain/VersionDuLogo';
 import { GestionHeader } from './header';
 
-const configureHeaderOf = async (roles: readonly string[]): Promise<void> => {
+const configureHeaderOf = async (roles: readonly string[], parametrage = new ParametrageFixture()): Promise<void> => {
   await TestBed.configureTestingModule({
     providers: [
+      { provide: ParametragePort, useValue: parametrage },
       provideRouter([{ path: '**', children: [] }]),
       { provide: ComponentFixtureAutoDetect, useValue: true },
       { provide: InMemoryGestionAuthentication, useFactory: () => new InMemoryGestionAuthentication(roles) },
@@ -212,5 +217,72 @@ describe('Gestion header, according to the realm roles', () => {
   const thenTheOtherDestinationsAreOffered = (): void => {
     expect(document.querySelector(dataSelector('gestion-navigation-supervision')) !== null).toBe(true);
     expect(document.querySelector(dataSelector('gestion-navigation-operateurs')) !== null).toBe(true);
+  };
+});
+
+describe('Gestion header, with the logo of the company', () => {
+  const LOGO_FIXTURE = { version: new VersionDuLogo('0123456789abcdef'), image: new ImageDuLogo('data:image/png;base64,iVBORw0K') };
+  let parametrage: ParametrageFixture;
+
+  beforeEach(() => {
+    parametrage = new ParametrageFixture();
+  });
+
+  it('should show the GLM logo until the session is open, without reading the settings', async () => {
+    givenTheCompanyHasALogo();
+    await configureHeaderOf([ROLE_GESTIONNAIRE], parametrage);
+
+    await showTheHeader();
+
+    thenTheGlmLogoIsShown();
+  });
+
+  it('should show the logo of the company once the session is open', async () => {
+    givenTheCompanyHasALogo();
+    await configureHeaderOf(['ROLE_CONSULTANT'], parametrage);
+    const header = await showTheHeader();
+
+    await whenTheSessionOpens(header);
+
+    thenTheCompanyLogoIsShown('data:image/png;base64,iVBORw0K');
+  });
+
+  it('should keep the GLM logo for a company without a logo', async () => {
+    await configureHeaderOf([ROLE_GESTIONNAIRE], parametrage);
+    const header = await showTheHeader();
+
+    await whenTheSessionOpens(header);
+
+    thenTheGlmLogoIsShown();
+  });
+
+  it('should keep the GLM logo when the logo cannot be read', async () => {
+    givenTheCompanyHasALogo();
+    parametrage.imageFailure = new Error('panne');
+    await configureHeaderOf([ROLE_GESTIONNAIRE], parametrage);
+    const header = await showTheHeader();
+
+    await whenTheSessionOpens(header);
+
+    thenTheGlmLogoIsShown();
+  });
+
+  const givenTheCompanyHasALogo = (): void => {
+    parametrage.logo = LOGO_FIXTURE;
+  };
+
+  const whenTheSessionOpens = async (header: ComponentFixture<GestionHeader>): Promise<void> => {
+    await openTheSession(header);
+    await new Promise(resolve => setTimeout(resolve));
+    await header.whenStable();
+  };
+
+  const thenTheGlmLogoIsShown = (): void => {
+    expect(document.querySelector(dataSelector('logo-de-l-entreprise'))).toBeNull();
+    expect(document.querySelector('glm-marque-glm')).not.toBeNull();
+  };
+
+  const thenTheCompanyLogoIsShown = (adresse: string): void => {
+    expect(document.querySelector(dataSelector('logo-de-l-entreprise'))?.getAttribute('src')).toBe(adresse);
   };
 });

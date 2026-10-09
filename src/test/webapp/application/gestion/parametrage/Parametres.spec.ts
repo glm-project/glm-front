@@ -48,6 +48,13 @@ describe('Company settings in gestion', () => {
     thenTheGlmLogoIsBack(api);
   });
 
+  it('should show the logo of the company in the header, in place of the GLM logo', () => {
+    givenSettingsWithALogo();
+    whenVisitingSettings();
+
+    thenTheHeaderShowsTheCompanyLogo();
+  });
+
   it('should send a consultant who opens the settings to the supervision, without the settings access', () => {
     givenSettings();
     whenVisitingSettingsAsAConsultant();
@@ -140,6 +147,14 @@ const thenTheGlmLogoIsBack = (api: ParametrageApiFixture): void => {
   cy.get(dataSelector('logo-glm')).should('be.visible');
   cy.get(dataSelector('logo-retirer')).should('not.exist');
   cy.wrap(api).its('retraits').should('eq', 1);
+};
+
+const thenTheHeaderShowsTheCompanyLogo = (): void => {
+  cy.get(dataSelector('gestion-header'))
+    .find(dataSelector('logo-de-l-entreprise'))
+    .should('be.visible')
+    .and('have.attr', 'src')
+    .and('match', /^data:image\/png;base64,/);
 };
 
 const thenTheConsultantIsOnTheSupervisionWithoutTheSettingsAccess = (): void => {
