@@ -8,12 +8,15 @@
     } } @else {
     <button
       type="button"
-      class="heading-target truncate text-section"
+      class="heading-target text-section"
       data-selector="header-heading"
       [glmLongPress]="administrationPressMs"
       (longPressed)="reinitialisationRequested.emit()"
     >
-      {{ heading() }}
+      @if (logo(); as image) {
+      <img class="logo-entreprise" [src]="image" alt="" data-selector="header-logo" />
+      }
+      <span class="truncate">{{ heading() }}</span>
     </button>
     }
   </div>

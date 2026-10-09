@@ -69,7 +69,15 @@ export class HttpAtelierExchange extends AtelierExchangePort {
       suivis: referentiel.suivis.map(toSuivi),
       categories: referentiel.categories,
       dureeMaximaleDActiviteEnMs: dureeEnMillisecondes(referentiel.dureeMaximaleDActivite),
+      ...(referentiel.logo === undefined ? {} : { logo: { version: referentiel.logo.version } }),
     };
+  }
+
+  override async imageDuLogo(version: string): Promise<string> {
+    const image = await this.api.readImage('/api/parametrage/logo/{version}', { pathParams: { version } });
+    let binaire = '';
+    for (const octet of new Uint8Array(await image.arrayBuffer())) binaire += String.fromCodePoint(octet);
+    return `data:${image.type};base64,${btoa(binaire)}`;
   }
 
   override async send(geste: GesteDePointage): Promise<Result<void, RefusDePublication>> {

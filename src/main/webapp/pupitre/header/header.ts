@@ -23,6 +23,7 @@ export class PupitreHeader {
   readonly connected = input.required<boolean>();
   readonly operateur = input<IdentiteOperateurDesigne>();
   readonly enPause = input(false);
+  readonly logo = input<string>();
   readonly message = input<MessageDAtelierVisible>();
   readonly finRequested = output();
   readonly reinitialisationRequested = output();

@@ -23,6 +23,10 @@ export class AtelierExchangeFixture extends AtelierExchangePort {
     return this.answer(() => structuredClone(this.reference));
   }
 
+  override imageDuLogo(): Promise<string> {
+    return this.answer(() => 'data:image/png;base64,iVBORw0K');
+  }
+
   override send(): Promise<Result<void, RefusDePublication>> {
     return this.answer(() => ok(undefined));
   }

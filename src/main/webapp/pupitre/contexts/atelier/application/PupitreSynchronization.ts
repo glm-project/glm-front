@@ -8,9 +8,11 @@ import {
   EvenementsDuJournal,
   GesteDePointage,
   JournalDuPupitre,
+  ReferentielDuPupitre,
   refusePublication,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { LogoDuPupitre, suiteDuLogo } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/LogoDuPupitre';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { BilanDePublication } from '@/pupitre/contexts/atelier/domain/synchronisation/BilanDePublication';
@@ -108,7 +110,8 @@ export class PupitreSynchronization {
 
   private async refreshReferentiel(entreprise: Entreprise, token: string, publish: PupitrePublisher): Promise<void> {
     try {
-      const referentiel = await this.serveur.referentiel();
+      const recu = await this.serveur.referentiel();
+      const referentiel = await this.avecLeLogo(recu, (await this.journal.read(entreprise)).referentiel?.logo);
       await this.authentication.synchronizeSession();
       if (this.hasUnchangedAuthorization(entreprise, token)) {
         const state = await this.journal.saveReferentiel(entreprise, referentiel);
@@ -116,6 +119,22 @@ export class PupitreSynchronization {
       }
     } catch (failure: unknown) {
       this.errorHandler.handleError(failure);
+    }
+  }
+
+  private async avecLeLogo(recu: ReferentielDuPupitre, garde: LogoDuPupitre | undefined): Promise<ReferentielDuPupitre> {
+    const { operateurs, suivis, categories, dureeMaximaleDActiviteEnMs } = recu;
+    const logo = await this.logoAGarder(suiteDuLogo(recu.logo, garde), garde);
+    return { operateurs, suivis, categories, dureeMaximaleDActiviteEnMs, ...(logo === undefined ? {} : { logo }) };
+  }
+
+  private async logoAGarder(suite: ReturnType<typeof suiteDuLogo>, garde: LogoDuPupitre | undefined): Promise<LogoDuPupitre | undefined> {
+    if (suite.kind === 'GARDER') return suite.logo;
+    try {
+      return { version: suite.version, image: await this.serveur.imageDuLogo(suite.version) };
+    } catch (failure: unknown) {
+      this.errorHandler.handleError(failure);
+      return garde;
     }
   }
 
