@@ -2,7 +2,7 @@ import { ActiviteEchue, DossierAnomalie } from '../../../domain/dossier/DossierA
 import { EchelleFrise, Graduation } from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise } from './PoigneeDeFrise';
 
-export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activite'>;
+export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activite' | 'borneDeFin'>;
 
 export interface EntreesDeFrise {
   readonly vue: VueDeFrise;
@@ -41,9 +41,19 @@ export interface RepereFrise {
   readonly nonConformite: boolean;
 }
 
+export interface ClotureFrise {
+  readonly kind: 'CLOTURE';
+  readonly cle: string;
+  readonly instant: number;
+  readonly gauche: number;
+  readonly haut: number;
+  readonly nom: string;
+  readonly heure: string;
+}
+
 export type RepereASituer = Omit<RepereFrise, 'gauche' | 'haut'>;
 
-export type ElementFrise = BarreFrise | RepereFrise | PositionDePoignee;
+export type ElementFrise = BarreFrise | RepereFrise | ClotureFrise | PositionDePoignee;
 
 export interface LectureDePoignee {
   readonly valeur: number;

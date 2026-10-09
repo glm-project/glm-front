@@ -4,6 +4,7 @@ import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { heureDe, libelleActivite, libelleCategorie, libelleDuGeste } from '../PresentationDossier';
 import {
   BarreFrise,
+  ClotureFrise,
   ElementFrise,
   EmplacementDePoignee,
   EntreesDeFrise,
@@ -40,6 +41,16 @@ export const repereDe = (pointage: PointageAnomalie): RepereASituer => ({
   nonConformite: pointage.fait.type === 'NON_CONFORMITE',
 });
 
+export type ClotureASituer = Omit<ClotureFrise, 'gauche' | 'haut'>;
+
+export const clotureDe = (borneDeFin: string): ClotureASituer => ({
+  kind: 'CLOTURE',
+  cle: 'cloture',
+  instant: Date.parse(borneDeFin),
+  nom: [formatInstantTimeWithSeconds(new Date(borneDeFin)), QUALIFICATIFS.cloture].join(' · '),
+  heure: heureDe(borneDeFin),
+});
+
 export const barreDe = (activite: ActiviteEchue, haut: number, contexte: ContexteDeFrise): BarreFrise => {
   const gauche = positionSur(contexte.echelle, Date.parse(activite.debut));
   return {
@@ -70,7 +81,7 @@ export const lectureDeLaFrise = ({ vue, poignee, placement }: EntreesDeFrise) =>
   const pointages = pointagesDeLaFrise(vue);
   return {
     pointages,
-    echelle: echelleDeLaFrise(instantsRecus(pointages, vue.activite), poignee, placement),
+    echelle: echelleDeLaFrise(instantsRecus(pointages, vue.activite, vue.borneDeFin), poignee, placement),
   };
 };
 

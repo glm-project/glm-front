@@ -69,6 +69,7 @@ export const LIBELLES_ANOMALIES = {
   frise: {
     heureProposee: 'heure proposée',
     finAutomatique: 'Fin automatique',
+    cloture: 'Clôture',
     poignee: 'Heure proposée du fait',
     heureInconnue: 'Heure ?',
     aucuneHeure: 'Aucune heure posée',

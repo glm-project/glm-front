@@ -33,8 +33,13 @@ const heureEntiereApres = (instant: number): number => {
   return avant === instant ? instant : avant + UNE_HEURE;
 };
 
-export const instantsRecus = (pointages: readonly PointageAnomalie[], activite: ActiviteEchue): readonly number[] =>
-  [...pointages.map(pointage => pointage.fait.instant), activite.debut, activite.echeance]
+export const instantsRecus = (pointages: readonly PointageAnomalie[], activite: ActiviteEchue, borneDeFin?: string): readonly number[] =>
+  [
+    ...pointages.map(pointage => pointage.fait.instant),
+    activite.debut,
+    activite.echeance,
+    ...(borneDeFin === undefined ? [] : [borneDeFin]),
+  ]
     .map(instant => Date.parse(instant))
     .filter(Number.isFinite);
 

@@ -13,6 +13,7 @@ import {
 import { EchelleFrise, graduationsDe, positionSur } from './EchelleFrise';
 import {
   barreDe,
+  clotureDe,
   ESPACE_ENTRE_RANGEES_PX,
   HAUTEUR_D_UN_ELEMENT_PX,
   HAUTEUR_DE_L_AXE_PX,
@@ -24,6 +25,7 @@ import {
   repereDe,
 } from './ElementsDeFrise';
 import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
+import { clotureDeLaFrise } from './PointagesDeLaFrise';
 
 const barreJusquALaPoignee = (barre: BarreFrise, poignee: PoigneeDeFrise, echelle: EchelleFrise): BarreFrise => ({
   ...barre,
@@ -70,8 +72,14 @@ export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise =>
   const haut = HAUTEUR_DE_L_AXE_PX + ESPACE_ENTRE_RANGEES_PX;
   const barreRecue = barreDe(activite, haut, { now, echelle });
   const barre = poignee === undefined ? barreRecue : barreJusquALaPoignee(barreRecue, poignee, echelle);
-  const reperes = pointages.map((pointage): RepereFrise => ({ ...repereDe(pointage), gauche: barre.gauche, haut }));
-  const elements = [barre, ...reperes, ...positionsDePoignee(entrees, activite, barre, echelle, largeur)].sort(
+  const reperes = pointages.map((pointage): RepereFrise => ({
+    ...repereDe(pointage),
+    gauche: positionSur(echelle, Date.parse(pointage.fait.instant)),
+    haut,
+  }));
+  const borne = clotureDeLaFrise(vue);
+  const clotures = borne === undefined ? [] : [{ ...clotureDe(borne), gauche: positionSur(echelle, Date.parse(borne)), haut }];
+  const elements = [barre, ...reperes, ...clotures, ...positionsDePoignee(entrees, activite, barre, echelle, largeur)].sort(
     (gauche, droite) => gauche.instant - droite.instant,
   );
   return {

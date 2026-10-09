@@ -71,6 +71,18 @@
       <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ element.symbole }}</span>
       <time class="text-(length:--text-label) tabular-nums" data-selector="anomalie-pointage-heure">{{ element.heure }}</time>
     </div>
+    } @case ('CLOTURE') {
+    <div
+      role="img"
+      class="repere cloture cursor-default"
+      data-selector="anomalie-cloture"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
+      [attr.aria-label]="element.nom"
+    >
+      <span aria-hidden="true">{{ libelles.frise.cloture }}</span>
+      <time class="text-(length:--text-label) tabular-nums">{{ element.heure }}</time>
+    </div>
     } @case ('POIGNEE') { @let sansHeure = element.heure === 'SANS_HEURE';
     <div
       role="slider"

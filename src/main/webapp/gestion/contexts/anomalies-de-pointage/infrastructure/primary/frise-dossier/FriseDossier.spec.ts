@@ -55,6 +55,12 @@ const vueDuJour = (debut: string, echeance: string, jour: number, jourEcheance: 
 
 const vueEntreInstants = (debut: Date, echeance: Date): VueDeFrise => vueDe(activiteA('a-1', debut.toISOString(), echeance.toISOString()));
 
+const avecLaBorne = (vue: VueDeFrise, heure: string, ...pointages: readonly PointageAnomalie[]): VueDeFrise => ({
+  ...vue,
+  journal: [...vue.journal, ...pointages],
+  borneDeFin: instantAt(heure),
+});
+
 const dossierDeLaFinAutomatique = (): VueDeFrise => vueDe(activiteFixture('a-1', '08:00', '12:00'));
 
 const poigneeFixture = (heure: string, surcharge: Partial<PoigneeDeFrise> = {}): PoigneeDeFrise => ({
@@ -501,6 +507,79 @@ describe('Frise of a dossier', () => {
     await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:05'));
 
     thenTheHandleIsNamedAndShows('Heure proposée du fait', '10:05');
+  });
+
+  describe('of the bound of the end', () => {
+    it('should draw the marker of the next start of the key on the instant that bounds the end', async () => {
+      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '20:00', pointageFixture('debut-suivant', 'DEMARRAGE', '20:00'));
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheMarkersAre(['debut-a-1', 'debut-suivant']);
+      thenTheMarkerIsNamed('debut-suivant', '20:00:00 · Démarrage');
+      thenTheMarkerStandsAtTheHour('debut-suivant', 20);
+    });
+
+    it('should draw the marker of a next start in non-conformity as a non-conformity', async () => {
+      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '20:00', pointageFixture('nc-suivante', 'DEMARRAGE_NC', '20:00'));
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheMarkerFlagIs('nc-suivante', 'data-non-conformite', 'true');
+    });
+
+    it('should draw a closure marker when no start of the key bounds the end', async () => {
+      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '20:00');
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheMarkersAre(['debut-a-1']);
+      thenTheClosureIsNamed('20:00:00 · Clôture');
+      thenTheClosureReads('Clôture 20:00');
+    });
+
+    it('should draw a closure marker rather than a stop that falls on the instant of the bound', async () => {
+      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '20:00', pointageFixture('fin-20', 'ARRET', '20:00'));
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheMarkersAre(['debut-a-1']);
+      thenTheClosureIsNamed('20:00:00 · Clôture');
+    });
+
+    it('should draw no marker for the bound when nothing bounds the end', async () => {
+      await whenRenderingTheFrise(vueEntre('08:00', '12:00'));
+
+      thenNoClosureIsDrawn();
+    });
+
+    it('should extend the scale to the hour after the bound of the end', async () => {
+      await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '20:00'));
+
+      thenTheGraduationsAre([
+        '07:00',
+        '08:00',
+        '09:00',
+        '10:00',
+        '11:00',
+        '12:00',
+        '13:00',
+        '14:00',
+        '15:00',
+        '16:00',
+        '17:00',
+        '18:00',
+        '19:00',
+        '20:00',
+        '21:00',
+      ]);
+    });
+
+    it('should let the pointer through the closure marker to the placement row under it', async () => {
+      await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '20:00'), undefined, placementDeLaFixture());
+
+      thenThePointerGoesThroughTheClosure();
+    });
   });
 
   describe('of an automatic end', () => {
@@ -1020,6 +1099,33 @@ describe('Frise of a dossier', () => {
       'placement row',
     );
     expect({ top: topOf(row), height: Number.parseFloat(row.style.height) }).toEqual(expected);
+  };
+
+  const closure = (): HTMLElement | null =>
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-cloture'));
+
+  const thenTheClosureIsNamed = (expected: string): void => {
+    expect(requiredFixture(closure(), 'closure marker').getAttribute('aria-label')).toBe(expected);
+  };
+
+  const thenTheClosureReads = (expected: string): void => {
+    const lines = [...requiredFixture(closure(), 'closure marker').children].map(line => line.textContent.trim());
+    expect(lines.join(' ')).toBe(expected);
+  };
+
+  const thenNoClosureIsDrawn = (): void => {
+    expect(closure()).toBeNull();
+  };
+
+  const thenThePointerGoesThroughTheClosure = (): void => {
+    expect(getComputedStyle(requiredFixture(closure(), 'closure marker')).pointerEvents).toBe('none');
+  };
+
+  const thenTheMarkerStandsAtTheHour = (pointage: string, heure: number): void => {
+    const debut = Date.parse(instantAt('07:00'));
+    const fin = Date.parse(instantAt('21:00'));
+    const attendu = ((new Date(2026, 8, 14, heure).getTime() - debut) / (fin - debut)) * 100;
+    expect(Number.parseFloat(marker(pointage).style.left)).toBeCloseTo(attendu);
   };
 
   const thenTheMarkersAre = (expected: readonly string[]): void => {
