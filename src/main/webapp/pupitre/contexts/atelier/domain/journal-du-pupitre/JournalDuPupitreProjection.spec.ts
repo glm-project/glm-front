@@ -74,16 +74,26 @@ describe('JournalDuPupitreProjection', () => {
     thenActivityHasNoPoste(projection);
   });
 
-  it('should change category on non conformity and stop on finish', () => {
+  it('should open a non conformity only after the finish of the work, and stop on finish', () => {
+    const finDuTravail = givenPointage('FIN');
     const nonConformite = givenPointage('NON_CONFORMITE');
-    const afterCategoryChange = givenEvents([debutFixture, nonConformite]);
-    const afterFinish = givenEvents([debutFixture, nonConformite, givenPointage('FIN')]);
+    const afterCategoryChange = givenEvents([debutFixture, finDuTravail, nonConformite]);
+    const afterFinish = givenEvents([debutFixture, finDuTravail, nonConformite, givenPointage('FIN', 'fin-de-la-non-conformite')]);
 
     const projection = whenProjecting(afterCategoryChange);
     const finished = whenProjecting(afterFinish);
 
     thenActivityIs(projection, 'NON_CONFORMITE', '2026-09-05T08:00:00Z');
     thenStateIs(finished, 'INTERROMPU', 0);
+  });
+
+  it.each(['NON_CONFORMITE', 'DEBUT'] as const)('should ignore a %s opening on a key whose activity is already in progress', type => {
+    const state = givenEvents([debutFixture, givenOpeningAt(type, '2026-09-05T08:30:00Z')]);
+
+    const projection = whenProjecting(state);
+
+    thenActivityIs(projection, 'TRAVAIL', '2026-09-05T08:00:00Z');
+    thenStateIs(projection, 'EN_COURS', 1);
   });
 
   it('should keep other operators active when one finishes', () => {
@@ -102,7 +112,12 @@ describe('JournalDuPupitreProjection', () => {
     const first = givenWorkstationPointage('DEBUT', firstPoste);
     const other = givenWorkstationPointage('DEBUT', otherPoste);
     const afterStart = givenEvents([first, other]);
-    const afterCategoryChange = givenEvents([first, other, givenWorkstationPointage('NON_CONFORMITE', firstPoste)]);
+    const afterCategoryChange = givenEvents([
+      first,
+      other,
+      givenWorkstationPointage('FIN', firstPoste, 'fin-avant-nc'),
+      givenWorkstationPointage('NON_CONFORMITE', firstPoste),
+    ]);
     const afterFinish = givenEvents([first, other, givenWorkstationPointage('FIN', firstPoste)]);
 
     const started = whenProjecting(afterStart);
@@ -168,13 +183,21 @@ describe('JournalDuPupitreProjection', () => {
       debutFixture,
     ],
   });
-  const givenPointage = (type: 'FIN' | 'NON_CONFORMITE'): EvenementDuJournal => ({
+  const givenPointage = (type: 'FIN' | 'NON_CONFORMITE', id = type === 'FIN' ? 'fin' : 'nc'): EvenementDuJournal => ({
     etat: 'EN_ATTENTE',
-    geste: type === 'FIN' ? { ...debutGesteFixture, id: 'fin', type } : { ...debutGesteFixture, id: 'nc', type },
+    geste: { ...debutGesteFixture, id, type },
   });
-  const givenWorkstationPointage = (type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', posteId: string | undefined): EvenementDuJournal => {
+  const givenOpeningAt = (type: 'DEBUT' | 'NON_CONFORMITE', dateDeSurvenue: string): EvenementDuJournal => ({
+    etat: 'EN_ATTENTE',
+    geste: { ...debutGesteFixture, id: `${type}-${dateDeSurvenue}`, type, dateDeSurvenue },
+  });
+  const givenWorkstationPointage = (
+    type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE',
+    posteId: string | undefined,
+    id = `${type}-${posteId ?? 'sans-poste'}`,
+  ): EvenementDuJournal => {
     const poste = posteId === undefined ? {} : { posteId };
-    const identite = { ...debutGesteFixture, ...poste, id: `${type}-${posteId ?? 'sans-poste'}` };
+    const identite = { ...debutGesteFixture, ...poste, id };
     return { etat: 'EN_ATTENTE', geste: { ...identite, type } };
   };
   const whenProjecting = (state: JournalDuPupitre): ReferentielDuPupitre | undefined => projectReferentiel(state);

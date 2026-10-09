@@ -336,22 +336,24 @@ describe('FenetreOperateur', () => {
     thenPointageTypesAre(fin, ['FIN']);
   });
 
-  it('should only finish the work when non conformity is asked during work, the opening following it waiting for B5', () => {
+  it('should finish the work then open a non conformity on the same workstation when non conformity is asked during work', () => {
     const nonConformite = whenDeciding('moule-1015', 'SECONDAIRE');
 
     const gestes = captureGestures(nonConformite);
 
-    thenGesturesAre(gestes, ['POINTAGE']);
-    thenPointageTypesAre(nonConformite, ['FIN']);
+    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE']);
+    thenPointageTypesAre(nonConformite, ['FIN', 'NON_CONFORMITE']);
+    thenPointagesKeepTheirWorkstations(nonConformite, ['tour', 'tour']);
   });
 
-  it('should only finish every activity when the secondary target is asked on a started element, the opening following waiting for B5', () => {
-    const fins = whenDeciding('of-204', 'SECONDAIRE');
+  it('should finish then reopen as work every non conforming activity, leaving the work untouched, when the secondary target is asked on a started element', () => {
+    const retourAuTravail = whenDeciding('of-204', 'SECONDAIRE');
 
-    const gestes = captureGestures(fins);
+    const gestes = captureGestures(retourAuTravail);
 
-    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE', 'POINTAGE']);
-    thenPointageTypesAre(fins, ['FIN', 'FIN', 'FIN']);
+    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE']);
+    thenPointageTypesAre(retourAuTravail, ['FIN', 'DEBUT', 'FIN', 'DEBUT']);
+    thenPointagesKeepTheirWorkstations(retourAuTravail, [undefined, undefined, undefined, undefined]);
   });
 
   it('should finish every personal activity on its workstation when stopping all', () => {

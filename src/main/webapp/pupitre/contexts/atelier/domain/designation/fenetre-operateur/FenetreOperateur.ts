@@ -130,7 +130,7 @@ export class FenetreOperateur {
   afterDeciding(suiviId: string, cible: CibleDePointage, identify: () => IdentiteDuGeste, instant: number): DecisionResult {
     const fenetre = this.afterEvaluatingActivities(instant).afterIntendingGesture();
     const suivi = fenetre.requireSuivi(suiviId);
-    const activities = fenetre.activitesFor(suivi).decide();
+    const activities = fenetre.activitesFor(suivi).decide(cible);
     const numero = NumeroDElement.from(suivi);
     const decision =
       activities.kind === 'ACTIF'
@@ -148,14 +148,9 @@ export class FenetreOperateur {
     const fenetre = this.afterEvaluatingActivities(instant);
     fenetre.requireAvailableGestures();
     const suivi = fenetre.requireSuivi(suiviId);
-    if (fenetre.activitesFor(suivi).decide().kind === 'ACTIF') throw new Error("L'élément est déjà actif pour cet opérateur.");
+    if (fenetre.activitesFor(suivi).decide(cible).kind === 'ACTIF') throw new Error("L'élément est déjà actif pour cet opérateur.");
     fenetre.etat.operateurDesigne.assertPoste(posteId);
-    const decision = fenetre.gestes(
-      suiviId,
-      NumeroDElement.from(suivi),
-      { premiere: { type: fenetre.openingTypeFor(cible), posteId }, suivantes: [] },
-      identify,
-    );
+    const decision = fenetre.gestes(suiviId, NumeroDElement.from(suivi), [{ type: fenetre.openingTypeFor(cible), posteId }], identify);
     return {
       fenetre: fenetre.with({ refusVisible: undefined, contextesParGeste: decision.contextesParGeste }),
       decision,
@@ -288,7 +283,7 @@ export class FenetreOperateur {
     const ouverture = this.etat.operateurDesigne.decideOuverture(this.openingTypeFor(cible));
     return ouverture.kind === 'CHOIX_POSTE_REQUIS'
       ? { kind: ouverture.kind, numero, postes: ouverture.postes }
-      : this.gestes(suiviId, numero, { premiere: ouverture.pointage, suivantes: [] }, identify);
+      : this.gestes(suiviId, numero, [ouverture.pointage], identify);
   }
   private gestes(
     suiviId: string,
@@ -296,8 +291,7 @@ export class FenetreOperateur {
     demandes: LotDePointagesDemandes,
     identify: () => IdentiteDuGeste,
   ): LotDeGestesDAtelier {
-    const first = this.toPointage(suiviId, demandes.premiere, identify());
-    const pointages = [first, ...demandes.suivantes.map(demande => this.toPointage(suiviId, demande, identify()))];
+    const pointages = demandes.map(demande => this.toPointage(suiviId, demande, identify()));
     return {
       kind: 'GESTES',
       capture: () => pointages,

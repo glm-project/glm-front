@@ -10,23 +10,40 @@ import {
 const matchesPair = (activite: ActiviteDuPupitre, geste: GesteDePointage): boolean =>
   activite.operateurId === geste.operateurId && activite.posteId === geste.posteId;
 
-const finSansActivite = (suivi: SuiviDuPupitre, geste: GesteDePointage): boolean =>
-  geste.type === 'FIN' && !suivi.activites.some(activite => matchesPair(activite, geste));
+const hasActivityOnKey = (suivi: SuiviDuPupitre, geste: GesteDePointage): boolean =>
+  suivi.activites.some(activite => matchesPair(activite, geste));
 
-const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre => {
-  if (finSansActivite(suivi, geste)) return suivi;
-  const activites = suivi.activites.filter(activite => !matchesPair(activite, geste));
-  if (geste.type !== 'FIN') {
-    activites.push({
+const isIgnoredByTheServer = (suivi: SuiviDuPupitre, geste: GesteDePointage): boolean =>
+  hasActivityOnKey(suivi, geste) !== (geste.type === 'FIN');
+
+const withActivities = (suivi: SuiviDuPupitre, activites: SuiviDuPupitre['activites']): SuiviDuPupitre => ({
+  ...suivi,
+  activites,
+  etat: etatFor(activites.length),
+});
+
+const finish = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre =>
+  withActivities(
+    suivi,
+    suivi.activites.filter(activite => !matchesPair(activite, geste)),
+  );
+
+const open = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre =>
+  withActivities(suivi, [
+    ...suivi.activites,
+    {
       ouverture: geste.id,
       echeance: new Date(Date.parse(geste.dateDeSurvenue) + 13 * 60 * 60 * 1000).toISOString(),
       operateurId: geste.operateurId,
       categorie: categorieFor(geste),
       depuis: geste.dateDeSurvenue,
       ...(geste.posteId === undefined ? {} : { posteId: geste.posteId }),
-    });
-  }
-  return { ...suivi, activites, etat: etatFor(activites.length) };
+    },
+  ]);
+
+const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre => {
+  if (isIgnoredByTheServer(suivi, geste)) return suivi;
+  return geste.type === 'FIN' ? finish(suivi, geste) : open(suivi, geste);
 };
 
 const categorieFor = (geste: GesteDePointage): 'TRAVAIL' | 'NON_CONFORMITE' => {

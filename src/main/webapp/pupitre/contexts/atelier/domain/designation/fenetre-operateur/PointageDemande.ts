@@ -5,7 +5,4 @@ export interface PointageDemande {
   readonly posteId?: string;
 }
 
-export interface LotDePointagesDemandes {
-  readonly premiere: PointageDemande;
-  readonly suivantes: readonly PointageDemande[];
-}
+export type LotDePointagesDemandes = readonly PointageDemande[];

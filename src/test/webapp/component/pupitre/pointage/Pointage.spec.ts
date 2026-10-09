@@ -70,6 +70,14 @@ describe('Pointage screen in a browser', () => {
     thenTheNonConformityMarkerIsYellowWithInkText('of-1');
   });
 
+  it('should mark in yellow a tile whose work is turned into non conformity', () => {
+    givenThePointageScreen();
+    givenTheTileAtWork('of-1');
+    whenHoldingTileTarget('of-1', 'secondary-target');
+
+    thenTheNonConformityMarkerIsYellowWithInkText('of-1');
+  });
+
   it('should use scrolling as a safety valve for an extreme workshop volume', () => {
     givenThePointageScreen('?many');
 
@@ -83,6 +91,11 @@ describe('Pointage screen in a browser', () => {
     cy.get(dataSelector('digit-9')).click();
     cy.get(dataSelector('validate')).click();
     cy.get(dataSelector('pointage'));
+  };
+  const givenTheTileAtWork = (id: string): void => {
+    whenHoldingTileTarget(id, 'primary-target');
+    whenChoosingWorkstation('tour');
+    cy.get(dataSelector(`tile-${id}`)).should('contain.text', 'ARRÊTER');
   };
   const givenTheTilePosition = (id: string): Cypress.Chainable<GridPositionFixture> =>
     cy.get(dataSelector(`tile-${id}`)).then(tile => positionInGrid(requiredFixture(tile[0], 'tile')));
