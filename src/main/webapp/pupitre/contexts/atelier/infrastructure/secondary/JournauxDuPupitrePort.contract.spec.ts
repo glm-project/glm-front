@@ -323,29 +323,6 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
     await thenThePreviousJournalIsGone();
   });
 
-  it('should read the category of every element in a reference stored before categories existed', async () => {
-    await givenAReferenceStoredBeforeCategories();
-
-    const state = await whenReadingCompany('entreprise-a');
-
-    expect(state.referentiel?.suivis.map(suivi => [suivi.id, suivi.categorie])).toEqual([
-      ['moule', 'MOULE'],
-      ['of', 'OF'],
-    ]);
-    expect(state.referentiel?.categories).toEqual([]);
-  });
-
-  it('should store the category of every element once a reference stored before categories existed changes', async () => {
-    await givenAReferenceStoredBeforeCategories();
-
-    const state = await journal.markDisconnected(Entreprise.of('entreprise-a'));
-
-    expect(state.referentiel?.suivis.map(suivi => [suivi.id, suivi.categorie])).toEqual([
-      ['moule', 'MOULE'],
-      ['of', 'OF'],
-    ]);
-  });
-
   it('should discard only the obsolete workshop documents and preserve credentials and new company journals', async () => {
     await givenALegacyAcceptedArrival();
     await givenOtherCompanyAndDeviceDocuments();
@@ -594,21 +571,6 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
       referentiel: { operateurs: [], suivis: [], categories: [] },
     };
     await storage.update('atelier-activites-v1:entreprise-a', avantLaDuree, () => avantLaDuree);
-  };
-  const givenAReferenceStoredBeforeCategories = async (): Promise<void> => {
-    const suivi = { nom: 'OF-1', etat: 'EN_ATTENTE', activites: [], evenements: [] };
-    const avantLesCategories = {
-      connecte: true,
-      evenements: [],
-      referentiel: {
-        operateurs: [],
-        suivis: [
-          { ...suivi, id: 'moule', type: 'PRODUIT' },
-          { ...suivi, id: 'of', type: 'ORDRE_DE_FABRICATION' },
-        ],
-      },
-    };
-    await storage.update(keyFor(Entreprise.of('entreprise-a')), avantLesCategories, () => avantLesCategories);
   };
   const whenReadingCompany = (company: string): Promise<JournalDuPupitre> => journal.read(Entreprise.of(company));
   const whenHoldingStorageLock = (

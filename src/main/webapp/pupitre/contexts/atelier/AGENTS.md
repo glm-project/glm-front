@@ -54,8 +54,6 @@ n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une repri
 
 **Zone** ([ADR 0053](../../../../../../documentation/adr/0053-replace-the-element-type-with-company-categories.md)) : regroupement des éléments de la vue de pointage par catégorie de produit (`MOULE`, `OF`…). Le code de la catégorie titre la zone tel quel ; une catégorie sans élément n'a pas de zone. Les zones suivent l'ordre des catégories du référentiel (`categories`, l'ordre choisi par le gestionnaire) ; une catégorie que cet ordre ne connaît pas vient ensuite, par code.
 
-**Journal stocké avant les catégories** : un journal enregistré avant glm-back#103 porte, pour chaque élément du référentiel, l'ancien `type` au lieu de `categorie`. L'adaptateur IndexedDB le traduit à la lecture (`ORDRE_DE_FABRICATION` → `OF`, `PRODUIT` → `MOULE`), et lui donne un ordre de catégories vide, pour qu'un pupitre redémarré hors ligne garde ses tuiles, rangées par code, jusqu'au prochain rafraîchissement ; la traduction disparaît avec le champ `type` de l'API (glm-back#107).
-
 **Pause** : arrêt, par la commande PAUSE, de toutes les activités personnelles que le pupitre connaît pour l'opérateur désigné, retenu pour être rouvert. Elle est identifiée par l'identité racine de l'intention globale initiée qui l'a prise. Le serveur n'en sait rien : il ne reçoit que des fins.
 
 **Activité suspendue** : activité arrêtée par une pause, avec son élément, son poste et le pointage qui la rouvrira — `DEBUT`, ou `NON_CONFORMITE` pour une activité en non-conformité. La fin qui l'arrête porte sa **suspension** : la pause et ce pointage de réouverture. Éviter : activité en pause.
