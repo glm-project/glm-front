@@ -4,9 +4,9 @@ import { MarqueGlm } from '@/gestion/shared/design-system/infrastructure/primary
 import { TextField } from '@/gestion/shared/design-system/infrastructure/primary/text-field/TextField';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { LogoAffiche } from '../../../application/LogoAffiche';
 import { FichierDeLogo } from '../../../domain/FichierDeLogo';
 import { FormulaireDureeMaxDActivite } from '../../../domain/FormulaireDureeMaxDActivite';
-import { ImageDuLogo } from '../../../domain/ImageDuLogo';
 import { ParametragePort } from '../../../domain/ParametragePort';
 import { VersionDuLogo } from '../../../domain/VersionDuLogo';
 import { LIBELLES_PARAMETRES } from '../LibellesParametrage';
@@ -23,6 +23,7 @@ const HEURE_DE_DEBUT_DE_L_EXEMPLE = 8;
 export class Parametres implements OnInit {
   private readonly port = inject(ParametragePort);
   private readonly errors = inject(ErrorHandlerPort);
+  private readonly logoAffiche = inject(LogoAffiche);
 
   protected readonly libelles = LIBELLES_PARAMETRES;
   protected readonly chargement = signal(true);
@@ -31,7 +32,13 @@ export class Parametres implements OnInit {
   protected readonly enregistrement = signal(false);
   protected readonly enregistree = signal(false);
   protected readonly erreurTechnique = signal(false);
-  protected readonly image = signal<ImageDuLogo | undefined>(undefined);
+  protected readonly image = this.logoAffiche.image;
+  protected readonly choisi = signal<FichierDeLogo | undefined>(undefined);
+  protected readonly apercu = computed(() => this.choisi()?.apercu() ?? this.image());
+  protected readonly legende = computed(() => {
+    if (this.choisi() !== undefined) return this.libelles.pasEncoreEnregistre;
+    return this.image() === undefined ? this.libelles.logoGlm : this.libelles.tailleReelle;
+  });
   protected readonly imageIndisponible = signal(false);
   protected readonly depot = signal(false);
   protected readonly refusLogo = signal<string | undefined>(undefined);
@@ -69,7 +76,17 @@ export class Parametres implements OnInit {
   protected choisirLogo(fichiers: FileList | null): void {
     const choisi = fichiers?.item(0);
     if (!(choisi instanceof Blob)) return;
-    this.errors.observe(this.deposer(choisi));
+    this.errors.observe(this.lireLeChoix(choisi));
+  }
+
+  protected enregistrerLogo(fichier: FichierDeLogo): void {
+    this.errors.observe(this.deposer(fichier));
+  }
+
+  protected annulerLeChoix(): void {
+    this.choisi.set(undefined);
+    this.refusLogo.set(undefined);
+    this.erreurDepot.set(false);
   }
 
   protected demanderLeRetrait(): void {
@@ -101,20 +118,23 @@ export class Parametres implements OnInit {
     }
   }
 
-  private async deposer(choisi: Blob): Promise<void> {
+  private async lireLeChoix(choisi: Blob): Promise<void> {
     this.refusLogo.set(undefined);
     this.logoEnregistre.set(false);
     this.logoRetire.set(false);
     this.erreurDepot.set(false);
     const fichier = new FichierDeLogo(new Uint8Array(await choisi.arrayBuffer()));
     const refus = fichier.refus();
-    if (refus !== undefined) {
-      this.refusLogo.set(refus);
-      return;
-    }
+    this.refusLogo.set(refus);
+    this.choisi.set(refus === undefined ? fichier : undefined);
+  }
+
+  private async deposer(fichier: FichierDeLogo): Promise<void> {
+    this.erreurDepot.set(false);
     this.depot.set(true);
     try {
       const resultat = await this.port.deposerLogo(fichier);
+      this.choisi.set(undefined);
       if (resultat.ok) {
         await this.afficherLogo(resultat.value);
         this.logoEnregistre.set(true);
@@ -145,11 +165,9 @@ export class Parametres implements OnInit {
 
   private async afficherLogo(version: VersionDuLogo | undefined): Promise<void> {
     this.logo.set(version);
-    this.image.set(undefined);
     this.imageIndisponible.set(false);
-    if (version === undefined) return;
     try {
-      this.image.set(await this.port.imageDuLogo(version));
+      await this.logoAffiche.montrer(version);
     } catch {
       this.imageIndisponible.set(true);
     }

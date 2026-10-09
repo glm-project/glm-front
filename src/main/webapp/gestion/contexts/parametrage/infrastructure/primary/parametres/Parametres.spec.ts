@@ -2,11 +2,15 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { IconeDeLOngletFixture } from '@test/unit/fixtures/gestion/parametrage/IconeDeLOngletFixture';
 import { pngFixture } from '@test/unit/fixtures/gestion/parametrage/ImagesFixture';
 import { ParametrageFixture } from '@test/unit/fixtures/gestion/parametrage/ParametrageFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
+import { LogoAffiche } from '../../../application/LogoAffiche';
 import { DureeMaxDActivite } from '../../../domain/DureeMaxDActivite';
+import { FichierDeLogo } from '../../../domain/FichierDeLogo';
+import { IconeDeLOnglet } from '../../../domain/IconeDeLOnglet';
 import { ImageDuLogo } from '../../../domain/ImageDuLogo';
 import { ParametragePort } from '../../../domain/ParametragePort';
 import { VersionDuLogo } from '../../../domain/VersionDuLogo';
@@ -26,6 +30,8 @@ describe('Parametres page', () => {
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: ParametragePort, useValue: port },
         { provide: ErrorHandlerPort, useValue: errors },
+        LogoAffiche,
+        { provide: IconeDeLOnglet, useValue: new IconeDeLOngletFixture() },
       ],
     });
   });
@@ -147,14 +153,42 @@ describe('Parametres page', () => {
     expect(field().value).toBe('13');
   });
 
-  it('should send a PNG of 50 × 50 pixels as soon as it is chosen, then show it', async () => {
+  it('should preview the chosen logo without sending it yet', async () => {
+    givenTheLogo();
     await whenOpening();
 
     await whenChoosing(pngFixture(50, 50));
 
+    expect(port.depots).toEqual([]);
+    thenTheLogoIsShownAtRealSize(new FichierDeLogo(pngFixture(50, 50)).apercu().adresse);
+    expect(text('logo-legende')).toBe('Pas encore enregistré');
+    expect(text('logo-enregistrer')).toBe('Enregistrer le logo');
+    thenTheRemovalIsNotOffered();
+  });
+
+  it('should send the chosen logo on save, then show it as the logo of the company', async () => {
+    await whenOpening();
+    await whenChoosing(pngFixture(50, 50));
+
+    await whenClicking('logo-enregistrer');
+
     expect(port.depots).toHaveLength(1);
     expect(text('logo-enregistre')).toBe('Logo enregistré.');
     thenTheLogoIsShownAtRealSize(requiredFixture(port.logo, 'logo déposé').image.adresse);
+    expect(text('logo-legende')).toBe('Taille réelle');
+    thenTheSaveIsNotOffered();
+  });
+
+  it('should drop the chosen logo on cancel, keeping the logo of the company', async () => {
+    givenTheLogo();
+    await whenOpening();
+    await whenChoosing(pngFixture(50, 50));
+
+    await whenClicking('logo-annuler');
+
+    expect(port.depots).toEqual([]);
+    thenTheLogoIsShownAtRealSize(LOGO_FIXTURE.image.adresse);
+    thenTheSaveIsNotOffered();
   });
 
   it('should refuse an image of the wrong size without sending it, saying what it measures', async () => {
@@ -164,13 +198,15 @@ describe('Parametres page', () => {
 
     expect(text('logo-refus')).toBe('Le logo doit tenir dans 256 × 256 pixels (reçu : 300 × 80).');
     expect(port.depots).toEqual([]);
+    thenTheSaveIsNotOffered();
   });
 
   it('should show the reason the server refused the logo', async () => {
     givenTheServerRefusesLogos('format inattendu');
     await whenOpening();
-
     await whenChoosing(pngFixture(50, 50));
+
+    await whenClicking('logo-enregistrer');
 
     expect(text('logo-refus')).toBe('Le logo a été refusé : format inattendu');
     expect(text('logo-enregistre')).toBe('');
@@ -179,11 +215,13 @@ describe('Parametres page', () => {
   it('should say the logo was not sent after a technical failure, and report it', async () => {
     givenTheDepositFails();
     await whenOpening();
-
     await whenChoosing(pngFixture(50, 50));
+
+    await whenClicking('logo-enregistrer');
 
     expect(text('logo-erreur-technique')).toBe('Le logo n’a pas pu être envoyé. Vérifiez la connexion puis réessayez.');
     expect(errors.errors).toEqual([new Error('panne')]);
+    expect(text('logo-enregistrer')).toBe('Enregistrer le logo');
   });
 
   it('should send nothing when the choice of a file is cancelled', async () => {
@@ -254,6 +292,9 @@ describe('Parametres page', () => {
     expect(errors.errors).toEqual([new Error('panne')]);
   });
 
+  const thenTheSaveIsNotOffered = (): void => {
+    expect(document.querySelector(dataSelector('logo-enregistrer'))).toBeNull();
+  };
   const thenTheRemovalIsNotOffered = (): void => {
     expect(document.querySelector(dataSelector('logo-retirer'))).toBeNull();
   };

@@ -4,7 +4,6 @@ import { atelierProvider } from './atelier.provider';
 import { coutDeRevientProvider } from './cout-de-revient.provider';
 import { elementsDeFabricationProvider } from './elements-de-fabrication.provider';
 import { operateursProvider } from './operateurs.provider';
-import { parametrageProvider } from './parametrage.provider';
 import { postesProvider } from './postes.provider';
 import { releveDesHeuresProvider } from './releve-des-heures.provider';
 import { reservedToGestionnaire } from './shared/authentication/infrastructure/primary/reserved-to-gestionnaire.guard';
@@ -76,6 +75,5 @@ export const routes: Routes = [
     path: 'parametres',
     canMatch: [reservedToGestionnaire],
     loadComponent: () => import('./contexts/parametrage/infrastructure/primary/parametres/Parametres').then(m => m.Parametres),
-    providers: parametrageProvider,
   },
 ];

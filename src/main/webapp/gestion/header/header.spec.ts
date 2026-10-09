@@ -6,8 +6,11 @@ import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/
 
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
+import { IconeDeLOngletFixture } from '@test/unit/fixtures/gestion/parametrage/IconeDeLOngletFixture';
 import { ParametrageFixture } from '@test/unit/fixtures/gestion/parametrage/ParametrageFixture';
 import { dataSelector } from '@test/utils/DataSelector';
+import { LogoAffiche } from '../contexts/parametrage/application/LogoAffiche';
+import { IconeDeLOnglet } from '../contexts/parametrage/domain/IconeDeLOnglet';
 import { ImageDuLogo } from '../contexts/parametrage/domain/ImageDuLogo';
 import { ParametragePort } from '../contexts/parametrage/domain/ParametragePort';
 import { VersionDuLogo } from '../contexts/parametrage/domain/VersionDuLogo';
@@ -17,6 +20,8 @@ const configureHeaderOf = async (roles: readonly string[], parametrage = new Par
   await TestBed.configureTestingModule({
     providers: [
       { provide: ParametragePort, useValue: parametrage },
+      LogoAffiche,
+      { provide: IconeDeLOnglet, useValue: new IconeDeLOngletFixture() },
       provideRouter([{ path: '**', children: [] }]),
       { provide: ComponentFixtureAutoDetect, useValue: true },
       { provide: InMemoryGestionAuthentication, useFactory: () => new InMemoryGestionAuthentication(roles) },
@@ -256,6 +261,27 @@ describe('Gestion header, with the logo of the company', () => {
     thenTheGlmLogoIsShown();
   });
 
+  it('should show the logo the gestionnaire has just deposited, without reloading the page', async () => {
+    await configureHeaderOf([ROLE_GESTIONNAIRE], parametrage);
+    const header = await showTheHeader();
+    await whenTheSessionOpens(header);
+
+    await whenALogoIsDeposited(header);
+
+    thenTheCompanyLogoIsShown('data:image/png;base64,iVBORw0K');
+  });
+
+  it('should go back to the GLM logo once the gestionnaire removes the logo, without reloading the page', async () => {
+    givenTheCompanyHasALogo();
+    await configureHeaderOf([ROLE_GESTIONNAIRE], parametrage);
+    const header = await showTheHeader();
+    await whenTheSessionOpens(header);
+
+    await whenTheLogoIsRemoved(header);
+
+    thenTheGlmLogoIsShown();
+  });
+
   it('should keep the GLM logo when the logo cannot be read', async () => {
     givenTheCompanyHasALogo();
     parametrage.imageFailure = new Error('panne');
@@ -269,6 +295,17 @@ describe('Gestion header, with the logo of the company', () => {
 
   const givenTheCompanyHasALogo = (): void => {
     parametrage.logo = LOGO_FIXTURE;
+  };
+
+  const whenALogoIsDeposited = async (header: ComponentFixture<GestionHeader>): Promise<void> => {
+    givenTheCompanyHasALogo();
+    await TestBed.inject(LogoAffiche).montrer(LOGO_FIXTURE.version);
+    await header.whenStable();
+  };
+
+  const whenTheLogoIsRemoved = async (header: ComponentFixture<GestionHeader>): Promise<void> => {
+    await TestBed.inject(LogoAffiche).montrer(undefined);
+    await header.whenStable();
   };
 
   const whenTheSessionOpens = async (header: ComponentFixture<GestionHeader>): Promise<void> => {

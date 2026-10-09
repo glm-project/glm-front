@@ -24,10 +24,11 @@ describe('Company settings in gestion', () => {
     thenTheDurationWasSavedAs(api, '10');
   });
 
-  it('should send the chosen logo at once and show it', () => {
+  it('should send the chosen logo on save and show it', () => {
     const api = givenSettings();
     whenVisitingSettings();
     whenChoosingTheLogo(pngFixture(50, 50));
+    whenSavingTheLogo();
 
     thenTheLogoIsShown(api);
   });
@@ -46,12 +47,30 @@ describe('Company settings in gestion', () => {
     whenRemovingTheLogo();
 
     thenTheGlmLogoIsBack(api);
+    thenTheTabShowsTheGlmIcon();
   });
 
   it('should show the logo of the company in the header, in place of the GLM logo', () => {
     givenSettingsWithALogo();
     whenVisitingSettings();
 
+    thenTheHeaderShowsTheCompanyLogo();
+  });
+
+  it('should show the logo of the company in the browser tab', () => {
+    givenSettingsWithALogo();
+    whenVisitingSettings();
+
+    thenTheTabShowsTheCompanyLogo();
+  });
+
+  it('should show the saved logo in the header at once, without reloading the page', () => {
+    const api = givenSettings();
+    whenVisitingSettings();
+    whenChoosingTheLogo(pngFixture(50, 50));
+    whenSavingTheLogo();
+
+    thenTheLogoIsShown(api);
     thenTheHeaderShowsTheCompanyLogo();
   });
 
@@ -124,6 +143,10 @@ const whenChoosingTheLogo = (octets: Uint8Array): void => {
   );
 };
 
+const whenSavingTheLogo = (): void => {
+  cy.get(dataSelector('logo-enregistrer')).click();
+};
+
 const whenVisitingSettingsAsAConsultant = (): void => {
   cy.viewport(1440, 900);
   cy.visit('/parametres', {
@@ -171,6 +194,16 @@ const thenTheHeaderShowsTheCompanyLogo = (): void => {
     .should('be.visible')
     .and('have.attr', 'src')
     .and('match', /^data:image\/png;base64,/);
+};
+
+const thenTheTabShowsTheCompanyLogo = (): void => {
+  cy.get('head link[rel="icon"]')
+    .should('have.attr', 'href')
+    .and('match', /^data:image\/png;base64,/);
+};
+
+const thenTheTabShowsTheGlmIcon = (): void => {
+  cy.get('head link[rel="icon"]').should('have.attr', 'href', 'content/images/glm-gestion.svg');
 };
 
 const thenTheHeaderLogoMeasures = (largeur: number, hauteur: number): void => {

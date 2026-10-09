@@ -1,7 +1,6 @@
 import { MarqueGlm } from '@/gestion/shared/design-system/infrastructure/primary/marque-glm/MarqueGlm';
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { ImageDuLogo } from '../../../domain/ImageDuLogo';
-import { ParametragePort } from '../../../domain/ParametragePort';
+import { Component, inject, OnInit } from '@angular/core';
+import { LogoAffiche } from '../../../application/LogoAffiche';
 
 @Component({
   selector: 'glm-logo-de-l-entreprise',
@@ -10,19 +9,11 @@ import { ParametragePort } from '../../../domain/ParametragePort';
   imports: [MarqueGlm],
 })
 export class LogoDeLEntreprise implements OnInit {
-  private readonly port = inject(ParametragePort);
+  private readonly logo = inject(LogoAffiche);
 
-  protected readonly image = signal<ImageDuLogo | undefined>(undefined);
+  protected readonly image = this.logo.image;
 
   ngOnInit(): void {
-    this.port
-      .parametrage()
-      .then(parametrage => (parametrage.logo === undefined ? undefined : this.port.imageDuLogo(parametrage.logo)))
-      .then(
-        image => {
-          this.image.set(image);
-        },
-        () => undefined,
-      );
+    this.logo.lire().catch(() => undefined);
   }
 }
