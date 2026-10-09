@@ -14,6 +14,7 @@ import {
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { Injector } from '@angular/core';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { EffacementDesJournauxFixture } from '@test/unit/fixtures/pupitre/atelier/EffacementDesJournauxFixture';
 import { identifiantFixture } from '@test/unit/fixtures/pupitre/atelier/IdentifiantFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
@@ -32,6 +33,7 @@ const referentielFixture: JournalDuPupitre = {
     operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
     suivis: [],
     categories: [],
+    dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
   },
 };
 

@@ -16,12 +16,18 @@ import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisati
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
-const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [], categories: [] };
+const referenceFixture: ReferentielDuPupitre = {
+  operateurs: [],
+  suivis: [],
+  categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
+};
 const gesteFixture: GesteDePointage = {
   id: 'arrivee',
   dateDeSurvenue: '2026-09-05T08:00:00Z',
@@ -557,6 +563,7 @@ describe('PupitreSynchronization', () => {
         operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
         suivis: [],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       };
     };
   };
@@ -567,6 +574,7 @@ describe('PupitreSynchronization', () => {
         operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
         suivis: [],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       };
     };
   };
@@ -635,6 +643,7 @@ describe('PupitreSynchronization', () => {
       operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
       suivis: [],
       categories: [],
+      dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
     });
   };
   const givenSessionTokenExpiresBeforePush = (): void => {

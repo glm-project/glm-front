@@ -203,7 +203,13 @@ const appServer = createServer(async (request, response) => {
   if (isReferentielRequest(url)) {
     state.referenceRequests += 1;
     recordEvidence();
-    json(response, 200, { genereLe: '2026-09-05T08:05:00Z', operateurs: [operator], suivis: [workshopItem], categories: ['MOULE'] });
+    json(response, 200, {
+      dureeMaximaleDActivite: 'PT13H',
+      genereLe: '2026-09-05T08:05:00Z',
+      operateurs: [operator],
+      suivis: [workshopItem],
+      categories: ['MOULE'],
+    });
     return;
   }
   if (isPostTo(request, url, '/api/atelier/suivis/workshop-item-1/pointages')) {

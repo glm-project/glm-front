@@ -2,10 +2,16 @@ import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 
 const scheduleOnTheRealClock = globalThis.setTimeout.bind(globalThis);
 
-const emptyReferentiel = (): ReferentielDuPupitre => ({ operateurs: [], suivis: [], categories: [] });
+const emptyReferentiel = (): ReferentielDuPupitre => ({
+  operateurs: [],
+  suivis: [],
+  categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
+});
 
 export class AtelierExchangeFixture extends AtelierExchangePort {
   private readonly suspended: (() => void)[] = [];

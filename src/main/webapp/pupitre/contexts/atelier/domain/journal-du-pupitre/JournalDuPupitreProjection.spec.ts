@@ -8,6 +8,8 @@ import {
 } from './JournalDuPupitre';
 import { projectReferentiel } from './JournalDuPupitreProjection';
 
+const dureeMaximaleFixtureEnMs = 13 * 60 * 60 * 1000;
+
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
 
 const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
@@ -27,6 +29,7 @@ const referenceFixture: ReferentielDuPupitre = {
   operateurs: [operateurJeanFixture],
   suivis: [{ id: 'piece', nom: 'OF-1', categorie: 'MOULE', etat: 'EN_ATTENTE', activites: [], evenements: [] }],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const debutGesteFixture: GesteDePointage = {
   nature: 'POINTAGE',
@@ -94,6 +97,22 @@ describe('JournalDuPupitreProjection', () => {
 
     thenOnlyActivityIs(freed, 'TRAVAIL', '2026-09-05T20:00:00Z');
     thenOnlyActivityIs(busy, 'TRAVAIL', '2026-09-05T07:00:00Z');
+  });
+
+  it('should give a locally opened activity the deadline of the maximum duration received with the reference', () => {
+    const state = givenEventsUnderAMaximumDurationOf(8, [debutFixture]);
+
+    const projection = whenProjecting(state);
+
+    thenOnlyActivityDeadlineIs(projection, '2026-09-05T16:00:00.000Z');
+  });
+
+  it('should free a key once the maximum duration received has elapsed since its local opening', () => {
+    const state = givenEventsUnderAMaximumDurationOf(8, [debutFixture, givenOpeningAt('DEBUT', '2026-09-05T16:00:00Z')]);
+
+    const projection = whenProjecting(state);
+
+    thenOnlyActivityIs(projection, 'TRAVAIL', '2026-09-05T16:00:00Z');
   });
 
   it('should open a non conformity only after the finish of the work, and stop on finish', () => {
@@ -211,6 +230,10 @@ describe('JournalDuPupitreProjection', () => {
     evenements: evenements.map(evenement => ({ ...evenement, geste: { ...evenement.geste, posteId: 'tour' } })),
     connecte: true,
   });
+  const givenEventsUnderAMaximumDurationOf = (heures: number, evenements: EvenementDuJournal[]): JournalDuPupitre => ({
+    ...givenEvents(evenements),
+    referentiel: { ...referenceFixture, dureeMaximaleDActiviteEnMs: heures * 60 * 60 * 1000 },
+  });
   const givenNoDownloadedReference = (): JournalDuPupitre => ({ evenements: [], connecte: true });
   const givenAnotherOperatorAtWork = (): EvenementDuJournal => ({
     ...debutFixture,
@@ -288,6 +311,10 @@ describe('JournalDuPupitreProjection', () => {
     const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
     expect(suivi.activites).toHaveLength(1);
     thenActivityIs(projection, categorie, depuis);
+  };
+  const thenOnlyActivityDeadlineIs = (projection: ReferentielDuPupitre | undefined, echeance: string): void => {
+    const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
+    expect(suivi.activites.map(activite => activite.echeance)).toEqual([echeance]);
   };
   const thenActivityHasNoPoste = (projection: ReferentielDuPupitre | undefined): void => {
     const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');

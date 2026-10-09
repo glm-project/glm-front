@@ -1,6 +1,4 @@
-import { components } from '@/app/generated/schema';
-
-type ChampsDuReferentiel = { readonly [champ in keyof components['schemas']['RestReferentielDuPupitre']]?: unknown };
+type ChampsDuReferentiel = Readonly<Record<string, unknown>>;
 
 export const referentielApiFixture = (champs: ChampsDuReferentiel = {}): ChampsDuReferentiel => ({
   dureeMaximaleDActivite: 'PT13H',

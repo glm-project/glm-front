@@ -5,12 +5,15 @@ import { DesignationOperateur, DesignationResolution } from './DesignationOperat
 import { FenetreOperateur } from './fenetre-operateur/FenetreOperateur';
 import { Identifiant } from './Identifiant';
 
+const dureeMaximaleFixtureEnMs = 13 * 60 * 60 * 1000;
+
 const referenceFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
     operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
     suivis: [{ id: 'piece', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] }],
     categories: [],
+    dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
   },
 };
 const identityFixture = (): IdentiteDuGeste => ({ id: 'geste', dateDeSurvenue: '2026-09-05T08:00:29.000Z' });

@@ -6,6 +6,8 @@ import { Identifiant } from './Identifiant';
 import { IdentiteDeFenetre } from './IdentiteDeFenetre';
 import { IntentionGlobaleInitiee } from './IntentionGlobaleInitiee';
 
+const dureeMaximaleFixtureEnMs = 13 * 60 * 60 * 1000;
+
 const racineFixture = { id: '11111111-2222-4333-8444-55550000000a', dateDeSurvenue: '2026-09-05T12:00:00.000Z' };
 const suiviFixture = (id: string, activites: SuiviDuPupitre['activites']): SuiviDuPupitre => ({
   id,
@@ -29,6 +31,7 @@ const journalFixture = (suivis: readonly SuiviDuPupitre[]): JournalDuPupitre => 
     ],
     suivis,
     categories: [],
+    dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
   },
 });
 const atelierAuTravailFixture = journalFixture([

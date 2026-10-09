@@ -1,5 +1,6 @@
 import type { GesteDePointage, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
 import type { ProductionPupitreFixture } from './fixtures/main';
@@ -29,6 +30,7 @@ const referenceFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'operator-1', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
   suivis: [{ id: 'workshop-item-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] }],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const otherCompanyFixture = 'entreprise-b';
 const otherCompanyGestureFixture: GesteDePointage = {
@@ -60,6 +62,7 @@ const otherCompanyReferenceFixture: ReferentielDuPupitre = {
     },
   ],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const serviceWorkerSessions: string[] = [];
 let documentBeforeUpdate: Document | undefined;

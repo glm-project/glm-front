@@ -1,6 +1,8 @@
 import { afterActivatingReferentiel } from './ActivationDuReferentiel';
 import { EvenementDuJournal, GesteDePointage, JournalDuPupitre, ReferentielDuPupitre, Suspension } from './JournalDuPupitre';
 
+const dureeMaximaleFixtureEnMs = 13 * 60 * 60 * 1000;
+
 const aReferentiel = (evenementsRecus: Readonly<Record<string, readonly string[]>> = {}): ReferentielDuPupitre => ({
   operateurs: [],
   suivis: ['piece', 'autre'].map(id => ({
@@ -12,6 +14,7 @@ const aReferentiel = (evenementsRecus: Readonly<Record<string, readonly string[]
     evenements: evenementsRecus[id] ?? [],
   })),
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 });
 
 const ouverture = (id: string, operateurId = 'jean', suiviId = 'piece'): GesteDePointage => ({

@@ -32,6 +32,7 @@ export interface ReferentielDuPupitre {
   readonly operateurs: readonly OperateurDuPupitre[];
   readonly suivis: readonly SuiviDuPupitre[];
   readonly categories: readonly string[];
+  readonly dureeMaximaleDActiviteEnMs: number;
 }
 
 export interface IdentiteDuGeste {
@@ -116,6 +117,7 @@ export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre =
             evenements: [...suivi.evenements],
           })),
           categories: [...journal.referentiel.categories],
+          dureeMaximaleDActiviteEnMs: journal.referentiel.dureeMaximaleDActiviteEnMs,
         },
       }),
 });

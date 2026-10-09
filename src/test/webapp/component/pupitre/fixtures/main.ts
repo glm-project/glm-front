@@ -23,6 +23,7 @@ import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/Device
 import { Component, inject } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { JournauxDeLAtelierFixture } from '@test/unit/fixtures/pupitre/enrolement/JournauxDeLAtelierFixture';
 
@@ -85,6 +86,7 @@ const referentielFixture = {
   ],
   suivis: baseSuivis,
   categories: ['MOULE', 'OF'],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 
 const parameters = new URLSearchParams(location.search);

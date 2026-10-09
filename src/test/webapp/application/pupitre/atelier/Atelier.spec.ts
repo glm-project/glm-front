@@ -1,4 +1,5 @@
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { referentielApiFixture } from '@test/unit/fixtures/pupitre/atelier/ReferentielApiFixture';
 import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { dataSelector } from '../../../utils/DataSelector';
@@ -28,6 +29,7 @@ const referentielFixture: ReferentielDuPupitre = {
   operateurs: [operateurFixture],
   suivis: [elementFixture, autreElementFixture, troisiemeElementFixture],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const activiteFixture = {
   ouverture: 'activite-fixture-7',
@@ -43,6 +45,7 @@ const referentielActifFixture: ReferentielDuPupitre = {
     { ...elementFixture, id: 'piece-active-2', nom: '302', etat: 'EN_COURS', activites: [activiteFixture] },
   ],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const operateurMultiPosteFixture = {
   ...operateurFixture,
@@ -55,6 +58,7 @@ const referentielMultiPosteFixture: ReferentielDuPupitre = {
   operateurs: [operateurMultiPosteFixture],
   suivis: [elementFixture],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 
 interface RequeteMetier {

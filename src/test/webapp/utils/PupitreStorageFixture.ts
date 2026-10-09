@@ -1,4 +1,5 @@
 import type { EvenementDuJournal, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 
 interface DurablePupitreFixture {
   entreprise: string;
@@ -59,7 +60,7 @@ export const givenDurablePupitreFixture = (fixture: DurablePupitreFixture): void
   cy.window().then(window =>
     persistPupitreFixture(window, {
       entreprise: fixture.entreprise,
-      referentiel: { operateurs: [], suivis: [], categories: [] },
+      referentiel: { operateurs: [], suivis: [], categories: [], dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs },
       evenements: [
         {
           etat: 'EN_ATTENTE',

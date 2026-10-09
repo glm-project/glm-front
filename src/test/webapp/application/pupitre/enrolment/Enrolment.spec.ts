@@ -1,3 +1,4 @@
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { referentielApiFixture } from '@test/unit/fixtures/pupitre/atelier/ReferentielApiFixture';
 import type { StaticResponse } from 'cypress/types/net-stubbing';
 import { dataSelector } from '../../../utils/DataSelector';
@@ -294,7 +295,10 @@ const givenAnEnrolledPupitre = (): void => {
   givenAnAuthorizationServerAnswering('authorization_pending');
   cy.visit('/');
   cy.wait('@deviceAuthorization');
-  givenEnrolledPupitreFixture({ entreprise: ENTREPRISE, referentiel: { operateurs: [OPERATEUR], suivis: [], categories: [] } });
+  givenEnrolledPupitreFixture({
+    entreprise: ENTREPRISE,
+    referentiel: { operateurs: [OPERATEUR], suivis: [], categories: [], dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs },
+  });
   cy.reload();
   cy.wait('@workshop');
   cy.tick(0);

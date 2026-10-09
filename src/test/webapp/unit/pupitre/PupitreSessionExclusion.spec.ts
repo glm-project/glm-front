@@ -16,6 +16,7 @@ import { HttpBackend, HttpEvent, HttpRequest, HttpResponse } from '@angular/comm
 import { Injector } from '@angular/core';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { Observable, Subject } from 'rxjs';
@@ -154,7 +155,7 @@ class AtelierExchangeFixture extends AtelierExchangePort {
   }
 
   override referentiel(): Promise<ReferentielDuPupitre> {
-    return Promise.resolve({ operateurs: [], suivis: [], categories: [] });
+    return Promise.resolve({ operateurs: [], suivis: [], categories: [], dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs });
   }
 }
 

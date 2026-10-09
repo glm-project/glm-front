@@ -14,6 +14,7 @@ import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisati
 import { inject, Injectable } from '@angular/core';
 
 import { toRefusDAtelier } from '../toRefusDAtelier';
+import { dureeEnMillisecondes } from './dureeIso8601';
 
 type RestActiviteDuPupitre = components['schemas']['RestActiviteDuPupitre'];
 type RestOperateurDuPupitre = components['schemas']['RestOperateurDuPupitre'];
@@ -67,6 +68,7 @@ export class HttpAtelierExchange extends AtelierExchangePort {
       operateurs: referentiel.operateurs.map(toOperateur),
       suivis: referentiel.suivis.map(toSuivi),
       categories: referentiel.categories,
+      dureeMaximaleDActiviteEnMs: dureeEnMillisecondes(referentiel.dureeMaximaleDActivite),
     };
   }
 

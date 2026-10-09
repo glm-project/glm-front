@@ -120,6 +120,39 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     await thenReferenceIsComplete(reference);
   });
 
+  it.each<[string, number]>([
+    ['PT13H', 46_800_000],
+    ['PT8H30M', 30_600_000],
+    ['PT90M', 5_400_000],
+    ['PT1H30M45S', 5_445_000],
+  ])('should translate the maximum activity duration %s received with the reference', async (duree, milliseconds) => {
+    const reference = whenReadingReference();
+
+    await whenServerReturnsTheReference({ ...referentielFixture, dureeMaximaleDActivite: duree });
+
+    await thenTheMaximumActivityDurationIs(reference, milliseconds);
+  });
+
+  it.each(['', 'PT', 'PT0S', 'P1D', '13H', 'PT-1H', 'PT1.5H', 'treize heures'])(
+    'should reject the reading of a reference whose maximum activity duration is %j',
+    async duree => {
+      const reference = whenReadingReference();
+
+      await whenServerReturnsTheReference({ ...referentielFixture, dureeMaximaleDActivite: duree });
+
+      await thenItFailed(reference, "La durée maximale d'une activité n'est pas lisible");
+    },
+  );
+
+  it('should reject the reading of a reference without a maximum activity duration', async () => {
+    const sansDuree = Object.fromEntries(Object.entries(referentielFixture).filter(([champ]) => champ !== 'dureeMaximaleDActivite'));
+    const reference = whenReadingReference();
+
+    await whenServerReturnsTheReference(sansDuree);
+
+    await thenItFailed(reference, "La durée maximale d'une activité n'est pas lisible");
+  });
+
   it('should make no referential request without authorization', async () => {
     givenNoAuthorization();
 
@@ -219,10 +252,10 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   const whenReadingReference = (): Promise<ReferentielDuPupitre> => observeRejection(serveur.referentiel());
   const whenSending = (geste: GesteDePointage): Promise<Result<void, RefusDePublication>> => observeRejection(serveur.send(geste));
   const whenRereading = (geste: GesteDePointage): Promise<void> => serveur.reread(geste);
-  const whenServerReturnsTheReference = async (): Promise<TestRequest> => {
+  const whenServerReturnsTheReference = async (body: object = referentielFixture): Promise<TestRequest> => {
     await new Promise(resolve => setTimeout(resolve));
     const request = http.expectOne('/api/pupitre/referentiel');
-    request.flush(referentielFixture);
+    request.flush(body);
     return request;
   };
   const whenServerAcceptsWrite = async (url: string): Promise<ReturnType<HttpTestingController['expectOne']>> => {
@@ -296,6 +329,9 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       ],
       evenements: [],
     });
+  };
+  const thenTheMaximumActivityDurationIs = async (operation: Promise<ReferentielDuPupitre>, milliseconds: number): Promise<void> => {
+    expect((await operation).dureeMaximaleDActiviteEnMs).toBe(milliseconds);
   };
   const thenItFailed = async (operation: Promise<unknown>, expectedMessage?: string): Promise<void> => {
     if (expectedMessage !== undefined) {

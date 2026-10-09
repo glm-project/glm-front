@@ -1,4 +1,5 @@
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { referentielApiFixture } from '@test/unit/fixtures/pupitre/atelier/ReferentielApiFixture';
 import { dataSelector } from '../../../utils/DataSelector';
 import { longPressFixture } from '../../../utils/LongPressFixture';
@@ -18,6 +19,7 @@ const referentielFixture: ReferentielDuPupitre = {
     },
   ],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 
 const SEMAINE_EN_COURS = 38;

@@ -31,14 +31,14 @@ const withoutActivityOnKey = (suivi: SuiviDuPupitre, geste: GesteDePointage): Su
 const finish = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre =>
   hasActivityOnKey(suivi, geste) ? withActivities(suivi, withoutActivityOnKey(suivi, geste)) : suivi;
 
-const open = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre =>
+const open = (suivi: SuiviDuPupitre, geste: GesteDePointage, dureeMaximaleEnMs: number): SuiviDuPupitre =>
   isKeyBusyAt(suivi, geste)
     ? suivi
     : withActivities(suivi, [
         ...withoutActivityOnKey(suivi, geste),
         {
           ouverture: geste.id,
-          echeance: new Date(Date.parse(geste.dateDeSurvenue) + 13 * 60 * 60 * 1000).toISOString(),
+          echeance: new Date(Date.parse(geste.dateDeSurvenue) + dureeMaximaleEnMs).toISOString(),
           operateurId: geste.operateurId,
           categorie: categorieFor(geste),
           depuis: geste.dateDeSurvenue,
@@ -46,8 +46,8 @@ const open = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre =>
         },
       ]);
 
-const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre =>
-  geste.type === 'FIN' ? finish(suivi, geste) : open(suivi, geste);
+const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage, dureeMaximaleEnMs: number): SuiviDuPupitre =>
+  geste.type === 'FIN' ? finish(suivi, geste) : open(suivi, geste, dureeMaximaleEnMs);
 
 const categorieFor = (geste: GesteDePointage): 'TRAVAIL' | 'NON_CONFORMITE' => {
   if (geste.type === 'NON_CONFORMITE') {
@@ -72,16 +72,17 @@ const applyToMatching = <T>(items: readonly T[], matches: (item: T) => boolean, 
 const projectPointage = (
   suivis: readonly SuiviDuPupitre[],
   evenement: Exclude<EvenementDuJournal, { readonly etat: 'REFUSE' }>,
+  dureeMaximaleEnMs: number,
 ): SuiviDuPupitre[] =>
   applyToMatching(
     suivis,
     suivi => !isAlreadyProjectedOrUnrelated(suivi, evenement.geste),
-    suivi => applyPointage(suivi, evenement.geste),
+    suivi => applyPointage(suivi, evenement.geste, dureeMaximaleEnMs),
   );
 
 const applyEvenement = (referentiel: ReferentielDuPupitre, evenement: EvenementDuJournal): ReferentielDuPupitre => {
   if (evenement.etat === 'REFUSE') return referentiel;
-  return { ...referentiel, suivis: projectPointage(referentiel.suivis, evenement) };
+  return { ...referentiel, suivis: projectPointage(referentiel.suivis, evenement, referentiel.dureeMaximaleDActiviteEnMs) };
 };
 
 export const projectReferentiel = (pupitre: JournalDuPupitre): ReferentielDuPupitre | undefined => {

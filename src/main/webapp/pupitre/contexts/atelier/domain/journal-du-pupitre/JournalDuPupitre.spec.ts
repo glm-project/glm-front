@@ -8,6 +8,8 @@ import {
   snapshotDuJournal,
 } from './JournalDuPupitre';
 
+const dureeMaximaleFixtureEnMs = 13 * 60 * 60 * 1000;
+
 const gesteFixture = (id: string): GesteDePointage => ({
   nature: 'POINTAGE',
   type: 'DEBUT',
@@ -108,6 +110,7 @@ describe('JournalDuPupitre', () => {
           },
         ],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
 
@@ -149,6 +152,7 @@ describe('JournalDuPupitre', () => {
           },
         ],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
       evenements: [
         {

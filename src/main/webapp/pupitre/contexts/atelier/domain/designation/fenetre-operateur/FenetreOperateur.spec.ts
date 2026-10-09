@@ -17,6 +17,8 @@ import { DecisionDePointage, LotDeGestesDAtelier } from './DecisionDePointage';
 import { FenetreOperateur } from './FenetreOperateur';
 import { ElementDePointage, VueDePointage } from './VueDePointage';
 
+const dureeMaximaleFixtureEnMs = 13 * 60 * 60 * 1000;
+
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
 
 const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
@@ -135,6 +137,7 @@ const vueFixture: JournalDuPupitre = {
       },
     ],
     categories: [],
+    dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
   },
 };
 
@@ -166,6 +169,18 @@ describe('FenetreOperateur', () => {
     ];
 
     expect(deadlines).toEqual([Date.parse('2026-09-05T19:00:00Z'), Date.parse('2026-09-05T21:30:00Z'), undefined]);
+  });
+
+  it('should schedule the deadline of an activity opened here from the maximum duration received with the reference', () => {
+    const window = givenAWindowOpenedOn({
+      ...vueFixture,
+      referentiel: { ...requiredFixture(vueFixture.referentiel, 'reference'), dureeMaximaleDActiviteEnMs: 8 * 60 * 60 * 1000 },
+    });
+
+    const started = window.afterDeciding('of-1015', 'PRINCIPALE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
+    const accepted = started.fenetre.prepareAcceptance(gesturesOf(started.decision)).applyTo(started.fenetre);
+
+    expect(accepted.prochaineEcheance()).toBe(Date.parse('2026-09-05T16:00:00Z'));
   });
 
   it('should request no resumption invalidation when accepting an ordinary opening', () => {
@@ -635,6 +650,7 @@ describe('FenetreOperateur', () => {
         operateurs: [],
         suivis: structuredClone(requiredFixture(vueFixture.referentiel, 'referential').suivis),
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     });
 
@@ -746,6 +762,7 @@ describe('FenetreOperateur', () => {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [element('piece-1', 'PIECE'), element('of-1', 'OF'), element('moule-1', 'MOULE')],
         categories,
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
 
@@ -778,6 +795,7 @@ describe('FenetreOperateur', () => {
           },
         ],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
     const onlyNcWindow = givenAWindowOpenedOn(onlyNcJournal);
@@ -798,6 +816,7 @@ describe('FenetreOperateur', () => {
           { id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
         ],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
     const sortWindow = givenAWindowOpenedOn(unsortedJournal);
@@ -834,6 +853,7 @@ describe('FenetreOperateur', () => {
           },
         ],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
     const sortWindow = givenAWindowOpenedOn(referencedJournal);
@@ -944,6 +964,7 @@ describe('FenetreOperateur', () => {
         operateurs: referentiel.operateurs,
         suivis: referentiel.suivis.map(suivi => ({ ...suivi, activites: activitesParSuivi[suivi.id] ?? [] })),
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     });
   };
@@ -968,6 +989,7 @@ describe('FenetreOperateur', () => {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [{ id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] }],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
     const initialWindow = givenAWindowOpenedOn(inactiveJournalFixture);

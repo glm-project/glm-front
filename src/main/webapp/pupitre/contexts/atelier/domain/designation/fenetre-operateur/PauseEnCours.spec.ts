@@ -8,6 +8,8 @@ import {
 } from '../../journal-du-pupitre/JournalDuPupitre';
 import { ActiviteSuspendue, PauseEnCours } from './PauseEnCours';
 
+const dureeMaximaleFixtureEnMs = 13 * 60 * 60 * 1000;
+
 const travailAuTourFixture: ActiviteDuPupitre = {
   ouverture: 'activite-fixture-10',
   echeance: '2026-09-05T21:00:00.000Z',
@@ -39,6 +41,7 @@ const referentielFixture: ReferentielDuPupitre = {
   ],
   suivis: [suiviFixture('of-204', [travailAuTourFixture])],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const suspensionFixture = (suiviId: string, extra: Partial<Omit<GesteDePointage, 'type'>>, pause = 'pause-de-midi'): GesteDePointage => ({
   id: `fin-${suiviId}-${pause}`,

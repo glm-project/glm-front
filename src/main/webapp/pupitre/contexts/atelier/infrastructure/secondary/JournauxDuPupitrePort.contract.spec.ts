@@ -11,6 +11,7 @@ import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalSto
 import { IndexedDbLocalStorage } from '@/pupitre/shared/local-storage/infrastructure/secondary/IndexedDbLocalStorage';
 import { TestBed } from '@angular/core/testing';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { elementsDeLaZoneFixture } from '@test/unit/fixtures/pupitre/atelier/VueDePointageFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
@@ -23,7 +24,12 @@ import { IntentionGlobaleInitiee } from '../../domain/designation/IntentionGloba
 import { keyFor } from './local/ClesDesJournaux';
 import { IndexedDbJournauxDuPupitre } from './local/IndexedDbJournauxDuPupitre';
 
-const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [], categories: [] };
+const referenceFixture: ReferentielDuPupitre = {
+  operateurs: [],
+  suivis: [],
+  categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
+};
 const refreshedReferenceFixture: ReferentielDuPupitre = {
   operateurs: [],
   suivis: [
@@ -31,6 +37,7 @@ const refreshedReferenceFixture: ReferentielDuPupitre = {
     { id: 'autre-piece', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'MOULE', activites: [], evenements: [] },
   ],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const ouvertureFixture: GesteDePointage = {
   nature: 'POINTAGE',
@@ -503,6 +510,7 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
         },
       ],
       categories: [],
+      dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
     });
     await journal.append(Entreprise.of('entreprise-a'), [suspensionFixture]);
     return journal.read(Entreprise.of('entreprise-a'));

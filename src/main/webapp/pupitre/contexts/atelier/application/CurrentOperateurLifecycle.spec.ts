@@ -23,6 +23,7 @@ import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/Device
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { AtelierExchangeFixture } from '@test/unit/fixtures/pupitre/atelier/AtelierExchangeFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { elementsDeLaZoneFixture } from '@test/unit/fixtures/pupitre/atelier/VueDePointageFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
@@ -49,7 +50,12 @@ const operateurAjouteFixture: OperateurDuPupitre = {
 };
 const identiteOperateurAjouteFixture = { id: 'lea', nom: 'Martin', prenom: 'Lea', identifiant: '050' };
 
-const referentielFixture = { operateurs: [operateurFixture], suivis: [], categories: [] };
+const referentielFixture = {
+  operateurs: [operateurFixture],
+  suivis: [],
+  categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
+};
 
 const referenceFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -628,7 +634,12 @@ describe('Designation du pupitre', () => {
   });
 
   const givenAnOperateurAddedToTheServerReferential = (): void => {
-    serveur.reference = { operateurs: [operateurFixture, operateurAjouteFixture], suivis: [], categories: [] };
+    serveur.reference = {
+      operateurs: [operateurFixture, operateurAjouteFixture],
+      suivis: [],
+      categories: [],
+      dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
+    };
   };
   const givenAHangingServerExchange = (): void => {
     serveur.suspendExchanges();
