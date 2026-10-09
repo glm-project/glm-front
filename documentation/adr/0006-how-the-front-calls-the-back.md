@@ -6,9 +6,12 @@ Accepted, amended by [ADR 0007](0007-durable-offline-pupitre.md): concurrent wri
 aggregate before an identical retry, and the offline reference is one unpaged response. The bounded-read
 rules govern online list ports. [ADR 0034](0034-proxy-the-api-at-the-edge.md) adds same-origin API relay;
 [ADR 0037](0037-require-production-consumers.md) removes unused `Page.isComplete()` while preserving the
-server total. This account is revised under [ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and
-[ADR 0047](0047-count-only-finished-activities.md): stable targeted activity intentions and durable local
+server total. This account is revised under [ADR 0045](0045-keep-the-pause-on-the-pupitre.md): durable local
 pause memory. The publication amendment below keeps local acceptance separate from server outcomes.
+Amended on 2026-10-09 by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md) (lot B9 of #254): a pointage
+body carries its type and workstation only, never an intention or a target; the server ignores what does not fit its
+key (409 `pointage-ignore`) and no longer accepts a publication with conflicts, so
+`AtelierExchangePort.send` resolves `Result<void, RefusDePublication>`.
 
 ## Context
 
@@ -66,7 +69,7 @@ one artefact a business domain imports — and the wire-side `buildPageFrom`. `a
 from the server's own `totalElementsCount`, and the returned elements let a caller identify truncation against that total.
 
 **Read guaranteed response fields directly and guard a genuinely optional value the domain needs.**
-A complete duration total missing its optional wire value rejects the read rather than constructing a
+A retained end missing from an automatically finished activity rejects the read rather than constructing a
 domain value from `undefined`. Required request fields are already enforced by the generated body type.
 
 **Assign the wire enums straight to the domain unions**, which repeat the same literals. No `Record` keyed by
@@ -83,8 +86,9 @@ its explicit server `Result`, as specified by the publication amendment. Durable
 only the committed journal mutation.
 
 **Replay `saisie-concurrente` once after rereading the affected workshop item.** Repeat the original body,
-UUID, occurrence time, intention and target. Preserve a second refusal; unexpected technical failure leaves
-the gesture pending. A 200/201 carrying conflicts remains accepted and retains its diagnostics before refresh.
+UUID, occurrence time, type and workstation. Preserve a second refusal; unexpected technical failure leaves
+the gesture pending. A 200/201 is accepted; a pointage the server ignores answers 409 `pointage-ignore`, a refusal
+kept in the journal and never shown to the operator.
 
 This record also names two revisions of issue 6:
 
@@ -102,8 +106,8 @@ ground under the unbounded queue of issue 53; the day it falls, that is the tick
 ### Publication amendment
 
 The durable journal now separates local acceptance from the actual server exchange. Therefore
-`AtelierExchangePort.send` returns `Promise<Result<PublicationAcceptee, RefusDePublication>>`: success confirms the server
-answered and retains its conflict diagnostics, and a recognized business refusal is a typed value carrying its original code, message and motif.
+`AtelierExchangePort.send` returns `Promise<Result<void, RefusDePublication>>`: success confirms the server
+answered and carries nothing more, and a recognized business refusal is a typed value carrying its original code, message and motif.
 As required by ADR 0007 and ADR 0009, structured business refusals without a known replay motif remain
 durable refusals. Unexpected technical failures still reject the promise; synchronization reports them
 through `ErrorHandlerPort`, marks disconnection and leaves pending work for a later attempt.

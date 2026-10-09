@@ -11,9 +11,10 @@ application coordinator into domain owners. Complemented by
 Issue 165 replaced paged reference acquisition with one unpaged `GET /api/pupitre/referentiel` response.
 The backend uses READ COMMITTED; successive queries can observe concurrent commits. This response is
 complete acquisition, without a shared transactional snapshot. Revised under
-[ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and [ADR 0047](0047-count-only-finished-activities.md):
-activity intentions retain stable targets, accepted conflicts retain diagnostics, and pause memory remains
-local and atomic.
+[ADR 0045](0045-keep-the-pause-on-the-pupitre.md): pause memory remains local and atomic.
+Amended on 2026-10-09 by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md) (lot B9 of #254): a gesture
+carries a type and a workstation, no intention or target; no accepted conflict diagnostic is retained; the document
+key is `atelier-activites-v2:<tenant>`, and the obsolete `atelier:` and `atelier-activites-v1:` documents are discarded.
 Amended by [ADR 0049](0049-forget-integrated-gestures-at-reference-activation.md): an accepted gesture is
 forgotten once a complete reference that integrates it is activated, except the last gesture and last pause of
 each operator, so the journal no longer retains acknowledged events or grows with past activity; pending and
@@ -53,10 +54,10 @@ appends remain available during a network request. Another lock coordinates devi
 outgoing gestures; the authentication port rereads the selected durable session before an exchange.
 
 `AtelierCoordinator` coordinates capture; `PupitreSynchronization` coordinates exchange. Each company has
-its own `atelier-activites-v1:<tenant>` document containing the complete last reference, original gestures,
+its own `atelier-activites-v2:<tenant>` document containing the complete last reference, original gestures,
 outcomes, pause markers and the last push state. Reenrolment after an automatic return selects a different document. The former document remains intact and
-its pending queue is suspended; an explicit reset erases every document, pending queue included. Gestures carry their UUID and timestamp before asynchronous work starts. A first activity commits its captured opening alone. Targeted finishes and transitions keep their original
-activity identity. A deferred global batch is decided from the updated window with deterministic identities
+its pending queue is suspended; an explicit reset erases every document, pending queue included. Gestures carry their UUID and timestamp before asynchronous work starts. A first activity commits its captured opening alone. A finish closes the activity of its key, and a tile press that changes a category sends a finish then an opening at
+the same time. A deferred global batch is decided from the updated window with deterministic identities
 and its initiation timestamp; an atomic stop invalidates resumption memory even for an empty batch.
 An unsuccessful local commit confirms nothing and changes no optimistic view.
 
@@ -81,13 +82,13 @@ refusal separately.
 changing its designated operator or frozen observation time. Optimistic effects apply only to local activity
 events not already represented by accepted server identities. This prevents losing an accepted activity
 before refresh and applying it twice after restart. Refusal reconciliation removes its optimistic effect.
-A failed refresh retains the complete previous reference and accepted conflict diagnostics. Reference data
+A failed refresh retains the complete previous reference. Reference data
 remain pupitre read models, without imports from another context's domain.
 
-PAUSE commits eligible targeted finishes and their suspension in one durable batch; REPRENDRE opens new
+PAUSE commits eligible finishes and their suspension in one durable batch; REPRENDRE opens new
 activities on still eligible elements and workstations. The pause belongs to the recording pupitre. TOUT
 ARRÊTER commits N finishes and clears that operator's resumption memory atomically, N=0 included, while
-retaining pending work and refusals. The activity format discards obsolete `atelier:` documents without
+retaining pending work and refusals. The activity format discards the obsolete `atelier:` and `atelier-activites-v1:` documents without
 reading or migrating them; credentials and enrolment remain independent.
 
 The device adapter persists the refresh credential, access-token expiry and company in the same IndexedDB

@@ -5,7 +5,9 @@
 `Accepted`
 
 Revised under [ADR 0047](0047-count-only-finished-activities.md): PAUSE closes only interpretable,
-unexpired activities by stable target; REPRENDRE opens new activities. TOUT ARRÊTER atomically invalidates
+unexpired activities; REPRENDRE opens new activities.
+Amended on 2026-10-09 by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md) (lot B9 of #254): a finish
+closes the activity of its key and carries no target; a pause has no conflicting suspension to leave unresumed. TOUT ARRÊTER atomically invalidates
 local resumption memory even without a finish. The global commands are the confirmed activity workflow.
 Amended by [ADR 0049](0049-forget-integrated-gestures-at-reference-activation.md): the journal no longer keeps
 accepted history. `PauseEnCours` reads the journal that remains, which always holds the last pause of every
@@ -33,7 +35,7 @@ memory needed to reopen its own activities. The server receives only activity fi
 ## Decision
 
 PAUSE ends, in one atomic batch, every interpretable nonexpired personal activity the pupitre knows for the designated operator: one
-targeted `FIN` per activity, on its workstation, carrying a **suspension** — the pause, identified by the root identity of
+`FIN` per activity, on its workstation, carrying a **suspension** — the pause, identified by the root identity of
 the initiated global intention, and the pointage that will reopen the activity (`DEBUT`, or `NON_CONFORMITE` for
 an activity in non-conformity). The suspension never leaves the pupitre.
 
@@ -41,18 +43,17 @@ an activity in non-conformity). The suspension never leaves the pupitre.
 reopens. The pause of an operator is the one of their last suspension; it ends at REPRENDRE, at any later gesture
 of that operator appended to this journal whatever its fate at publication, and as soon as the projected
 reference shows an activity of that operator other than one whose suspension was refused, considering only interpretable nonexpired activities. It reopens the
-activities whose suspension was neither refused nor conserved in conflict, whose element is still in the projected reference, whose workstation
+activities whose suspension was not refused, whose element is still in the projected reference, whose workstation
 is still held and which are not open again on the same element and workstation. No clock is compared across
 devices and a pause never expires.
 
-REPRENDRE sends one opening DEBUT or NON_CONFORMITE per activity to reopen, with a new UUID and no
-former target. PAUSE is offered while an interpretable personal activity remains, REPRENDRE while a local
+REPRENDRE sends one opening DEBUT or NON_CONFORMITE per activity to reopen, with a new UUID. PAUSE is offered while an interpretable personal activity remains, REPRENDRE while a local
 pause remains, TOUT ARRÊTER always. The chrome shows the operator identity and « En pause » when appropriate.
 
-TOUT ARRÊTER appends N targeted finishes and clears durable resumption memory in one journal mutation,
+TOUT ARRÊTER appends N finishes and clears durable resumption memory in one journal mutation,
 including N=0. It retains pending gestures. No local or server gesture is fabricated to express
 that invalidation. A failed transaction leaves both effects unapplied; restart cannot restore a cleared
-pause. The company-scoped activity journal uses its own versioned key and discards obsolete `atelier:` documents
+pause. The company-scoped activity journal uses its own versioned key and discards the obsolete `atelier:` and `atelier-activites-v1:` documents
 without reading or migrating them. Device enrolment and credentials retain their documents.
 
 ## Consequences

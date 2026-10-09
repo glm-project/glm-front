@@ -8,11 +8,15 @@ Amends [ADR 0007](0007-durable-offline-pupitre.md): the former company's journal
 after a reenrolment that follows an explicit reset. The automatic return to enrolment after a definitive loss of
 authorization keeps every journal, as ADR 0007 and [ADR 0009](0009-pupitre-domain-responsibilities.md) describe.
 
+`Amended on 2026-10-09 (lot B9 of #254, ADR 0054)`: the journal document is now `atelier-activites-v2:<tenant>`. The
+erasure removes every document under that prefix and nothing else, so the format change leaves this decision intact; the
+documents of the obsolete prefixes are discarded when a journal is read.
+
 ## Context
 
 The reset gesture (three-second hold on the logo, then a confirmation) revokes the device enrolment on the
 server and sends the pupitre back to its first request. It never touched the journals: each company's
-`atelier-activites-v1:<tenant>` document stayed on disk, pending gestures included. After the next enrolment the
+`atelier-activites-v1:<tenant>` document (now `atelier-activites-v2:`) stayed on disk, pending gestures included. After the next enrolment the
 pupitre read that disk again and published the old gestures under the new credential, whoever now owned the
 device and whichever company it was enrolled for.
 

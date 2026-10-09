@@ -8,6 +8,8 @@ Accepted. Amends [0031](0031-own-workshop-supervision-in-gestion.md) and complem
 interpretable current activities. The positioning, alphabetical order, optional workstation labels,
 NC overlay and duration-free reading remain. Local pause ownership is carried by
 [0045](0045-keep-the-pause-on-the-pupitre.md).
+Amended on 2026-10-09 by [0054](0054-ignore-incoherent-pointages-at-reception.md) (lot B9 of #254): there is no
+conflicting sequence to render any more; the card's verification signal carries automatic finishes only.
 
 ## Context
 
@@ -41,10 +43,8 @@ Show **Au travail · Sans activité**, always in that order and visible even whe
 operator appears exactly once: at least one interpretable current activity means Au travail; otherwise
 Sans activité. Sort by name, first name and identifier within each lane. The operator has no fixed place.
 
-NC is hatching and a text mark laid over an interpretable current activity, never a lane. Conflicting
-sequences render separately, including those without an activity to resolve. They yield no interpreted
-current activity and no NC signal; independent activities of the same operator still render. Automatic
-finishes and conflicts remain visible in the card's verification signal without changing the lane.
+NC is hatching and a text mark laid over an interpretable current activity, never a lane. Automatic
+finishes remain visible in the card's verification signal without changing the lane.
 
 Personal work uses an OF Perso created by the supervisor and stays Au travail while ongoing.
 Supervision reads it like any fabrication order; creating it and choosing its subtype is another feature.
@@ -66,7 +66,7 @@ demonstration fallback. Keep InMemory for reproducible fixtures. The dated histo
 ### Positive
 
 - The two states read by position at a glance without horizontal scrolling.
-- NC and conflicts remain visible without replacing the activity classification.
+- NC and automatic finishes remain visible without replacing the activity classification.
 - No computed duration can contradict the pupitre or the reports.
 - The view exposes only states supported by its source.
 
@@ -77,5 +77,5 @@ demonstration fallback. Keep InMemory for reproducible fixtures. The dated histo
 - Au travail grows long beyond about 40 operators; no compact mode exists.
 - The supervisor cannot distinguish a local pause from another reason for having no current activity.
 - An NC remains signalled while its interpretable activity remains ongoing in the source, including when
-  its finish is still unpublished or another pupitre opened it. A conflicting activity contributes none.
+  its finish is still unpublished or another pupitre opened it.
 - The timeline, filter and suspended-activity scenarios left with their removed UI responsibilities.

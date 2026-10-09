@@ -10,10 +10,13 @@ Complements [0012](0012-own-business-contexts-by-front.md). Acquisition is amend
 [0047](0047-count-only-finished-activities.md). This revised account retains the context and acquisition
 reasons with the delivered two-lane model. HTTP acquisition now uses the complete atelier projection;
 InMemory remains a demonstration adapter.
+Amended on 2026-10-09 by [0054](0054-ignore-incoherent-pointages-at-reception.md) (lot B9 of #254): the supervision
+no longer renders conflicting sequences; an operator « à vérifier » carries an automatic finish only, and the
+demonstration sets its own deadlines.
 
 ## Context
 
-The view combines declared operators, interpretable activities and conflicting sequences. Gestion's
+The view combines declared operators and interpretable activities. Gestion's
 `operateur` context owns the operator reference and habilitations; instantaneous workshop interpretation
 has another reason to change. The screen semantics originated in
 [#12](https://github.com/glm-project/glm-front/issues/12#issuecomment-5542625574) and now follow ADR 0047.
@@ -35,10 +38,10 @@ acquires the resources and translates transport data. The domain separately deci
 The living vocabulary belongs to
 [`supervision-atelier` AGENTS.md](../../src/main/webapp/gestion/contexts/supervision-atelier/AGENTS.md):
 
-- **Supervision de l'atelier**: interpretation of declared operators, current activities and conflicts.
+- **Supervision de l'atelier**: interpretation of declared operators and current activities.
 - **Lecture complète**: every required collection acquired without truncation.
-- **Lecture exploitable**: every activity, including a conflicting one, has an identifiable operator.
-- **Opérateur à vérifier**: an operator carrying an automatic finish or conflicting sequence.
+- **Lecture exploitable**: every activity has an identifiable operator.
+- **Opérateur à vérifier**: an operator carrying an automatic finish.
 
 Reject incomplete acquisition in the secondary adapter. Let the domain refuse activities without an
 identifiable operator. Either failure displays an error replacing the previous lanes; omitting an
@@ -46,7 +49,7 @@ unassignable activity would silently alter the classification. Keep activities w
 show « Sans poste ». Personal work is represented by a supervisor-created OF Perso, read like every
 other fabrication order. Its creation and subtype are a separate feature; a missing element stays invalid.
 
-Provide reproducible activity, automatic-finish and conflict scenarios through one InMemory adapter,
+Provide reproducible activity and automatic-finish scenarios through one InMemory adapter,
 for fixtures. Select HTTP for the normal supervision route at the composition root. Its complete atelier
 projection supplies every required source; a failed HTTP call never selects simulated data. The current
 two lanes, alphabetical order and NC overlay belong to ADR 0041.
