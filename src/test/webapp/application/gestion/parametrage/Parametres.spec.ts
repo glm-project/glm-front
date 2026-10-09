@@ -46,6 +46,7 @@ describe('Company settings in gestion', () => {
     whenRemovingTheLogo();
 
     thenTheGlmLogoIsBack(api);
+    thenTheTabShowsTheGlmIcon();
   });
 
   it('should show the logo of the company in the header, in place of the GLM logo', () => {
@@ -53,6 +54,13 @@ describe('Company settings in gestion', () => {
     whenVisitingSettings();
 
     thenTheHeaderShowsTheCompanyLogo();
+  });
+
+  it('should show the logo of the company in the browser tab', () => {
+    givenSettingsWithALogo();
+    whenVisitingSettings();
+
+    thenTheTabShowsTheCompanyLogo();
   });
 
   it('should show the chosen logo in the header at once, without reloading the page', () => {
@@ -180,6 +188,16 @@ const thenTheHeaderShowsTheCompanyLogo = (): void => {
     .should('be.visible')
     .and('have.attr', 'src')
     .and('match', /^data:image\/png;base64,/);
+};
+
+const thenTheTabShowsTheCompanyLogo = (): void => {
+  cy.get('head link[rel="icon"]')
+    .should('have.attr', 'href')
+    .and('match', /^data:image\/png;base64,/);
+};
+
+const thenTheTabShowsTheGlmIcon = (): void => {
+  cy.get('head link[rel="icon"]').should('have.attr', 'href', 'content/images/glm-gestion.svg');
 };
 
 const thenTheHeaderLogoMeasures = (largeur: number, hauteur: number): void => {

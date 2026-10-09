@@ -6,9 +6,11 @@ import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/
 
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
+import { IconeDeLOngletFixture } from '@test/unit/fixtures/gestion/parametrage/IconeDeLOngletFixture';
 import { ParametrageFixture } from '@test/unit/fixtures/gestion/parametrage/ParametrageFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { LogoAffiche } from '../contexts/parametrage/application/LogoAffiche';
+import { IconeDeLOnglet } from '../contexts/parametrage/domain/IconeDeLOnglet';
 import { ImageDuLogo } from '../contexts/parametrage/domain/ImageDuLogo';
 import { ParametragePort } from '../contexts/parametrage/domain/ParametragePort';
 import { VersionDuLogo } from '../contexts/parametrage/domain/VersionDuLogo';
@@ -19,6 +21,7 @@ const configureHeaderOf = async (roles: readonly string[], parametrage = new Par
     providers: [
       { provide: ParametragePort, useValue: parametrage },
       LogoAffiche,
+      { provide: IconeDeLOnglet, useValue: new IconeDeLOngletFixture() },
       provideRouter([{ path: '**', children: [] }]),
       { provide: ComponentFixtureAutoDetect, useValue: true },
       { provide: InMemoryGestionAuthentication, useFactory: () => new InMemoryGestionAuthentication(roles) },

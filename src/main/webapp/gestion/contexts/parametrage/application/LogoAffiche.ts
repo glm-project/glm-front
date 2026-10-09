@@ -1,4 +1,5 @@
 import { inject, Injectable, signal } from '@angular/core';
+import { IconeDeLOnglet } from '../domain/IconeDeLOnglet';
 import { ImageDuLogo } from '../domain/ImageDuLogo';
 import { ParametragePort } from '../domain/ParametragePort';
 import { VersionDuLogo } from '../domain/VersionDuLogo';
@@ -6,6 +7,7 @@ import { VersionDuLogo } from '../domain/VersionDuLogo';
 @Injectable()
 export class LogoAffiche {
   private readonly port = inject(ParametragePort);
+  private readonly icone = inject(IconeDeLOnglet);
   private readonly courante = signal<ImageDuLogo | undefined>(undefined);
 
   readonly image = this.courante.asReadonly();
@@ -16,14 +18,19 @@ export class LogoAffiche {
 
   async montrer(version: VersionDuLogo | undefined): Promise<void> {
     if (version === undefined) {
-      this.courante.set(undefined);
+      this.afficher(undefined);
       return;
     }
     try {
-      this.courante.set(await this.port.imageDuLogo(version));
+      this.afficher(await this.port.imageDuLogo(version));
     } catch (failure) {
-      this.courante.set(undefined);
+      this.afficher(undefined);
       throw failure;
     }
+  }
+
+  private afficher(image: ImageDuLogo | undefined): void {
+    this.courante.set(image);
+    this.icone.afficher(image);
   }
 }

@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { IconeDeLOngletFixture } from '@test/unit/fixtures/gestion/parametrage/IconeDeLOngletFixture';
 import { ParametrageFixture } from '@test/unit/fixtures/gestion/parametrage/ParametrageFixture';
+import { IconeDeLOnglet } from '../domain/IconeDeLOnglet';
 import { ImageDuLogo } from '../domain/ImageDuLogo';
 import { ParametragePort } from '../domain/ParametragePort';
 import { VersionDuLogo } from '../domain/VersionDuLogo';
@@ -10,11 +12,15 @@ const AUTRE_LOGO = { version: new VersionDuLogo('fedcba9876543210'), image: new 
 
 describe('Logo shown by the gestion', () => {
   let port: ParametrageFixture;
+  let icone: IconeDeLOngletFixture;
   let affiche: LogoAffiche;
 
   beforeEach(() => {
     port = new ParametrageFixture();
-    TestBed.configureTestingModule({ providers: [LogoAffiche, { provide: ParametragePort, useValue: port }] });
+    icone = new IconeDeLOngletFixture();
+    TestBed.configureTestingModule({
+      providers: [LogoAffiche, { provide: ParametragePort, useValue: port }, { provide: IconeDeLOnglet, useValue: icone }],
+    });
     affiche = TestBed.inject(LogoAffiche);
   });
 
@@ -30,6 +36,7 @@ describe('Logo shown by the gestion', () => {
     await affiche.lire();
 
     expect(affiche.image()).toBe(LOGO.image);
+    expect(icone.affichees).toEqual([LOGO.image]);
   });
 
   it('should show nothing for a company without a logo', async () => {
@@ -55,6 +62,7 @@ describe('Logo shown by the gestion', () => {
     await affiche.montrer(undefined);
 
     expect(affiche.image()).toBeUndefined();
+    expect(icone.affichees).toEqual([LOGO.image, undefined]);
   });
 
   it('should show nothing and fail when the image cannot be read', async () => {
@@ -65,5 +73,6 @@ describe('Logo shown by the gestion', () => {
     await expect(affiche.montrer(LOGO.version)).rejects.toEqual(new Error('panne'));
 
     expect(affiche.image()).toBeUndefined();
+    expect(icone.affichees).toEqual([LOGO.image, undefined]);
   });
 });

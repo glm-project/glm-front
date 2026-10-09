@@ -2,12 +2,14 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { IconeDeLOngletFixture } from '@test/unit/fixtures/gestion/parametrage/IconeDeLOngletFixture';
 import { pngFixture } from '@test/unit/fixtures/gestion/parametrage/ImagesFixture';
 import { ParametrageFixture } from '@test/unit/fixtures/gestion/parametrage/ParametrageFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { LogoAffiche } from '../../../application/LogoAffiche';
 import { DureeMaxDActivite } from '../../../domain/DureeMaxDActivite';
+import { IconeDeLOnglet } from '../../../domain/IconeDeLOnglet';
 import { ImageDuLogo } from '../../../domain/ImageDuLogo';
 import { ParametragePort } from '../../../domain/ParametragePort';
 import { VersionDuLogo } from '../../../domain/VersionDuLogo';
@@ -28,6 +30,7 @@ describe('Parametres page', () => {
         { provide: ParametragePort, useValue: port },
         { provide: ErrorHandlerPort, useValue: errors },
         LogoAffiche,
+        { provide: IconeDeLOnglet, useValue: new IconeDeLOngletFixture() },
       ],
     });
   });
