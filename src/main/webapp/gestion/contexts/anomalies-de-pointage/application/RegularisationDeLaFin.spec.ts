@@ -11,6 +11,8 @@ const realSetTimeout = setTimeout;
 const ADRESSE: AdresseDossier = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') };
 const ACTIVITE = new ActiviteAnomalieId('travail-8');
 const FIN = '2026-09-14T17:00:00-03:00';
+const FIN_EN_UTC = '2026-09-14T20:00:00Z';
+const AUTRE_FIN = '2026-09-14T16:00:00-03:00';
 
 type Reponse = ResultatDeRegularisation | Error;
 
@@ -70,7 +72,7 @@ describe('Regularisation of the automatic end of a dossier', () => {
     thenTheStateIs({ kind: 'REGULARISEE', dateDeSurvenue: FIN });
   });
 
-  it('should keep the identifier of the entry when it is sent again after a technical failure', async () => {
+  it('should keep the identifier when the same end is sent again after a technical failure', async () => {
     givenTheEntryIdentifiers('saisie-1', 'saisie-2');
     port.repondre(new Error('Réseau coupé'));
     await whenValidating(FIN);
@@ -79,6 +81,26 @@ describe('Regularisation of the automatic end of a dossier', () => {
 
     expect(port.commandes.map(commande => commande.id)).toEqual(['saisie-1', 'saisie-1']);
     thenTheStateIs({ kind: 'REGULARISEE', dateDeSurvenue: FIN });
+  });
+
+  it('should give a new identifier to another hour sent after a technical failure, the first request may have succeeded', async () => {
+    givenTheEntryIdentifiers('saisie-1', 'saisie-2');
+    port.repondre(new Error('Réponse perdue'));
+    await whenValidating(FIN);
+
+    await whenValidating(AUTRE_FIN);
+
+    expect(port.commandes.map(commande => commande.id)).toEqual(['saisie-1', 'saisie-2']);
+  });
+
+  it('should keep the identifier when the same end is spelled otherwise and sent again', async () => {
+    givenTheEntryIdentifiers('saisie-1', 'saisie-2');
+    port.repondre(new Error('Réseau coupé'));
+    await whenValidating(FIN);
+
+    await whenValidating(FIN_EN_UTC);
+
+    expect(port.commandes.map(commande => commande.id)).toEqual(['saisie-1', 'saisie-1']);
   });
 
   it('should give another identifier to another entry', async () => {
@@ -90,12 +112,12 @@ describe('Regularisation of the automatic end of a dossier', () => {
     expect(port.commandes.map(commande => commande.id)).toEqual(['saisie-1', 'saisie-2']);
   });
 
-  it('should keep the identifier of the entry when the end is sent again after a refusal', async () => {
-    givenTheEntryIdentifiers('saisie-1');
-    port.repondre({ kind: 'REFUS', code: 'fin-apres-borne' });
+  it('should keep the identifier when the same end is sent again after a refusal', async () => {
+    givenTheEntryIdentifiers('saisie-1', 'saisie-2');
+    port.repondre({ kind: 'REFUS', code: 'activite-non-echue' });
     await whenValidating(FIN);
 
-    await whenValidating('2026-09-14T16:00:00-03:00');
+    await whenValidating(FIN);
 
     expect(port.commandes.map(commande => commande.id)).toEqual(['saisie-1', 'saisie-1']);
   });
@@ -152,7 +174,7 @@ describe('Regularisation of the automatic end of a dossier', () => {
   it('should send nothing more once the end is regularised', async () => {
     await whenValidating(FIN);
 
-    await whenValidating('2026-09-14T16:00:00-03:00');
+    await whenValidating(AUTRE_FIN);
 
     expect(port.commandes).toHaveLength(1);
   });

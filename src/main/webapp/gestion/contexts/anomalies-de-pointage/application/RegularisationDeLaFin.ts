@@ -3,6 +3,7 @@ import { ActiviteAnomalieId } from '../domain/dossier/ActiviteAnomalieId';
 import { AdresseDossier } from '../domain/dossier/DossierAnomalie';
 import { InstantPointage } from '../domain/dossier/InstantPointage';
 import { CodeRefusRegularisation, RegularisationPort } from '../domain/regularisation/RegularisationPort';
+import { SaisieDeRegularisation } from '../domain/regularisation/SaisieDeRegularisation';
 
 export type EtatDeRegularisation =
   | { readonly kind: 'REPOS' | 'EN_COURS' | 'A_RELIRE' | 'ECHEC' }
@@ -12,7 +13,7 @@ export type EtatDeRegularisation =
 @Injectable()
 export class RegularisationDeLaFin {
   private readonly port = inject(RegularisationPort);
-  private readonly identifiantDeLaSaisie = crypto.randomUUID();
+  private saisie: SaisieDeRegularisation | undefined;
   private readonly etatCourant = signal<EtatDeRegularisation>({ kind: 'REPOS' });
   readonly etat = this.etatCourant.asReadonly();
 
@@ -31,8 +32,14 @@ export class RegularisationDeLaFin {
   }
 
   private async envoyer(adresse: AdresseDossier, activite: ActiviteAnomalieId, dateDeSurvenue: string): Promise<EtatDeRegularisation> {
+    this.saisie = SaisieDeRegularisation.pour(this.saisie, activite, dateDeSurvenue, () => crypto.randomUUID());
     try {
-      const resultat = await this.port.regulariser({ suivi: adresse.suivi, id: this.identifiantDeLaSaisie, activite, dateDeSurvenue });
+      const resultat = await this.port.regulariser({
+        suivi: adresse.suivi,
+        id: this.saisie.id,
+        activite: this.saisie.activite,
+        dateDeSurvenue: this.saisie.dateDeSurvenue,
+      });
       if (resultat.kind === 'REGULARISEE') return { kind: 'REGULARISEE', dateDeSurvenue };
       return resultat.kind === 'REFUS' ? { kind: 'REFUSEE', code: resultat.code } : { kind: 'A_RELIRE' };
     } catch {
