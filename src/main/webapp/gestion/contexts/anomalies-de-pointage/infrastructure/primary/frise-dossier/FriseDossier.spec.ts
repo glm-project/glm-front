@@ -4,7 +4,7 @@ import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { instantLocalFixture } from '@test/utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 import { ActiviteAnomalieId } from '../../../domain/dossier/ActiviteAnomalieId';
-import { ActiviteAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { ActiviteEchue, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
 import { VueDeFrise } from './DispositionFrise';
 import { FriseDossier } from './FriseDossier';
@@ -23,70 +23,55 @@ const instantAt = (heure: string, jour = 14): string => {
   return instantLocalFixture(new Date(2026, 8, jour, heures, minutes));
 };
 
-const pointageFixture = (id: string, geste: Geste, heure: string, surcharge: Partial<PointageAnomalie> = {}): PointageAnomalie => ({
+const pointageA = (id: string, geste: Geste, instant: string): PointageAnomalie => ({
   id: new PointageAnomalieId(id),
-  fait: { ...GESTES[geste], operateur: 'op-camille', instant: instantAt(heure) },
+  fait: { ...GESTES[geste], operateur: 'op-camille', instant },
   operateurNom: 'Camille Martin',
-  regularisation: false,
-  ...surcharge,
 });
 
-const pointageLe = (id: string, geste: Geste, jour: number, heure: string): PointageAnomalie => {
-  const pointage = pointageFixture(id, geste, heure);
-  return { ...pointage, fait: { ...pointage.fait, instant: instantAt(heure, jour) } };
-};
+const pointageFixture = (id: string, geste: Geste, heure: string): PointageAnomalie => pointageA(id, geste, instantAt(heure));
 
-const activiteFixture = (
-  id: string,
-  etat: ActiviteAnomalie['etat'],
-  debut: string,
-  fin?: string,
-  categorie: 'TRAVAIL' | 'NON_CONFORMITE' = 'TRAVAIL',
-): ActiviteAnomalie => ({
+const activiteA = (id: string, debut: string, echeance: string, categorie: ActiviteEchue['categorie'] = 'TRAVAIL'): ActiviteEchue => ({
   id: new ActiviteAnomalieId(id),
-  libelle: `Activité ${id}`,
-  etat,
   ouvrant: new PointageAnomalieId(`debut-${id}`),
-  periode: { categorie, debut: instantAt(debut), ...(fin === undefined ? {} : { fin: instantAt(fin) }) },
+  categorie,
+  debut,
+  echeance,
 });
+
+const activiteFixture = (id: string, debut: string, echeance: string, categorie: ActiviteEchue['categorie'] = 'TRAVAIL'): ActiviteEchue =>
+  activiteA(id, instantAt(debut), instantAt(echeance), categorie);
+
+const vueDe = (activite: ActiviteEchue, geste: Geste = 'DEMARRAGE', ...autres: readonly PointageAnomalie[]): VueDeFrise => ({
+  journal: [pointageA(activite.ouvrant.pointage, geste, activite.debut), ...autres],
+  activite,
+});
+
+const vueEntre = (debut: string, echeance: string, jourEcheance = 14): VueDeFrise =>
+  vueDe(activiteA('a-1', instantAt(debut), instantAt(echeance, jourEcheance)));
+
+const vueDuJour = (debut: string, echeance: string, jour: number, jourEcheance: number): VueDeFrise =>
+  vueDe(activiteA('a-1', instantAt(debut, jour), instantAt(echeance, jourEcheance)));
+
+const vueEntreInstants = (debut: Date, echeance: Date): VueDeFrise => vueDe(activiteA('a-1', debut.toISOString(), echeance.toISOString()));
+
+const dossierDeLaFinAutomatique = (): VueDeFrise => vueDe(activiteFixture('a-1', '08:00', '12:00'));
 
 const poigneeFixture = (heure: string, surcharge: Partial<PoigneeDeFrise> = {}): PoigneeDeFrise => ({
   instant: instantAt(heure),
-  activiteVisee: 'travail-8',
   bornes: { min: instantAt('08:00'), max: instantLocalFixture(new Date(2026, 9, 5, 10, 0)) },
   ...surcharge,
 });
 
 const placementFixture = (surcharge: Partial<PlacementDeLInstant> = {}): PlacementDeLInstant => ({
-  activiteVisee: 'travail-8',
   bornes: { min: instantAt('08:00'), max: instantAt('13:00') },
   ...surcharge,
 });
 
-const placementDeLaFixture = (activite: string): PlacementDeLInstant =>
-  placementFixture({ activiteVisee: activite, bornes: { min: instantAt('08:00'), max: instantLocalFixture(new Date(2026, 9, 5, 10, 0)) } });
+const placementDeLaFixture = (): PlacementDeLInstant =>
+  placementFixture({ bornes: { min: instantAt('08:00'), max: instantLocalFixture(new Date(2026, 9, 5, 10, 0)) } });
 
 const PLAN_WIDTH = 1000;
-
-type VueDeTest = Omit<VueDeFrise, 'activites'> & { readonly activites?: readonly ActiviteAnomalie[] };
-
-const barreOuvertePar = (pointage: PointageAnomalie): ActiviteAnomalie => ({
-  id: new ActiviteAnomalieId(`ouverte-${pointage.id.pointage}`),
-  libelle: `Activité ouverte par ${pointage.id.pointage}`,
-  etat: 'EN_COURS',
-  ouvrant: pointage.id,
-  periode: { categorie: 'TRAVAIL', debut: pointage.fait.instant },
-});
-
-const dossierDeLaFinAutomatique = (): VueDeTest => ({
-  journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00')],
-  activites: [{ ...activiteFixture('travail-8', 'ECHUE', '08:00', '12:00'), ouvrant: new PointageAnomalieId('debut-8') }],
-});
-
-const vueAvecUneBarreParRepere = (vue: VueDeTest): VueDeFrise => ({
-  ...vue,
-  activites: vue.activites ?? vue.journal.filter(pointage => Number.isFinite(Date.parse(pointage.fait.instant))).map(barreOuvertePar),
-});
 
 describe('Frise of a dossier', () => {
   let fixture: ComponentFixture<FriseDossier>;
@@ -105,197 +90,87 @@ describe('Frise of a dossier', () => {
     resizeObserver.restore();
   });
 
-  it('should draw one marker per pointage of the journal', async () => {
-    const dossier = { journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-17', 'ARRET', '17:00')] };
+  it('should draw the marker of the pointage that opened the expired activity, and no other', async () => {
+    const dossier = vueDe(activiteFixture('a-1', '08:00', '21:00'), 'DEMARRAGE', pointageFixture('fin-17', 'ARRET', '17:00'));
 
     await whenRenderingTheFrise(dossier);
 
-    thenTheMarkersAre(['debut-8', 'fin-17']);
+    thenTheMarkersAre(['debut-a-1']);
   });
 
   it('should keep the scale on what is drawn when the journal holds pointages of other days or that open no bar', async () => {
-    const debut = pointageFixture('debut-8', 'DEMARRAGE', '08:00');
-    const dossier = {
-      journal: [
-        {
-          ...pointageFixture('veille-9', 'DEMARRAGE', '09:00'),
-          fait: { ...pointageFixture('x', 'DEMARRAGE', '09:00').fait, instant: instantAt('09:00', 10) },
-        },
-        debut,
-        pointageFixture('fin-11', 'ARRET', '11:00'),
-      ],
-      activites: [{ ...activiteFixture('travail-8', 'ECHUE', '08:00', '11:00'), ouvrant: debut.id }],
-    };
+    const dossier = vueDe(
+      activiteFixture('a-1', '08:00', '11:00'),
+      'DEMARRAGE',
+      pointageA('veille-9', 'DEMARRAGE', instantAt('09:00', 10)),
+      pointageFixture('fin-11', 'ARRET', '11:00'),
+    );
 
     await whenRenderingTheFrise(dossier);
 
-    thenTheMarkersAre(['debut-8']);
+    thenTheMarkersAre(['debut-a-1']);
     thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00']);
   });
 
-  it('should draw the markers in chronological order whatever the order of the journal', async () => {
-    const dossier = {
-      journal: [pointageFixture('fin-17', 'ARRET', '17:00'), pointageFixture('debut-8', 'DEMARRAGE', '08:00')],
-    };
+  it('should name the marker by the time of its pointage with its seconds and its gesture', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '21:00'));
 
-    await whenRenderingTheFrise(dossier);
-
-    thenTheMarkersAre(['debut-8', 'fin-17']);
-  });
-
-  it('should name each marker by the time of its pointage with its seconds and its gesture', async () => {
-    const dossier = { journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-17', 'ARRET', '17:00')] };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheMarkerIsNamed('fin-17', '17:00:00 · Arrêt');
-    thenTheMarkerIsNamed('debut-8', '08:00:00 · Démarrage');
-  });
-
-  it('should say in the name of its marker that the pointage is regularised', async () => {
-    const dossier = { journal: [pointageFixture('fin-17', 'ARRET', '17:00', { regularisation: true })] };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheMarkerIsNamed('fin-17', '17:00:00 · Arrêt · régularisé');
-  });
-
-  it('should mark the marker of a regularised pointage with the badge R and no other', async () => {
-    const dossier = {
-      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:00'), pointageFixture('fin-17', 'ARRET', '17:00', { regularisation: true })],
-    };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheMarkerBadgeIs('fin-17', 'R');
-    thenTheMarkerHasNoBadge('debut-8');
+    thenTheMarkerIsNamed('debut-a-1', '08:00:00 · Démarrage');
   });
 
   it.each([
     ['DEMARRAGE', '▶'],
     ['DEMARRAGE_NC', '▷'],
-    ['ARRET', '■'],
-  ] as const)('should draw the %s gesture of a pointage with the symbol %s', async (geste, symbole) => {
-    const dossier = { journal: [pointageFixture('p-1', geste, '08:00')] };
+  ] as const)('should draw the %s gesture of the opening pointage with the symbol %s', async (geste, symbole) => {
+    await whenRenderingTheFrise(vueDe(activiteFixture('a-1', '08:00', '21:00'), geste));
 
-    await whenRenderingTheFrise(dossier);
-
-    thenTheMarkerSymbolIs('p-1', symbole);
+    thenTheMarkerSymbolIs('debut-a-1', symbole);
   });
 
   it.each([
     ['DEMARRAGE', 'false'],
     ['DEMARRAGE_NC', 'true'],
-    ['ARRET', 'false'],
   ] as const)('should flag the marker of a %s gesture as a non-conformity: %s', async (geste, drapeau) => {
-    const dossier = { journal: [pointageFixture('p-1', geste, '08:00')] };
+    await whenRenderingTheFrise(vueDe(activiteFixture('a-1', '08:00', '21:00'), geste));
 
-    await whenRenderingTheFrise(dossier);
-
-    thenTheMarkerFlagIs('p-1', 'data-non-conformite', drapeau);
+    thenTheMarkerFlagIs('debut-a-1', 'data-non-conformite', drapeau);
   });
 
-  it('should show under each marker the hour and minute of its pointage', async () => {
-    const dossier = {
-      journal: [pointageFixture('debut-8', 'DEMARRAGE', '08:05'), pointageFixture('fin-17', 'ARRET', '17:00')],
-    };
+  it('should show under the marker the hour and minute of its pointage', async () => {
+    await whenRenderingTheFrise(vueEntre('08:05', '21:00'));
 
-    await whenRenderingTheFrise(dossier);
-
-    thenTheMarkerTimeIs('debut-8', '08:05');
-    thenTheMarkerTimeIs('fin-17', '17:00');
-  });
-
-  it('should draw one bar per activity, in the order of their start', async () => {
-    const dossier = {
-      journal: [],
-      activites: [activiteFixture('nc-12', 'EN_COURS', '12:00'), activiteFixture('travail-8', 'EN_COURS', '08:00')],
-    };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheBarsAre(['travail-8', 'nc-12']);
+    thenTheMarkerTimeIs('debut-a-1', '08:05');
   });
 
   it.each([
-    ['TRAVAIL', 'TERMINEE', 'Travail · Terminée'],
-    ['TRAVAIL', 'ECHUE', 'Travail · Fin automatique'],
-    ['NON_CONFORMITE', 'EN_COURS', 'Non-conformité · En cours'],
-  ] as const)('should write on the bar of a %s activity %s its category and its state: %s', async (categorie, etat, texte) => {
-    const dossier = { journal: [], activites: [activiteFixture('a-1', etat, '08:00', undefined, categorie)] };
-
-    await whenRenderingTheFrise(dossier);
+    ['TRAVAIL', 'Travail · Fin automatique'],
+    ['NON_CONFORMITE', 'Non-conformité · Fin automatique'],
+  ] as const)('should write on the bar of a %s activity its category and the automatic end: %s', async (categorie, texte) => {
+    await whenRenderingTheFrise(vueDe(activiteFixture('a-1', '08:00', '21:00', categorie)));
 
     thenTheBarReads('a-1', texte);
   });
 
-  it('should tell the category and the state of a bar by attributes', async () => {
-    const dossier = { journal: [], activites: [activiteFixture('nc-9', 'TERMINEE', '09:00', '10:00', 'NON_CONFORMITE')] };
-
-    await whenRenderingTheFrise(dossier);
+  it('should tell the category of the bar by an attribute', async () => {
+    await whenRenderingTheFrise(vueDe(activiteFixture('nc-9', '09:00', '22:00', 'NON_CONFORMITE')));
 
     thenTheBarAttributeIs('nc-9', 'data-categorie', 'NON_CONFORMITE');
-    thenTheBarAttributeIs('nc-9', 'data-etat', 'TERMINEE');
   });
 
-  it.each([
-    { etat: 'TERMINEE', fin: '10:00', attendu: 'RECUE' },
-    { etat: 'ECHUE', fin: '18:00', attendu: 'AUTOMATIQUE' },
-    { etat: 'EN_COURS', fin: undefined, attendu: 'OUVERTE' },
-    { etat: 'EN_COURS', fin: '10:00', attendu: 'OUVERTE' },
-    { etat: 'ECHUE', fin: undefined, attendu: 'OUVERTE' },
-  ] as const)('should end the bar of an activity $etat received with the end $fin as $attendu', async ({ etat, fin, attendu }) => {
-    const dossier = { journal: [], activites: [activiteFixture('a-1', etat, '08:00', fin)] };
+  it('should end the bar of the expired activity as an automatic end', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '21:00'));
 
-    await whenRenderingTheFrise(dossier);
-
-    thenTheBarAttributeIs('a-1', 'data-fin', attendu);
+    thenTheBarAttributeIs('a-1', 'data-fin', 'AUTOMATIQUE');
   });
 
-  it.each([
-    { etat: 'TERMINEE', fin: '17:00', nom: 'Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 17:00 · Terminée' },
-    { etat: 'EN_COURS', fin: undefined, nom: 'Travail · lundi 14 septembre à 08:00 · En cours' },
-  ] as const)('should name the bar of an activity $etat by its category, its received period and its state', async ({ etat, fin, nom }) => {
-    const dossier = { journal: [], activites: [activiteFixture('a-1', etat, '08:00', fin)] };
+  it('should name the bar by its category, its received period and its automatic end', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
 
-    await whenRenderingTheFrise(dossier);
-
-    thenTheBarIsNamed('a-1', nom);
+    thenTheBarIsNamed('a-1', 'Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 17:00 · Fin automatique');
   });
 
-  it('should give an activity without period its row and its label but no bar', async () => {
-    const sansPeriode: ActiviteAnomalie = {
-      id: new ActiviteAnomalieId('a-1'),
-      libelle: 'Travail ouvert à 8 h',
-      etat: 'EN_COURS',
-      ouvrant: new PointageAnomalieId('debut-a-1'),
-    };
-    const dossier = { journal: [pointageFixture('fin-17', 'ARRET', '17:00')], activites: [sansPeriode] };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheBarReads('a-1', 'Travail ouvert à 8 h');
-    thenTheBarAttributeIs('a-1', 'data-fin', null);
-  });
-
-  it('should list the activity that holds no period after the bars that have one', async () => {
-    const sansPeriode: ActiviteAnomalie = {
-      id: new ActiviteAnomalieId('a-1'),
-      libelle: 'Travail ouvert à 8 h',
-      etat: 'EN_COURS',
-      ouvrant: new PointageAnomalieId('debut-a-1'),
-    };
-    const dossier = { journal: [], activites: [sansPeriode, activiteFixture('a-2', 'TERMINEE', '09:00', '10:00')] };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheBarsAre(['a-2', 'a-1']);
-  });
-
-  it('should graduate the scale by the hour, from an hour before the first pointage to an hour after the last, rounded to the hour', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:30'), pointageFixture('p-2', 'ARRET', '10:15')] };
-
-    await whenRenderingTheFrise(dossier);
+  it('should graduate the scale by the hour, from an hour before the first instant to an hour after the last, rounded to the hour', async () => {
+    await whenRenderingTheFrise(vueEntre('08:30', '10:15'));
 
     thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00']);
   });
@@ -312,8 +187,7 @@ describe('Frise of a dossier', () => {
     { largeur: 150, pas: 'six hours', attendu: ['12:00', '18:00'] },
     { largeur: 70, pas: 'twelve hours', attendu: ['12:00'] },
   ])('should graduate every $pas on a frise $largeur pixels wide', async ({ largeur, attendu }) => {
-    const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'ARRET', '17:00')] };
-    await whenRenderingTheFrise(dossier);
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
 
     await whenTheFriseIsMeasured(largeur);
 
@@ -327,10 +201,7 @@ describe('Frise of a dossier', () => {
     { largeur: 80, pas: 'three days', jours: ['jeu. 17 sept.'] },
     { largeur: 20, pas: 'a week, although it cannot hold 64 pixels', jours: [] },
   ])('should graduate every $pas, midnight to midnight, on a frise $largeur pixels wide holding four days', async ({ largeur, jours }) => {
-    const dossier = {
-      journal: [pointageLe('p-1', 'DEMARRAGE', 14, '08:00'), pointageLe('p-2', 'ARRET', 17, '17:00')],
-    };
-    await whenRenderingTheFrise(dossier);
+    await whenRenderingTheFrise(vueDuJour('08:00', '17:00', 14, 17));
 
     await whenTheFriseIsMeasured(largeur);
 
@@ -339,10 +210,7 @@ describe('Frise of a dossier', () => {
   });
 
   it('should graduate the midnight that opens a week counted from the start of the scale', async () => {
-    const dossier = {
-      journal: [pointageLe('p-1', 'DEMARRAGE', 14, '08:00'), pointageLe('p-2', 'ARRET', 23, '17:00')],
-    };
-    await whenRenderingTheFrise(dossier);
+    await whenRenderingTheFrise(vueDuJour('08:00', '17:00', 14, 23));
 
     await whenTheFriseIsMeasured(100);
 
@@ -350,16 +218,13 @@ describe('Frise of a dossier', () => {
   });
 
   it('should graduate the hours the way it did when the frise is wide, as the reference width leaves 64 pixels per hour', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'ARRET', '17:00')] };
-
-    await whenRenderingTheFrise(dossier);
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
 
     thenTheNumberOfGraduationsIs(12);
   });
 
   it('should take a new measure of its host into account', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'ARRET', '17:00')] };
-    await whenRenderingTheFrise(dossier);
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
     await whenTheFriseIsMeasured(150);
 
     await whenTheFriseIsMeasured(704);
@@ -368,8 +233,7 @@ describe('Frise of a dossier', () => {
   });
 
   it('should ignore a measure of zero width', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'ARRET', '17:00')] };
-    await whenRenderingTheFrise(dossier);
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
     await whenTheFriseIsMeasured(150);
 
     await whenTheFriseIsMeasured(0);
@@ -378,27 +242,23 @@ describe('Frise of a dossier', () => {
   });
 
   it('should stop observing the size of its host when destroyed', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00')] };
-    await whenRenderingTheFrise(dossier);
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
 
     whenDestroyingTheFrise();
 
     expect(resizeObserver.observantUnElement).toBe(false);
   });
 
-  it('should keep the exact time of a marker on a narrow frise, whatever the room its position leaves', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'ARRET', '17:00')] };
-    await whenRenderingTheFrise(dossier);
+  it('should keep the exact time of the marker on a narrow frise, whatever the room its position leaves', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
 
     await whenTheFriseIsMeasured(100);
 
-    thenTheMarkerTimeIs('p-1', '08:00');
-    thenTheMarkerTimeIs('p-2', '17:00');
+    thenTheMarkerTimeIs('debut-a-1', '08:00');
   });
 
   it('should keep the exact time of the handle on a narrow frise, whatever the room its position leaves', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:45'));
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:45'));
 
     await whenTheFriseIsMeasured(100);
 
@@ -406,8 +266,7 @@ describe('Frise of a dossier', () => {
   });
 
   it('should not shift the handle under the pointer when it is grabbed while held away from the edge', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:45'));
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:45'));
     await whenTheFriseIsMeasured(100);
 
     whenDraggingTheHandle({ from: 780, to: 780 });
@@ -415,97 +274,45 @@ describe('Frise of a dossier', () => {
     thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 10, 45).getTime() }]);
   });
 
-  it('should reach the start and the end of the activities received, not a stop that opens no bar, when graduating the scale', async () => {
-    const dossier = {
-      journal: [pointageFixture('p-1', 'ARRET', '10:00')],
-      activites: [activiteFixture('a-1', 'TERMINEE', '06:00', '08:00')],
-    };
+  it('should reach the start and the end of the expired activity, not a stop that opens no bar, when graduating the scale', async () => {
+    const dossier = vueDe(activiteFixture('a-1', '06:00', '08:00'), 'DEMARRAGE', pointageFixture('fin-10', 'ARRET', '10:00'));
 
     await whenRenderingTheFrise(dossier);
 
     thenTheGraduationsAre(['05:00', '06:00', '07:00', '08:00', '09:00']);
   });
 
-  it('should show the day at midnight when the sequence spans several days', async () => {
-    const dossier = {
-      journal: [
-        pointageFixture('p-1', 'DEMARRAGE', '22:00'),
-        {
-          ...pointageFixture('p-2', 'ARRET', '02:00'),
-          fait: { ...pointageFixture('p-2', 'ARRET', '02:00').fait, instant: instantAt('02:00', 15) },
-        },
-      ],
-    };
-
-    await whenRenderingTheFrise(dossier);
+  it('should show the day at midnight when the activity spans several days', async () => {
+    await whenRenderingTheFrise(vueEntre('22:00', '02:00', 15));
 
     thenTheGraduationsAre(['21:00', '22:00', '23:00', '00:00', '01:00', '02:00', '03:00']);
     thenTheDaysShownAre(['mar. 15 sept.']);
   });
 
-  it('should show no day on a sequence that crosses no midnight', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'ARRET', '17:00')] };
-
-    await whenRenderingTheFrise(dossier);
+  it('should show no day on an activity that crosses no midnight', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
 
     thenTheDaysShownAre([]);
   });
 
-  it('should draw the frise of a dossier that holds a pointage', async () => {
-    const dossier = { journal: [pointageFixture('p-1', 'ARRET', '17:00')] };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenTheFriseIsDrawn();
-  });
-
-  it('should draw nothing for a dossier that holds neither pointage nor activity', async () => {
-    const dossier = { journal: [] };
-
-    await whenRenderingTheFrise(dossier);
-
-    thenNoFriseIsDrawn();
-  });
-
-  it('should still list an activity that holds no period when the dossier holds no instant at all', async () => {
-    const sansPeriode: ActiviteAnomalie = {
-      id: new ActiviteAnomalieId('a-1'),
-      libelle: 'Travail ouvert à 8 h',
-      etat: 'EN_COURS',
-      ouvrant: new PointageAnomalieId('debut-a-1'),
-    };
-
-    await whenRenderingTheFrise({ journal: [], activites: [sansPeriode] });
-
-    thenTheBarReads('a-1', 'Travail ouvert à 8 h');
-  });
-
   it('should draw no marker for a pointage whose instant it cannot read, nor let it spoil the scale', async () => {
-    const illisible = pointageFixture('p-1', 'ARRET', '17:00');
-    const dossier = {
-      journal: [{ ...illisible, fait: { ...illisible.fait, instant: 'illisible' } }, pointageFixture('p-2', 'DEMARRAGE', '08:00')],
-    };
+    const activite = activiteFixture('a-1', '08:00', '09:00');
+    const dossier = { journal: [pointageA('debut-a-1', 'DEMARRAGE', 'illisible')], activite };
 
     await whenRenderingTheFrise(dossier);
 
-    thenTheMarkersAre(['p-2']);
-    thenTheGraduationsAre(['07:00', '08:00', '09:00']);
+    thenTheMarkersAre([]);
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00']);
   });
 
-  it('should be tall enough for its lowest element', async () => {
-    const dossier = {
-      journal: [pointageFixture('p-1', 'DEMARRAGE', '08:00'), pointageFixture('p-2', 'ARRET', '08:10')],
-      activites: [activiteFixture('a-1', 'EN_COURS', '08:00'), activiteFixture('a-2', 'EN_COURS', '09:00')],
-    };
+  it('should be tall enough for its bar', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '21:00'));
 
-    await whenRenderingTheFrise(dossier);
-
-    expect(Number.parseFloat(thePlan().style.height)).toBeGreaterThanOrEqual(topOf(bar('a-2')) + 44);
+    expect(Number.parseFloat(thePlan().style.height)).toBeGreaterThanOrEqual(topOf(bar('a-1')) + 44);
   });
 
   it('should ask to place the instant where the pointages row is clicked', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-    await whenRenderingTheFrise(dossier, undefined, placementFixture());
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), undefined, placementFixture());
 
     whenClickingThePlacementRowAt(500);
 
@@ -516,8 +323,7 @@ describe('Frise of a dossier', () => {
     { cas: 'down to the nearest five minutes', clientX: 504, heure: new Date(2026, 8, 14, 10, 0) },
     { cas: 'up to the nearest five minutes', clientX: 513, heure: new Date(2026, 8, 14, 10, 5) },
   ])('should round the instant of the click $cas', async ({ clientX, heure }) => {
-    const dossier = dossierDeLaFinAutomatique();
-    await whenRenderingTheFrise(dossier, undefined, placementFixture());
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), undefined, placementFixture());
 
     whenClickingThePlacementRowAt(clientX);
 
@@ -525,18 +331,14 @@ describe('Frise of a dossier', () => {
   });
 
   it('should draw no placement row while no instant waits to be placed', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-
-    await whenRenderingTheFrise(dossier);
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique());
 
     thenNoPlacementRowIsDrawn();
   });
 
   it('should extend the scale to three hours after the last received instant while an instant waits to be placed', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-
     await whenRenderingTheFrise(
-      dossier,
+      dossierDeLaFinAutomatique(),
       undefined,
       placementFixture({ bornes: { min: instantAt('08:00'), max: instantLocalFixture(new Date(2026, 9, 5, 10, 0)) } }),
     );
@@ -545,33 +347,31 @@ describe('Frise of a dossier', () => {
   });
 
   it('should draw the handle of the proposed instant as a slider', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-
-    await whenRenderingTheFrise(dossier, poigneeFixture('12:00'));
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('12:00'));
 
     thenTheHandleIsASlider();
   });
 
   it('should extend the scale to three hours after the last received instant while a handle is active', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:00'));
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
 
     thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
   });
 
   it('should keep the normal scale when the clock stands before the last received instant', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('10:00') } }));
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('10:00') } }),
+    );
 
     thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
   });
 
   it('should extend the scale only up to the hour that follows the clock', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('14:20') } }));
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('14:20') } }),
+    );
 
     thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
   });
@@ -582,18 +382,17 @@ describe('Frise of a dossier', () => {
   ])(
     'should hold the handle at the nearest end of its range on the scale when it stands $cas every received instant',
     async ({ instant, tenue }) => {
-      const dossier = dossierDeLaFinAutomatique();
-
-      await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { instant: instantLocalFixture(instant) }));
+      await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00', { instant: instantLocalFixture(instant) }));
 
       thenTheHandleHoldsAt(tenue);
     },
   );
 
   it('should give the handle a range, a value and a readable time within its bounds', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:05', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }));
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:05', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
 
     thenTheHandleReads({
       min: new Date(2026, 8, 14, 8, 0).getTime(),
@@ -615,8 +414,7 @@ describe('Frise of a dossier', () => {
     { touche: 'Home', maj: false, demande: { kind: 'BORNE', borne: 'MIN' } },
     { touche: 'End', maj: false, demande: { kind: 'BORNE', borne: 'MAX' } },
   ])('should ask $demande.kind the handle when $touche is pressed (shift: $maj)', async ({ touche, maj, demande }) => {
-    const dossier = dossierDeLaFinAutomatique();
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:00'));
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
 
     whenPressingKeyOnTheHandle(touche, maj);
 
@@ -624,8 +422,7 @@ describe('Frise of a dossier', () => {
   });
 
   it('should leave the other keys to the browser so that the tab key still leaves the handle', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:00'));
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
 
     const touche = whenPressingKeyOnTheHandle('Tab');
 
@@ -634,8 +431,10 @@ describe('Frise of a dossier', () => {
   });
 
   it('should ask to move the handle to the instant under the pointer dragging it', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }));
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
 
     whenDraggingTheHandle({ from: 500, to: 750 });
 
@@ -646,8 +445,10 @@ describe('Frise of a dossier', () => {
     { cas: 'down to the nearest five minutes', to: 756, heure: new Date(2026, 8, 14, 11, 30) },
     { cas: 'up to the nearest five minutes', to: 762, heure: new Date(2026, 8, 14, 11, 35) },
   ])('should round the instant under the pointer $cas', async ({ to, heure }) => {
-    const dossier = dossierDeLaFinAutomatique();
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }));
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
 
     whenDraggingTheHandle({ from: 500, to });
 
@@ -655,8 +456,10 @@ describe('Frise of a dossier', () => {
   });
 
   it('should keep the point of the handle that was grabbed under the pointer instead of jumping to its centre', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }));
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
 
     whenDraggingTheHandle({ from: 520, to: 770 });
 
@@ -664,8 +467,10 @@ describe('Frise of a dossier', () => {
   });
 
   it('should ignore a pointer that moves over the handle without having pressed it', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }));
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
 
     whenMovingThePointerOverTheHandleTo(750);
 
@@ -673,8 +478,10 @@ describe('Frise of a dossier', () => {
   });
 
   it.each(['pointerup', 'pointercancel'])('should stop following the pointer once it ends with %s', async fin => {
-    const dossier = dossierDeLaFinAutomatique();
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }));
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
     whenDraggingTheHandle({ from: 500, to: 750 });
 
     whenTheGestureEndsWith(fin);
@@ -684,8 +491,10 @@ describe('Frise of a dossier', () => {
   });
 
   it('should capture the pointer that presses the handle so that the drag goes on outside of it', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }));
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
     const captured = givenTheBrowserCapturesPointers();
 
     whenPressingTheHandleAt(500, 7);
@@ -694,71 +503,37 @@ describe('Frise of a dossier', () => {
   });
 
   it('should name the handle and show the time it stands at', async () => {
-    const dossier = dossierDeLaFinAutomatique();
-
-    await whenRenderingTheFrise(dossier, poigneeFixture('10:05'));
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:05'));
 
     thenTheHandleIsNamedAndShows('Heure proposée du fait', '10:05');
   });
 
   describe('of an automatic end', () => {
-    it('should lay an automatic end with one row per activity and its start marker on the start of its bar', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-a-2', 'DEMARRAGE', '12:00')],
-        activites: [activiteFixture('a-1', 'TERMINEE', '08:00', '11:00'), activiteFixture('a-2', 'ECHUE', '12:00', '21:00')],
-      };
+    const uneFinAutomatique = (): VueDeFrise => vueEntre('08:00', '12:00');
 
-      await whenRenderingTheFrise(dossier);
+    it('should lay the bar of the expired activity under the axis and its start marker on the start of its bar', async () => {
+      await whenRenderingTheFrise(vueEntre('08:00', '21:00'));
 
-      thenTheBarsStandOnRowsAt([36, 88]);
+      thenTheBarsStandOnRowsAt([36]);
       thenTheStartMarkerStandsOnTheStartOfItsBar('debut-a-1', 'a-1');
-      thenTheStartMarkerStandsOnTheStartOfItsBar('debut-a-2', 'a-2');
     });
 
     it('should stand the handle on the row of the bar it terminates, without a row of its own', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-a-2', 'DEMARRAGE', '12:00')],
-        activites: [activiteFixture('a-1', 'TERMINEE', '08:00', '11:00'), activiteFixture('a-2', 'ECHUE', '12:00', '21:00')],
-      };
+      await whenRenderingTheFrise(vueEntre('08:00', '21:00'), poigneeFixture('17:00'));
 
-      await whenRenderingTheFrise(dossier, poigneeFixture('17:00', { activiteVisee: 'a-2' }));
-
-      expect(topOf(handle())).toBe(88);
-      thenTheBarsStandOnRowsAt([36, 88]);
-    });
-
-    it('should draw no handle for an hour that terminates no activity of the dossier', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '21:00')],
-      };
-
-      await whenRenderingTheFrise(dossier, poigneeFixture('17:00', { activiteVisee: 'ailleurs' }));
-
-      thenNoHandleIsDrawn();
+      expect(topOf(handle())).toBe(36);
       thenTheBarsStandOnRowsAt([36]);
-      thenTheBarAttributeIs('a-1', 'data-fin', 'AUTOMATIQUE');
     });
 
     it('should lay the placement row on the row of the bar the instant will terminate, without a row of its own', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '21:00')],
-      };
-
-      await whenRenderingTheFrise(dossier, undefined, placementFixture({ activiteVisee: 'a-1' }));
+      await whenRenderingTheFrise(vueEntre('08:00', '21:00'), undefined, placementFixture());
 
       thenThePlacementRowStandsAt({ top: 36, height: 44 });
       thenTheBarsStandOnRowsAt([36]);
     });
 
     it('should stand an hourless handle at the received end of the bar it will terminate, in the tab order and read as holding no hour', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-      };
-
-      await whenRenderingTheFrise(dossier, undefined, placementDeLaFixture('a-1'));
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
 
       thenTheHandleStandsAt({ left: '62.5%', onTheRowOf: 'a-1' });
       thenTheHandleIsHourless('Heure ?');
@@ -768,11 +543,7 @@ describe('Frise of a dossier', () => {
     });
 
     it('should ask to place the instant where the hourless handle is dragged to', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-      };
-      await whenRenderingTheFrise(dossier, undefined, placementDeLaFixture('a-1'));
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
 
       whenDraggingTheHandle({ from: 625, to: 750 });
 
@@ -781,11 +552,7 @@ describe('Frise of a dossier', () => {
     });
 
     it('should ask for nothing when the hourless handle is pressed and released without moving', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-      };
-      await whenRenderingTheFrise(dossier, undefined, placementDeLaFixture('a-1'));
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
 
       whenPressingTheHandleAt(625);
       whenTheGestureEndsWith('pointerup');
@@ -802,11 +569,7 @@ describe('Frise of a dossier', () => {
     ])(
       'should ask to place the instant $demande.kind when $touche is pressed on the hourless handle (shift: $maj)',
       async ({ touche, maj, demande }) => {
-        const dossier = {
-          journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-          activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-        };
-        await whenRenderingTheFrise(dossier, undefined, placementDeLaFixture('a-1'));
+        await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
 
         const pressee = whenPressingKeyOnTheHandle(touche, maj);
 
@@ -817,11 +580,7 @@ describe('Frise of a dossier', () => {
     );
 
     it('should leave the other keys to the browser on the hourless handle', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-      };
-      await whenRenderingTheFrise(dossier, undefined, placementDeLaFixture('a-1'));
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
 
       const touche = whenPressingKeyOnTheHandle('Tab');
 
@@ -830,15 +589,11 @@ describe('Frise of a dossier', () => {
     });
 
     it('should keep the same element for the handle once its first move gave the fact an hour', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-      };
-      await whenRenderingTheFrise(dossier, undefined, placementDeLaFixture('a-1'));
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
       const hourlessHandle = handle();
       const touchedNodes = givenTheNodesOfThePlanAreWatched();
 
-      await whenTheFactGetsItsHour(poigneeFixture('13:00', { activiteVisee: 'a-1', bornes: placementDeLaFixture('a-1').bornes }));
+      await whenTheFactGetsItsHour(poigneeFixture('13:00', { bornes: placementDeLaFixture().bornes }));
 
       expect(handle()).toBe(hourlessHandle);
       expect(touchedNodes()).not.toContain(hourlessHandle);
@@ -847,61 +602,25 @@ describe('Frise of a dossier', () => {
     });
 
     it('should go on moving the handle within the same gesture once the first move gave the fact an hour', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-      };
-      await whenRenderingTheFrise(dossier, undefined, placementDeLaFixture('a-1'));
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
       whenDraggingTheHandle({ from: 625, to: 750 });
-      await whenTheFactGetsItsHour(poigneeFixture('13:00', { activiteVisee: 'a-1', bornes: placementDeLaFixture('a-1').bornes }));
+      await whenTheFactGetsItsHour(poigneeFixture('13:00', { bornes: placementDeLaFixture().bornes }));
 
       whenMovingThePointerOverTheHandleTo(875);
 
       thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 14, 0).getTime() }]);
     });
 
-    it('should ask to place the instant where the row of the aimed bar is clicked beyond the bar', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-      };
-      await whenRenderingTheFrise(dossier, undefined, placementDeLaFixture('a-1'));
+    it('should ask to place the instant where the row of the bar is clicked beyond the bar', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
 
       whenClickingThePlacementRowAt(750);
 
       thenThePlacementsAsked([new Date(2026, 8, 14, 13, 0).getTime()]);
     });
 
-    it('should stand no hourless handle on a bar that holds no received end', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'EN_COURS', '08:00')],
-      };
-
-      await whenRenderingTheFrise(dossier, undefined, placementDeLaFixture('a-1'));
-
-      thenNoHandleIsDrawn();
-    });
-
-    it('should stand no hourless handle for an hour that waits to terminate no activity of the dossier', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-      };
-
-      await whenRenderingTheFrise(dossier, undefined, placementDeLaFixture('ailleurs'));
-
-      thenNoHandleIsDrawn();
-      thenNoPlacementRowIsDrawn();
-    });
-
     it('should end the bar the handle terminates at the time the handle stands at', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-      };
-
-      await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { activiteVisee: 'a-1' }));
+      await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('10:00'));
 
       thenTheBarSpans('a-1', { left: '12.5%', width: '25%' });
       thenTheHandleStandsAt({ left: '37.5%', onTheRowOf: 'a-1' });
@@ -913,12 +632,7 @@ describe('Frise of a dossier', () => {
     });
 
     it('should draw the part the handle removes up to the received end', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-      };
-
-      await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { activiteVisee: 'a-1' }));
+      await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('10:00'));
 
       thenTheRemovedPartSpans({ left: '37.5%', width: '25%' });
       thenTheRemovedPartStandsOnTheRowOf('a-1');
@@ -926,110 +640,45 @@ describe('Frise of a dossier', () => {
     });
 
     it('should lengthen the bar past its received end when the handle stands after it, with nothing removed', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-      };
-
-      await whenRenderingTheFrise(dossier, poigneeFixture('14:00', { activiteVisee: 'a-1' }));
+      await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('14:00'));
 
       thenTheBarSpans('a-1', { left: '12.5%', width: '75%' });
       thenNoPartIsRemoved();
     });
 
-    it('should remove nothing from a bar that is still open', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'EN_COURS', '08:00')],
-      };
-
-      await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { activiteVisee: 'a-1' }));
-
-      thenTheBarAttributeIs('a-1', 'data-fin', 'PROPOSEE');
-      thenNoPartIsRemoved();
-    });
-
-    it('should draw the automatic end of an expired aimed activity while the handle is active, and none for another one', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-a-2', 'DEMARRAGE', '08:30')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00'), activiteFixture('a-2', 'ECHUE', '08:30', '11:00')],
-      };
-
-      await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { activiteVisee: 'a-1' }));
+    it('should draw the automatic end of the expired activity while the handle is active', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('10:00'));
 
       thenTheAutomaticEndsDrawnAre(['Fin automatique 12:00']);
       thenTheAutomaticEndStands({ left: '62.5%', onTheRowOf: 'a-1' });
       thenTheAutomaticEndIsDecorative();
     });
 
-    it('should draw no automatic end for an aimed activity that was not ended automatically', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'TERMINEE', '08:00', '12:00')],
-      };
-
-      await whenRenderingTheFrise(dossier, poigneeFixture('10:00', { activiteVisee: 'a-1' }));
-
-      thenTheAutomaticEndsDrawnAre([]);
-    });
-
     it('should draw no automatic end while no handle is active', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00')],
-      };
-
-      await whenRenderingTheFrise(dossier);
+      await whenRenderingTheFrise(uneFinAutomatique());
 
       thenTheAutomaticEndsDrawnAre([]);
     });
 
-    it('should keep on a marker laid on its bar its name, its symbol, its hour and its badge', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00', { regularisation: true })],
-        activites: [activiteFixture('a-1', 'TERMINEE', '08:00', '11:00')],
-      };
+    it('should keep on the marker laid on its bar its name, its symbol and its hour', async () => {
+      await whenRenderingTheFrise(vueEntre('08:00', '11:00'));
 
-      await whenRenderingTheFrise(dossier);
-
-      thenTheMarkerIsNamed('debut-a-1', '08:00:00 · Démarrage · régularisé');
+      thenTheMarkerIsNamed('debut-a-1', '08:00:00 · Démarrage');
       thenTheMarkerSymbolIs('debut-a-1', '▶');
       thenTheMarkerTimeIs('debut-a-1', '08:00');
-      thenTheMarkerBadgeIs('debut-a-1', 'R');
     });
 
-    it('should draw no marker for a pointage that opens no bar, a stop included', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('fin-tardive', 'ARRET', '23:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '21:00')],
-      };
+    it('should draw the marker and the bar as images, with no button, out of the tab order', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique());
 
-      await whenRenderingTheFrise(dossier);
-
-      thenTheMarkersAre(['debut-a-1']);
-    });
-
-    it('should draw the markers and the bars as images, with no button, out of the tab order', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-a-2', 'DEMARRAGE', '09:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00'), activiteFixture('a-2', 'TERMINEE', '09:00', '10:00')],
-      };
-
-      await whenRenderingTheFrise(dossier);
-
-      thenTheMarkersAndTheBarsAreImages(['debut-a-1', 'debut-a-2'], ['a-1', 'a-2']);
+      thenTheMarkersAndTheBarsAreImages(['debut-a-1'], ['a-1']);
       thenTheTabOrderIs([]);
     });
 
-    it('should let the pointer through the markers and the bars to the placement row under them', async () => {
-      const dossier = {
-        journal: [pointageFixture('debut-a-1', 'DEMARRAGE', '08:00'), pointageFixture('debut-a-2', 'DEMARRAGE', '09:00')],
-        activites: [activiteFixture('a-1', 'ECHUE', '08:00', '12:00'), activiteFixture('a-2', 'TERMINEE', '09:00', '10:00')],
-      };
+    it('should let the pointer through the marker and the bar to the placement row under them', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
 
-      await whenRenderingTheFrise(dossier, undefined, placementDeLaFixture('a-1'));
-
-      thenThePointerGoesThroughTheMarkersAndTheBars(['debut-a-1', 'debut-a-2'], ['a-1', 'a-2']);
+      thenThePointerGoesThroughTheMarkersAndTheBars(['debut-a-1'], ['a-1']);
     });
 
     it('should leave the handle the only element of the focus order, still a slider that moves with the keys', async () => {
@@ -1043,9 +692,9 @@ describe('Frise of a dossier', () => {
     });
   });
 
-  const whenRenderingTheFrise = async (dossier: VueDeTest, poignee?: PoigneeDeFrise, placement?: PlacementDeLInstant): Promise<void> => {
+  const whenRenderingTheFrise = async (dossier: VueDeFrise, poignee?: PoigneeDeFrise, placement?: PlacementDeLInstant): Promise<void> => {
     fixture = TestBed.createComponent(FriseDossier);
-    fixture.componentRef.setInput('dossier', vueAvecUneBarreParRepere(dossier));
+    fixture.componentRef.setInput('dossier', dossier);
     fixture.componentRef.setInput('poignee', poignee);
     fixture.componentRef.setInput('placement', placement);
     fixture.componentRef.setInput('now', new Date(2026, 9, 5, 10, 0));
@@ -1133,10 +782,6 @@ describe('Frise of a dossier', () => {
     expect(requestedMoves.map(deplacement => deplacement.demande)).toEqual(expected);
   };
 
-  const thenNoHandleIsDrawn = (): void => {
-    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('anomalie-poignee'))).toBeNull();
-  };
-
   const thenTheHandleStandsAt = (expected: { left: string; onTheRowOf: string }): void => {
     expect({ left: handle().style.left, top: handle().style.top }).toEqual({
       left: expected.left,
@@ -1218,17 +863,6 @@ describe('Frise of a dossier', () => {
     expect(marker(pointage).getAttribute(attribut)).toBe(expected);
   };
 
-  const badgeOf = (pointage: string): HTMLElement | null =>
-    marker(pointage).querySelector<HTMLElement>(dataSelector('anomalie-pointage-regularise'));
-
-  const thenTheMarkerBadgeIs = (pointage: string, expected: string): void => {
-    expect(badgeOf(pointage)?.textContent.trim()).toBe(expected);
-  };
-
-  const thenTheMarkerHasNoBadge = (pointage: string): void => {
-    expect(badgeOf(pointage)).toBeNull();
-  };
-
   const thenTheMarkerSymbolIs = (pointage: string, expected: string): void => {
     const symbole = requiredFixture(
       marker(pointage).querySelector<HTMLElement>(dataSelector('anomalie-pointage-symbole')),
@@ -1245,10 +879,6 @@ describe('Frise of a dossier', () => {
   const bars = (): HTMLElement[] => [
     ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-activite')),
   ];
-
-  const thenTheBarsAre = (expected: readonly string[]): void => {
-    expect(bars().map(bar => bar.dataset['activite'])).toEqual(expected);
-  };
 
   const bar = (activite: string): HTMLElement =>
     requiredFixture(
@@ -1323,14 +953,6 @@ describe('Frise of a dossier', () => {
   };
 
   const topOf = (element: HTMLElement): number => Number.parseFloat(element.style.top);
-
-  const thenTheFriseIsDrawn = (): void => {
-    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('anomalie-frise'))).not.toBeNull();
-  };
-
-  const thenNoFriseIsDrawn = (): void => {
-    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('anomalie-frise'))).toBeNull();
-  };
 
   const thePlan = (): HTMLElement =>
     requiredFixture((fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-frise-plan')), 'frise plan');
@@ -1408,6 +1030,7 @@ describe('Frise of a dossier', () => {
   const thenTheMarkersAre = (expected: readonly string[]): void => {
     expect(markers().map(marker => marker.dataset['pointage'])).toEqual(expected);
   };
+
   describe('in a time zone that changes hour', () => {
     const original = process.env['TZ'];
 
@@ -1421,17 +1044,7 @@ describe('Frise of a dossier', () => {
     });
 
     it('should graduate every elapsed hour across the hour the clock repeats', async () => {
-      const avantLeChangement = pointageFixture('p-1', 'DEMARRAGE', '00:00', { fait: pointageFixture('p-1', 'DEMARRAGE', '00:00').fait });
-      const dossier = {
-        journal: [
-          { ...avantLeChangement, fait: { ...avantLeChangement.fait, instant: new Date(Date.UTC(2026, 9, 24, 23, 30)).toISOString() } },
-          {
-            ...avantLeChangement,
-            id: new PointageAnomalieId('p-2'),
-            fait: { ...avantLeChangement.fait, instant: new Date(Date.UTC(2026, 9, 25, 1, 30)).toISOString() },
-          },
-        ],
-      };
+      const dossier = vueEntreInstants(new Date(Date.UTC(2026, 9, 24, 23, 30)), new Date(Date.UTC(2026, 9, 25, 1, 30)));
 
       await whenRenderingTheFrise(dossier);
 
@@ -1439,13 +1052,7 @@ describe('Frise of a dossier', () => {
     });
 
     it('should graduate the extended scale hour by hour across midnight and the hour the clock repeats', async () => {
-      const pointage = (id: string, instant: Date): PointageAnomalie => ({
-        ...pointageFixture(id, 'DEMARRAGE', '00:00'),
-        fait: { ...pointageFixture(id, 'DEMARRAGE', '00:00').fait, instant: instant.toISOString() },
-      });
-      const dossier = {
-        journal: [pointage('p-1', new Date(Date.UTC(2026, 9, 24, 21, 0))), pointage('p-2', new Date(Date.UTC(2026, 9, 24, 22, 30)))],
-      };
+      const dossier = vueEntreInstants(new Date(Date.UTC(2026, 9, 24, 21, 0)), new Date(Date.UTC(2026, 9, 24, 22, 30)));
       const bornes = {
         min: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString(),
         max: new Date(Date.UTC(2026, 9, 25, 12, 0)).toISOString(),
@@ -1464,21 +1071,7 @@ describe('Frise of a dossier', () => {
       { cas: 'first', instant: new Date(Date.UTC(2026, 9, 25, 0, 30)), texte: '02:30 UTC+02:00' },
       { cas: 'second', instant: new Date(Date.UTC(2026, 9, 25, 1, 30)), texte: '02:30 UTC+01:00' },
     ])('should tell the $cas occurrence of the hour the clock repeats apart in the time of the handle', async ({ instant, texte }) => {
-      const dossier = {
-        journal: [
-          {
-            ...pointageFixture('p-1', 'DEMARRAGE', '00:00'),
-            fait: { ...pointageFixture('p-1', 'DEMARRAGE', '00:00').fait, instant: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString() },
-          },
-        ],
-        activites: [
-          {
-            ...activiteFixture('travail-8', 'EN_COURS', '00:00'),
-            ouvrant: new PointageAnomalieId('p-1'),
-            periode: { categorie: 'TRAVAIL' as const, debut: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString() },
-          },
-        ],
-      };
+      const dossier = vueEntreInstants(new Date(Date.UTC(2026, 9, 24, 21, 0)), new Date(Date.UTC(2026, 9, 24, 22, 0)));
       const bornes = {
         min: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString(),
         max: new Date(Date.UTC(2026, 9, 25, 5, 0)).toISOString(),
@@ -1497,23 +1090,10 @@ describe('Frise of a dossier', () => {
       async ({ instant, proposee }) => {
         const debut = new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString();
         const fin = new Date(Date.UTC(2026, 9, 25, 5, 0)).toISOString();
-        const activite: ActiviteAnomalie = {
-          ...activiteFixture('a-1', 'ECHUE', '00:00'),
-          periode: { categorie: 'TRAVAIL', debut, fin },
-        };
-        const dossier = {
-          journal: [
-            {
-              ...pointageFixture('debut-a-1', 'DEMARRAGE', '00:00'),
-              fait: { ...pointageFixture('x', 'DEMARRAGE', '00:00').fait, instant: debut },
-            },
-          ],
-          activites: [activite],
-        };
 
         await whenRenderingTheFrise(
-          dossier,
-          poigneeFixture('00:00', { instant: instant.toISOString(), activiteVisee: 'a-1', bornes: { min: debut, max: fin } }),
+          vueDe(activiteA('a-1', debut, fin)),
+          poigneeFixture('00:00', { instant: instant.toISOString(), bornes: { min: debut, max: fin } }),
         );
 
         thenTheBarNameEndsWith('a-1', ` · ${proposee}`);
@@ -1521,10 +1101,7 @@ describe('Frise of a dossier', () => {
     );
 
     it('should graduate every two hours the day the clock repeats an hour, without two graduations closer than 64 pixels', async () => {
-      const dossier = {
-        journal: [unPointageA('p-1', new Date(Date.UTC(2026, 9, 24, 23, 30))), unPointageA('p-2', new Date(Date.UTC(2026, 9, 25, 1, 30)))],
-      };
-      await whenRenderingTheFrise(dossier);
+      await whenRenderingTheFrise(vueEntreInstants(new Date(Date.UTC(2026, 9, 24, 23, 30)), new Date(Date.UTC(2026, 9, 25, 1, 30))));
 
       await whenTheFriseIsMeasured(200);
 
@@ -1533,20 +1110,12 @@ describe('Frise of a dossier', () => {
     });
 
     it('should graduate every three hours the day the clock skips an hour, without two graduations closer than 64 pixels', async () => {
-      const dossier = {
-        journal: [unPointageA('p-1', new Date(Date.UTC(2026, 2, 28, 23, 30))), unPointageA('p-2', new Date(Date.UTC(2026, 2, 29, 2, 30)))],
-      };
-      await whenRenderingTheFrise(dossier);
+      await whenRenderingTheFrise(vueEntreInstants(new Date(Date.UTC(2026, 2, 28, 23, 30)), new Date(Date.UTC(2026, 2, 29, 2, 30))));
 
       await whenTheFriseIsMeasured(140);
 
       thenTheGraduationsStandAt([100 / 6, 100]);
       thenNoTwoGraduationsAreCloserThan(64, 140);
-    });
-
-    const unPointageA = (id: string, instant: Date): PointageAnomalie => ({
-      ...pointageFixture(id, 'DEMARRAGE', '00:00'),
-      fait: { ...pointageFixture(id, 'DEMARRAGE', '00:00').fait, instant: instant.toISOString() },
     });
   });
 
@@ -1563,14 +1132,7 @@ describe('Frise of a dossier', () => {
     });
 
     it('should keep the second midnight, and drop the graduation before it, when the first one is too close', async () => {
-      const unPointageA = (id: string, instant: Date): PointageAnomalie => ({
-        ...pointageFixture(id, 'DEMARRAGE', '00:00'),
-        fait: { ...pointageFixture(id, 'DEMARRAGE', '00:00').fait, instant: instant.toISOString() },
-      });
-      const dossier = {
-        journal: [unPointageA('p-1', new Date(Date.UTC(2026, 10, 1, 2, 0))), unPointageA('p-2', new Date(Date.UTC(2026, 10, 1, 8, 0)))],
-      };
-      await whenRenderingTheFrise(dossier);
+      await whenRenderingTheFrise(vueEntreInstants(new Date(Date.UTC(2026, 10, 1, 2, 0)), new Date(Date.UTC(2026, 10, 1, 8, 0))));
 
       await whenTheFriseIsMeasured(400);
 

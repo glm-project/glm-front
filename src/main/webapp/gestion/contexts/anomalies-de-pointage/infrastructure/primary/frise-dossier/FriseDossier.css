@@ -62,9 +62,6 @@
 [data-selector='anomalie-activite'] {
   padding-left: calc(var(--spacing-touch) + 0.5rem);
 }
-[data-selector='anomalie-activite'][data-fin='RECUE'] {
-  padding-right: calc(var(--spacing-touch) + 0.5rem);
-}
 [data-selector='anomalie-activite'][data-fin='PROPOSEE'] {
   padding-right: calc(var(--spacing-touch) / 2 + 0.5rem);
 }
@@ -81,15 +78,6 @@
   background: var(--color-nc);
   color: var(--color-ink);
 }
-.barre:not([data-categorie]) {
-  border-style: dashed;
-  background: var(--color-sunken);
-}
-.barre[data-fin='RECUE'] {
-  border-right-width: 4px;
-  border-right-style: solid;
-  border-right-color: var(--color-ink);
-}
 .barre[data-fin='AUTOMATIQUE']::after {
   position: absolute;
   top: 0;
@@ -98,9 +86,4 @@
   width: 1.75rem;
   background: var(--gestion-hachure-fin-automatique);
   content: '';
-}
-.barre[data-fin='OUVERTE'] {
-  border-right-style: dotted;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
 }

@@ -1,6 +1,6 @@
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, input, output, signal } from '@angular/core';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
-import { PositionDePoignee, PositionSansHeure, RangeeDePlacement, VueDeFrise } from './DispositionFrise';
+import { PositionDePoignee, PositionSansHeure, VueDeFrise } from './DispositionFrise';
 import { instantSousLePointeur, positionSur } from './EchelleFrise';
 import { dispositionDeFrise } from './FriseEnLigne';
 import {
@@ -66,7 +66,7 @@ export class FriseDossier {
     if (this.prise === undefined) return;
     const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), pointeur.clientX - this.prise.decalage);
     if (position.heure === 'AVEC_HEURE') this.deplacementDemande.emit({ demande: { kind: 'VERS', instant }, poignee: position.source });
-    else this.placementDemande.emit({ demande: { kind: 'VERS', instant }, placement: position.source });
+    else this.placementDemande.emit({ demande: { kind: 'VERS', instant } });
   }
 
   private mesure(largeur: number): void {
@@ -77,9 +77,9 @@ export class FriseDossier {
     this.prise = undefined;
   }
 
-  protected place(clic: MouseEvent, plan: HTMLElement, rangee: RangeeDePlacement): void {
+  protected place(clic: MouseEvent, plan: HTMLElement): void {
     const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), clic.clientX);
-    this.placementDemande.emit({ demande: { kind: 'VERS', instant }, placement: rangee.source });
+    this.placementDemande.emit({ demande: { kind: 'VERS', instant } });
   }
 
   protected touche(touche: KeyboardEvent, position: PositionDePoignee): void {
@@ -87,10 +87,6 @@ export class FriseDossier {
     if (demande === undefined) return;
     touche.preventDefault();
     if (position.heure === 'AVEC_HEURE') this.deplacementDemande.emit({ demande, poignee: position.source });
-    else
-      this.placementDemande.emit({
-        demande: placementAuClavier(demande, position),
-        placement: position.source,
-      });
+    else this.placementDemande.emit({ demande: placementAuClavier(demande, position) });
   }
 }

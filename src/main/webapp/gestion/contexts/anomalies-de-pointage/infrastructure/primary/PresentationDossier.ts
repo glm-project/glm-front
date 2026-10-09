@@ -1,9 +1,9 @@
 import { formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { InstantLongDayPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
-import { ActiviteAnomalie, FaitDePointage } from '../../domain/dossier/DossierAnomalie';
+import { ActiviteEchue, FaitDePointage } from '../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from './LibellesAnomalies';
 
-type CategorieActivite = NonNullable<ActiviteAnomalie['periode']>['categorie'];
+type CategorieActivite = ActiviteEchue['categorie'];
 
 const instantLongDay = new InstantLongDayPipe();
 
@@ -17,10 +17,5 @@ export const libelleDuGeste = (fait: Pick<FaitDePointage, 'type'>): string => LI
 export const libelleCategorie = (categorie: CategorieActivite): string =>
   categorie === 'TRAVAIL' ? LIBELLES_ANOMALIES.types.DEBUT : LIBELLES_ANOMALIES.types.NON_CONFORMITE;
 
-export const libelleActivite = (activite: ActiviteAnomalie, now: Date): string => {
-  const periode = activite.periode;
-  if (periode === undefined) return activite.libelle;
-  const categorie = libelleCategorie(periode.categorie);
-  const fin = periode.fin === undefined ? '' : ` → ${instantLongDay.transform(periode.fin, now)}`;
-  return `${categorie} · ${instantLongDay.transform(periode.debut, now)}${fin}`;
-};
+export const libelleActivite = (activite: ActiviteEchue, now: Date): string =>
+  `${libelleCategorie(activite.categorie)} · ${instantLongDay.transform(activite.debut, now)} → ${instantLongDay.transform(activite.echeance, now)}`;

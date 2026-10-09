@@ -12,13 +12,9 @@ describe('Day of the operator the link of the frise leads to', () => {
 
   it('should tell the day the period starts by the local clock near midnight', () => {
     const dossier = dossierDeFinAutomatiqueFixture({
-      activites: [activiteEchueFixture('travail-8', 'TRAVAIL', '23:50', '23:55')],
+      activite: activiteEchueFixture('travail-8', 'TRAVAIL', '23:50', '23:55'),
     });
 
     expect(jourDeLaJournee(dossier)).toBe('2026-09-14');
-  });
-
-  it('should be none when the anomaly shows no pointage and no activity to tell the day from', () => {
-    expect(jourDeLaJournee(dossierDeFinAutomatiqueFixture({ activites: [] }))).toBeUndefined();
   });
 });

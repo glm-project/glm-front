@@ -106,28 +106,20 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
         operateurNom: 'Camille Martin',
         posteLibelle: 'DMU 50',
         posteId: 'poste-dmu',
-        echue: new ActiviteAnomalieId('travail-8'),
-        debut: '2026-09-14T08:00:00.123456789+02:00',
         journal: [
           {
             id: new PointageAnomalieId('debut-8'),
             fait: { type: 'DEBUT', operateur: 'op-camille', instant: '2026-09-14T08:00:00.123456789+02:00' },
             operateurNom: 'Camille Martin',
-            regularisation: false,
           },
         ],
-        activites: [
-          {
-            id: new ActiviteAnomalieId('travail-8'),
-            ouvrant: new PointageAnomalieId('debut-8'),
-            etat: 'ECHUE',
-            periode: {
-              categorie: 'TRAVAIL',
-              debut: '2026-09-14T08:00:00.123456789+02:00',
-              fin: '2026-09-14T21:00:00.123456789+02:00',
-            },
-          },
-        ],
+        activite: {
+          id: new ActiviteAnomalieId('travail-8'),
+          ouvrant: new PointageAnomalieId('debut-8'),
+          categorie: 'TRAVAIL',
+          debut: '2026-09-14T08:00:00.123456789+02:00',
+          echeance: '2026-09-14T21:00:00.123456789+02:00',
+        },
       },
     });
   });

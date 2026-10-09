@@ -23,19 +23,14 @@ export interface PointageAnomalie {
   readonly id: PointageAnomalieId;
   readonly fait: FaitDePointage;
   readonly operateurNom: string;
-  readonly regularisation: boolean;
 }
 
-export interface ActiviteAnomalie {
+export interface ActiviteEchue {
   readonly id: ActiviteAnomalieId;
-  readonly libelle: string;
-  readonly etat: 'EN_COURS' | 'TERMINEE' | 'ECHUE';
   readonly ouvrant: PointageAnomalieId;
-  readonly periode?: {
-    readonly categorie: 'TRAVAIL' | 'NON_CONFORMITE';
-    readonly debut: string;
-    readonly fin?: string;
-  };
+  readonly categorie: 'TRAVAIL' | 'NON_CONFORMITE';
+  readonly debut: string;
+  readonly echeance: string;
 }
 
 export interface LigneFinAutomatique {
@@ -54,10 +49,8 @@ export interface DossierAnomalie {
   readonly operateurNom: string;
   readonly posteLibelle: string;
   readonly posteId?: string;
-  readonly echue: ActiviteAnomalieId;
-  readonly debut: string;
   readonly journal: readonly PointageAnomalie[];
-  readonly activites: readonly ActiviteAnomalie[];
+  readonly activite: ActiviteEchue;
 }
 
 export type LectureDossier = { readonly kind: 'DOSSIER'; readonly dossier: DossierAnomalie } | { readonly kind: 'INTROUVABLE' };

@@ -1,7 +1,7 @@
 import { InstantLongDayPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { Component, input } from '@angular/core';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { phrasesDuProbleme } from '../PhrasesDuProbleme';
+import { phraseDuProbleme } from '../PhrasesDuProbleme';
 import { operateurPresente, postePresente } from '../PresentationIdentites';
 
 @Component({
@@ -15,5 +15,5 @@ export class EnTeteDuDossier {
   readonly now = input.required<Date>();
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
-  protected readonly problemes = phrasesDuProbleme;
+  protected readonly probleme = phraseDuProbleme;
 }

@@ -1,9 +1,7 @@
 <header class="mb-6">
   <p class="text-body-sm text-ink-muted">
-    {{ operateurDe(dossier().operateurNom) }} · {{ posteDe(dossier().posteLibelle, dossier().posteId) }} · {{ dossier().debut |
+    {{ operateurDe(dossier().operateurNom) }} · {{ posteDe(dossier().posteLibelle, dossier().posteId) }} · {{ dossier().activite.debut |
     instantLongDay: now() }}
   </p>
-  @for (phrase of problemes(dossier()); track $index) {
-  <p class="mt-4 text-body" data-selector="anomalie-probleme">{{ phrase }}</p>
-  }
+  <p class="mt-4 text-body" data-selector="anomalie-probleme">{{ probleme(dossier()) }}</p>
 </header>

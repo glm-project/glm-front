@@ -1,4 +1,4 @@
-import { ActiviteAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { ActiviteEchue } from '../../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import {
   BarreFrise,
@@ -14,30 +14,16 @@ import { EchelleFrise, graduationsDe, positionSur } from './EchelleFrise';
 import {
   barreDe,
   ESPACE_ENTRE_RANGEES_PX,
-  finRecueDe,
   HAUTEUR_D_UN_ELEMENT_PX,
   HAUTEUR_DE_L_AXE_PX,
   hauteurDeLaFrise,
   instantTenuSur,
   lectureDeLaFrise,
-  parDebut,
   positionDeLaPoignee,
   positionDeLaPoigneeSansHeure,
   repereDe,
 } from './ElementsDeFrise';
 import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
-
-const ouvre = (activite: ActiviteAnomalie, pointage: PointageAnomalie): boolean =>
-  activite.periode !== undefined && activite.ouvrant.pointage === pointage.id.pointage;
-
-interface RangeeDActivite {
-  readonly activite: ActiviteAnomalie;
-  readonly barre: BarreFrise;
-}
-
-interface PoigneeSurSaBarre extends RangeeDActivite {
-  readonly poignee: PoigneeDeFrise;
-}
 
 const barreJusquALaPoignee = (barre: BarreFrise, poignee: PoigneeDeFrise, echelle: EchelleFrise): BarreFrise => ({
   ...barre,
@@ -46,70 +32,46 @@ const barreJusquALaPoignee = (barre: BarreFrise, poignee: PoigneeDeFrise, echell
   nom: `${barre.nom} · ${LIBELLES_ANOMALIES.frise.heureProposee} ${texteDeLHeure(poignee.instant)}`,
 });
 
-const retraitDe = ({ activite, barre, poignee }: PoigneeSurSaBarre, echelle: EchelleFrise): RetraitDeFrise | undefined => {
-  const fin = finRecueDe(activite.etat, activite.periode?.fin);
-  if (fin === undefined) return undefined;
+const retraitDe = (
+  activite: ActiviteEchue,
+  barre: BarreFrise,
+  poignee: PoigneeDeFrise,
+  echelle: EchelleFrise,
+): RetraitDeFrise | undefined => {
   const gauche = positionSur(echelle, instantTenuSur(poignee, echelle));
-  const largeur = positionSur(echelle, Date.parse(fin)) - gauche;
+  const largeur = positionSur(echelle, Date.parse(activite.echeance)) - gauche;
   return largeur > 0 ? { gauche, largeur, haut: barre.haut } : undefined;
 };
 
-const finRecueTraceeDe = ({ activite, barre }: PoigneeSurSaBarre, echelle: EchelleFrise): FinRecueDeFrise | undefined => {
-  const fin = activite.periode?.fin;
-  return activite.etat === 'ECHUE' && fin !== undefined
-    ? {
-        gauche: positionSur(echelle, Date.parse(fin)),
-        haut: barre.haut,
-        texte: `${LIBELLES_ANOMALIES.frise.finAutomatique} ${texteDeLHeure(fin)}`,
-      }
-    : undefined;
-};
+const finRecueTraceeDe = (activite: ActiviteEchue, barre: BarreFrise, echelle: EchelleFrise): FinRecueDeFrise => ({
+  gauche: positionSur(echelle, Date.parse(activite.echeance)),
+  haut: barre.haut,
+  texte: `${LIBELLES_ANOMALIES.frise.finAutomatique} ${texteDeLHeure(activite.echeance)}`,
+});
 
 const positionsDePoignee = (
   { poignee, placement }: Pick<EntreesDeFrise, 'poignee' | 'placement'>,
-  visee: RangeeDActivite | undefined,
+  activite: ActiviteEchue,
+  barre: BarreFrise,
   echelle: EchelleFrise,
   largeur: number,
 ): readonly PositionDePoignee[] => {
-  if (visee === undefined) return [];
-  if (poignee !== undefined) return [positionDeLaPoignee(poignee, echelle, visee.barre.haut, largeur)];
-  const fin = finRecueDe(visee.activite.etat, visee.activite.periode?.fin);
-  return placement === undefined || fin === undefined
-    ? []
-    : [positionDeLaPoigneeSansHeure(placement, fin, echelle, visee.barre.haut, largeur)];
+  if (poignee !== undefined) return [positionDeLaPoignee(poignee, echelle, barre.haut, largeur)];
+  return placement === undefined ? [] : [positionDeLaPoigneeSansHeure(placement, activite.echeance, echelle, barre.haut, largeur)];
 };
 
-const rangeeDePlacementSur = (
-  placement: PlacementDeLInstant | undefined,
-  visee: RangeeDActivite | undefined,
-): RangeeDePlacement | undefined =>
-  placement === undefined || visee === undefined
-    ? undefined
-    : {
-        haut: visee.barre.haut,
-        hauteur: HAUTEUR_D_UN_ELEMENT_PX,
-        source: placement,
-      };
+const rangeeDePlacementSur = (placement: PlacementDeLInstant | undefined, barre: BarreFrise): RangeeDePlacement | undefined =>
+  placement === undefined ? undefined : { haut: barre.haut, hauteur: HAUTEUR_D_UN_ELEMENT_PX };
 
 export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise => {
   const { vue, maintenant: now, poignee, placement, largeur } = entrees;
   const { pointages, echelle } = lectureDeLaFrise(entrees);
-  const contexte = { now, echelle };
-  const cible = vue.activites.find(activite => activite.id.activite === (poignee ?? placement)?.activiteVisee);
-  const hautDesActivites = HAUTEUR_DE_L_AXE_PX + ESPACE_ENTRE_RANGEES_PX;
-  const rangees = parDebut(vue.activites).map((activite, rang): RangeeDActivite => {
-    const barre = barreDe(activite, hautDesActivites + rang * (HAUTEUR_D_UN_ELEMENT_PX + ESPACE_ENTRE_RANGEES_PX), contexte);
-    return { activite, barre: poignee !== undefined && activite === cible ? barreJusquALaPoignee(barre, poignee, echelle) : barre };
-  });
-  const visee = rangees.find(({ activite }) => activite === cible);
-  const surSaBarre = poignee === undefined || visee === undefined ? undefined : { ...visee, poignee };
-  const barres = rangees.map(({ barre }) => barre);
-  const reperes = pointages.flatMap((pointage): readonly RepereFrise[] =>
-    rangees
-      .filter(({ activite }) => ouvre(activite, pointage))
-      .map(({ barre }) => ({ ...repereDe(pointage), gauche: barre.gauche, haut: barre.haut })),
-  );
-  const elements = [...barres, ...reperes, ...positionsDePoignee(entrees, visee, echelle, largeur)].sort(
+  const activite = vue.activite;
+  const haut = HAUTEUR_DE_L_AXE_PX + ESPACE_ENTRE_RANGEES_PX;
+  const barreRecue = barreDe(activite, haut, { now, echelle });
+  const barre = poignee === undefined ? barreRecue : barreJusquALaPoignee(barreRecue, poignee, echelle);
+  const reperes = pointages.map((pointage): RepereFrise => ({ ...repereDe(pointage), gauche: barre.gauche, haut }));
+  const elements = [barre, ...reperes, ...positionsDePoignee(entrees, activite, barre, echelle, largeur)].sort(
     (gauche, droite) => gauche.instant - droite.instant,
   );
   return {
@@ -117,8 +79,8 @@ export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise =>
     hauteur: hauteurDeLaFrise(elements),
     graduations: graduationsDe(echelle, largeur),
     elements,
-    retrait: surSaBarre === undefined ? undefined : retraitDe(surSaBarre, echelle),
-    finRecue: surSaBarre === undefined ? undefined : finRecueTraceeDe(surSaBarre, echelle),
-    rangeeDePlacement: rangeeDePlacementSur(placement, visee),
+    retrait: poignee === undefined ? undefined : retraitDe(activite, barre, poignee, echelle),
+    finRecue: poignee === undefined ? undefined : finRecueTraceeDe(activite, barre, echelle),
+    rangeeDePlacement: rangeeDePlacementSur(placement, barre),
   };
 };

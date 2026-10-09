@@ -1,6 +1,6 @@
 import { ActiviteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ActiviteAnomalieId';
 import {
-  ActiviteAnomalie,
+  ActiviteEchue,
   DossierAnomalie,
   FaitDePointage,
   PointageAnomalie,
@@ -30,7 +30,6 @@ export const pointageFixture = (id: string, fait: FaitDePointage, changement: Pa
   id: new PointageAnomalieId(id),
   fait,
   operateurNom: 'Camille Martin',
-  regularisation: false,
   ...changement,
 });
 
@@ -38,22 +37,20 @@ export const activiteEchueFixture = (
   id: string,
   categorie: 'TRAVAIL' | 'NON_CONFORMITE',
   debut: string,
-  fin: string,
-): ActiviteAnomalie => ({
+  echeance: string,
+): ActiviteEchue => ({
   id: new ActiviteAnomalieId(id),
-  libelle: '',
-  etat: 'ECHUE',
   ouvrant: new PointageAnomalieId(`debut-${id}`),
-  periode: { categorie, debut: instantDuJourFixture(debut), fin: instantDuJourFixture(fin) },
+  categorie,
+  debut: instantDuJourFixture(debut),
+  echeance: instantDuJourFixture(echeance),
 });
 
 export const dossierDeFinAutomatiqueFixture = (changement: Partial<DossierAnomalie> = {}): DossierAnomalie => ({
   operateur: new OperateurAnomalieId('op-camille'),
   operateurNom: 'Camille Martin',
   posteLibelle: 'DMU 50',
-  echue: new ActiviteAnomalieId('travail-8'),
-  debut: instantDuJourFixture('08:00'),
   journal: [],
-  activites: [activiteEchueFixture('travail-8', 'TRAVAIL', '08:00', '18:00')],
+  activite: activiteEchueFixture('travail-8', 'TRAVAIL', '08:00', '18:00'),
   ...changement,
 });

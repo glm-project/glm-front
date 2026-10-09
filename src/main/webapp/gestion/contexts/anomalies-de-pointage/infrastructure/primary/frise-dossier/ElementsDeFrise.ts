@@ -1,5 +1,5 @@
 import { formatInstantTimeWithSeconds } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
-import { ActiviteAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { ActiviteEchue, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { heureDe, libelleActivite, libelleCategorie, libelleDuGeste } from '../PresentationDossier';
 import {
@@ -7,8 +7,6 @@ import {
   ElementFrise,
   EmplacementDePoignee,
   EntreesDeFrise,
-  FinDeBarre,
-  PeriodeActivite,
   PositionAvecHeure,
   PositionSansHeure,
   RepereASituer,
@@ -22,20 +20,14 @@ export interface ContexteDeFrise {
   readonly echelle: EchelleFrise;
 }
 
-export const POSITION_DU_BORD = 100;
 export const HAUTEUR_DE_L_AXE_PX = 28;
 export const HAUTEUR_D_UN_ELEMENT_PX = 44;
 export const ESPACE_ENTRE_RANGEES_PX = 8;
-const ETATS_SANS_FIN_RECUE: readonly ActiviteAnomalie['etat'][] = ['EN_COURS'];
 
 const QUALIFICATIFS = LIBELLES_ANOMALIES.frise;
 
 const nomDuRepere = (pointage: PointageAnomalie): string =>
-  [
-    formatInstantTimeWithSeconds(new Date(pointage.fait.instant)),
-    libelleDuGeste(pointage.fait),
-    ...(pointage.regularisation ? [QUALIFICATIFS.regularise] : []),
-  ].join(' · ');
+  [formatInstantTimeWithSeconds(new Date(pointage.fait.instant)), libelleDuGeste(pointage.fait)].join(' · ');
 
 export const repereDe = (pointage: PointageAnomalie): RepereASituer => ({
   kind: 'REPERE',
@@ -46,68 +38,23 @@ export const repereDe = (pointage: PointageAnomalie): RepereASituer => ({
   heure: heureDe(pointage.fait.instant),
   symbole: QUALIFICATIFS.symboles[pointage.fait.type],
   nonConformite: pointage.fait.type === 'NON_CONFORMITE',
-  regularise: pointage.regularisation,
 });
 
-export const finRecueDe = (etat: ActiviteAnomalie['etat'], fin: string | undefined): string | undefined =>
-  ETATS_SANS_FIN_RECUE.includes(etat) ? undefined : fin;
-
-const finDeLaBarre = (etat: ActiviteAnomalie['etat'], fin: string | undefined): FinDeBarre => {
-  if (fin === undefined) return 'OUVERTE';
-  return etat === 'ECHUE' ? 'AUTOMATIQUE' : 'RECUE';
-};
-
-const barreCommune = (activite: ActiviteAnomalie, now: Date) => ({
-  kind: 'BARRE' as const,
-  cle: `activite:${activite.id.activite}`,
-  activite: activite.id.activite,
-  nom: `${libelleActivite(activite, now)} · ${LIBELLES_ANOMALIES.etats[activite.etat]}`,
-  etat: activite.etat,
-});
-
-const barreAvecPeriode = (activite: ActiviteAnomalie, periode: PeriodeActivite, haut: number, contexte: ContexteDeFrise): BarreFrise => {
-  const fin = finRecueDe(activite.etat, periode.fin);
-  const gauche = positionSur(contexte.echelle, Date.parse(periode.debut));
+export const barreDe = (activite: ActiviteEchue, haut: number, contexte: ContexteDeFrise): BarreFrise => {
+  const gauche = positionSur(contexte.echelle, Date.parse(activite.debut));
   return {
-    ...barreCommune(activite, contexte.now),
-    instant: Date.parse(periode.debut),
+    kind: 'BARRE',
+    cle: `activite:${activite.id.activite}`,
+    activite: activite.id.activite,
+    nom: `${libelleActivite(activite, contexte.now)} · ${QUALIFICATIFS.finAutomatique}`,
+    instant: Date.parse(activite.debut),
     gauche,
     haut,
-    largeur: (fin === undefined ? POSITION_DU_BORD : positionSur(contexte.echelle, Date.parse(fin))) - gauche,
-    texte: `${libelleCategorie(periode.categorie)} · ${LIBELLES_ANOMALIES.etats[activite.etat]}`,
-    categorie: periode.categorie,
-    fin: finDeLaBarre(activite.etat, fin),
+    largeur: positionSur(contexte.echelle, Date.parse(activite.echeance)) - gauche,
+    texte: `${libelleCategorie(activite.categorie)} · ${QUALIFICATIFS.finAutomatique}`,
+    categorie: activite.categorie,
+    fin: 'AUTOMATIQUE',
   };
-};
-
-const barreSansPeriode = (activite: ActiviteAnomalie, haut: number, now: Date): BarreFrise => ({
-  ...barreCommune(activite, now),
-  haut,
-  instant: Infinity,
-  gauche: 0,
-  largeur: undefined,
-  texte: activite.libelle,
-  categorie: undefined,
-  fin: undefined,
-});
-
-export const barreDe = (activite: ActiviteAnomalie, haut: number, contexte: ContexteDeFrise): BarreFrise =>
-  activite.periode === undefined
-    ? barreSansPeriode(activite, haut, contexte.now)
-    : barreAvecPeriode(activite, activite.periode, haut, contexte);
-
-const debutDe = (activite: ActiviteAnomalie): number => (activite.periode === undefined ? Infinity : Date.parse(activite.periode.debut));
-
-export const parDebut = (activites: readonly ActiviteAnomalie[]): readonly ActiviteAnomalie[] =>
-  [...activites].sort((premiere, seconde) => debutDe(premiere) - debutDe(seconde));
-
-const instantsDeLEchelle = (
-  pointages: readonly PointageAnomalie[],
-  activites: readonly ActiviteAnomalie[],
-  now: Date,
-): readonly number[] => {
-  const instants = instantsRecus(pointages, activites);
-  return instants.length > 0 ? instants : [now.getTime()];
 };
 
 const echelleDeLaFrise = (
@@ -119,11 +66,11 @@ const echelleDeLaFrise = (
   return echelleDe(instants, bornes && Date.parse(bornes.max));
 };
 
-export const lectureDeLaFrise = ({ vue, maintenant, poignee, placement }: EntreesDeFrise) => {
+export const lectureDeLaFrise = ({ vue, poignee, placement }: EntreesDeFrise) => {
   const pointages = pointagesDeLaFrise(vue);
   return {
     pointages,
-    echelle: echelleDeLaFrise(instantsDeLEchelle(pointages, vue.activites, maintenant), poignee, placement),
+    echelle: echelleDeLaFrise(instantsRecus(pointages, vue.activite), poignee, placement),
   };
 };
 
@@ -170,7 +117,6 @@ export const positionDeLaPoigneeSansHeure = (
 ): PositionSansHeure => ({
   ...emplacementDeLaPoignee(finRecue, placement, LIBELLES_ANOMALIES.frise.heureInconnue, echelle, haut, largeur),
   heure: 'SANS_HEURE',
-  source: placement,
 });
 
 export const hauteurDeLaFrise = (elements: readonly ElementFrise[]): number =>

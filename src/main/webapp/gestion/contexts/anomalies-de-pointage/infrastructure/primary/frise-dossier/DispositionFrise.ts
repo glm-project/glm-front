@@ -1,8 +1,8 @@
-import { ActiviteAnomalie, DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { ActiviteEchue, DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { EchelleFrise, Graduation } from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise } from './PoigneeDeFrise';
 
-export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activites'>;
+export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activite'>;
 
 export interface EntreesDeFrise {
   readonly vue: VueDeFrise;
@@ -12,7 +12,7 @@ export interface EntreesDeFrise {
   readonly largeur: number;
 }
 
-export type FinDeBarre = 'RECUE' | 'AUTOMATIQUE' | 'OUVERTE' | 'PROPOSEE';
+export type FinDeBarre = 'AUTOMATIQUE' | 'PROPOSEE';
 
 export interface BarreFrise {
   readonly kind: 'BARRE';
@@ -20,13 +20,12 @@ export interface BarreFrise {
   readonly instant: number;
   readonly gauche: number;
   readonly haut: number;
-  readonly largeur: number | undefined;
+  readonly largeur: number;
   readonly activite: string;
   readonly texte: string;
   readonly nom: string;
-  readonly categorie: CategorieDeBarre | undefined;
-  readonly etat: ActiviteAnomalie['etat'];
-  readonly fin: FinDeBarre | undefined;
+  readonly categorie: ActiviteEchue['categorie'];
+  readonly fin: FinDeBarre;
 }
 
 export interface RepereFrise {
@@ -40,7 +39,6 @@ export interface RepereFrise {
   readonly heure: string;
   readonly symbole: string;
   readonly nonConformite: boolean;
-  readonly regularise: boolean;
 }
 
 export type RepereASituer = Omit<RepereFrise, 'gauche' | 'haut'>;
@@ -71,7 +69,6 @@ export interface PositionAvecHeure extends EmplacementDePoignee {
 
 export interface PositionSansHeure extends EmplacementDePoignee {
   readonly heure: 'SANS_HEURE';
-  readonly source: PlacementDeLInstant;
 }
 
 export type PositionDePoignee = PositionAvecHeure | PositionSansHeure;
@@ -79,7 +76,6 @@ export type PositionDePoignee = PositionAvecHeure | PositionSansHeure;
 export interface RangeeDePlacement {
   readonly haut: number;
   readonly hauteur: number;
-  readonly source: PlacementDeLInstant;
 }
 
 export interface RetraitDeFrise {
@@ -103,6 +99,3 @@ export interface DispositionFrise {
   readonly retrait: RetraitDeFrise | undefined;
   readonly finRecue: FinRecueDeFrise | undefined;
 }
-
-export type PeriodeActivite = NonNullable<ActiviteAnomalie['periode']>;
-export type CategorieDeBarre = PeriodeActivite['categorie'];

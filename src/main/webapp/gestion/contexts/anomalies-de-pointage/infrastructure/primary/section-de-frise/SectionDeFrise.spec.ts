@@ -8,7 +8,6 @@ import { PlacementDeLInstant } from '../frise-dossier/PoigneeDeFrise';
 import { SectionDeFrise } from './SectionDeFrise';
 
 const PLACEMENT: PlacementDeLInstant = {
-  activiteVisee: 'travail-8',
   bornes: { min: new Date(2026, 8, 14, 8, 0).toISOString(), max: new Date(2026, 8, 14, 20, 0).toISOString() },
 };
 

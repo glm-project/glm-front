@@ -1,5 +1,5 @@
 import { formatInstantShortWeekdayDayMonth, formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
-import { ActiviteAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { ActiviteEchue, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 
 const UNE_MINUTE = 60_000;
 const UNE_HEURE = 3_600_000;
@@ -34,9 +34,9 @@ const heureEntiereApres = (instant: number): number => {
   return avant === instant ? instant : avant + UNE_HEURE;
 };
 
-export const instantsRecus = (pointages: readonly PointageAnomalie[], activites: readonly ActiviteAnomalie[]): readonly number[] =>
-  [...pointages.map(pointage => pointage.fait.instant), ...activites.flatMap(activite => [activite.periode?.debut, activite.periode?.fin])]
-    .flatMap(instant => (instant === undefined ? [] : [Date.parse(instant)]))
+export const instantsRecus = (pointages: readonly PointageAnomalie[], activite: ActiviteEchue): readonly number[] =>
+  [...pointages.map(pointage => pointage.fait.instant), activite.debut, activite.echeance]
+    .map(instant => Date.parse(instant))
     .filter(Number.isFinite);
 
 export const finDeLaPortee = (instants: readonly number[]): number => Math.max(...instants) + TROIS_HEURES;

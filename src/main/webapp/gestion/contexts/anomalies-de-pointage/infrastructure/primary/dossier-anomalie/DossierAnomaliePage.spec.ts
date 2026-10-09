@@ -74,25 +74,20 @@ const dossierFinAutomatiqueFixture = ({ sansPoste = false } = {}): DossierAnomal
   operateurNom: 'Camille Martin',
   posteLibelle: sansPoste ? '' : 'DMU 50',
   ...(sansPoste ? {} : { posteId: 'poste-1' }),
-  echue: new ActiviteAnomalieId('travail-8'),
-  debut: INSTANT_DEBUT,
   journal: [
     {
       id: new PointageAnomalieId('debut-8'),
       fait: { type: 'DEBUT', operateur: 'op-camille', instant: INSTANT_DEBUT },
       operateurNom: 'Camille Martin',
-      regularisation: false,
     },
   ],
-  activites: [
-    {
-      id: new ActiviteAnomalieId('travail-8'),
-      libelle: '',
-      etat: 'ECHUE',
-      ouvrant: new PointageAnomalieId('debut-8'),
-      periode: { categorie: 'TRAVAIL', debut: INSTANT_DEBUT, fin: INSTANT_ECHEANCE },
-    },
-  ],
+  activite: {
+    id: new ActiviteAnomalieId('travail-8'),
+    ouvrant: new PointageAnomalieId('debut-8'),
+    categorie: 'TRAVAIL',
+    debut: INSTANT_DEBUT,
+    echeance: INSTANT_ECHEANCE,
+  },
 });
 
 describe('Anomaly dossier page', () => {

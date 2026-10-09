@@ -1,6 +1,6 @@
 import { components } from '@/app/generated/schema';
 import { ActiviteAnomalieId } from '../../domain/dossier/ActiviteAnomalieId';
-import { ActiviteAnomalie, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
+import { ActiviteEchue, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
 
@@ -12,15 +12,14 @@ const toPointage = (pointage: components['schemas']['RestEvenementDAtelier']): P
     instant: pointage.dateDeSurvenue,
   },
   operateurNom: pointage.operateur === undefined ? '' : `${pointage.operateur.prenom} ${pointage.operateur.nom}`,
-  regularisation: pointage.estUneRegularisation,
 });
 
-const toActiviteEchue = (activite: components['schemas']['RestActiviteDuDossier']): ActiviteAnomalie => ({
+const toActiviteEchue = (activite: components['schemas']['RestActiviteDuDossier']): ActiviteEchue => ({
   id: new ActiviteAnomalieId(activite.activite),
-  libelle: '',
-  etat: 'ECHUE',
   ouvrant: new PointageAnomalieId(activite.evenement),
-  periode: { categorie: activite.categorie, debut: activite.debut, fin: activite.fin },
+  categorie: activite.categorie,
+  debut: activite.debut,
+  echeance: activite.fin,
 });
 
 export const toDossier = (dossier: components['schemas']['RestDossierAnomalie']): DossierAnomalie => {
@@ -31,9 +30,7 @@ export const toDossier = (dossier: components['schemas']['RestDossierAnomalie'])
     operateurNom: echue.operateur === undefined ? '' : `${echue.operateur.prenom} ${echue.operateur.nom}`,
     posteLibelle: echue.poste?.libelle ?? '',
     ...(echue.posteId === undefined ? {} : { posteId: echue.posteId }),
-    echue: new ActiviteAnomalieId(echue.activite),
-    debut: echue.debut,
     journal,
-    activites: [toActiviteEchue(echue)],
+    activite: toActiviteEchue(echue),
   };
 };

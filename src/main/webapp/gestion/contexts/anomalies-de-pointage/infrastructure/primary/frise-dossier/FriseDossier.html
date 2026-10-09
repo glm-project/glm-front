@@ -1,4 +1,3 @@
-@if (disposition().elements.length > 0) {
 <div class="rounded-surface border border-border bg-surface" data-selector="anomalie-frise">
   <div #plan class="relative w-full overflow-x-clip" data-selector="anomalie-frise-plan" [style.height.px]="disposition().hauteur">
     @for (graduation of disposition().graduations; track graduation.instant) {
@@ -20,7 +19,7 @@
       data-selector="anomalie-frise-placement"
       [style.top.px]="rangee.haut"
       [style.height.px]="rangee.hauteur"
-      (click)="place($event, plan, rangee)"
+      (click)="place($event, plan)"
     ></div>
     } @if (disposition().retrait; as retrait) {
     <div
@@ -54,7 +53,6 @@
       [style.width.%]="element.largeur"
       [attr.aria-label]="element.nom"
       [attr.data-categorie]="element.categorie"
-      [attr.data-etat]="element.etat"
       [attr.data-fin]="element.fin"
     >
       {{ element.texte }}
@@ -72,13 +70,6 @@
     >
       <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ element.symbole }}</span>
       <time class="text-(length:--text-label) tabular-nums" data-selector="anomalie-pointage-heure">{{ element.heure }}</time>
-      @if (element.regularise) {
-      <span
-        class="absolute -top-2 -right-2 grid size-5 place-items-center rounded-[50%] bg-ink text-(length:--text-label) font-bold text-surface"
-        data-selector="anomalie-pointage-regularise"
-        >{{ libelles.frise.badgeRegularise }}</span
-      >
-      }
     </div>
     } @case ('POIGNEE') { @let sansHeure = element.heure === 'SANS_HEURE';
     <div
@@ -105,4 +96,3 @@
     } } }
   </div>
 </div>
-}

@@ -33,11 +33,6 @@ const PROBLEMES = {
 } as const;
 
 export const LIBELLES_ANOMALIES = {
-  etats: {
-    EN_COURS: 'En cours',
-    TERMINEE: 'Terminée',
-    ECHUE: 'Fin automatique',
-  },
   choisirOperateur: 'Choisissez l’opérateur',
   tousLesOperateurs: 'Tous les opérateurs',
   rechercherOperateur: 'Rechercher un opérateur',
@@ -72,14 +67,12 @@ export const LIBELLES_ANOMALIES = {
   operateurNonResolu: 'Opérateur non résolu',
   posteNonResolu: 'Poste non résolu',
   frise: {
-    regularise: 'régularisé',
     heureProposee: 'heure proposée',
     finAutomatique: 'Fin automatique',
     poignee: 'Heure proposée du fait',
     heureInconnue: 'Heure ?',
     aucuneHeure: 'Aucune heure posée',
     placerLaFinReelle: 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.',
-    badgeRegularise: 'R',
     symboles: SYMBOLES_DES_GESTES,
   },
   problemes: PROBLEMES,

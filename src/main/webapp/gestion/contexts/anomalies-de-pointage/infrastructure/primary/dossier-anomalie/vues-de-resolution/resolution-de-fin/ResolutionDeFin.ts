@@ -1,13 +1,11 @@
 import { Component, computed, input, signal } from '@angular/core';
-import { CadreDuFait } from '../../../../../domain/acte/CadreDuFait';
 import { DossierAnomalie } from '../../../../../domain/dossier/DossierAnomalie';
 import { OperateurAnomalie } from '../../../../../domain/dossier/OperateurAnomalie';
 import { EnTeteDuDossier } from '../../../en-tete-du-dossier/EnTeteDuDossier';
 import { instantDeplace } from '../../../frise-dossier/DeplacementDeLaPoignee';
 import {
-  bornesDuDeplacement,
+  bornesDuFait,
   DeplacementDemande,
-  FinProposee,
   PlacementDemande,
   placementDuDossier,
   poigneeDuDossier,
@@ -28,19 +26,17 @@ export class ResolutionDeFin {
   private readonly maintenant = signal(new Date().toISOString());
   private readonly instant = signal('');
   protected readonly operateur = computed(() => operateurDuDossier(this.dossier(), this.operateurs()));
-  private readonly cadre = computed(() => CadreDuFait.depuis(this.dossier().activites, this.maintenant()));
-  private readonly fin = computed((): FinProposee => ({ activiteVisee: this.dossier().echue.activite, instant: this.instant() }));
-  protected readonly poignee = computed(() => poigneeDuDossier(this.dossier(), this.fin(), this.maintenant()));
-  protected readonly placement = computed(() => placementDuDossier(this.dossier(), this.fin(), this.maintenant()));
+  protected readonly poignee = computed(() => poigneeDuDossier(this.dossier(), this.instant(), this.maintenant()));
+  protected readonly placement = computed(() => placementDuDossier(this.dossier(), this.instant(), this.maintenant()));
 
   protected deplacer({ demande, poignee }: DeplacementDemande): void {
     this.lireLHorloge();
-    this.instant.set(instantDeplace(demande, poignee.instant, bornesDuDeplacement(this.cadre(), this.dossier(), poignee)));
+    this.instant.set(instantDeplace(demande, poignee.instant, bornesDuFait(this.dossier(), this.maintenant())));
   }
 
-  protected placer({ demande, placement }: PlacementDemande): void {
+  protected placer({ demande }: PlacementDemande): void {
     this.lireLHorloge();
-    this.instant.set(instantDeplace(demande, this.maintenant(), bornesDuDeplacement(this.cadre(), this.dossier(), placement)));
+    this.instant.set(instantDeplace(demande, this.maintenant(), bornesDuFait(this.dossier(), this.maintenant())));
   }
 
   private lireLHorloge(): void {
