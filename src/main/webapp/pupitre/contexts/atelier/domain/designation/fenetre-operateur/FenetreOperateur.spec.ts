@@ -584,10 +584,10 @@ describe('FenetreOperateur', () => {
 
   it('should preserve an earlier window while recognizing a refusal reconciled before durable acceptance', () => {
     const previous = fenetre;
-    const transition = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
-    const refused = givenTheDecisionWasRefused(gesturesOf(transition.decision).capture());
+    const secondaire = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
+    const refused = givenTheDecisionWasRefused(gesturesOf(secondaire.decision).capture());
 
-    const reconciled = transition.fenetre.afterReconciling(Entreprise.of('entreprise-a'), refused);
+    const reconciled = secondaire.fenetre.afterReconciling(Entreprise.of('entreprise-a'), refused);
 
     expect(previous.refusal()).toBeUndefined();
     expect(reconciled.refusal()).toEqual({

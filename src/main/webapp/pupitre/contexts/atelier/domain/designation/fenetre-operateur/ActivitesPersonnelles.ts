@@ -1,6 +1,6 @@
 import { ActiviteDuPupitre, SuiviDuPupitre } from '../../journal-du-pupitre/JournalDuPupitre';
 import { OperateurDesigne } from './OperateurDesigne';
-import { LotDeTransitions, TransitionDePointage } from './TransitionDePointage';
+import { LotDePointagesDemandes, PointageDemande } from './PointageDemande';
 import { ActiviteDePointage } from './VueDePointage';
 
 type EtatDesActivites =
@@ -11,7 +11,7 @@ type EtatDesActivites =
       readonly suivantes: readonly SuiviDuPupitre['activites'][number][];
     };
 
-type DecisionDesActivites = { readonly kind: 'INACTIF' } | { readonly kind: 'ACTIF'; readonly transitions: LotDeTransitions };
+type DecisionDesActivites = { readonly kind: 'INACTIF' } | { readonly kind: 'ACTIF'; readonly pointages: LotDePointagesDemandes };
 
 export class ActivitesPersonnelles {
   private readonly etat: EtatDesActivites;
@@ -49,7 +49,7 @@ export class ActivitesPersonnelles {
     if (this.etat.kind === 'INACTIF') return this.etat;
     return {
       kind: 'ACTIF',
-      transitions: { premiere: this.fin(this.etat.premiere), suivantes: this.etat.suivantes.map(activite => this.fin(activite)) },
+      pointages: { premiere: this.fin(this.etat.premiere), suivantes: this.etat.suivantes.map(activite => this.fin(activite)) },
     };
   }
 
@@ -57,7 +57,7 @@ export class ActivitesPersonnelles {
     return activites.some(activite => activite.categorie === 'NON_CONFORMITE');
   }
 
-  private fin(activite: ActiviteDuPupitre): TransitionDePointage {
+  private fin(activite: ActiviteDuPupitre): PointageDemande {
     return activite.posteId === undefined ? { type: 'FIN' } : { type: 'FIN', posteId: activite.posteId };
   }
 }

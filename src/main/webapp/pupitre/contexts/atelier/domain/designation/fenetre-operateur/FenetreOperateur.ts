@@ -31,10 +31,10 @@ import {
 } from './DecisionDePointage';
 import { IdentiteOperateurDesigne, OperateurDesigne } from './OperateurDesigne';
 import { ActiviteSuspendue, PauseEnCours } from './PauseEnCours';
-import { LotDeTransitions, TransitionDePointage } from './TransitionDePointage';
+import { LotDePointagesDemandes, PointageDemande } from './PointageDemande';
 import { ElementDePointage, VueDePointage, zonesDePointage } from './VueDePointage';
 
-const toTransition = ({ reouverture, posteId }: ActiviteSuspendue): TransitionDePointage =>
+const toPointageDemande = ({ reouverture, posteId }: ActiviteSuspendue): PointageDemande =>
   posteId === undefined ? { type: reouverture } : { type: reouverture, posteId };
 
 interface ActivitePersonnelleConnue {
@@ -134,7 +134,7 @@ export class FenetreOperateur {
     const numero = NumeroDElement.from(suivi);
     const decision =
       activities.kind === 'ACTIF'
-        ? fenetre.gestes(suiviId, numero, activities.transitions, identify)
+        ? fenetre.gestes(suiviId, numero, activities.pointages, identify)
         : fenetre.ouverture(suiviId, numero, cible, identify);
     return { fenetre: fenetre.with({ contextesParGeste: fenetre.contextesOf(decision) }), decision };
   }
@@ -226,7 +226,7 @@ export class FenetreOperateur {
   }
   prepareReprise(identify: () => IdentiteDuGeste): LotDeGestesDAtelier {
     const reouvertures = (this.pauseEnCours()?.activitesARouvrir() ?? []).map(activite =>
-      this.toPointage(activite.suiviId, toTransition(activite), identify()),
+      this.toPointage(activite.suiviId, toPointageDemande(activite), identify()),
     );
     if (reouvertures.length === 0) return this.sansGeste();
     return {
@@ -288,16 +288,16 @@ export class FenetreOperateur {
     const ouverture = this.etat.operateurDesigne.decideOuverture(this.openingTypeFor(cible));
     return ouverture.kind === 'CHOIX_POSTE_REQUIS'
       ? { kind: ouverture.kind, numero, postes: ouverture.postes }
-      : this.gestes(suiviId, numero, { premiere: ouverture.transition, suivantes: [] }, identify);
+      : this.gestes(suiviId, numero, { premiere: ouverture.pointage, suivantes: [] }, identify);
   }
   private gestes(
     suiviId: string,
     numero: NumeroDElement,
-    transitions: LotDeTransitions,
+    demandes: LotDePointagesDemandes,
     identify: () => IdentiteDuGeste,
   ): LotDeGestesDAtelier {
-    const first = this.toPointage(suiviId, transitions.premiere, identify());
-    const pointages = [first, ...transitions.suivantes.map(t => this.toPointage(suiviId, t, identify()))];
+    const first = this.toPointage(suiviId, demandes.premiere, identify());
+    const pointages = [first, ...demandes.suivantes.map(demande => this.toPointage(suiviId, demande, identify()))];
     return {
       kind: 'GESTES',
       capture: () => pointages,
@@ -305,8 +305,8 @@ export class FenetreOperateur {
       intention: this.etat.intention,
     };
   }
-  private toPointage(suiviId: string, transition: TransitionDePointage, identite: IdentiteDuGeste): GesteDePointage {
-    return { ...identite, ...transition, suiviId, operateurId: this.etat.operateurDesigne.id(), nature: 'POINTAGE' };
+  private toPointage(suiviId: string, demande: PointageDemande, identite: IdentiteDuGeste): GesteDePointage {
+    return { ...identite, ...demande, suiviId, operateurId: this.etat.operateurDesigne.id(), nature: 'POINTAGE' };
   }
   private requireSuivi(suiviId: string): SuiviDuPupitre {
     const suivi = projectReferentiel(this.etat.vue)?.suivis.find(candidate => candidate.id === suiviId);
