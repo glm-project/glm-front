@@ -74,6 +74,28 @@ describe('JournalDuPupitreProjection', () => {
     thenActivityHasNoPoste(projection);
   });
 
+  it.each(['DEBUT', 'NON_CONFORMITE'] as const)(
+    'should let a %s opening replace an activity of its key once the activity is past its deadline',
+    type => {
+      const state = givenEventsAfterAnActivityExpired([givenOpeningAt(type, '2026-09-05T20:30:00Z')]);
+
+      const projection = whenProjecting(state);
+
+      thenOnlyActivityIs(projection, type === 'DEBUT' ? 'TRAVAIL' : 'NON_CONFORMITE', '2026-09-05T20:30:00Z');
+    },
+  );
+
+  it('should free a key at the very instant of its deadline and keep it busy a moment before', () => {
+    const atDeadline = givenEventsAfterAnActivityExpired([givenOpeningAt('DEBUT', '2026-09-05T20:00:00Z')]);
+    const beforeDeadline = givenEventsAfterAnActivityExpired([givenOpeningAt('DEBUT', '2026-09-05T19:59:59Z')]);
+
+    const freed = whenProjecting(atDeadline);
+    const busy = whenProjecting(beforeDeadline);
+
+    thenOnlyActivityIs(freed, 'TRAVAIL', '2026-09-05T20:00:00Z');
+    thenOnlyActivityIs(busy, 'TRAVAIL', '2026-09-05T07:00:00Z');
+  });
+
   it('should open a non conformity only after the finish of the work, and stop on finish', () => {
     const finDuTravail = givenPointage('FIN');
     const nonConformite = givenPointage('NON_CONFORMITE');
@@ -166,6 +188,29 @@ describe('JournalDuPupitreProjection', () => {
     evenements,
     connecte: true,
   });
+  const givenEventsAfterAnActivityExpired = (evenements: EvenementDuJournal[]): JournalDuPupitre => ({
+    referentiel: {
+      ...referenceFixture,
+      suivis: [
+        {
+          ...requiredFixture(referenceFixture.suivis[0], 'item'),
+          etat: 'EN_COURS',
+          activites: [
+            {
+              ouverture: 'ancienne',
+              echeance: '2026-09-05T20:00:00Z',
+              operateurId: 'jean',
+              categorie: 'TRAVAIL',
+              depuis: '2026-09-05T07:00:00Z',
+              posteId: 'tour',
+            },
+          ],
+        },
+      ],
+    },
+    evenements: evenements.map(evenement => ({ ...evenement, geste: { ...evenement.geste, posteId: 'tour' } })),
+    connecte: true,
+  });
   const givenNoDownloadedReference = (): JournalDuPupitre => ({ evenements: [], connecte: true });
   const givenAnotherOperatorAtWork = (): EvenementDuJournal => ({
     ...debutFixture,
@@ -238,6 +283,11 @@ describe('JournalDuPupitreProjection', () => {
   const thenActivityIs = (projection: ReferentielDuPupitre | undefined, categorie: string, depuis: string): void => {
     const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
     expect(requiredFixture(suivi.activites[0], 'projected activity')).toMatchObject({ operateurId: 'jean', categorie, depuis });
+  };
+  const thenOnlyActivityIs = (projection: ReferentielDuPupitre | undefined, categorie: string, depuis: string): void => {
+    const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');
+    expect(suivi.activites).toHaveLength(1);
+    thenActivityIs(projection, categorie, depuis);
   };
   const thenActivityHasNoPoste = (projection: ReferentielDuPupitre | undefined): void => {
     const suivi = requiredFixture(projection?.suivis[0], 'projected workshop element');

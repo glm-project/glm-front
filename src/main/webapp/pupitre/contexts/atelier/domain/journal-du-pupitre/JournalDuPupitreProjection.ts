@@ -13,8 +13,11 @@ const matchesPair = (activite: ActiviteDuPupitre, geste: GesteDePointage): boole
 const hasActivityOnKey = (suivi: SuiviDuPupitre, geste: GesteDePointage): boolean =>
   suivi.activites.some(activite => matchesPair(activite, geste));
 
-const isIgnoredByTheServer = (suivi: SuiviDuPupitre, geste: GesteDePointage): boolean =>
-  hasActivityOnKey(suivi, geste) !== (geste.type === 'FIN');
+const isPastDeadline = (activite: ActiviteDuPupitre, geste: GesteDePointage): boolean =>
+  Date.parse(geste.dateDeSurvenue) >= Date.parse(activite.echeance);
+
+const isKeyBusyAt = (suivi: SuiviDuPupitre, geste: GesteDePointage): boolean =>
+  suivi.activites.some(activite => matchesPair(activite, geste) && !isPastDeadline(activite, geste));
 
 const withActivities = (suivi: SuiviDuPupitre, activites: SuiviDuPupitre['activites']): SuiviDuPupitre => ({
   ...suivi,
@@ -22,29 +25,29 @@ const withActivities = (suivi: SuiviDuPupitre, activites: SuiviDuPupitre['activi
   etat: etatFor(activites.length),
 });
 
+const withoutActivityOnKey = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre['activites'] =>
+  suivi.activites.filter(activite => !matchesPair(activite, geste));
+
 const finish = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre =>
-  withActivities(
-    suivi,
-    suivi.activites.filter(activite => !matchesPair(activite, geste)),
-  );
+  hasActivityOnKey(suivi, geste) ? withActivities(suivi, withoutActivityOnKey(suivi, geste)) : suivi;
 
 const open = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre =>
-  withActivities(suivi, [
-    ...suivi.activites,
-    {
-      ouverture: geste.id,
-      echeance: new Date(Date.parse(geste.dateDeSurvenue) + 13 * 60 * 60 * 1000).toISOString(),
-      operateurId: geste.operateurId,
-      categorie: categorieFor(geste),
-      depuis: geste.dateDeSurvenue,
-      ...(geste.posteId === undefined ? {} : { posteId: geste.posteId }),
-    },
-  ]);
+  isKeyBusyAt(suivi, geste)
+    ? suivi
+    : withActivities(suivi, [
+        ...withoutActivityOnKey(suivi, geste),
+        {
+          ouverture: geste.id,
+          echeance: new Date(Date.parse(geste.dateDeSurvenue) + 13 * 60 * 60 * 1000).toISOString(),
+          operateurId: geste.operateurId,
+          categorie: categorieFor(geste),
+          depuis: geste.dateDeSurvenue,
+          ...(geste.posteId === undefined ? {} : { posteId: geste.posteId }),
+        },
+      ]);
 
-const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre => {
-  if (isIgnoredByTheServer(suivi, geste)) return suivi;
-  return geste.type === 'FIN' ? finish(suivi, geste) : open(suivi, geste);
-};
+const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre =>
+  geste.type === 'FIN' ? finish(suivi, geste) : open(suivi, geste);
 
 const categorieFor = (geste: GesteDePointage): 'TRAVAIL' | 'NON_CONFORMITE' => {
   if (geste.type === 'NON_CONFORMITE') {
