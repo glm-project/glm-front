@@ -1,12 +1,12 @@
 import { Cout } from '../montant/Cout';
 import { Montant } from '../montant/Montant';
+import { DureePassee } from '../temps/DureePassee';
 import { PeriodeDeTravail } from '../temps/PeriodeDeTravail';
-import { TotalDeTemps } from '../temps/TotalDeTemps';
 import { OperateurCite } from './OperateurCite';
 import { PartDePointage } from './PartDePointage';
 import { PosteCite } from './PosteCite';
 
-export type AnomalieDePointage = 'FIN_AUTOMATIQUE' | 'PARTAGE_INCONNU';
+export type AnomalieDePointage = 'FIN_AUTOMATIQUE';
 export type CategorieDePointage = 'TRAVAIL' | 'NON_CONFORMITE';
 
 export interface FicheDePointage {
@@ -15,7 +15,7 @@ export interface FicheDePointage {
   readonly poste: PosteCite | undefined;
   readonly categorie: CategorieDePointage;
   readonly periode: PeriodeDeTravail;
-  readonly duree: TotalDeTemps;
+  readonly duree: DureePassee;
   readonly coutHoraire: Montant | undefined;
   readonly tauxHoraire: Montant | undefined;
   readonly cout: Cout;
@@ -28,7 +28,7 @@ export class PointageDeCout {
   readonly poste: PosteCite | undefined;
   readonly categorie: CategorieDePointage;
   readonly periode: PeriodeDeTravail;
-  readonly duree: TotalDeTemps;
+  readonly duree: DureePassee;
   readonly coutHoraire: Montant | undefined;
   readonly tauxHoraire: Montant | undefined;
   readonly cout: Cout;
@@ -60,6 +60,6 @@ export class PointageDeCout {
   }
 
   detailleSonPartage(): boolean {
-    return this.parts.length > 1 || this.parts.some(part => part.estPartagee() || part.partageInconnu());
+    return this.parts.length > 1 || this.parts.some(part => part.estPartagee());
   }
 }

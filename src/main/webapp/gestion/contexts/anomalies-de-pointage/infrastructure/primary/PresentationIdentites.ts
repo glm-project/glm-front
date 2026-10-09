@@ -22,4 +22,4 @@ const nomConnuDeLOperateur = (
   ?? journal.find(pointage => pointage.fait.operateur === operateur && pointage.operateurNom !== '')?.operateurNom;
 
 export const operateurDuDossier = (dossier: DossierAnomalie, operateurs: readonly OperateurAnomalie[] | undefined): string | undefined =>
-  dossier.ligne.operateur || nomConnuDeLOperateur(dossier.operateur.operateur, operateurs, dossier.journal);
+  dossier.operateurNom || nomConnuDeLOperateur(dossier.operateur.operateur, operateurs, dossier.journal);

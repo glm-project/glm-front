@@ -1,4 +1,3 @@
-import { TotalDeDuree } from '@/gestion/contexts/releve-des-heures/domain/duree/TotalDeDuree';
 import { PointageReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageReleveId';
 import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { ActiviteDuReleve } from '../element/ActiviteDuReleve';
@@ -28,7 +27,7 @@ const SEMAINE = new SemaineISO(2026, 38);
 const jourFixture = (jour: string): JourDeReleve =>
   new JourDeReleve({
     jour: new JourCalendaire(jour),
-    operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
+    operationnelTotal: new DureeTravaillee('PT0S'),
     intervalles: [],
     pointages: [],
   });
@@ -39,7 +38,7 @@ const ficheFixture = (jours: readonly JourDeReleve[]): FicheDuReleve => ({
   operateur: new IdentiteOperateur('Dupont', 'Jean'),
   elements: [],
   jours,
-  operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT57H30M')),
+  operationnelTotal: new DureeTravaillee('PT57H30M'),
 });
 
 const instantDe = (heure: string): InstantDeReleve => new InstantDeReleve(`2026-09-14T${heure}:00Z`);
@@ -51,8 +50,8 @@ const elementFixture = (id: string): ElementDuReleve =>
     nom: id,
     reference: undefined,
     description: undefined,
-    duree: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
-    dureeNonConformite: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
+    duree: new DureeTravaillee('PT0S'),
+    dureeNonConformite: new DureeTravaillee('PT0S'),
     postes: [
       new PosteDeLElement(new PosteReleveId('dmu'), 'DMU 50', 'Fraisage'),
       new PosteDeLElement(new PosteReleveId('mazak'), 'Mazak QT-200', 'Tournage'),
@@ -84,7 +83,7 @@ const releveDes = (lundi: {
 }): ReleveDesHeures => {
   const jourAvecFaits = new JourDeReleve({
     jour: new JourCalendaire('2026-09-14'),
-    operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
+    operationnelTotal: new DureeTravaillee('PT0S'),
     intervalles: lundi.intervalles ?? [],
     pointages: lundi.pointages ?? [],
   });
@@ -112,7 +111,7 @@ describe('ReleveDesHeures', () => {
   it('should carry the operational week total the server computed', () => {
     const releve = new ReleveDesHeures(SEMAINE, ficheFixture(semaineCompleteFixture()));
 
-    expect(releve.operationnelTotal.snapshot()).toMatchObject({ complete: true, valeur: { heures: 57, minutesRestantes: 30 } });
+    expect(releve.operationnelTotal).toMatchObject({ heures: 57, minutesRestantes: 30 });
   });
 
   it('should carry the operator the report resolved', () => {

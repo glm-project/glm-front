@@ -28,7 +28,6 @@ const gesteFixture: GesteDePointage = {
   operateurId: 'jean',
   nature: 'POINTAGE',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));

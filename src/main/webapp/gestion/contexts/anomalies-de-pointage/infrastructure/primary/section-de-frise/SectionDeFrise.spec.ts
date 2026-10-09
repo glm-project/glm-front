@@ -1,23 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import {
-  ARRET_FIXTURE,
-  dossierDeFinAutomatiqueFixture,
-  faitFixture,
-  instantDuJourFixture,
-  pointageFixture,
-} from '@test/unit/fixtures/gestion/anomalies-de-pointage/DossierAnomalie.fixture';
+import { dossierDeFinAutomatiqueFixture } from '@test/unit/fixtures/gestion/anomalies-de-pointage/DossierAnomalie.fixture';
 import { ResizeObserverFixture } from '@test/unit/fixtures/gestion/anomalies-de-pointage/ResizeObserverFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { PerimetreDuDossier } from '../../../domain/dossier/PerimetreDuDossier';
 import { PlacementDeLInstant } from '../frise-dossier/PoigneeDeFrise';
 import { SectionDeFrise } from './SectionDeFrise';
 
 const PLACEMENT: PlacementDeLInstant = {
   activiteVisee: 'travail-8',
   bornes: { min: new Date(2026, 8, 14, 8, 0).toISOString(), max: new Date(2026, 8, 14, 20, 0).toISOString() },
-  desactivee: false,
 };
 
 describe('Section of the frise', () => {
@@ -56,31 +48,6 @@ describe('Section of the frise', () => {
 
     expect(text('anomalie-frise-journee')).toBe('Voir la journée de l’opérateur');
   });
-
-  it('should say what the operator pointed on the element beyond the anomaly', async () => {
-    await whenRendering({ operateur: 'Camille Martin', dossier: dossierAuJournalDebordantFixture() });
-
-    expect(text('anomalie-frise-contexte')).toBe(
-      'Hors de cette anomalie, Camille Martin compte sur cet élément 1 pointage les jours suivants, jusqu’au mardi 15 septembre.',
-    );
-  });
-
-  it('should say nothing of the element beyond the anomaly when the journal holds nothing else', async () => {
-    await whenRendering({ operateur: 'Camille Martin' });
-
-    expect(present('anomalie-frise-contexte')).toBe(false);
-  });
-
-  const dossierAuJournalDebordantFixture = (): DossierAnomalie => {
-    const debut = pointageFixture('debut-8', faitFixture(ARRET_FIXTURE, instantDuJourFixture('08:00')));
-    const fin = pointageFixture('fin-17', faitFixture(ARRET_FIXTURE, instantDuJourFixture('17:00')));
-    const lendemain = pointageFixture('hors-0', faitFixture(ARRET_FIXTURE, instantDuJourFixture('09:00', 15)));
-    return dossierDeFinAutomatiqueFixture({
-      activites: [],
-      journal: [debut, fin, lendemain],
-      perimetre: new PerimetreDuDossier([debut.id, fin.id]),
-    });
-  };
 
   const whenRendering = async (inputs: {
     readonly dossier?: DossierAnomalie;

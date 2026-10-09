@@ -53,7 +53,6 @@ const ouvertureFixture: GesteDePointage = {
   dateDeSurvenue: '2026-09-05T08:00:00Z',
   operateurId: 'jean',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
 const identityRootFixture = '11111111-1111-4111-8111-111111111111';
@@ -267,7 +266,7 @@ describe('AtelierCoordinator', () => {
     await thenQueueHasUniqueStableIdentities();
   });
 
-  it('should retain two simultaneous tile captures in acquisition order and stop only the activity they leave open', async () => {
+  it('should retain two simultaneous tile captures in acquisition order and stop nothing more once they closed every activity', async () => {
     await givenTwoActiveWorkstations();
     givenSequentialGestureIdentities();
     const storage = givenDelayedLocalWrite();
@@ -275,12 +274,12 @@ describe('AtelierCoordinator', () => {
     const finishing = whenPointingAt('piece-tour', 'PRINCIPALE');
     await whenCaptureHasReachedStorage(storage);
     whenBusinessTimeBecomes('2026-09-05T08:00:01Z');
-    const transitioning = whenPointingAt('piece-fraiseuse', 'SECONDAIRE');
+    const secondaire = whenPointingAt('piece-fraiseuse', 'SECONDAIRE');
     whenBusinessTimeBecomes('2026-09-05T08:00:02Z');
     const stopping = whenStoppingEverything();
     const beforeRelease = await readQueuedGestures();
     whenBusinessTimeBecomes('2026-09-05T08:00:03Z');
-    await whenReleasingLocalWrite(storage, finishing, transitioning, stopping);
+    await whenReleasingLocalWrite(storage, finishing, secondaire, stopping);
     const gestures = await readQueuedGestures();
 
     expect(beforeRelease).toEqual([]);
@@ -292,9 +291,7 @@ describe('AtelierCoordinator', () => {
         operateurId: 'jean',
         suiviId: 'piece-tour',
         posteId: 'tour',
-        intention: 'FIN',
         type: 'FIN',
-        cible: 'activite-fixture-34',
       },
       {
         nature: 'POINTAGE',
@@ -303,20 +300,7 @@ describe('AtelierCoordinator', () => {
         operateurId: 'jean',
         suiviId: 'piece-fraiseuse',
         posteId: 'fraiseuse',
-        intention: 'TRANSITION',
-        type: 'NON_CONFORMITE',
-        cible: 'activite-fixture-35',
-      },
-      {
-        nature: 'POINTAGE',
-        id: '33333333-3333-4333-8333-333333333333',
-        dateDeSurvenue: '2026-09-05T08:00:02.000Z',
-        operateurId: 'jean',
-        suiviId: 'piece-fraiseuse',
-        posteId: 'fraiseuse',
-        intention: 'FIN',
         type: 'FIN',
-        cible: futureIdentityRootFixture,
       },
     ]);
   });
@@ -497,19 +481,19 @@ describe('AtelierCoordinator', () => {
     await thenPendingGesturesAre(['DEBUT:piece-tour:tour']);
   });
 
-  it('should keep projecting a pending transition on the reference activity once its published opening is forgotten', async () => {
+  it('should keep projecting a pending finish on the reference activity once its published opening is forgotten', async () => {
     await givenAnOpenWindow();
     await whenStarting();
     givenAuthorizedAccess();
     givenServerReferenceHoldingTheActivityOpenedBy(await firstQueuedGesture());
     givenServerFailures(undefined, new Error('reseau coupe'));
-    givenNonConformityIsReportedDuringReferenceRefresh();
+    givenTheSecondaryTargetIsPressedDuringReferenceRefresh();
 
     await whenSynchronizing();
 
     await thenQueueHas(1);
-    await thenPendingGesturesAre(['NON_CONFORMITE:piece:tour']);
-    thenActivityIs('NON_CONFORMITE');
+    await thenPendingGesturesAre(['FIN:piece:tour']);
+    thenNoActivity();
   });
 
   it('should clear the current refusal as soon as a new business intent starts', async () => {
@@ -602,7 +586,6 @@ describe('AtelierCoordinator', () => {
         operateurId: 'jean',
         suiviId: 'piece',
         posteId: 'fraiseuse',
-        intention: 'OUVERTURE',
         type: 'DEBUT',
       },
     ]);
@@ -1053,9 +1036,7 @@ describe('AtelierCoordinator', () => {
         operateurId: 'jean',
         suiviId: 'piece-tour',
         posteId: 'tour',
-        intention: 'FIN',
         type: 'FIN',
-        cible: 'activite-fixture-34',
       },
       {
         nature: 'POINTAGE',
@@ -1064,9 +1045,7 @@ describe('AtelierCoordinator', () => {
         operateurId: 'jean',
         suiviId: 'piece-fraiseuse',
         posteId: 'fraiseuse',
-        intention: 'FIN',
         type: 'FIN',
-        cible: 'activite-fixture-35',
         suspension: { pause: futureIdentityRootFixture, reouverture: 'DEBUT' },
       },
     ]);
@@ -1512,7 +1491,7 @@ describe('AtelierCoordinator', () => {
       ],
     };
   };
-  const givenNonConformityIsReportedDuringReferenceRefresh = (): void => {
+  const givenTheSecondaryTargetIsPressedDuringReferenceRefresh = (): void => {
     serveur.afterReference = () => {
       serveur.afterReference = undefined;
       void whenPointingAt('piece', 'SECONDAIRE');
@@ -1626,7 +1605,7 @@ describe('AtelierCoordinator', () => {
     return requiredFixture(accepted[0], 'accepted opening').value.id;
   };
   const thenOpeningBelongsTo = (operateurId: string): void => {
-    expect(serveur.journal).toEqual([expect.objectContaining({ nature: 'POINTAGE', operateurId, intention: 'OUVERTURE', type: 'DEBUT' })]);
+    expect(serveur.journal).toEqual([expect.objectContaining({ nature: 'POINTAGE', operateurId, type: 'DEBUT' })]);
   };
   const thenOpeningAndPointageAreRefused = async (opening: Promise<unknown>, pointage: Promise<void>): Promise<void> => {
     await Promise.all([thenFails(opening, 'deja ouverte'), thenFails(pointage, 'habilitations')]);

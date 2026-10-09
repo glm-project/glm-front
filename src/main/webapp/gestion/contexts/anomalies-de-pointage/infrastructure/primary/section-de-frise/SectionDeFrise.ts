@@ -1,7 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { contexteDuSuivi } from '../ContexteDuSuivi';
 import { FriseDossier } from '../frise-dossier/FriseDossier';
 import { DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from '../frise-dossier/PoigneeDeFrise';
 import { jourDeLaJournee } from '../JourneeDeLOperateur';
@@ -22,12 +21,10 @@ export class SectionDeFrise {
   readonly placement = input<PlacementDeLInstant | undefined>(undefined);
   readonly deplacementDemande = output<DeplacementDemande>();
   readonly placementDemande = output<PlacementDemande>();
-  readonly poigneeRelachee = output();
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly jourDeLaJournee = jourDeLaJournee;
-  protected readonly phraseDeContexte = contexteDuSuivi;
 
   protected libelleDeLaJournee(): string {
-    return this.libelles.voirLaJournee(this.operateur() ?? this.libelles.frise.contexte.operateurInconnu);
+    return this.libelles.voirLaJournee(this.operateur() ?? this.libelles.operateurInconnu);
   }
 }

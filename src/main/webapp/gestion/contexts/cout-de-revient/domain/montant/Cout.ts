@@ -1,9 +1,9 @@
-import { TotalDeMontant } from './TotalDeMontant';
+import { Montant } from './Montant';
 
 export class Cout {
   constructor(
-    readonly machine: TotalDeMontant,
-    readonly mainDOeuvre: TotalDeMontant,
-    readonly total: TotalDeMontant,
+    readonly machine: Montant,
+    readonly mainDOeuvre: Montant,
+    readonly total: Montant,
   ) {}
 }

@@ -203,11 +203,7 @@
                           } @else {
                           <span data-selector="cout-pointage-taux">{{ libelles.detail.tarif(pointage.tauxHoraire) }}</span>
                           } @for (part of pointage.parts; track $index) {
-                          <span
-                            class="diviseur"
-                            [class.diviseur-partage]="part.estPartagee()"
-                            [class.diviseur-inconnu]="part.partageInconnu()"
-                            data-selector="cout-pointage-diviseur"
+                          <span class="diviseur" [class.diviseur-partage]="part.estPartagee()" data-selector="cout-pointage-diviseur"
                             >{{ libelles.detail.diviseur(part) }}</span
                           >
                           }
@@ -224,7 +220,7 @@
                       <td colspan="2" data-selector="cout-part-contexte">
                         ↳ {{ libelles.detail.plageDePart(part) }} · {{ libelles.detail.contexteDePart(part) }}
                       </td>
-                      <td class="nombre" data-selector="cout-part-duree">{{ libelles.dureeCertaine(part.duree) }}</td>
+                      <td class="nombre" data-selector="cout-part-duree">{{ libelles.duree(part.duree) }}</td>
                       <td></td>
                       <td class="nombre" data-selector="cout-part-calcul">{{ libelles.detail.calculDePart(pointage, part) }}</td>
                       <td></td>
@@ -232,7 +228,7 @@
                     } } @for (anomalie of pointage.anomalies; track anomalie) {
                     <tr class="explication" [attr.data-anomalie]="anomalie" data-selector="cout-pointage-explication">
                       <td></td>
-                      <td colspan="6">{{ libelles.detail.explication(pointage, anomalie) }}</td>
+                      <td colspan="6">{{ libelles.detail.explication(anomalie) }}</td>
                     </tr>
                     } }
                   </tbody>

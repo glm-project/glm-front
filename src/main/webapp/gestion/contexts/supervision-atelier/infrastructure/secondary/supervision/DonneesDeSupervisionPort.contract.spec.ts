@@ -86,7 +86,7 @@ interface HttpReadHarness extends ReadHarness {
 
 const emptyFixture: SceneFixture = {
   donnees: { evaluation: EVALUATION, operateurs: [], activites: [] },
-  response: { evaluation: EVALUATION.value, operateurs: [], activites: [], sequencesEnConflit: [] },
+  response: { evaluation: EVALUATION.value, operateurs: [], activites: [] },
 };
 
 const operateurFixture = new OperateurDeclare({

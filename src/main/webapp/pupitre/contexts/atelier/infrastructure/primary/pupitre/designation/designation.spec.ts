@@ -313,7 +313,6 @@ describe('Designation keypad', () => {
       etat: 'EN_ATTENTE',
       geste: {
         nature: 'POINTAGE',
-        intention: 'OUVERTURE',
         type: 'DEBUT',
         id: 'geste-en-attente',
         operateurId: 'jean',

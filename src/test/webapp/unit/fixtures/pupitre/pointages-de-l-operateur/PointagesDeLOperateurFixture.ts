@@ -1,16 +1,13 @@
 import { DemandeDePointages } from '@/pupitre/contexts/pointages-de-l-operateur/domain/DemandeDePointages';
 import { DureeTravaillee } from '@/pupitre/contexts/pointages-de-l-operateur/domain/duree/DureeTravaillee';
-import { TotalDeDuree } from '@/pupitre/contexts/pointages-de-l-operateur/domain/duree/TotalDeDuree';
 import { JourDePointages } from '@/pupitre/contexts/pointages-de-l-operateur/domain/JourDePointages';
 import { CategorieDePointage, EtatDeLigne, LigneDePointage } from '@/pupitre/contexts/pointages-de-l-operateur/domain/LigneDePointage';
 import { PointagesDeLaSemaine } from '@/pupitre/contexts/pointages-de-l-operateur/domain/PointagesDeLaSemaine';
 import { PointagesDeLOperateurPort } from '@/pupitre/contexts/pointages-de-l-operateur/domain/PointagesDeLOperateurPort';
 import { SemaineISO } from '@/pupitre/contexts/pointages-de-l-operateur/domain/semaine/SemaineISO';
 
-export type TotalFixture = string | false;
-
 export interface JourFixture {
-  readonly total: TotalFixture;
+  readonly total: string;
   readonly lignes: readonly LigneDePointage[];
 }
 
@@ -34,20 +31,17 @@ export const ligneFixture = (ligne: LigneFixture): LigneDePointage =>
     etatFixture(ligne),
   );
 
-export const totalFixture = (total: TotalFixture): TotalDeDuree =>
-  total === false ? TotalDeDuree.incomplet() : TotalDeDuree.complet(new DureeTravaillee(total));
-
 export const semaineFixture = (
   semaine: SemaineISO,
   jours: Readonly<Partial<Record<number, JourFixture>>> = {},
-  total: TotalFixture = 'PT0S',
+  total = 'PT0S',
 ): PointagesDeLaSemaine =>
   new PointagesDeLaSemaine(
     semaine,
-    totalFixture(total),
+    new DureeTravaillee(total),
     semaine.jours().map((jour, rang) => {
       const pointe = jours[rang];
-      return new JourDePointages(jour, totalFixture(pointe?.total ?? 'PT0S'), pointe?.lignes ?? []);
+      return new JourDePointages(jour, new DureeTravaillee(pointe?.total ?? 'PT0S'), pointe?.lignes ?? []);
     }),
   );
 

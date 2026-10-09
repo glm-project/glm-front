@@ -41,7 +41,6 @@ const gesteFixture = (id: string): GesteDePointage => ({
   dateDeSurvenue: '2026-09-05T09:00:00Z',
   operateurId: 'jean',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 });
 

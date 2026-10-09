@@ -10,7 +10,6 @@ import {
 
 const gesteFixture = (id: string): GesteDePointage => ({
   nature: 'POINTAGE',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
   id,
   operateurId: 'jean',
@@ -22,9 +21,7 @@ describe('JournalDuPupitre', () => {
   it('should stop only the designated operator resumption while retaining every prior journal event', () => {
     const suspended = (operateurId: string): GesteDePointage => ({
       nature: 'POINTAGE',
-      intention: 'FIN',
       type: 'FIN',
-      cible: 'ouverture-' + operateurId,
       id: 'fin-' + operateurId,
       operateurId,
       suiviId: 'piece',
@@ -60,9 +57,7 @@ describe('JournalDuPupitre', () => {
             operateurId: 'jean',
             suiviId: 'piece',
             nature: 'POINTAGE',
-            intention: 'FIN',
             type: 'FIN',
-            cible: 'ouverture',
           },
         },
       ],
@@ -79,7 +74,6 @@ describe('JournalDuPupitre', () => {
 
   it('should copy accepted events', () => {
     const pointage: GesteDePointage = {
-      intention: 'OUVERTURE',
       id: 'pt-1',
       dateDeSurvenue: '2026-09-05T08:00:00Z',
       nature: 'POINTAGE',
@@ -162,7 +156,6 @@ describe('JournalDuPupitre', () => {
             id: 'arr-1',
             dateDeSurvenue: '2026-09-05T08:00:00Z',
             nature: 'POINTAGE',
-            intention: 'OUVERTURE',
             type: 'DEBUT',
             suiviId: 'suivi-1',
             operateurId: 'jean',
@@ -174,7 +167,6 @@ describe('JournalDuPupitre', () => {
             id: 'ref-1',
             dateDeSurvenue: '2026-09-05T08:00:00Z',
             nature: 'POINTAGE',
-            intention: 'OUVERTURE',
             type: 'DEBUT',
             suiviId: 'suivi-1',
             operateurId: 'jean',

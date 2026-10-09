@@ -20,7 +20,6 @@ const connectedWorkshopFixture: RestSupervision = {
       etat: 'EN_COURS',
     },
   ],
-  sequencesEnConflit: [],
 };
 
 const idleConnectedWorkshopFixture: RestSupervision = { ...connectedWorkshopFixture, activites: [] };
@@ -45,7 +44,6 @@ const workshopWithWarningsFixture: RestSupervision = {
       finRetenue: new Date(2026, 8, 23, 21).toISOString(),
     },
   ],
-  sequencesEnConflit: [{ id: 'sequence-to-correct', operateurId: 'op-connected-serin', activites: [] }],
 };
 
 describe('Supervision atelier in back office', () => {

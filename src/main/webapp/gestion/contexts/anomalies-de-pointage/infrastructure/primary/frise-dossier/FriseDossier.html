@@ -68,10 +68,7 @@
       [style.left.%]="element.gauche"
       [style.top.px]="element.haut"
       [attr.aria-label]="element.nom"
-      [attr.data-en-cause]="element.enCause"
-      [attr.data-annule]="element.annule"
       [attr.data-non-conformite]="element.nonConformite"
-      [attr.data-ancrage]="element.ancrage"
     >
       <span aria-hidden="true" data-selector="anomalie-pointage-symbole">{{ element.symbole }}</span>
       <time class="text-(length:--text-label) tabular-nums" data-selector="anomalie-pointage-heure">{{ element.heure }}</time>
@@ -97,7 +94,6 @@
       [attr.aria-valuemax]="element.max"
       [attr.aria-valuenow]="element.heure === 'AVEC_HEURE' ? element.lecture.valeur : null"
       [attr.aria-valuetext]="element.heure === 'AVEC_HEURE' ? element.lecture.texte : libelles.frise.aucuneHeure"
-      [attr.aria-disabled]="element.desactivee"
       (keydown)="touche($event, element)"
       (pointerdown)="saisit($event, plan, element)"
       (pointermove)="glisse($event, plan, element)"

@@ -11,7 +11,7 @@ type RestActivite = components['schemas']['RestActiviteDeLaFeuilleDeTemps'];
 type RestTotal = components['schemas']['RestDureeDeSynthese'];
 const HORLOGE = new Date(2026, 8, 26, 10, 30).getTime();
 const ADRESSE = '/operateurs/op-1/heures?annee=2026&semaine=38&jour=2026-09-14';
-const total = (valeur: string): RestTotal => ({ complete: true, valeur });
+const total = (valeur: string): RestTotal => ({ valeur });
 const heure = (jour: number, valeur: number): string => new Date(2026, 8, jour, valeur).toISOString();
 const activite = (id: string, debut: string, fin: string, poste?: string): RestActivite => ({
   element: 'element-1',
@@ -95,37 +95,6 @@ const semaineDeNuitFixture = (): SemaineSemee => {
     },
   };
 };
-const semaineIncompleteFixture = (): SemaineSemee => {
-  const base = semaineDeJourFixture();
-  return {
-    synthese: {
-      ...base.synthese,
-      dureeOperationnelleTotale: { complete: false },
-      elements: [{ ...requiredFixture(base.synthese.elements[0]), duree: { complete: false }, dureeNonConformite: total('PT1H') }],
-      jours: requiredFixture(base.synthese.jours).map((jour, rang) =>
-        rang === 0 ? { ...jour, dureeOperationnelle: { complete: false } } : jour,
-      ),
-    },
-    feuille: {
-      ...base.feuille,
-      jours: requiredFixture(base.feuille.jours).map((jour, rang) =>
-        rang === 0
-          ? {
-              ...jour,
-              activites: [
-                {
-                  element: 'element-1',
-                  categorie: 'TRAVAIL',
-                  debut: heure(14, 8),
-                  activite: { id: 'a', debut: heure(14, 8), etat: 'EN_COURS' },
-                },
-              ],
-            }
-          : jour,
-      ),
-    },
-  };
-};
 const semaineAFinAutomatiqueFixture = (debut: number, fin: number): SemaineSemee => {
   const base = semaineDeJourFixture();
   const duree = total(`PT${fin - debut}H`);
@@ -206,13 +175,6 @@ describe('Operational time report in gestion', () => {
     whenVisiting(ADRESSE);
 
     thenRenderReceivedNightPortionsAndDailyTotalsWithoutReconstructingTheActivity();
-  });
-
-  it('should show incomplete work independently of complete nonconformity', () => {
-    givenAWeek(semaineIncompleteFixture());
-    whenVisiting(ADRESSE);
-
-    thenShowIncompleteWorkIndependentlyOfCompleteNonconformity();
   });
 
   it('should keep the work and markers inside their day column', () => {
@@ -579,13 +541,6 @@ describe('Operational time report in gestion', () => {
     cy.get(dataSelector('synthese-operationnel-jour')).eq(1).should('have.text', '8 h 00');
     thenTheMarksOfTheDayStayInsideIt(0);
     thenTheWorkOfTheElementStaysInsideItsDay(0, 0);
-  };
-
-  const thenShowIncompleteWorkIndependentlyOfCompleteNonconformity = (): void => {
-    cy.get(dataSelector('synthese-operationnel-total')).should('have.text', 'Incomplet');
-    cy.get(dataSelector('synthese-element-total')).should('contain.text', 'Incomplet');
-    cy.get(dataSelector('synthese-element-nc')).should('have.text', 'NC 1 h 00');
-    cy.get(dataSelector('synthese-activite-etat')).should('contain.text', 'En cours');
   };
 
   const thenKeepLoadingVisibleUntilBothReceivedReportsAreAvailable = (): void => {

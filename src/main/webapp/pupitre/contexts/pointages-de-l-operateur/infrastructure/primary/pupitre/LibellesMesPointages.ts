@@ -8,7 +8,6 @@ import {
   formatInstantTime,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { DureeTravaillee } from '../../../domain/duree/DureeTravaillee';
-import { TotalDeDuree } from '../../../domain/duree/TotalDeDuree';
 import { JourDePointages } from '../../../domain/JourDePointages';
 import { LigneDePointage } from '../../../domain/LigneDePointage';
 import { PointagesDeLaSemaine } from '../../../domain/PointagesDeLaSemaine';
@@ -21,11 +20,6 @@ const avecMajuscule = (texte: string): string => `${texte.charAt(0).toUpperCase(
 const nomDuMois = (mois: MoisCalendaire): string => avecMajuscule(formatCalendarMonthName(mois.annee, mois.numero));
 
 const heuresEtMinutes = (duree: DureeTravaillee): string => `${String(duree.heures)} h ${String(duree.minutesRestantes).padStart(2, '0')}`;
-
-const duree = (total: TotalDeDuree): string => {
-  const lecture = total.snapshot();
-  return lecture.complete ? heuresEtMinutes(lecture.valeur) : '—';
-};
 
 const plage = (ligne: LigneDePointage): string =>
   `${formatInstantTime(ligne.activite.debut)} → ${'fin' in ligne.etat ? formatInstantTime(ligne.etat.fin) : '…'}`;
@@ -91,7 +85,7 @@ export const LIBELLES_MES_POINTAGES = {
   dates,
   totalDeLaSemaine: 'Total de la semaine',
   jour,
-  duree,
+  duree: heuresEtMinutes,
   titreDuJour,
   libelleDuTotalDuJour: 'pointées',
   explications,
@@ -99,6 +93,5 @@ export const LIBELLES_MES_POINTAGES = {
   noteDeLaSemaine,
   plage,
   mentionDeLaLigne,
-  dureeDeLaLigne: heuresEtMinutes,
   nonConformite: 'NC',
 } as const;

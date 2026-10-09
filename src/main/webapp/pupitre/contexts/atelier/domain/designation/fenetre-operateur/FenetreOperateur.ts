@@ -35,7 +35,7 @@ import { LotDeTransitions, TransitionDePointage } from './TransitionDePointage';
 import { ElementDePointage, VueDePointage, zonesDePointage } from './VueDePointage';
 
 const toTransition = ({ reouverture, posteId }: ActiviteSuspendue): TransitionDePointage =>
-  posteId === undefined ? { intention: 'OUVERTURE', type: reouverture } : { intention: 'OUVERTURE', type: reouverture, posteId };
+  posteId === undefined ? { type: reouverture } : { type: reouverture, posteId };
 
 interface ActivitePersonnelleConnue {
   readonly suiviId: string;
@@ -130,7 +130,7 @@ export class FenetreOperateur {
   afterDeciding(suiviId: string, cible: CibleDePointage, identify: () => IdentiteDuGeste, instant: number): DecisionResult {
     const fenetre = this.afterEvaluatingActivities(instant).afterIntendingGesture();
     const suivi = fenetre.requireSuivi(suiviId);
-    const activities = fenetre.activitesFor(suivi).decide(cible);
+    const activities = fenetre.activitesFor(suivi).decide();
     const numero = NumeroDElement.from(suivi);
     const decision =
       activities.kind === 'ACTIF'
@@ -148,12 +148,12 @@ export class FenetreOperateur {
     const fenetre = this.afterEvaluatingActivities(instant);
     fenetre.requireAvailableGestures();
     const suivi = fenetre.requireSuivi(suiviId);
-    if (fenetre.activitesFor(suivi).decide(cible).kind === 'ACTIF') throw new Error("L'élément est déjà actif pour cet opérateur.");
+    if (fenetre.activitesFor(suivi).decide().kind === 'ACTIF') throw new Error("L'élément est déjà actif pour cet opérateur.");
     fenetre.etat.operateurDesigne.assertPoste(posteId);
     const decision = fenetre.gestes(
       suiviId,
       NumeroDElement.from(suivi),
-      { premiere: { intention: 'OUVERTURE', type: fenetre.openingTypeFor(cible), posteId }, suivantes: [] },
+      { premiere: { type: fenetre.openingTypeFor(cible), posteId }, suivantes: [] },
       identify,
     );
     return {
@@ -262,9 +262,7 @@ export class FenetreOperateur {
   private finDe(suiviId: string, activite: ActiviteDuPupitre, identite: IdentiteDuGeste): GesteDePointage {
     return this.toPointage(
       suiviId,
-      activite.posteId === undefined
-        ? { intention: 'FIN', type: 'FIN', cible: activite.ouverture }
-        : { intention: 'FIN', type: 'FIN', cible: activite.ouverture, posteId: activite.posteId },
+      activite.posteId === undefined ? { type: 'FIN' } : { type: 'FIN', posteId: activite.posteId },
       identite,
     );
   }

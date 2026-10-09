@@ -50,7 +50,7 @@
         </span>
         <span class="text-ink-muted tabular-nums">{{ labels.plage(ligne) }}</span>
         <span class="flex flex-col items-end tabular-nums">
-          @if (ligne.duree(); as duree) { {{ labels.dureeDeLaLigne(duree) }} @if (labels.mentionDeLaLigne(ligne); as mention) {
+          @if (ligne.duree(); as duree) { {{ labels.duree(duree) }} @if (labels.mentionDeLaLigne(ligne); as mention) {
           <span class="text-label text-warn" data-selector="mention">{{ mention }}</span>
           } } @else {
           <span class="rounded bg-ok px-2 text-label text-on-accent" data-selector="en-cours">{{ labels.mentionDeLaLigne(ligne) }}</span>

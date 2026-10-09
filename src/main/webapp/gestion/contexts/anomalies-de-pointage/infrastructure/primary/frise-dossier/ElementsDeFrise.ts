@@ -26,34 +26,27 @@ export const POSITION_DU_BORD = 100;
 export const HAUTEUR_DE_L_AXE_PX = 28;
 export const HAUTEUR_D_UN_ELEMENT_PX = 44;
 export const ESPACE_ENTRE_RANGEES_PX = 8;
-const ETATS_SANS_FIN_RECUE: readonly ActiviteAnomalie['etat'][] = ['EN_COURS', 'A_RESOUDRE'];
+const ETATS_SANS_FIN_RECUE: readonly ActiviteAnomalie['etat'][] = ['EN_COURS'];
 
 const QUALIFICATIFS = LIBELLES_ANOMALIES.frise;
 
-const nomDuRepere = (pointage: PointageAnomalie, enCause: boolean): string =>
+const nomDuRepere = (pointage: PointageAnomalie): string =>
   [
     formatInstantTimeWithSeconds(new Date(pointage.fait.instant)),
     libelleDuGeste(pointage.fait),
-    ...(pointage.annulation ? [QUALIFICATIFS.annule] : []),
     ...(pointage.regularisation ? [QUALIFICATIFS.regularise] : []),
-    ...(enCause ? [QUALIFICATIFS.enCause] : []),
   ].join(' · ');
 
-const symboleDuGeste = (fait: PointageAnomalie['fait']): string =>
-  QUALIFICATIFS.symboles[fait.type][fait.intention] ?? QUALIFICATIFS.symboleInconnu;
-
-export const repereDe = (pointage: PointageAnomalie, enCause: boolean): RepereASituer => ({
+export const repereDe = (pointage: PointageAnomalie): RepereASituer => ({
   kind: 'REPERE',
   instant: Date.parse(pointage.fait.instant),
   cle: `pointage:${pointage.id.pointage}`,
   pointage: pointage.id.pointage,
-  nom: nomDuRepere(pointage, enCause),
+  nom: nomDuRepere(pointage),
   heure: heureDe(pointage.fait.instant),
-  symbole: symboleDuGeste(pointage.fait),
+  symbole: QUALIFICATIFS.symboles[pointage.fait.type],
   nonConformite: pointage.fait.type === 'NON_CONFORMITE',
-  annule: pointage.annulation !== undefined,
   regularise: pointage.regularisation,
-  enCause,
 });
 
 export const finRecueDe = (etat: ActiviteAnomalie['etat'], fin: string | undefined): string | undefined =>
@@ -129,7 +122,6 @@ const echelleDeLaFrise = (
 export const lectureDeLaFrise = ({ vue, maintenant, poignee, placement }: EntreesDeFrise) => {
   const pointages = pointagesDeLaFrise(vue);
   return {
-    enCause: new Set(vue.diagnostics?.map(diagnostic => diagnostic.pointage.pointage)),
     pointages,
     echelle: echelleDeLaFrise(instantsDeLEchelle(pointages, vue.activites, maintenant), poignee, placement),
   };
@@ -144,7 +136,7 @@ export const instantTenuSur = (poignee: Pick<PoigneeDeFrise, 'instant' | 'bornes
 
 const emplacementDeLaPoignee = (
   instant: string,
-  cadre: Pick<PoigneeDeFrise, 'bornes' | 'desactivee'>,
+  cadre: Pick<PoigneeDeFrise, 'bornes'>,
   etiquette: string,
   echelle: EchelleFrise,
   haut: number,
@@ -160,7 +152,6 @@ const emplacementDeLaPoignee = (
     min: Date.parse(cadre.bornes.min),
     max: Date.parse(cadre.bornes.max),
     etiquette,
-    desactivee: cadre.desactivee,
   };
 };
 

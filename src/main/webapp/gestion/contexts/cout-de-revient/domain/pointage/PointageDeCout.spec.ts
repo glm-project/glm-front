@@ -1,23 +1,20 @@
 import { Cout } from '../montant/Cout';
 import { Montant } from '../montant/Montant';
-import { TotalDeMontant } from '../montant/TotalDeMontant';
 import { DureePassee } from '../temps/DureePassee';
 import { InstantDeTravail } from '../temps/InstantDeTravail';
 import { PeriodeDeTravail } from '../temps/PeriodeDeTravail';
-import { TotalDeTemps } from '../temps/TotalDeTemps';
 import { OperateurCite } from './OperateurCite';
 import { PartDePointage } from './PartDePointage';
 import { AnomalieDePointage, CategorieDePointage, FicheDePointage, PointageDeCout } from './PointageDeCout';
 
-const partFixture = (debut: string, fin: string, diviseur: number | undefined): PartDePointage =>
+const partFixture = (debut: string, fin: string, diviseur: number): PartDePointage =>
   new PartDePointage({
     debut: new InstantDeTravail(debut),
     fin: new InstantDeTravail(fin),
     duree: new DureePassee('PT1H'),
     diviseur,
-    mainDOeuvre: TotalDeMontant.complet(new Montant(35)),
+    mainDOeuvre: new Montant(35),
     paralleles: [],
-    bloquants: [],
   });
 
 const ficheFixture = (
@@ -30,14 +27,10 @@ const ficheFixture = (
   poste: undefined,
   categorie,
   periode: new PeriodeDeTravail(new InstantDeTravail('2026-09-12T07:30:00Z'), new InstantDeTravail('2026-09-12T09:30:00Z')),
-  duree: TotalDeTemps.complet(new DureePassee('PT2H')),
+  duree: new DureePassee('PT2H'),
   coutHoraire: new Montant(48),
   tauxHoraire: new Montant(35),
-  cout: new Cout(
-    TotalDeMontant.complet(new Montant(96)),
-    TotalDeMontant.complet(new Montant(70)),
-    TotalDeMontant.complet(new Montant(166)),
-  ),
+  cout: new Cout(new Montant(96), new Montant(70), new Montant(166)),
   parts,
 });
 
@@ -65,16 +58,10 @@ describe('PointageDeCout', () => {
     );
   });
 
-  it('should detail the sharing of a clocking whose divisor is unknown', () => {
-    expect(
-      new PointageDeCout(ficheFixture([partFixture('2026-09-12T07:30:00Z', '2026-09-12T09:30:00Z', undefined)])).detailleSonPartage(),
-    ).toBe(true);
-  });
-
   it('should tell the anomalies a clocking carries', () => {
     const pointage = new PointageDeCout(ficheFixture([], 'TRAVAIL', ['FIN_AUTOMATIQUE']));
 
-    expect([pointage.porte('FIN_AUTOMATIQUE'), pointage.porte('PARTAGE_INCONNU'), pointage.estEnAnomalie()]).toEqual([true, false, true]);
+    expect([pointage.porte('FIN_AUTOMATIQUE'), pointage.estEnAnomalie()]).toEqual([true, true]);
   });
 
   it('should not call a clocking without anomaly a clocking in anomaly', () => {

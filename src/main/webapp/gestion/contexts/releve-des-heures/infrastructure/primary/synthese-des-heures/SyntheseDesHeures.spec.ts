@@ -461,29 +461,6 @@ describe('Synthese des heures component', () => {
   });
 
   it.each([
-    [false, 'PT1H', 'Incomplet', 'NC 1 h 00'],
-    ['PT2H', false, '2 h 00', 'NC Incomplet'],
-    [false, false, 'Incomplet', 'NC Incomplet'],
-  ] as const)(
-    'should display an incomplete work or NC total without a partial number (%s, %s)',
-    async (travail, nc, attendu, attenduNC) => {
-      givenReleve(
-        releveFixture(SEMAINE_EN_COURS, { 0: { operationnelle: false } }, { operationnelle: false }, [
-          elementFixture({ duree: travail, dureeNonConformite: nc }),
-        ]),
-      );
-
-      await whenEcranAffiche();
-
-      expect(texte('synthese-operationnel-total')).toBe('Incomplet');
-      expect(textes('synthese-operationnel-jour')[0]).toBe('Incomplet');
-      expect(textes('synthese-element-total')).toEqual([attendu]);
-      expect(textes('synthese-element-nc')).toEqual([attenduNC]);
-      expect(titres('synthese-operationnel-total')).toEqual(['']);
-    },
-  );
-
-  it.each([
     ['at the automatic deadline', 8, 21, 'TERMINEE_AUTOMATIQUEMENT', 'PT13H', undefined, '13 h 00', true],
     ['on a later read', 8, 21, 'TERMINEE_AUTOMATIQUEMENT', 'PT13H', undefined, '13 h 00', true],
     ['after a late received end at 17:00', 8, 17, 'TERMINEE', 'PT9H', 17, '9 h 00', false],
@@ -1687,65 +1664,6 @@ describe('Synthese des heures component', () => {
     expect(texte('synthese-semaine-libelle')).toContain('Semaine 37');
     expect(texte('synthese-operationnel-total')).toBe('2 h 00');
     expect(portFixture.demandes.map(demande => demande.semaine.numero)).toEqual([38, 37]);
-  });
-
-  it('should replace the incomplete total with the corrected report received on a new reading', async () => {
-    givenReleve(
-      releveFixture(
-        SEMAINE_EN_COURS,
-        {
-          0: {
-            operationnelle: false,
-            intervalles: [
-              {
-                debut: [8, 0],
-                activite: {
-                  id: new ActiviteReleveId('a'),
-                  debut: instantFixture(0, [8, 0]),
-                  etat: 'EN_COURS',
-                },
-              },
-            ],
-            pointagesDElement: [{ id: 'a', type: 'DEBUT', heure: [8, 0] }],
-          },
-        },
-        { operationnelle: false },
-        [elementFixture({ duree: false })],
-      ),
-    );
-    givenSemaineSemee(new SemaineISO(2026, 37));
-
-    await whenEcranAffiche();
-    const avant = texte('synthese-operationnel-total');
-    givenReleve(
-      releveFixture(
-        SEMAINE_EN_COURS,
-        {
-          0: {
-            operationnelle: 'PT2H',
-            intervalles: [
-              {
-                debut: [8, 0],
-                fin: [10, 0],
-                activite: {
-                  id: new ActiviteReleveId('a'),
-                  debut: instantFixture(0, [8, 0]),
-                  fin: instantFixture(0, [10, 0]),
-                  etat: 'TERMINEE',
-                },
-              },
-            ],
-          },
-        },
-        { operationnelle: 'PT2H' },
-        [elementFixture({ duree: 'PT2H' })],
-      ),
-    );
-    await whenAnotherWeekIsOpened({ annee: '2026', semaine: '37', jour: '2026-09-08' });
-    await whenAnotherWeekIsOpened({ annee: '2026', semaine: '38', jour: '2026-09-14' });
-
-    expect([avant, texte('synthese-operationnel-total'), textes('synthese-activite-etat')]).toEqual(['Incomplet', '2 h 00', []]);
-    expect(portFixture.demandes.map(demande => demande.semaine.numero)).toEqual([38, 37, 38]);
   });
 
   const givenReadingInFlight = (releve: ReleveDesHeures): (() => void) => {

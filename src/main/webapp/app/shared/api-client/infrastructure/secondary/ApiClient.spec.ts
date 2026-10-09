@@ -7,7 +7,6 @@ import { ApiClient } from './ApiClient';
 const SUIVI_ID = 'b7f0c2de-1f2a-4c3b-9d4e-5f6a7b8c9d0e';
 const OPERATEUR_ID = '0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d';
 const POINTAGE_ID = '932c0c0b-a676-408d-8f82-e9b56ad7791c';
-const ACTIVITE_ID = 'a0260511-0516-4bea-943a-d3c8f641a4dc';
 const PLEINE_PAGE = 100;
 const POSTE_ID = 'poste/avec espace';
 const MODIFICATION_POSTE = {
@@ -32,7 +31,6 @@ const UNE_PAGE_DE_SUIVIS = {
 } satisfies components['schemas']['PageRestSuiviDAtelierEnGrille'];
 
 const UN_SUIVI = {
-  conflits: [],
   activitesEnCours: [],
   element: 'element',
   engageLe: '2026-09-05T08:00:00Z',
@@ -125,7 +123,7 @@ describe('ApiClient', () => {
 
     await whenTheRequestCompletes(ecriture);
 
-    thenItSent(requete, { id: POINTAGE_ID, operateur: OPERATEUR_ID, intention: 'FIN', type: 'FIN', cible: ACTIVITE_ID });
+    thenItSent(requete, { id: POINTAGE_ID, operateur: OPERATEUR_ID, type: 'FIN' });
   });
 
   it('should update the requested workstation and return the server answer', async () => {
@@ -219,13 +217,13 @@ describe('ApiClient', () => {
   const whenStartingWork = (): Promise<unknown> =>
     api.write('/api/atelier/suivis/{id}/pointages', {
       pathParams: { id: SUIVI_ID },
-      body: { id: 'evenement', operateur: OPERATEUR_ID, intention: 'OUVERTURE', type: 'DEBUT' },
+      body: { id: 'evenement', operateur: OPERATEUR_ID, type: 'DEBUT' },
     });
 
   const whenFinishingActivity = (): Promise<unknown> =>
     api.write('/api/atelier/suivis/{id}/pointages', {
       pathParams: { id: SUIVI_ID },
-      body: { id: POINTAGE_ID, operateur: OPERATEUR_ID, intention: 'FIN', type: 'FIN', cible: ACTIVITE_ID },
+      body: { id: POINTAGE_ID, operateur: OPERATEUR_ID, type: 'FIN' },
     });
 
   const whenUpdatingAWorkstation = (): Promise<unknown> =>

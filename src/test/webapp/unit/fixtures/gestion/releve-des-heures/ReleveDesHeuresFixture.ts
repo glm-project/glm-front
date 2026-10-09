@@ -1,5 +1,4 @@
 import { DureeTravaillee } from '@/gestion/contexts/releve-des-heures/domain/duree/DureeTravaillee';
-import { TotalDeDuree } from '@/gestion/contexts/releve-des-heures/domain/duree/TotalDeDuree';
 import { ActiviteDuReleve } from '@/gestion/contexts/releve-des-heures/domain/element/ActiviteDuReleve';
 import { CategorieDActivite } from '@/gestion/contexts/releve-des-heures/domain/element/CategorieDActivite';
 import { CategorieDElement } from '@/gestion/contexts/releve-des-heures/domain/element/CategorieDElement';
@@ -27,8 +26,7 @@ export type Heure = readonly [number, number];
 export const instantFixture = (rang: number, [heure, minute]: Heure): InstantDeReleve =>
   new InstantDeReleve(new Date(2026, 8, 14 + rang, heure, minute).toISOString());
 
-export const totalFixture = (valeur: string | false = 'PT0S'): TotalDeDuree =>
-  valeur === false ? TotalDeDuree.incomplet() : TotalDeDuree.complet(new DureeTravaillee(valeur));
+export const totalFixture = (valeur = 'PT0S'): DureeTravaillee => new DureeTravaillee(valeur);
 
 export const activiteFixture = (debut: InstantDeReleve, fin: InstantDeReleve | undefined, id = 'activite-fixture'): ActiviteDuReleve =>
   fin === undefined
@@ -55,7 +53,7 @@ export interface PointageDElementFixture {
 export interface JourFixture {
   readonly intervalles?: readonly IntervalleFixture[];
   readonly pointagesDElement?: readonly PointageDElementFixture[];
-  readonly operationnelle?: string | false;
+  readonly operationnelle?: string;
   readonly journal?: readonly PointageDElementFixture[];
 }
 
@@ -94,7 +92,7 @@ export const jourFixture = (jour: JourCalendaire, rang: number, fiche: JourFixtu
   });
 
 export interface TotauxFixture {
-  readonly operationnelle?: string | false;
+  readonly operationnelle?: string;
 }
 
 export interface ElementFixture {
@@ -104,8 +102,8 @@ export interface ElementFixture {
   readonly reference?: string;
   readonly description?: string;
   readonly postes?: readonly (readonly [string, string | undefined, string?])[];
-  readonly duree?: string | false;
-  readonly dureeNonConformite?: string | false;
+  readonly duree?: string;
+  readonly dureeNonConformite?: string;
 }
 
 export const elementFixture = (fiche: ElementFixture = {}): ElementDuReleve =>

@@ -16,7 +16,6 @@ const aReferentiel = (evenementsRecus: Readonly<Record<string, readonly string[]
 
 const ouverture = (id: string, operateurId = 'jean', suiviId = 'piece'): GesteDePointage => ({
   nature: 'POINTAGE',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
   id,
   operateurId,
@@ -28,9 +27,7 @@ const suspendu = (id: string, pause: string, operateurId = 'jean', suiviId = 'pi
   const suspension: Suspension = { pause, reouverture: 'DEBUT' };
   return {
     nature: 'POINTAGE',
-    intention: 'FIN',
     type: 'FIN',
-    cible: 'ouverture-' + id,
     id,
     operateurId,
     suiviId,

@@ -5,7 +5,6 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { inject, Injectable } from '@angular/core';
 import { DemandeDePointages } from '../../../domain/DemandeDePointages';
 import { DureeTravaillee } from '../../../domain/duree/DureeTravaillee';
-import { TotalDeDuree } from '../../../domain/duree/TotalDeDuree';
 import { InstantDEvaluation } from '../../../domain/InstantDEvaluation';
 import { JourDePointages } from '../../../domain/JourDePointages';
 import { EtatDeLigne, LigneDePointage } from '../../../domain/LigneDePointage';
@@ -27,8 +26,7 @@ interface Libelles {
   readonly postes: ReadonlyMap<string, string>;
 }
 
-const toTotal = (duree: RestDuree): TotalDeDuree =>
-  duree.complete ? TotalDeDuree.complet(new DureeTravaillee(required(duree.valeur, 'duree.valeur'))) : TotalDeDuree.incomplet();
+const toTotal = (duree: RestDuree): DureeTravaillee => new DureeTravaillee(duree.valeur);
 
 const libellesDe = (synthese: RestSynthese): Libelles => ({
   elements: new Map(synthese.elements.map(element => [element.id, element.reference ?? element.nom])),
@@ -45,9 +43,6 @@ const libelleDe = (libelles: ReadonlyMap<string, string>, id: string, nature: st
 
 const toEtat = (activite: RestActivite): EtatDeLigne => {
   const etat = activite.activite.etat;
-  if (etat === 'A_RESOUDRE') {
-    throw new Error('Le serveur a rendu un pointage à résoudre, état que le pupitre ne présente plus.');
-  }
   return etat === 'TERMINEE' || etat === 'TERMINEE_AUTOMATIQUEMENT' ? { etat, fin: new Date(required(activite.fin, 'fin')) } : { etat };
 };
 

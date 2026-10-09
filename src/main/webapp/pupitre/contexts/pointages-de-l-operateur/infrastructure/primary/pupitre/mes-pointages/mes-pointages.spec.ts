@@ -77,15 +77,6 @@ describe('Mes pointages screen', () => {
     ]);
   });
 
-  it('should show an incomplete week total without any figure', async () => {
-    givenTheCurrentWeek(semaineFixture(SEMAINE_EN_COURS, { 0: { total: false, lignes: [LUNDI] } }, false));
-
-    await whenShowingMyPointages();
-
-    thenTextOf('total-semaine', ['—']);
-    thenClockedDaysAre([['jour-2026-10-05', 'Lun. 5 oct.', '—']]);
-  });
-
   it('should detail today by default, with its server total and each clocked portion', async () => {
     givenTheCurrentWeek(semaineEnCoursFixture());
 

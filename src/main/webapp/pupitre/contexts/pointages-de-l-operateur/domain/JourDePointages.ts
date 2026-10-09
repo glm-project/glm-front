@@ -1,11 +1,11 @@
-import { TotalDeDuree } from './duree/TotalDeDuree';
+import { DureeTravaillee } from './duree/DureeTravaillee';
 import { LigneDePointage } from './LigneDePointage';
 import { JourCalendaire } from './semaine/JourCalendaire';
 
 export class JourDePointages {
   constructor(
     readonly jour: JourCalendaire,
-    readonly total: TotalDeDuree,
+    readonly total: DureeTravaillee,
     readonly lignes: readonly LigneDePointage[],
   ) {}
 

@@ -132,7 +132,6 @@ describe('EtatHorsLigneDuPupitre', () => {
     etat: 'EN_ATTENTE',
     geste: {
       nature: 'POINTAGE',
-      intention: 'OUVERTURE',
       type: 'DEBUT',
       id: 'geste',
       operateurId: 'jean',

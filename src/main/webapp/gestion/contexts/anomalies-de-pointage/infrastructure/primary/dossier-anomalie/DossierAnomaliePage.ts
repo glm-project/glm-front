@@ -1,14 +1,10 @@
-import { Component, computed, inject, linkedSignal, resource } from '@angular/core';
+import { Component, computed, inject, resource } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { PreparationActe } from '../../../application/PreparationActe';
-import { SaisieActe } from '../../../domain/acte/SaisieActe';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
-import { AdresseDossier, DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { saisieDeRegularisation } from '../../../domain/dossier/SaisieDeRegularisation';
+import { AdresseDossier } from '../../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
-import { LectureDuDossier } from './vues-de-resolution/LectureDuDossier';
 import { ResolutionDeFin } from './vues-de-resolution/resolution-de-fin/ResolutionDeFin';
 
 @Component({
@@ -16,24 +12,16 @@ import { ResolutionDeFin } from './vues-de-resolution/resolution-de-fin/Resoluti
   imports: [ResolutionDeFin, RouterLink],
   templateUrl: './DossierAnomaliePage.html',
   styleUrls: ['../Boutons.css'],
-  providers: [PreparationActe],
 })
 export class DossierAnomaliePage {
   private readonly route = inject(ActivatedRoute);
   private readonly port = inject(AnomaliesReadPort);
-  private readonly preparation = inject(PreparationActe);
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
   private readonly parametres = toSignal(this.route.queryParamMap, { requireSync: true });
-  private precedente: AdresseDossier | undefined;
   protected readonly now = new Date();
   protected readonly libelles = LIBELLES_ANOMALIES;
   protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
-  private readonly cleDeLAdresse = computed(() => {
-    const adresse = this.adresse();
-    return adresse === undefined ? '' : `${adresse.suivi.suivi}/${adresse.pointage.pointage}`;
-  });
   protected readonly retour = computed(() => ({
-    nature: this.parametres().get('nature'),
     operateur: this.parametres().get('operateur'),
     element: this.parametres().get('element'),
     page: this.parametres().get('page'),
@@ -47,51 +35,9 @@ export class DossierAnomaliePage {
     const lecture = this.resultatLecture();
     return lecture?.kind === 'DOSSIER' ? lecture.dossier : undefined;
   });
-  protected readonly saisieDeDepart = linkedSignal<
-    { readonly cle: string; readonly dossier: DossierAnomalie | undefined },
-    SaisieActe | undefined
-  >({
-    source: () => ({ cle: this.cleDeLAdresse(), dossier: this.dossier() }),
-    computation: ({ cle, dossier }, precedent) => {
-      const figee = precedent?.source.cle === cle ? precedent.value : undefined;
-      return figee ?? (dossier === undefined ? undefined : saisieDeRegularisation(dossier));
-    },
-  });
-  protected readonly lectureDuDossier: LectureDuDossier = {
-    relire: adresse => this.relire(adresse),
-    remplacerPar: dossier => {
-      this.remplacerPar(dossier);
-    },
-  };
 
   private read(adresse: AdresseDossier | undefined) {
-    if (adresse === undefined) {
-      this.precedente = undefined;
-      this.preparation.contextChanged();
-      return Promise.resolve(undefined);
-    }
-    if (!this.sameAddress(adresse)) this.preparation.contextChanged();
-    this.precedente = adresse;
-    return this.port.read(adresse);
-  }
-
-  private sameAddress(adresse: AdresseDossier): boolean {
-    return this.precedente?.suivi.suivi === adresse.suivi.suivi && this.precedente.pointage.pointage === adresse.pointage.pointage;
-  }
-
-  private async relire(adresse: AdresseDossier): Promise<DossierAnomalie | undefined> {
-    try {
-      const lecture = await this.port.read(adresse);
-      this.lecture.value.set(lecture);
-      return lecture.kind === 'DOSSIER' ? lecture.dossier : undefined;
-    } catch {
-      this.lecture.reload();
-      return undefined;
-    }
-  }
-
-  private remplacerPar(dossier: DossierAnomalie): void {
-    this.lecture.value.set({ kind: 'DOSSIER', dossier });
+    return adresse === undefined ? Promise.resolve(undefined) : this.port.read(adresse);
   }
 
   protected reload(): void {

@@ -40,11 +40,7 @@ const referentielFixture: ReferentielDuPupitre = {
   suivis: [suiviFixture('of-204', [travailAuTourFixture])],
   categories: [],
 };
-const suspensionFixture = (
-  suiviId: string,
-  extra: Partial<Omit<Extract<GesteDePointage, { readonly intention: 'FIN' }>, 'intention' | 'type'>>,
-  pause = 'pause-de-midi',
-): GesteDePointage => ({
+const suspensionFixture = (suiviId: string, extra: Partial<Omit<GesteDePointage, 'type'>>, pause = 'pause-de-midi'): GesteDePointage => ({
   id: `fin-${suiviId}-${pause}`,
   dateDeSurvenue: '2026-09-05T12:00:00Z',
   nature: 'POINTAGE',
@@ -53,8 +49,6 @@ const suspensionFixture = (
   type: 'FIN',
   suspension: { pause, reouverture: 'DEBUT' },
   ...extra,
-  intention: 'FIN',
-  cible: suiviId === 'of-205' ? 'activite-fixture-12' : 'activite-fixture-10',
 });
 
 const nonConformiteFixture: ActiviteDuPupitre = {
@@ -307,7 +301,6 @@ const accepted = (...gestes: readonly GesteDePointage[]): EvenementDuJournal[] =
 const refused = (...gestes: readonly GesteDePointage[]): EvenementDuJournal[] =>
   gestes.map(geste => ({ geste, etat: 'REFUSE', refus: { code: 'refus', message: 'Refusé.' } }));
 const debutFixture = (suiviId: string): GesteDePointage => ({
-  intention: 'OUVERTURE',
   id: `debut-${suiviId}`,
   dateDeSurvenue: '2026-09-05T13:00:00Z',
   nature: 'POINTAGE',

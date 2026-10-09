@@ -103,8 +103,6 @@ describe('GestesRecordingQueue', () => {
       kind: 'GESTES',
       capture: () => [
         {
-          intention: 'FIN',
-          cible: 'activite-fixture-31',
           id: 'pointage-1',
           dateDeSurvenue: '2026-09-05T09:00:00Z',
           operateurId: 'jean',
@@ -129,8 +127,6 @@ describe('GestesRecordingQueue', () => {
       kind: 'GESTES',
       capture: () => [
         {
-          intention: 'FIN',
-          cible: 'activite-fixture-32',
           id: 'pointage-1',
           dateDeSurvenue: '2026-09-05T09:00:00Z',
           operateurId: 'jean',
@@ -195,8 +191,6 @@ describe('GestesRecordingQueue', () => {
   const thenGesturesAreSuspensionsOf = (gestures: readonly GesteDePointage[], pause: string): void => {
     expect(gestures).toEqual([
       expect.objectContaining({
-        intention: 'FIN',
-        cible: 'activite-fixture-30',
         nature: 'POINTAGE',
         suiviId: 'moule-1015',
         type: 'FIN',

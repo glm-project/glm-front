@@ -1,13 +1,11 @@
 import { Cout } from '../montant/Cout';
 import { Montant } from '../montant/Montant';
-import { TotalDeMontant } from '../montant/TotalDeMontant';
 import { OperateurCite } from '../pointage/OperateurCite';
 import { AnomalieDePointage, PointageDeCout } from '../pointage/PointageDeCout';
 import { DureePassee } from '../temps/DureePassee';
 import { InstantDeTravail } from '../temps/InstantDeTravail';
 import { PeriodeDeTravail } from '../temps/PeriodeDeTravail';
 import { TempsPasse } from '../temps/TempsPasse';
-import { TotalDeTemps } from '../temps/TotalDeTemps';
 import { FicheDeLigne, LigneDeCout } from './LigneDeCout';
 import { NatureDOperation } from './NatureDOperation';
 
@@ -18,44 +16,32 @@ const pointageFixture = (anomalies: readonly AnomalieDePointage[]): PointageDeCo
     poste: undefined,
     categorie: 'TRAVAIL',
     periode: new PeriodeDeTravail(new InstantDeTravail('2026-05-11T09:00:00Z'), new InstantDeTravail('2026-05-11T11:00:00Z')),
-    duree: TotalDeTemps.complet(new DureePassee('PT2H')),
+    duree: new DureePassee('PT2H'),
     coutHoraire: undefined,
     tauxHoraire: undefined,
-    cout: new Cout(TotalDeMontant.complet(new Montant(0)), TotalDeMontant.complet(new Montant(0)), TotalDeMontant.complet(new Montant(0))),
+    cout: new Cout(new Montant(0), new Montant(0), new Montant(0)),
     parts: [],
   });
 
 const ficheFixture = (nature: NatureDOperation | undefined, pointages: readonly PointageDeCout[] = []): FicheDeLigne => ({
   nature,
-  temps: new TempsPasse(
-    TotalDeTemps.complet(new DureePassee('PT2H')),
-    TotalDeTemps.complet(new DureePassee('PT0S')),
-    TotalDeTemps.complet(new DureePassee('PT2H')),
-  ),
-  cout: new Cout(
-    TotalDeMontant.complet(new Montant(90)),
-    TotalDeMontant.complet(new Montant(40)),
-    TotalDeMontant.complet(new Montant(130)),
-  ),
+  temps: new TempsPasse(new DureePassee('PT2H'), new DureePassee('PT0S'), new DureePassee('PT2H')),
+  cout: new Cout(new Montant(90), new Montant(40), new Montant(130)),
   pointages,
 });
 
 describe('LigneDeCout', () => {
-  it('should count its clockings by anomaly, in a fixed order, leaving out the absent ones', () => {
+  it('should count its clockings by anomaly, leaving out the absent ones', () => {
     const ligne = new LigneDeCout(
       ficheFixture(new NatureDOperation('Électroérosion'), [
-        pointageFixture(['PARTAGE_INCONNU']),
-        pointageFixture(['FIN_AUTOMATIQUE', 'PARTAGE_INCONNU']),
+        pointageFixture(['FIN_AUTOMATIQUE']),
         pointageFixture([]),
         pointageFixture(['FIN_AUTOMATIQUE']),
       ]),
     );
 
-    expect(ligne.anomalies()).toEqual([
-      { anomalie: 'FIN_AUTOMATIQUE', nombre: 2 },
-      { anomalie: 'PARTAGE_INCONNU', nombre: 2 },
-    ]);
-    expect([ligne.pointagesEnAnomalie(), ligne.porteDesAnomalies()]).toEqual([3, true]);
+    expect(ligne.anomalies()).toEqual([{ anomalie: 'FIN_AUTOMATIQUE', nombre: 2 }]);
+    expect([ligne.pointagesEnAnomalie(), ligne.porteDesAnomalies()]).toEqual([2, true]);
   });
 
   it('should not call a line whose clockings carry no anomaly a line in anomaly', () => {
@@ -75,11 +61,7 @@ describe('LigneDeCout', () => {
   it('should carry everything the report says about one trade', () => {
     const ligne = new LigneDeCout(ficheFixture(new NatureDOperation('Fraisage')));
 
-    expect([ligne.nature?.value, ligne.temps.total.snapshot(), ligne.cout.total.snapshot()]).toEqual([
-      'Fraisage',
-      { complete: true, valeur: new DureePassee('PT2H') },
-      { complete: true, valeur: new Montant(130) },
-    ]);
+    expect([ligne.nature?.value, ligne.temps.total, ligne.cout.total]).toEqual(['Fraisage', new DureePassee('PT2H'), new Montant(130)]);
   });
 
   it('should recognise the line a pointing without a work station produced', () => {

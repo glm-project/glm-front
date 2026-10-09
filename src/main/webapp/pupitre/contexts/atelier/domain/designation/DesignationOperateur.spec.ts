@@ -313,7 +313,6 @@ describe('DesignationOperateur', () => {
       type: 'DEBUT',
       operateurId: 'jean',
       nature: 'POINTAGE',
-      intention: 'OUVERTURE',
     });
   };
 });

@@ -1,25 +1,25 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import {
-  dossierFixture,
-  finFixture,
-  givenTheElements,
-  givenTheReferentiel,
-  suiviFixture,
-} from '../../../utils/gestion/anomalies-de-pointage/AnomaliesHttp.fixture';
+  dossierFinAutomatiqueFixture,
+  givenTheReferentielFinAutomatique,
+  ouvrantFinAutomatiqueFixture,
+  suiviFinAutomatiqueFixture,
+} from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
+import { givenTheElementsFinsAutomatiques } from '../../../utils/gestion/anomalies-de-pointage/FinsAutomatiquesHttp.fixture';
 import { AtelierApiFixture } from '../../../utils/gestion/atelier/AtelierApiFixture';
 import { AuthenticationFixture } from '../../../utils/gestion/authentication/AuthenticationFixture';
 import type {} from '../../../utils/gestion/authentication/RolesFixture';
 import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
 const CONSULTANT_ROLES = ['ROLE_CONSULTANT'];
-const DOSSIER_ADDRESS = `/anomalies/${suiviFixture}?pointage=${finFixture}`;
+const DOSSIER_ADDRESS = `/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`;
 
 describe('Anomalies reserved to the gestionnaire', () => {
   beforeEach(() => {
     new SupervisionApiFixture().intercept();
     new AtelierApiFixture().install();
-    givenTheReferentiel();
-    givenTheElements();
+    givenTheReferentielFinAutomatique();
+    givenTheElementsFinsAutomatiques();
     givenAnAddressedDossier();
   });
 
@@ -73,7 +73,9 @@ describe('Anomalies reserved to the gestionnaire', () => {
 });
 
 const givenAnAddressedDossier = (): void => {
-  cy.intercept('GET', `/api/atelier/suivis/${suiviFixture}/anomalies/${finFixture}`, { body: dossierFixture() });
+  cy.intercept('GET', `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`, {
+    body: dossierFinAutomatiqueFixture(),
+  });
 };
 
 const openingWithRoles =
@@ -124,12 +126,12 @@ const whenVisitingTheWorkshopThenTheListAsAConsultantAndGoingBack = (): void => 
 const thenTheHeaderIsVisibleAndTheDossierAbsent = (): void => {
   cy.get(dataSelector('gestion-header')).should('be.visible');
   cy.get(dataSelector('anomalie-retour')).should('not.exist');
-  cy.location('pathname').should('eq', `/anomalies/${suiviFixture}`);
+  cy.location('pathname').should('eq', `/anomalies/${suiviFinAutomatiqueFixture}`);
 };
 
 const thenTheDossierIsDisplayed = (): void => {
   cy.get(dataSelector('anomalie-retour')).should('be.visible');
-  cy.location('pathname').should('eq', `/anomalies/${suiviFixture}`);
+  cy.location('pathname').should('eq', `/anomalies/${suiviFinAutomatiqueFixture}`);
 };
 
 const thenTheConsultantIsOnTheSupervisionWithoutTheAnomaliesEntry = (): void => {
@@ -142,7 +144,7 @@ const thenTheConsultantIsOnTheSupervisionWithoutTheAnomaliesEntry = (): void => 
 
 const thenTheAddressIsUnchangedAndOnlyTheRefusalIsReported = (reportedErrors: readonly string[]): void => {
   cy.wrap(reportedErrors).should('deep.equal', ['Error: login refused']);
-  cy.location('pathname').should('eq', `/anomalies/${suiviFixture}`);
+  cy.location('pathname').should('eq', `/anomalies/${suiviFinAutomatiqueFixture}`);
   cy.get(dataSelector('anomalie-retour')).should('not.exist');
   cy.get(dataSelector('supervision-atelier')).should('not.exist');
 };

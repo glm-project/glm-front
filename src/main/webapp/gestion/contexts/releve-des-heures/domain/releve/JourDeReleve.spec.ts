@@ -1,4 +1,3 @@
-import { TotalDeDuree } from '@/gestion/contexts/releve-des-heures/domain/duree/TotalDeDuree';
 import { PointageReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageReleveId';
 import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { ActiviteDuReleve } from '../element/ActiviteDuReleve';
@@ -50,7 +49,7 @@ const pointageDElementFixture = (type: TypeDePointage, element: string, heure: n
 
 const ficheFixture = (fiche: Partial<FicheDuJour>): FicheDuJour => ({
   jour: new JourCalendaire('2026-09-14'),
-  operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
+  operationnelTotal: new DureeTravaillee('PT0S'),
   intervalles: [],
   pointages: [],
   ...fiche,

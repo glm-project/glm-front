@@ -31,7 +31,6 @@ const operateurSansIdentifiantFixture = {
   postes: [{ id: 'tour', libelle: 'Tour' }],
 } satisfies RestOperateurDuPupitre;
 const suiviSansReferenceFixture = {
-  conflits: [],
   activites: [],
   etat: 'EN_ATTENTE',
   id: 'piece',
@@ -60,16 +59,15 @@ const suiviAvecReferenceFixture = {
       depuis: '2026-09-05T08:00:00Z',
     },
   ],
-  conflits: [],
 } satisfies RestSuiviDuPupitre;
 const referentielFixture = {
+  dureeMaximaleDActivite: 'PT13H',
   genereLe: '2026-09-05T08:05:00Z',
   operateurs: [operateurFixture, operateurSansIdentifiantFixture],
   suivis: [suiviSansReferenceFixture, suiviAvecReferenceFixture],
   categories: ['MOULE', 'OF'],
 } satisfies RestReferentielDuPupitre;
 const suiviDetailleFixture = {
-  conflits: [],
   activitesEnCours: [],
   element: 'element',
   engageLe: '2026-09-05T07:30:00Z',
@@ -86,7 +84,6 @@ const ouvertureFixture: GesteDePointage = {
   dateDeSurvenue: '2026-09-05T08:00:00Z',
   operateurId: 'jean',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
 const adapters = [['HTTP', () => TestBed.inject(HttpAtelierExchange)]] as const;
@@ -134,9 +131,8 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
   it.each<GesteDePointage>([
     { ...ouvertureFixture, type: 'DEBUT' },
     { ...ouvertureFixture, type: 'NON_CONFORMITE', posteId: 'tour' },
-    { ...ouvertureFixture, intention: 'TRANSITION', type: 'NON_CONFORMITE', cible: 'opening', posteId: 'tour' },
-    { ...ouvertureFixture, intention: 'FIN', type: 'FIN', cible: 'opening' },
-  ])('should preserve captured identity, occurrence, intention and target for $intention $type', async geste => {
+    { ...ouvertureFixture, type: 'FIN' },
+  ])('should preserve captured identity, occurrence and type for $type', async geste => {
     const sent = whenSending(geste);
 
     const request = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
@@ -146,8 +142,6 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       dateDeSurvenue: '2026-09-05T08:00:00Z',
       operateur: 'jean',
       type: geste.type,
-      intention: geste.intention,
-      ...(geste.intention === 'OUVERTURE' ? {} : { cible: 'opening' }),
       ...(geste.posteId === undefined ? {} : { poste: 'tour' }),
     });
   });
@@ -160,8 +154,6 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       type: 'FIN',
       posteId: 'tour',
       suspension: { pause: 'pause-de-midi', reouverture: 'DEBUT' },
-      intention: 'FIN',
-      cible: 'activite-fixture-40',
     });
     const request = await whenServerAcceptsWrite('/api/atelier/suivis/piece/pointages');
 
@@ -170,8 +162,6 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       dateDeSurvenue: ouvertureFixture.dateDeSurvenue,
       operateur: 'jean',
       type: 'FIN',
-      intention: 'FIN',
-      cible: 'activite-fixture-40',
       poste: 'tour',
     });
   });
@@ -212,8 +202,6 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
       nature: 'POINTAGE',
       suiviId: 'piece',
       type: 'FIN',
-      intention: 'FIN',
-      cible: 'activite-fixture-41',
     });
     const workshopElementRequest = await whenServerReturnsWorkshopElement();
 

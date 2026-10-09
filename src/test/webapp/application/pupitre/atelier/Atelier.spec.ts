@@ -14,7 +14,6 @@ const operateurFixture = {
   postes: [],
 } as const;
 const elementFixture = {
-  conflits: [],
   id: 'piece-1',
   nom: '204',
   etat: 'EN_ATTENTE',
@@ -214,7 +213,6 @@ describe('Pupitre workshop journey', () => {
             echeance: activite.echeance,
             ...(activite.posteId === undefined ? {} : { poste: activite.posteId }),
           })),
-          conflits: [],
         })),
         categories: referentiel.categories,
       },
@@ -245,7 +243,6 @@ describe('Pupitre workshop journey', () => {
         engagePar: 'gestionnaire',
         etat: 'EN_ATTENTE',
         activitesEnCours: [],
-        conflits: [],
         journal: [],
       },
     });

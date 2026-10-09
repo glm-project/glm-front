@@ -97,7 +97,7 @@ export class HttpAtelierExchange extends AtelierExchangePort {
     const body = { id: geste.id, dateDeSurvenue: geste.dateDeSurvenue, operateur: geste.operateurId };
     const request = {
       pathParams: { id: geste.suiviId },
-      body: { ...body, type: geste.type, intention: geste.intention, ...(geste.intention === 'OUVERTURE' ? {} : { cible: geste.cible }) },
+      body: { ...body, type: geste.type },
     };
     if (geste.posteId === undefined) {
       return this.api.write('/api/atelier/suivis/{id}/pointages', request);

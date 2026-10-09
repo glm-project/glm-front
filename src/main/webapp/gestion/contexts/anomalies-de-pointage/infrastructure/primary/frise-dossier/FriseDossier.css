@@ -25,28 +25,11 @@
   flex-direction: column;
   justify-content: center;
   padding: 0;
-  transform: translateX(-50%);
   line-height: 1.1;
-}
-.repere[data-ancrage='GAUCHE'] {
-  transform: none;
-}
-.repere[data-ancrage='DROITE'] {
-  transform: translateX(-100%);
 }
 .repere[data-non-conformite='true'] {
   border-color: var(--color-ink);
   background: var(--color-nc);
-}
-.repere[data-en-cause='true'] {
-  border: 2px solid var(--color-danger);
-  color: var(--color-danger);
-}
-.repere[data-en-cause='true'][data-non-conformite='true'] {
-  color: var(--color-ink);
-}
-.repere[data-annule='true'] :is([data-selector='anomalie-pointage-symbole'], time) {
-  text-decoration: line-through;
 }
 [data-selector='anomalie-poignee'] {
   transform: translateX(-50%);
@@ -101,19 +84,6 @@
 .barre:not([data-categorie]) {
   border-style: dashed;
   background: var(--color-sunken);
-}
-.barre[data-etat='A_RESOUDRE'] {
-  background-color: var(--color-surface);
-  background-image: repeating-linear-gradient(
-    135deg,
-    transparent 0 0.45rem,
-    color-mix(in srgb, var(--color-ink) 22%, transparent) 0.45rem 0.9rem
-  );
-  color: var(--color-ink);
-}
-.barre[data-etat='ANNULEE'],
-.barre[data-etat='REMPLACEE'] {
-  opacity: 0.55;
 }
 .barre[data-fin='RECUE'] {
   border-right-width: 4px;

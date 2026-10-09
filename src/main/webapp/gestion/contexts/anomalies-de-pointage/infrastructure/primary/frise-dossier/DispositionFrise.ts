@@ -2,7 +2,7 @@ import { ActiviteAnomalie, DossierAnomalie } from '../../../domain/dossier/Dossi
 import { EchelleFrise, Graduation } from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise } from './PoigneeDeFrise';
 
-export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'perimetre' | 'activites' | 'diagnostics'>;
+export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activites'>;
 
 export interface EntreesDeFrise {
   readonly vue: VueDeFrise;
@@ -40,13 +40,10 @@ export interface RepereFrise {
   readonly heure: string;
   readonly symbole: string;
   readonly nonConformite: boolean;
-  readonly annule: boolean;
   readonly regularise: boolean;
-  readonly enCause: boolean;
-  readonly ancrage: 'CENTRE' | 'GAUCHE' | 'DROITE';
 }
 
-export type RepereASituer = Omit<RepereFrise, 'gauche' | 'haut' | 'ancrage'>;
+export type RepereASituer = Omit<RepereFrise, 'gauche' | 'haut'>;
 
 export type ElementFrise = BarreFrise | RepereFrise | PositionDePoignee;
 
@@ -64,7 +61,6 @@ export interface EmplacementDePoignee {
   readonly min: number;
   readonly max: number;
   readonly etiquette: string;
-  readonly desactivee: boolean;
 }
 
 export interface PositionAvecHeure extends EmplacementDePoignee {
@@ -83,7 +79,6 @@ export type PositionDePoignee = PositionAvecHeure | PositionSansHeure;
 export interface RangeeDePlacement {
   readonly haut: number;
   readonly hauteur: number;
-  readonly desactivee: boolean;
   readonly source: PlacementDeLInstant;
 }
 

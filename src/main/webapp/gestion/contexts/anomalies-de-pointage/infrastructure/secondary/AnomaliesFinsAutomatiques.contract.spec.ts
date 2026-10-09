@@ -6,14 +6,12 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { AnomaliesReadPort } from '../../domain/dossier/AnomaliesReadPort';
-import { NatureAnomalie } from '../../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../../domain/dossier/ElementAnomalieId';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../../domain/dossier/SuiviAnomalieId';
 import { HttpAnomalies } from './HttpAnomalies';
 
 const finAutomatiqueFixture: components['schemas']['RestFinAutomatiqueEnListe'] = {
-  nature: 'FIN_AUTOMATIQUE',
   activite: 'travail-8',
   adresse: { suivi: 'suivi-camille', pointage: 'debut-8' },
   revision: 7,
@@ -25,17 +23,6 @@ const finAutomatiqueFixture: components['schemas']['RestFinAutomatiqueEnListe'] 
   poste: { id: 'poste-dmu', libelle: 'DMU 50' },
   debut: '2026-09-14T08:00:00.123456789+02:00',
   echeance: '2026-09-14T21:00:00.123456789+02:00',
-};
-
-const conflitFixture: components['schemas']['RestConflitEnListe'] = {
-  nature: 'CONFLIT',
-  adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
-  revision: 7,
-  elementId: 'moule-42',
-  designation: 'M-042',
-  operateurId: 'op-camille',
-  datePremierPointage: '2026-09-14T08:00:00.123456789+02:00',
-  nombrePointages: 3,
 };
 
 describe('Beyond the contract: HTTP automatic end reading', () => {
@@ -63,12 +50,11 @@ describe('Beyond the contract: HTTP automatic end reading', () => {
   });
 
   it('should request the automatic ends and keep the received instants and the opening address', async () => {
-    const lecture = port.list({ nature: 'FIN_AUTOMATIQUE', operateur: 'Camille', element: 'OF', page: 2 });
-    whenPageAnswers('FIN_AUTOMATIQUE', [finAutomatiqueFixture]);
+    const lecture = port.list({ operateur: 'Camille', element: 'OF', page: 2 });
+    whenPageAnswers([finAutomatiqueFixture]);
     const page = await lecture;
 
     expect(page).toEqual({
-      nature: 'FIN_AUTOMATIQUE',
       lignes: [
         {
           adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-8') },
@@ -82,7 +68,6 @@ describe('Beyond the contract: HTTP automatic end reading', () => {
         },
       ],
       total: 12,
-      complete: true,
     });
   });
 
@@ -93,8 +78,8 @@ describe('Beyond the contract: HTTP automatic end reading', () => {
     const sansPoste = { ...sansFiches };
     delete sansPoste.posteId;
 
-    const lecture = port.list({ nature: 'FIN_AUTOMATIQUE', operateur: 'Camille', element: 'OF', page: 2 });
-    whenPageAnswers('FIN_AUTOMATIQUE', [sansFiches, sansPoste]);
+    const lecture = port.list({ operateur: 'Camille', element: 'OF', page: 2 });
+    whenPageAnswers([sansFiches, sansPoste]);
     const page = await lecture;
 
     expect(page.lignes).toMatchObject([
@@ -105,39 +90,27 @@ describe('Beyond the contract: HTTP automatic end reading', () => {
     expect(page.lignes[0]).not.toHaveProperty('operateurId');
   });
 
-  it('should reject and report an incomplete page of automatic ends', async () => {
-    const lecture = port
-      .list({ nature: 'FIN_AUTOMATIQUE', operateur: 'Camille', element: 'OF', page: 2 })
-      .catch((failure: unknown) => failure);
+  it('should report a failed read once and reject it', async () => {
+    const lecture = port.list({ operateur: 'Camille', element: 'OF', page: 2 }).catch((failure: unknown) => failure);
 
-    whenPageAnswers('FIN_AUTOMATIQUE', [finAutomatiqueFixture], false);
+    whenPageFails();
     const failure = await lecture;
 
-    expect(failure).toEqual(new Error('Lecture des anomalies incomplète.'));
     expect(errors.errors).toEqual([failure]);
   });
 
-  it.each([
-    { demandee: 'FIN_AUTOMATIQUE' as const, recue: conflitFixture },
-    { demandee: 'CONFLIT' as const, recue: finAutomatiqueFixture },
-    { demandee: 'FIN_AUTOMATIQUE' as const, recue: { ...finAutomatiqueFixture, nature: 'AUTRE' } },
-  ])('should reject a $recue.nature line in a page requested as $demandee and report it once', async ({ demandee, recue }) => {
-    const lecture = port.list({ nature: demandee, operateur: 'Camille', element: 'OF', page: 2 }).catch((failure: unknown) => failure);
+  const whenPageFails = (): void => {
+    server
+      .expectOne('/api/atelier/anomalies?operateur=Camille&element=OF&page=1&size=5')
+      .flush({ type: 'urn:glm:erreur:inconnue' }, { status: 500, statusText: 'Server Error' });
+  };
 
-    whenPageAnswers(demandee, [recue]);
-    const failure = await lecture;
-
-    expect(failure).toEqual(new Error('Ligne d’anomalie incohérente avec la nature demandée.'));
-    expect(errors.errors).toEqual([failure]);
-  });
-
-  const whenPageAnswers = (nature: NatureAnomalie, lignes: object[], complete = true): void => {
-    server.expectOne(`/api/atelier/anomalies?nature=${nature}&operateur=Camille&element=OF&page=1&size=5`).flush({
-      lignes,
-      total: 12,
-      complete,
-      page: 1,
-      size: 5,
+  const whenPageAnswers = (lignes: object[]): void => {
+    server.expectOne('/api/atelier/anomalies?operateur=Camille&element=OF&page=1&size=5').flush({
+      content: lignes,
+      currentPage: 1,
+      pageSize: 5,
+      totalElementsCount: 12,
     });
   };
 });

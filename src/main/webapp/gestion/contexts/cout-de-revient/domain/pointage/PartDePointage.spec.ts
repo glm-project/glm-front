@@ -1,17 +1,15 @@
 import { Montant } from '../montant/Montant';
-import { TotalDeMontant } from '../montant/TotalDeMontant';
 import { DureePassee } from '../temps/DureePassee';
 import { InstantDeTravail } from '../temps/InstantDeTravail';
 import { FicheDePart, PartDePointage } from './PartDePointage';
 
-const ficheFixture = (diviseur: number | undefined): FicheDePart => ({
+const ficheFixture = (diviseur: number): FicheDePart => ({
   debut: new InstantDeTravail('2026-09-12T09:00:00Z'),
   fin: new InstantDeTravail('2026-09-12T10:30:00Z'),
   duree: new DureePassee('PT1H30M'),
   diviseur,
-  mainDOeuvre: diviseur === undefined ? TotalDeMontant.incomplet() : TotalDeMontant.complet(new Montant(26.25)),
+  mainDOeuvre: new Montant(26.25),
   paralleles: [],
-  bloquants: [],
 });
 
 describe('PartDePointage', () => {
@@ -22,13 +20,7 @@ describe('PartDePointage', () => {
   it('should not call a share run on a single work station shared', () => {
     const part = new PartDePointage(ficheFixture(1));
 
-    expect([part.estPartagee(), part.partageInconnu()]).toEqual([false, false]);
-  });
-
-  it('should tell a share whose divisor the server could not know', () => {
-    const part = new PartDePointage(ficheFixture(undefined));
-
-    expect([part.estPartagee(), part.partageInconnu()]).toEqual([false, true]);
+    expect(part.estPartagee()).toBe(false);
   });
 
   it.each([0, 1.5, -2])('should reject %s, which is no number of work stations', diviseur => {
@@ -37,7 +29,7 @@ describe('PartDePointage', () => {
     );
   });
 
-  it('should keep its parallel and blocking activities safe from the caller', () => {
+  it('should keep its parallel activities safe from the caller', () => {
     const paralleles: never[] = [];
     const part = new PartDePointage({ ...ficheFixture(2), paralleles });
     paralleles.length = 0;

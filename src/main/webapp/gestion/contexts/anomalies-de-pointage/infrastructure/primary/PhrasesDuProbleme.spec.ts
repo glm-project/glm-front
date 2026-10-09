@@ -9,7 +9,7 @@ import { phrasesDuProbleme } from './PhrasesDuProbleme';
 
 type Categorie = 'TRAVAIL' | 'NON_CONFORMITE';
 
-const sansPeriode = ({ id, libelle, etat, temps, ouvrant }: ActiviteAnomalie): ActiviteAnomalie => ({ id, libelle, etat, temps, ouvrant });
+const sansPeriode = ({ id, libelle, etat, ouvrant }: ActiviteAnomalie): ActiviteAnomalie => ({ id, libelle, etat, ouvrant });
 
 describe('Phrases saying the problem of an automatic end', () => {
   it.each<{ cas: string; categorie: Categorie; phrase: string }>([

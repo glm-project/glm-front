@@ -20,7 +20,7 @@ const ROUTES = [
   ['couts', '/couts-de-revient/element-1', 'cout-total'],
 ] as const;
 
-const totalFixture = (valeur: string): { complete: true; valeur: string } => ({ complete: true, valeur });
+const totalFixture = (valeur: string): { valeur: string } => ({ valeur });
 const instantFixture = (day: number, hour: number): string => new Date(2026, 8, day, hour).toISOString();
 
 const givenRepresentativeReadings = (): void => {

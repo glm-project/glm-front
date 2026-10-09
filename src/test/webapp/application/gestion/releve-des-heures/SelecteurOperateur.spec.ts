@@ -10,7 +10,7 @@ const HORLOGE = new Date(2026, 8, 17, 10).getTime();
 const ADRESSE = '/operateurs/op-1/heures?annee=2026&semaine=38&jour=2026-09-14';
 
 const reportOfFixture = (id: string, nom: string, prenom: string, duree: string) => ({
-  synthese: { ...syntheseFixture(2026, 38), operateur: { id, nom, prenom }, dureeOperationnelleTotale: { complete: true, valeur: duree } },
+  synthese: { ...syntheseFixture(2026, 38), operateur: { id, nom, prenom }, dureeOperationnelleTotale: { valeur: duree } },
   feuille: { ...feuilleFixture(2026, 38), operateur: { id, nom, prenom } },
 });
 
@@ -87,7 +87,7 @@ describe('Change the operator of the operational time consultation', () => {
     rapports.seed({
       synthese: {
         ...synthese,
-        jours: (synthese.jours ?? []).map(jour => ({ ...jour, pointages: [], dureeOperationnelle: { complete: true, valeur: 'PT0S' } })),
+        jours: (synthese.jours ?? []).map(jour => ({ ...jour, pointages: [], dureeOperationnelle: { valeur: 'PT0S' } })),
       },
       feuille: { ...feuille, jours: (feuille.jours ?? []).map(jour => ({ ...jour, activites: [] })) },
     });
@@ -407,8 +407,8 @@ describe('Change the operator of the operational time consultation', () => {
       synthese: {
         ...synthese,
         operateur,
-        dureeOperationnelleTotale: { complete: true, valeur: 'PT0S' },
-        jours: (synthese.jours ?? []).map(jour => ({ ...jour, pointages: [], dureeOperationnelle: { complete: true, valeur: 'PT0S' } })),
+        dureeOperationnelleTotale: { valeur: 'PT0S' },
+        jours: (synthese.jours ?? []).map(jour => ({ ...jour, pointages: [], dureeOperationnelle: { valeur: 'PT0S' } })),
       },
       feuille: { ...feuille, operateur, jours: (feuille.jours ?? []).map(jour => ({ ...jour, activites: [] })) },
     });

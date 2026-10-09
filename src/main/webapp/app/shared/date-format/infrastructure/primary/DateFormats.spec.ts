@@ -9,7 +9,6 @@ import {
   formatCalendarDayShortWithMonth,
   formatCalendarMonthName,
   formatInstantLongDay,
-  formatInstantLongDayWithSeconds,
   formatInstantNumericDateTime,
   formatInstantNumericDayMonth,
   formatInstantShortDateTime,
@@ -264,24 +263,6 @@ describe('DateFormats', () => {
     const text = formatInstantLongDay(instant, now);
 
     expect(text).toBe('jeudi 31 décembre à 23:30');
-  });
-
-  it('should write the seconds of an instant after its long day and local time', () => {
-    const instant = new Date(2026, 9, 1, 9, 41, 22);
-    const now = new Date(2026, 9, 5, 10, 0);
-
-    const text = formatInstantLongDayWithSeconds(instant, now);
-
-    expect(text).toBe('jeudi 1 octobre à 09:41:22');
-  });
-
-  it('should add the year to the long day of an instant with seconds that falls in another year than now', () => {
-    const instant = new Date(2025, 9, 1, 9, 41, 22);
-    const now = new Date(2026, 9, 5, 10, 0);
-
-    const text = formatInstantLongDayWithSeconds(instant, now);
-
-    expect(text).toBe('mercredi 1 octobre 2025 à 09:41:22');
   });
 
   it('should write the local time of an instant with its seconds', () => {

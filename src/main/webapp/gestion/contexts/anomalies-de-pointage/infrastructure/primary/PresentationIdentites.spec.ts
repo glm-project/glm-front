@@ -42,19 +42,19 @@ describe('Operator and workstation presentation', () => {
     const operateursFixture = [{ id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin' }];
     const dossierFixture = (ligne: string, journal: string): DossierAnomalie =>
       dossierDeFinAutomatiqueFixture({
-        ligne: { ...dossierDeFinAutomatiqueFixture().ligne, operateur: ligne },
+        operateurNom: ligne,
         journal: [pointageFixture('debut-8', faitFixture(ARRET_FIXTURE, '2026-09-14T08:00:00Z'), { operateurNom: journal })],
       });
 
-    it('should be the name the line of the dossier carries, before the operators and the journal', () => {
+    it('should be the name the dossier carries, before the operators and the journal', () => {
       expect(operateurDuDossier(dossierFixture('Camille Durand', 'Camille Journal'), operateursFixture)).toBe('Camille Durand');
     });
 
-    it('should be the name among the operators, before the one of the journal, when the line carries none', () => {
+    it('should be the name among the operators, before the one of the journal, when the dossier carries none', () => {
       expect(operateurDuDossier(dossierFixture('', 'Camille Journal'), operateursFixture)).toBe('Camille Martin');
     });
 
-    it('should be the name of the journal when neither the line nor the operators carry one', () => {
+    it('should be the name of the journal when neither the dossier nor the operators carry one', () => {
       expect(operateurDuDossier(dossierFixture('', 'Camille Journal'), [])).toBe('Camille Journal');
     });
 

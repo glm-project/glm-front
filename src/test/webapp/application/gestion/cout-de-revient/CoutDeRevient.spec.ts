@@ -1,10 +1,6 @@
 import { dataSelector } from '../../../utils/DataSelector';
 import { AtelierApiFixture, engageablesFixture, suivisFixture } from '../../../utils/gestion/atelier/AtelierApiFixture';
-import {
-  CoutDeRevientApiFixture,
-  rapportEnCoursFixture,
-  rapportIncompletFixture,
-} from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
+import { CoutDeRevientApiFixture, rapportEnCoursFixture } from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
 import { ElementsApiFixture, elementsFixture } from '../../../utils/gestion/element-de-fabrication/ElementsApiFixture';
 
 describe('Cost of manufacture of an element at the workshop', () => {
@@ -19,12 +15,12 @@ describe('Cost of manufacture of an element at the workshop', () => {
     cout = new CoutDeRevientApiFixture();
   });
 
-  it('should reach an incomplete report from the workshop and preserve its element address', () => {
-    givenIncompleteWorkshopReport();
+  it('should reach the report from the workshop and preserve its element address', () => {
+    givenWorkshopAndReports();
     whenVisitingWorkshop();
     whenOpeningTheCostOfTheFirstElement();
 
-    thenTheIncompleteElementReportIsVisible();
+    thenTheElementReportIsVisible();
   });
 
   it('should return to the workshop from a report carrying only excluded current activities', () => {
@@ -89,11 +85,6 @@ describe('Cost of manufacture of an element at the workshop', () => {
 
     thenTheUnknownElementIsExplained();
   });
-
-  const givenIncompleteWorkshopReport = (): void => {
-    cout.rapport = rapportIncompletFixture();
-    givenWorkshopAndReports();
-  };
 
   const givenCurrentWorkshopReport = (): void => {
     cout.rapport = rapportEnCoursFixture();
@@ -163,11 +154,10 @@ describe('Cost of manufacture of an element at the workshop', () => {
     cy.get(dataSelector('cout-retour')).click();
   };
 
-  const thenTheIncompleteElementReportIsVisible = (): void => {
+  const thenTheElementReportIsVisible = (): void => {
     cy.location('pathname').should('eq', '/couts-de-revient/element-1');
-    cy.get(dataSelector('cout-total')).should('contain.text', 'Incomplet');
-    cy.get(dataSelector('cout-machine-cell')).should('contain.text', '300,00');
-    cy.get(dataSelector('cout-bandeau-anomalies')).should('be.visible');
+    cy.get(dataSelector('cout-total')).should('contain.text', '295,00');
+    cy.get(dataSelector('cout-ligne-row')).should('have.length', 3);
   };
 
   const thenTheReportIsDisplayed = (): void => {

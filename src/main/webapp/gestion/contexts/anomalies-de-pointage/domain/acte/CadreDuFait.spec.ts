@@ -9,7 +9,6 @@ const activite = (id: string, debut?: string): ActiviteAnomalie => ({
   id: new ActiviteAnomalieId(id),
   libelle: 'Travail',
   etat: 'TERMINEE',
-  temps: 'PT1H',
   ouvrant: new PointageAnomalieId(`debut-${id}`),
   ...(debut === undefined ? {} : { periode: { categorie: 'TRAVAIL', debut } }),
 });

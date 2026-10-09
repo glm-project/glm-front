@@ -36,7 +36,6 @@ const operator = {
 };
 
 const workshopItem = {
-  conflits: [],
   activites: [],
   etat: 'EN_ATTENTE',
   id: 'workshop-item-1',
@@ -53,7 +52,6 @@ const publication = {
   engageLe: '2026-09-05T07:00:00Z',
   engagePar: 'gestionnaire',
   activitesEnCours: [],
-  conflits: [],
   journal: [],
 };
 

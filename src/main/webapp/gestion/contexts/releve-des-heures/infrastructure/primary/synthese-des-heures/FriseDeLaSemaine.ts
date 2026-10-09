@@ -62,7 +62,7 @@ export interface FriseDeLaSemaine {
 const reperesDetail = (axe: AxeDuJour): readonly RepereDeFrise[] =>
   axe.reperes(true).map(repere => ({ ...repere, libelle: LIBELLES.repere(repere.minutes) }));
 
-const sansOperationnel = (jour: JourDeReleve): boolean => jour.estVide() && jour.operationnelTotal.snapshot().complete;
+const sansOperationnel = (jour: JourDeReleve): boolean => jour.estVide();
 
 const jourDeFrise = ({ jour, axe, ouvert }: JourSurSonAxe, aujourdhui: JourCalendaire): JourDeFrise => ({
   cle: jour.jour.value,

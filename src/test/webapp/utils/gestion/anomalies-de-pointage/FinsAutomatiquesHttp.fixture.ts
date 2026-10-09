@@ -1,18 +1,15 @@
 import { components } from '@/app/generated/schema';
 import {
   activiteFinAutomatiqueFixture,
-  activiteSuivanteFixture,
   elementFinAutomatiqueFixture,
   operateurFinAutomatiqueFixture,
   ouvrantFinAutomatiqueFixture,
-  ouvrantSuivantFixture,
   posteFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from './FinAutomatiqueHttp.fixture';
 import { interceptElements, interceptOperateurs } from './ReferentielHttp.fixture';
 
 export const finAutomatiqueLigneFixture: components['schemas']['RestFinAutomatiqueEnListe'] = {
-  nature: 'FIN_AUTOMATIQUE',
   activite: activiteFinAutomatiqueFixture,
   adresse: { suivi: suiviFinAutomatiqueFixture, pointage: ouvrantFinAutomatiqueFixture },
   revision: 0,
@@ -26,16 +23,14 @@ export const finAutomatiqueLigneFixture: components['schemas']['RestFinAutomatiq
   echeance: new Date(2026, 0, 1, 22, 26).toISOString(),
 };
 
-export const finAutomatiqueSuivanteLigneFixture: components['schemas']['RestFinAutomatiqueEnListe'] = {
-  ...finAutomatiqueLigneFixture,
-  activite: activiteSuivanteFixture,
-  adresse: { suivi: suiviFinAutomatiqueFixture, pointage: ouvrantSuivantFixture },
-  designation: 'OF M24-0700',
-};
-
 export const pageFinsAutomatiquesFixture = (
   lignes: components['schemas']['RestFinAutomatiqueEnListe'][] = [finAutomatiqueLigneFixture],
-): components['schemas']['RestPageDesAnomalies'] => ({ lignes, total: lignes.length, complete: true, page: 0, size: 5 });
+): components['schemas']['PageRestFinAutomatiqueEnListe'] => ({
+  content: lignes,
+  currentPage: 0,
+  pageSize: 5,
+  totalElementsCount: lignes.length,
+});
 
 export const autreOperateurFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000009';
 export const autreElementFinAutomatiqueFixture = '71000000-0000-0000-0000-000000000010';

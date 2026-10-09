@@ -164,7 +164,7 @@ describe('FenetreOperateur', () => {
     const accepted = fenetre.prepareAcceptance(gesturesOf(decision));
 
     expect(accepted).not.toHaveProperty('repriseAEffacer');
-    expect(accepted.gestes).toMatchObject([{ intention: 'OUVERTURE', suiviId: 'of-1015' }]);
+    expect(accepted.gestes).toMatchObject([{ type: 'DEBUT', suiviId: 'of-1015' }]);
   });
 
   it('should capture only one activity opening for the first operator action', () => {
@@ -173,7 +173,7 @@ describe('FenetreOperateur', () => {
     const gestes = captureGestures(decision);
 
     expect(gestes).toHaveLength(1);
-    expect(gestes[0]).toMatchObject({ intention: 'OUVERTURE', nature: 'POINTAGE', type: 'DEBUT' });
+    expect(gestes[0]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT' });
   });
 
   it('should finish the stable original opening of the displayed activity', () => {
@@ -182,7 +182,7 @@ describe('FenetreOperateur', () => {
 
     const decision = whenDecidingWith(window, 'moule-1015', 'PRINCIPALE');
 
-    expect(captureGestures(decision)).toMatchObject([{ intention: 'FIN', type: 'FIN', cible: 'original-opening' }]);
+    expect(captureGestures(decision)).toMatchObject([{ type: 'FIN' }]);
   });
 
   it('should decide a new opening at the inclusive thirteen-hour deadline even before any timer callback', () => {
@@ -200,7 +200,6 @@ describe('FenetreOperateur', () => {
         suiviId: 'moule-1015',
         posteId: 'tour',
         type: 'DEBUT',
-        intention: 'OUVERTURE',
       },
     ]);
   });
@@ -233,9 +232,7 @@ describe('FenetreOperateur', () => {
         operateurId: 'jean',
         suiviId: 'moule-1015',
         posteId: 'tour',
-        intention: 'FIN',
         type: 'FIN',
-        cible: travailAuTourFixture.ouverture,
       },
     ]);
   });
@@ -266,7 +263,7 @@ describe('FenetreOperateur', () => {
 
     const gestes = intention.prepare(window).capture();
 
-    expect(gestes).toMatchObject([{ intention: 'FIN', cible: 'encore-active', posteId: 'fraiseuse' }]);
+    expect(gestes).toMatchObject([{ type: 'FIN', posteId: 'fraiseuse' }]);
     expect(gestes).toHaveLength(1);
   });
 
@@ -339,22 +336,22 @@ describe('FenetreOperateur', () => {
     thenPointageTypesAre(fin, ['FIN']);
   });
 
-  it('should transition work to non conformity', () => {
+  it('should only finish the work when non conformity is asked during work, the opening following it waiting for B5', () => {
     const nonConformite = whenDeciding('moule-1015', 'SECONDAIRE');
 
     const gestes = captureGestures(nonConformite);
 
     thenGesturesAre(gestes, ['POINTAGE']);
-    thenPointageTypesAre(nonConformite, ['NON_CONFORMITE']);
+    thenPointageTypesAre(nonConformite, ['FIN']);
   });
 
-  it('should transition non conformity back to work', () => {
-    const travail = whenDeciding('of-204', 'SECONDAIRE');
+  it('should only finish every activity when the secondary target is asked on a started element, the opening following waiting for B5', () => {
+    const fins = whenDeciding('of-204', 'SECONDAIRE');
 
-    const gestes = captureGestures(travail);
+    const gestes = captureGestures(fins);
 
-    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE']);
-    thenPointageTypesAre(travail, ['DEBUT', 'DEBUT']);
+    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE', 'POINTAGE']);
+    thenPointageTypesAre(fins, ['FIN', 'FIN', 'FIN']);
   });
 
   it('should finish every personal activity on its workstation when stopping all', () => {
@@ -535,14 +532,10 @@ describe('FenetreOperateur', () => {
     expect(fenetre.refusal()).toBeUndefined();
   });
 
-  it('should turn every personal activity off from the primary target and normalize only necessary secondary transitions', () => {
+  it('should turn every personal activity off from the primary target, keeping its workstation', () => {
     const stop = whenDeciding('of-204', 'PRINCIPALE');
-    const backToWork = whenDeciding('of-204', 'SECONDAIRE');
-    const toNonConformity = whenDeciding('moule-1015', 'SECONDAIRE');
 
     thenPointageTypesAre(stop, ['FIN', 'FIN', 'FIN']);
-    thenPointageTypesAre(backToWork, ['DEBUT', 'DEBUT']);
-    thenPointageTypesAre(toNonConformity, ['NON_CONFORMITE']);
     thenPointagesKeepTheirWorkstations(stop, [undefined, 'tour', undefined]);
   });
 
@@ -763,69 +756,6 @@ describe('FenetreOperateur', () => {
     expect(elementsDeLaZone(pointage, 'OF')[0]?.isNonConforme()).toBe(true);
   });
 
-  it('should resume only non conforming activities preserving their respective workstations', () => {
-    const multiNcJournal: JournalDuPupitre = {
-      ...EMPTY_JOURNAL_DU_PUPITRE,
-      referentiel: {
-        operateurs: [
-          {
-            id: 'jean',
-            nom: 'Dupont',
-            prenom: 'Jean',
-            identifiant: '049',
-            postes: [
-              { id: 'poste-1', libelle: 'Poste 1' },
-              { id: 'poste-2', libelle: 'Poste 2' },
-              { id: 'poste-3', libelle: 'Poste 3' },
-            ],
-          },
-        ],
-        suivis: [
-          {
-            id: 'of-multi-nc',
-            nom: 'OF-MULTI',
-            etat: 'EN_COURS',
-            categorie: 'OF',
-            activites: [
-              {
-                ouverture: 'activite-fixture-23',
-                echeance: '2026-09-05T21:00:00.000Z',
-                operateurId: 'jean',
-                categorie: 'NON_CONFORMITE',
-                depuis: '2026-09-05T08:00:00Z',
-                posteId: 'poste-1',
-              },
-              {
-                ouverture: 'activite-fixture-24',
-                echeance: '2026-09-05T21:15:00.000Z',
-                operateurId: 'jean',
-                categorie: 'TRAVAIL',
-                depuis: '2026-09-05T08:15:00Z',
-                posteId: 'poste-2',
-              },
-              {
-                ouverture: 'activite-fixture-25',
-                echeance: '2026-09-05T21:30:00.000Z',
-                operateurId: 'jean',
-                categorie: 'NON_CONFORMITE',
-                depuis: '2026-09-05T08:30:00Z',
-                posteId: 'poste-3',
-              },
-            ],
-            evenements: [],
-          },
-        ],
-        categories: [],
-      },
-    };
-    const multiWindow = givenAWindowOpenedOn(multiNcJournal);
-
-    const decision = whenDecidingWith(multiWindow, 'of-multi-nc', 'SECONDAIRE');
-
-    thenPointageTypesAre(decision, ['DEBUT', 'DEBUT']);
-    thenPointagesKeepTheirWorkstations(decision, ['poste-1', 'poste-3']);
-  });
-
   it('should sort elements using natural numeric order', () => {
     const unsortedJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
@@ -888,7 +818,7 @@ describe('FenetreOperateur', () => {
     const gestures = whenChoosingWith(multiposte, 'of-1015', 'PRINCIPALE', 'fraiseuse').capture();
 
     thenGesturesAre(gestures, ['POINTAGE']);
-    expect(gestures[0]).toMatchObject({ intention: 'OUVERTURE', nature: 'POINTAGE', type: 'DEBUT', posteId: 'fraiseuse' });
+    expect(gestures[0]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT', posteId: 'fraiseuse' });
   });
 
   it('should expose no refusal after a workstation choice until one is reconciled', () => {
@@ -1018,7 +948,7 @@ describe('FenetreOperateur', () => {
     return start.fenetre.prepareAcceptance(gesturesOf(start.decision)).gestes;
   };
   const thenTheFirstGestureIsAnOpening = (gestes: readonly GesteDePointage[]): void => {
-    expect(gestes).toMatchObject([{ intention: 'OUVERTURE', nature: 'POINTAGE', type: 'DEBUT' }]);
+    expect(gestes).toMatchObject([{ nature: 'POINTAGE', type: 'DEBUT' }]);
   };
   const givenAPreparedPointage = (): (() => readonly GesteDePointage[]) => {
     const result = fenetre.afterDeciding('of-1015', 'PRINCIPALE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
@@ -1048,7 +978,6 @@ describe('FenetreOperateur', () => {
   const givenAJournalWithEveryEventState = (): JournalDuPupitre => {
     const geste = {
       nature: 'POINTAGE' as const,
-      intention: 'OUVERTURE' as const,
       type: 'DEBUT' as const,
       suiviId: 'piece',
       operateurId: 'jean',

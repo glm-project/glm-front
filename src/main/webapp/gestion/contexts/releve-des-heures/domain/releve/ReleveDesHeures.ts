@@ -1,4 +1,4 @@
-import { TotalDeDuree } from '../duree/TotalDeDuree';
+import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { ElementDuReleve } from '../element/ElementDuReleve';
 import { ElementReleveId } from '../element/ElementReleveId';
 import { SemaineISO } from '../semaine/SemaineISO';
@@ -39,14 +39,14 @@ export interface FicheDuReleve {
   readonly operateur: IdentiteOperateur;
   readonly elements: readonly ElementDuReleve[];
   readonly jours: readonly JourDeReleve[];
-  readonly operationnelTotal: TotalDeDuree;
+  readonly operationnelTotal: DureeTravaillee;
 }
 
 export class ReleveDesHeures {
   readonly operateur: IdentiteOperateur;
   readonly elements: readonly ElementDuReleve[];
   readonly jours: readonly JourDeReleve[];
-  readonly operationnelTotal: TotalDeDuree;
+  readonly operationnelTotal: DureeTravaillee;
 
   constructor(semaine: SemaineISO, fiche: FicheDuReleve) {
     ReleveDesHeures.verifieLesSeptJours(semaine, fiche.jours);

@@ -1,7 +1,6 @@
 import { formatInstantTimeUnambiguous } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { BornesDuFait, CadreDuFait } from '../../../domain/acte/CadreDuFait';
 import { InstantPointage } from '../../../domain/acte/InstantPointage';
-import { PropositionActe, termineUneActivite } from '../../../domain/acte/SaisieActe';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { finDeLaPortee, instantsRecus } from './EchelleFrise';
 import { pointagesDeLaFrise } from './PointagesDeLaFrise';
@@ -19,7 +18,6 @@ export type DemandeDeDeplacement =
 export interface PlacementDeLInstant {
   readonly activiteVisee: string;
   readonly bornes: BornesDePoignee;
-  readonly desactivee: boolean;
 }
 
 export interface PlacementDemande {
@@ -31,10 +29,9 @@ export interface PoigneeDeFrise {
   readonly instant: string;
   readonly activiteVisee: string;
   readonly bornes: BornesDePoignee;
-  readonly desactivee: boolean;
 }
 
-type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'perimetre' | 'activites' | 'diagnostics'>;
+type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'activites'>;
 
 const plafondDansLaPortee = (dossier: DossierDeLaFrise, bornes: Required<BornesDuFait>): string => {
   const portee = finDeLaPortee([Date.parse(bornes.min), ...instantsRecus(pointagesDeLaFrise(dossier), dossier.activites)]);
@@ -72,13 +69,6 @@ export const demandeDeLaTouche = (touche: Pick<KeyboardEvent, 'key' | 'shiftKey'
   return borne === undefined ? undefined : { kind: 'BORNE', borne };
 };
 
-const proposeUnFait = (proposition: PropositionActe | undefined): proposition is Exclude<PropositionActe, { kind: 'ANNULATION' }> =>
-  proposition !== undefined && proposition.kind !== 'ANNULATION';
-
-const proposeUnFaitQuiTermine = (
-  proposition: PropositionActe | undefined,
-): proposition is Exclude<PropositionActe, { kind: 'ANNULATION' }> => proposeUnFait(proposition) && termineUneActivite(proposition.fait);
-
 const bornesDuFait = (
   dossier: DossierDeLaFrise,
   fait: { readonly activiteVisee: string },
@@ -88,35 +78,21 @@ const bornesDuFait = (
   return min === undefined ? undefined : { min, max: plafondDansLaPortee(dossier, { min, max }) };
 };
 
-export const poigneeDuDossier = (
-  dossier: DossierDeLaFrise,
-  proposition: PropositionActe | undefined,
-  maintenant: string,
-  desactivee: boolean,
-): PoigneeDeFrise | undefined => {
-  if (!proposeUnFaitQuiTermine(proposition)) return undefined;
-  const fait = proposition.fait;
-  if (!new InstantPointage(fait.instant).isValid()) return undefined;
-  const bornes = bornesDuFait(dossier, fait, maintenant);
-  if (bornes === undefined) return undefined;
-  return {
-    instant: fait.instant,
-    activiteVisee: fait.activiteVisee,
-    bornes,
-    desactivee,
-  };
+export interface FinProposee {
+  readonly activiteVisee: string;
+  readonly instant: string;
+}
+
+export const poigneeDuDossier = (dossier: DossierDeLaFrise, fin: FinProposee, maintenant: string): PoigneeDeFrise | undefined => {
+  if (!new InstantPointage(fin.instant).isValid()) return undefined;
+  const bornes = bornesDuFait(dossier, fin, maintenant);
+  return bornes === undefined ? undefined : { instant: fin.instant, activiteVisee: fin.activiteVisee, bornes };
 };
 
-export const placementDuDossier = (
-  dossier: DossierDeLaFrise,
-  proposition: PropositionActe | undefined,
-  maintenant: string,
-  desactivee: boolean,
-): PlacementDeLInstant | undefined => {
-  if (!proposeUnFaitQuiTermine(proposition)) return undefined;
-  if (new InstantPointage(proposition.fait.instant).isValid()) return undefined;
-  const bornes = bornesDuFait(dossier, proposition.fait, maintenant);
-  return bornes === undefined ? undefined : { activiteVisee: proposition.fait.activiteVisee, bornes, desactivee };
+export const placementDuDossier = (dossier: DossierDeLaFrise, fin: FinProposee, maintenant: string): PlacementDeLInstant | undefined => {
+  if (new InstantPointage(fin.instant).isValid()) return undefined;
+  const bornes = bornesDuFait(dossier, fin, maintenant);
+  return bornes === undefined ? undefined : { activiteVisee: fin.activiteVisee, bornes };
 };
 
 export interface DeplacementDemande {

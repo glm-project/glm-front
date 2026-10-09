@@ -29,7 +29,6 @@ const referenceFixture: ReferentielDuPupitre = {
   categories: [],
 };
 const debutGesteFixture: GesteDePointage = {
-  intention: 'OUVERTURE',
   nature: 'POINTAGE',
   operateurId: 'jean',
   suiviId: 'piece',
@@ -53,11 +52,11 @@ describe('JournalDuPupitreProjection', () => {
     expect(projected?.suivis[0]?.activites).toEqual([]);
   });
 
-  it('should never turn an unknown targeted transition into a new opening', () => {
+  it('should never turn a finish without an activity on its key into an opening', () => {
     const state = givenEvents([
       {
         etat: 'EN_ATTENTE',
-        geste: { ...debutGesteFixture, id: 'transition', intention: 'TRANSITION', type: 'NON_CONFORMITE', cible: 'inconnue' },
+        geste: { ...debutGesteFixture, id: 'fin-sans-activite', type: 'FIN' },
       },
     ]);
 
@@ -89,11 +88,7 @@ describe('JournalDuPupitreProjection', () => {
 
   it('should keep other operators active when one finishes', () => {
     const other = givenAnotherOperatorAtWork();
-    const state = givenEvents([
-      debutFixture,
-      other,
-      { ...givenPointage('FIN'), geste: { ...debutGesteFixture, id: 'fin', intention: 'FIN', type: 'FIN', cible: 'debut' } },
-    ]);
+    const state = givenEvents([debutFixture, other, { ...givenPointage('FIN'), geste: { ...debutGesteFixture, id: 'fin', type: 'FIN' } }]);
 
     const projection = whenProjecting(state);
 
@@ -175,22 +170,12 @@ describe('JournalDuPupitreProjection', () => {
   });
   const givenPointage = (type: 'FIN' | 'NON_CONFORMITE'): EvenementDuJournal => ({
     etat: 'EN_ATTENTE',
-    geste:
-      type === 'FIN'
-        ? { ...debutGesteFixture, id: 'fin', intention: 'FIN', type, cible: 'nc' }
-        : { ...debutGesteFixture, id: 'nc', intention: 'TRANSITION', type, cible: 'debut' },
+    geste: type === 'FIN' ? { ...debutGesteFixture, id: 'fin', type } : { ...debutGesteFixture, id: 'nc', type },
   });
   const givenWorkstationPointage = (type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', posteId: string | undefined): EvenementDuJournal => {
     const poste = posteId === undefined ? {} : { posteId };
     const identite = { ...debutGesteFixture, ...poste, id: `${type}-${posteId ?? 'sans-poste'}` };
-    const cible = `DEBUT-${posteId ?? 'sans-poste'}`;
-    const geste = pointageAt(identite, type, cible);
-    return { etat: 'EN_ATTENTE', geste };
-  };
-  const pointageAt = (identite: typeof debutGesteFixture, type: 'DEBUT' | 'FIN' | 'NON_CONFORMITE', cible: string): GesteDePointage => {
-    if (type === 'DEBUT') return identite;
-    if (type === 'FIN') return { ...identite, intention: 'FIN', type, cible };
-    return { ...identite, intention: 'TRANSITION', type, cible };
+    return { etat: 'EN_ATTENTE', geste: { ...identite, type } };
   };
   const whenProjecting = (state: JournalDuPupitre): ReferentielDuPupitre | undefined => projectReferentiel(state);
   const thenWorkstationsAreActive = (projection: ReferentielDuPupitre | undefined, postes: (string | undefined)[]): void => {

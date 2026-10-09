@@ -80,7 +80,6 @@ describe('RetardDePublication', () => {
     etat: 'EN_ATTENTE',
     geste: {
       nature: 'POINTAGE',
-      intention: 'OUVERTURE',
       type: 'DEBUT',
       id,
       operateurId: 'jean',

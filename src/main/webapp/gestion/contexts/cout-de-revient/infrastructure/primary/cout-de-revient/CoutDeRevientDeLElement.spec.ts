@@ -11,7 +11,6 @@ import { ElementChiffre } from '../../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../../domain/element/ElementChiffreId';
 import { Cout } from '../../../domain/montant/Cout';
 import { Montant } from '../../../domain/montant/Montant';
-import { TotalDeMontant } from '../../../domain/montant/TotalDeMontant';
 import { ActiviteCitee } from '../../../domain/pointage/ActiviteCitee';
 import { ElementCite } from '../../../domain/pointage/ElementCite';
 import { OperateurCite } from '../../../domain/pointage/OperateurCite';
@@ -27,7 +26,6 @@ import { DureePassee } from '../../../domain/temps/DureePassee';
 import { InstantDeTravail } from '../../../domain/temps/InstantDeTravail';
 import { PeriodeDeTravail } from '../../../domain/temps/PeriodeDeTravail';
 import { TempsPasse } from '../../../domain/temps/TempsPasse';
-import { TotalDeTemps } from '../../../domain/temps/TotalDeTemps';
 import { CoutDeRevientDeLElement } from './CoutDeRevientDeLElement';
 
 const ELEMENT = '4f8d1e0a-1111-2222-3333-444455556666';
@@ -86,16 +84,8 @@ const ligneFixture = (fixture: Partial<LigneFixture> = {}, fiche: Partial<FicheD
   };
   return new LigneDeCout({
     nature: ligne.nature === undefined ? undefined : new NatureDOperation(ligne.nature),
-    temps: new TempsPasse(
-      TotalDeTemps.complet(new DureePassee(ligne.travail)),
-      TotalDeTemps.complet(new DureePassee(ligne.nonConformite)),
-      TotalDeTemps.complet(new DureePassee(ligne.total)),
-    ),
-    cout: new Cout(
-      TotalDeMontant.complet(new Montant(ligne.machine)),
-      TotalDeMontant.complet(new Montant(ligne.mainDOeuvre)),
-      TotalDeMontant.complet(new Montant(ligne.machine + ligne.mainDOeuvre)),
-    ),
+    temps: new TempsPasse(new DureePassee(ligne.travail), new DureePassee(ligne.nonConformite), new DureePassee(ligne.total)),
+    cout: new Cout(new Montant(ligne.machine), new Montant(ligne.mainDOeuvre), new Montant(ligne.machine + ligne.mainDOeuvre)),
     pointages: [],
     ...fiche,
   });
@@ -106,21 +96,10 @@ const rapportFixture = (lignes: readonly LigneDeCout[], categorie = 'OF', fiche:
     lignes,
     evaluation: new InstantDeTravail('2026-05-11T12:00:00Z'),
     activitesEnCours: new ActivitesEnCoursExclues(0),
-    temps: new TempsPasse(
-      TotalDeTemps.complet(new DureePassee('PT3H')),
-      TotalDeTemps.complet(new DureePassee('PT30M')),
-      TotalDeTemps.complet(new DureePassee('PT3H30M')),
-    ),
-    cout: new Cout(
-      TotalDeMontant.complet(new Montant(150)),
-      TotalDeMontant.complet(new Montant(50)),
-      TotalDeMontant.complet(new Montant(200)),
-    ),
+    temps: new TempsPasse(new DureePassee('PT3H'), new DureePassee('PT30M'), new DureePassee('PT3H30M')),
+    cout: new Cout(new Montant(150), new Montant(50), new Montant(200)),
     ...fiche,
   });
-
-const montantFixture = (euros: number | undefined): TotalDeMontant =>
-  euros === undefined ? TotalDeMontant.incomplet() : TotalDeMontant.complet(new Montant(euros));
 
 const haasFixture = new ActiviteCitee(
   new ElementCite(new ElementChiffreId('element-192'), 'OF-2026-000192', new CategorieDElementChiffre('OF')),
@@ -132,18 +111,17 @@ const partFixture = (
   [heureDebut, minuteDebut]: [number, number],
   [heureFin, minuteFin]: [number, number],
   duree: string,
-  diviseur: number | undefined,
-  mainDOeuvre: number | undefined,
-  autour: Partial<Pick<PartDePointage, 'paralleles' | 'bloquants'>> = {},
+  diviseur: number,
+  mainDOeuvre: number,
+  autour: Partial<Pick<PartDePointage, 'paralleles'>> = {},
 ): PartDePointage =>
   new PartDePointage({
     debut: instantFixture(heureDebut, minuteDebut),
     fin: instantFixture(heureFin, minuteFin),
     duree: new DureePassee(duree),
     diviseur,
-    mainDOeuvre: montantFixture(mainDOeuvre),
+    mainDOeuvre: new Montant(mainDOeuvre),
     paralleles: autour.paralleles ?? [],
-    bloquants: autour.bloquants ?? [],
   });
 
 const pointageFixture = (fiche: Partial<FicheDePointage> = {}): PointageDeCout =>
@@ -153,10 +131,10 @@ const pointageFixture = (fiche: Partial<FicheDePointage> = {}): PointageDeCout =
     poste: new PosteCite('poste-dmg', 'DMG DMU 50'),
     categorie: 'TRAVAIL',
     periode: new PeriodeDeTravail(instantFixture(7, 30), instantFixture(11, 30)),
-    duree: TotalDeTemps.complet(new DureePassee('PT4H')),
+    duree: new DureePassee('PT4H'),
     coutHoraire: new Montant(48),
     tauxHoraire: new Montant(35),
-    cout: new Cout(montantFixture(192), montantFixture(113.75), montantFixture(305.75)),
+    cout: new Cout(new Montant(192), new Montant(113.75), new Montant(305.75)),
     parts: [
       partFixture([7, 30], [9, 0], 'PT1H30M', 1, 52.5),
       partFixture([9, 0], [10, 30], 'PT1H30M', 2, 26.25, { paralleles: [haasFixture] }),
@@ -193,46 +171,6 @@ describe('Cout de revient component', () => {
 
   afterEach(() => {
     componentFixture.destroy();
-  });
-
-  it.each([
-    ['cout-travail-cell', '5 h 00'],
-    ['cout-non-conformite-duree', 'Incomplet'],
-    ['cout-temps-cell', 'Incomplet'],
-    ['cout-machine-cell', '300,00 €'],
-    ['cout-main-d-oeuvre-cell', 'Incomplet'],
-    ['cout-ligne-total-cell', 'Incomplet'],
-    ['cout-total-travail', '5 h 00'],
-    ['cout-total-non-conformite', 'Incomplet'],
-    ['cout-total-temps', 'Incomplet'],
-    ['cout-total-machine', '300,00 €'],
-    ['cout-total-main-d-oeuvre', 'Incomplet'],
-    ['cout-total-cout', 'Incomplet'],
-    ['cout-total', 'Incomplet'],
-    ['cout-temps-total', 'Incomplet'],
-    ['cout-temps-non-conformite', 'dont non-conformité Incomplet'],
-    ['cout-repartition', 'Machine 300,00 € · Main d’œuvre Incomplet'],
-  ])('should independently display the received completeness of %s', async (selector, attendu) => {
-    givenRapportIncomplet();
-
-    await whenEcranAffiche();
-
-    expect(texte(selector)).toBe(attendu);
-  });
-
-  it.each([
-    'cout-main-d-oeuvre-cell',
-    'cout-ligne-total-cell',
-    'cout-total-cout',
-    'cout-total',
-    'cout-temps-total',
-    'cout-non-conformite-duree',
-  ])('should expose no partial figure in the text or accessible labels of %s', async selector => {
-    givenRapportIncomplet();
-
-    await whenEcranAffiche();
-
-    expect(contenuAccessible(selector)).not.toMatch(/\d/);
   });
 
   it('should make an automatic finish visible before opening any row detail', async () => {
@@ -670,9 +608,8 @@ describe('Cout de revient component', () => {
             fin: new InstantDeTravail(new Date(2026, 4, 12, 3, 0).toISOString()),
             duree: new DureePassee('PT13H'),
             diviseur: 2,
-            mainDOeuvre: montantFixture(227.5),
+            mainDOeuvre: new Montant(227.5),
             paralleles: [haasFixture],
-            bloquants: [],
           }),
         ],
       }),
@@ -684,20 +621,23 @@ describe('Cout de revient component', () => {
     ]);
   });
 
-  it('should show a share whose divisor is unknown and the clocking that blocks it', async () => {
-    const inconnu = new ActiviteCitee(new ElementCite(new ElementChiffreId('element-inconnu'), undefined, undefined), undefined, undefined);
+  it('should name a parallel activity by what is known of it: its workstation without nature, an element without name', async () => {
     await givenDetailDe([
       pointageSeulFixture({
-        cout: new Cout(montantFixture(192), montantFixture(undefined), montantFixture(undefined)),
-        parts: [partFixture([7, 30], [11, 30], 'PT4H', undefined, undefined, { bloquants: [inconnu] })],
+        parts: [
+          new PartDePointage({
+            debut: instantFixture(9, 0),
+            fin: instantFixture(10, 30),
+            duree: new DureePassee('PT1H30M'),
+            diviseur: 2,
+            mainDOeuvre: new Montant(26.25),
+            paralleles: [new ActiviteCitee(new ElementCite(new ElementChiffreId('element-3'), undefined, undefined), undefined, undefined)],
+          }),
+        ],
       }),
     ]);
 
-    expect(textes('cout-pointage-diviseur')).toEqual(['÷?']);
-    expect(textesCompacts('cout-part-contexte')).toEqual([
-      '↳ 07:30 → 11:30 · partage inconnu : pointage à résoudre sur Sans poste · élément inconnu',
-    ]);
-    expect(textes('cout-part-calcul')).toEqual(['35,00 × 4,00 ÷ ? = inconnu']);
+    expect(textesCompacts('cout-part-contexte')).toEqual(['↳ 09:00 → 10:30 · aussi sur Sans poste · élément inconnu']);
   });
 
   it('should say an opened row carries no finished clocking', async () => {
@@ -719,35 +659,24 @@ describe('Cout de revient component', () => {
     ]);
   });
 
-  it('should explain a share the operator cannot be split on yet', async () => {
-    await givenDetailDe([pointageSeulFixture({ anomalies: ['PARTAGE_INCONNU'] })]);
-
-    expect(textes('cout-pointage-anomalie')).toEqual(['Partage inconnu']);
-    expect(texte('cout-pointage-explication')).toContain('Julien Martin a un pointage à résoudre sur un autre poste pendant ce temps');
-  });
-
   it('should count the anomalies of each nature and sum them up in a banner above the report', async () => {
     givenRapport([
       ligneFixture(
         { nature: 'Électroérosion' },
         {
-          pointages: [
-            pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE'] }),
-            pointageSeulFixture({ anomalies: ['PARTAGE_INCONNU'] }),
-            pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE', 'PARTAGE_INCONNU'] }),
-          ],
+          pointages: [pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE'] }), pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE'] })],
         },
       ),
       ligneFixture({ nature: 'Fraisage' }, { pointages: [pointageSeulFixture()] }),
-      ligneFixture({ nature: undefined }, { pointages: [pointageSeulFixture({ anomalies: ['PARTAGE_INCONNU'] })] }),
+      ligneFixture({ nature: undefined }, { pointages: [pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE'] })] }),
     ]);
 
     await whenEcranAffiche();
 
-    expect(textes('cout-nature-anomalie')).toEqual(['2 fins automatiques', '2 partages inconnus', '1 partage inconnu']);
-    expect(texte('cout-bandeau-titre')).toBe('4 pointages en anomalie sur les natures Électroérosion, Sans poste.');
+    expect(textes('cout-nature-anomalie')).toEqual(['2 fins automatiques', '1 fin automatique']);
+    expect(texte('cout-bandeau-titre')).toBe('3 pointages en anomalie sur les natures Électroérosion, Sans poste.');
     expect(texte('cout-bandeau-detail')).toBe(
-      'Électroérosion : 2 fins automatiques, 2 partages inconnus · Sans poste : 1 partage inconnu. Dépliez la nature concernée pour voir ce qu’il manque sur chaque pointage.',
+      'Électroérosion : 2 fins automatiques · Sans poste : 1 fin automatique. Dépliez la nature concernée pour voir ce qu’il manque sur chaque pointage.',
     );
   });
 
@@ -756,10 +685,7 @@ describe('Cout de revient component', () => {
       ligneFixture(
         {},
         {
-          pointages: [
-            pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE', 'PARTAGE_INCONNU'] }),
-            pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE', 'PARTAGE_INCONNU'] }),
-          ],
+          pointages: [pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE'] }), pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE'] })],
         },
       ),
     ]);
@@ -767,7 +693,7 @@ describe('Cout de revient component', () => {
     await whenEcranAffiche();
 
     expect(texte('cout-bandeau-titre')).toBe('2 pointages en anomalie sur la nature Fraisage.');
-    expect(textes('cout-nature-anomalie')).toEqual(['2 fins automatiques', '2 partages inconnus']);
+    expect(textes('cout-nature-anomalie')).toEqual(['2 fins automatiques']);
   });
 
   it('should show no banner when no clocking carries an anomaly', async () => {
@@ -848,24 +774,12 @@ describe('Cout de revient component', () => {
   });
 
   const rapportTermineFixture = (heures: number, montant: number, automatique: boolean): CoutDeRevient => {
-    const temps = new TempsPasse(
-      TotalDeTemps.complet(new DureePassee(`PT${String(heures)}H`)),
-      TotalDeTemps.complet(new DureePassee('PT0S')),
-      TotalDeTemps.complet(new DureePassee(`PT${String(heures)}H`)),
-    );
-    const cout = new Cout(
-      TotalDeMontant.complet(new Montant(0)),
-      TotalDeMontant.complet(new Montant(montant)),
-      TotalDeMontant.complet(new Montant(montant)),
-    );
+    const temps = new TempsPasse(new DureePassee(`PT${String(heures)}H`), new DureePassee('PT0S'), new DureePassee(`PT${String(heures)}H`));
+    const cout = new Cout(new Montant(0), new Montant(montant), new Montant(montant));
     const arreteAutomatiquement = pointageSeulFixture({
       anomalies: ['FIN_AUTOMATIQUE'],
       periode: periodeFixture(8, 8 + heures),
-      cout: new Cout(
-        TotalDeMontant.complet(new Montant(0)),
-        TotalDeMontant.complet(new Montant(montant)),
-        TotalDeMontant.complet(new Montant(montant)),
-      ),
+      cout: new Cout(new Montant(0), new Montant(montant), new Montant(montant)),
     });
     const ligne = ligneFixture({}, { temps, cout, pointages: automatique ? [arreteAutomatiquement] : [] });
     return rapportFixture([ligne], 'OF', { temps, cout });
@@ -887,16 +801,8 @@ describe('Cout de revient component', () => {
   };
 
   const givenAutreElementEnCours = (): void => {
-    const temps = new TempsPasse(
-      TotalDeTemps.complet(new DureePassee('PT0S')),
-      TotalDeTemps.complet(new DureePassee('PT0S')),
-      TotalDeTemps.complet(new DureePassee('PT0S')),
-    );
-    const cout = new Cout(
-      TotalDeMontant.complet(new Montant(0)),
-      TotalDeMontant.complet(new Montant(0)),
-      TotalDeMontant.complet(new Montant(0)),
-    );
+    const temps = new TempsPasse(new DureePassee('PT0S'), new DureePassee('PT0S'), new DureePassee('PT0S'));
+    const cout = new Cout(new Montant(0), new Montant(0), new Montant(0));
     portFixture.rapports.set(
       'element-b',
       new CoutDeRevient(new ElementChiffre('OF-B', new CategorieDElementChiffre('OF')), {
@@ -914,28 +820,13 @@ describe('Cout de revient component', () => {
   };
 
   const givenSeulementActivitesEnCours = (nombre: number): void => {
-    const temps = new TempsPasse(
-      TotalDeTemps.complet(new DureePassee('PT0S')),
-      TotalDeTemps.complet(new DureePassee('PT0S')),
-      TotalDeTemps.complet(new DureePassee('PT0S')),
-    );
-    const cout = new Cout(
-      TotalDeMontant.complet(new Montant(0)),
-      TotalDeMontant.complet(new Montant(0)),
-      TotalDeMontant.complet(new Montant(0)),
-    );
+    const temps = new TempsPasse(new DureePassee('PT0S'), new DureePassee('PT0S'), new DureePassee('PT0S'));
+    const cout = new Cout(new Montant(0), new Montant(0), new Montant(0));
     givenNouveauRapport(rapportFixture([], 'OF', { temps, cout, activitesEnCours: new ActivitesEnCoursExclues(nombre) }));
   };
 
   const givenFinAutomatique = (): void => {
     portFixture.rapports.set(ELEMENT, rapportTermineFixture(13, 260, true));
-  };
-
-  const givenRapportIncomplet = (): void => {
-    const temps = new TempsPasse(TotalDeTemps.complet(new DureePassee('PT5H')), TotalDeTemps.incomplet(), TotalDeTemps.incomplet());
-    const cout = new Cout(TotalDeMontant.complet(new Montant(300)), TotalDeMontant.incomplet(), TotalDeMontant.incomplet());
-    const ligne = ligneFixture({}, { temps, cout });
-    portFixture.rapports.set(ELEMENT, rapportFixture([ligne], 'OF', { temps, cout }));
   };
 
   const givenRapport = (lignes: readonly LigneDeCout[]): void => {
@@ -1000,15 +891,6 @@ describe('Cout de revient component', () => {
       throw new Error(`Aucun élément ${selector} à l’écran`);
     }
     return element;
-  };
-
-  const contenuAccessible = (selector: string): string => {
-    const element = requis(selector);
-    const labels = [element, ...element.querySelectorAll<HTMLElement>('[aria-label], [title]')].flatMap(value => [
-      value.getAttribute('aria-label'),
-      value.getAttribute('title'),
-    ]);
-    return [element.textContent, ...labels].join(' ');
   };
 
   const normalise = (valeur: string): string => valeur.replace(/[\u00a0\u2009\u202f]/g, ' ').trim();

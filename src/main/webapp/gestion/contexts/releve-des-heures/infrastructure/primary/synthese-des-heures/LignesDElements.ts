@@ -154,5 +154,5 @@ export const ligneDeFrise = (element: ElementDuReleve, jours: readonly JourSurSo
   libelle: element.description ?? '',
   postes: LIBELLES.postes(element.postes),
   total: LIBELLES.duree(element.duree),
-  nonConformite: element.dureeNonConformite.estNul() ? undefined : LIBELLES.nonConformite(element.dureeNonConformite),
+  nonConformite: element.dureeNonConformite.estNulle() ? undefined : LIBELLES.nonConformite(element.dureeNonConformite),
 });

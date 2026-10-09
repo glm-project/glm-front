@@ -23,7 +23,6 @@ const gesteFixture: GesteDePointage = {
   operateurId: 'jean',
   nature: 'POINTAGE',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
 const targetedFinishFixture: GesteDePointage = {
@@ -33,9 +32,7 @@ const targetedFinishFixture: GesteDePointage = {
   operateurId: 'jean',
   suiviId: 'piece',
   posteId: 'tour',
-  intention: 'FIN',
   type: 'FIN',
-  cible: 'ouverture-originale',
 };
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
@@ -64,7 +61,6 @@ const openingBodyFixture = {
   id: 'arrivee-originale',
   dateDeSurvenue: '2026-09-05T08:00:00Z',
   operateur: 'jean',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
 const finishBodyFixture = {
@@ -72,9 +68,7 @@ const finishBodyFixture = {
   dateDeSurvenue: '2026-09-05T17:00:00Z',
   operateur: 'jean',
   poste: 'tour',
-  intention: 'FIN',
   type: 'FIN',
-  cible: 'ouverture-originale',
 };
 
 class TimeoutSessionFixture extends DeviceSessionPort {
@@ -195,7 +189,6 @@ describe('Pupitre synchronization over stalled HTTP', () => {
   };
   const whenServerAccepts = (request: TestRequest): void => {
     request.flush({
-      conflits: [],
       activitesEnCours: [],
       journal: [],
       id: 'piece',

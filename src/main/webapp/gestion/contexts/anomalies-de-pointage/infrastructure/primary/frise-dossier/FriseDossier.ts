@@ -29,7 +29,6 @@ export class FriseDossier {
   readonly placement = input<PlacementDeLInstant | undefined>(undefined);
   readonly deplacementDemande = output<DeplacementDemande>();
   readonly placementDemande = output<PlacementDemande>();
-  readonly poigneeRelachee = output();
   protected readonly libelles = LIBELLES_ANOMALIES;
   private readonly hote = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly largeur = signal(LARGEUR_DE_REFERENCE_PX);
@@ -58,7 +57,6 @@ export class FriseDossier {
   }
 
   protected saisit(pointeur: PointerEvent, plan: HTMLElement, poignee: PositionDePoignee): void {
-    if (poignee.desactivee) return;
     (pointeur.currentTarget as Element).setPointerCapture(pointeur.pointerId);
     const { left, width } = plan.getBoundingClientRect();
     this.prise = { decalage: pointeur.clientX - (left + (positionSur(this.disposition().echelle, poignee.instant) / 100) * width) };
@@ -76,19 +74,15 @@ export class FriseDossier {
   }
 
   protected relache(): void {
-    if (this.prise === undefined) return;
     this.prise = undefined;
-    this.poigneeRelachee.emit();
   }
 
   protected place(clic: MouseEvent, plan: HTMLElement, rangee: RangeeDePlacement): void {
-    if (rangee.desactivee) return;
     const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), clic.clientX);
     this.placementDemande.emit({ demande: { kind: 'VERS', instant }, placement: rangee.source });
   }
 
   protected touche(touche: KeyboardEvent, position: PositionDePoignee): void {
-    if (position.desactivee) return;
     const demande = demandeDeLaTouche(touche);
     if (demande === undefined) return;
     touche.preventDefault();

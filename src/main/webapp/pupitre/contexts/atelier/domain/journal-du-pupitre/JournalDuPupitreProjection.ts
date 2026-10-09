@@ -10,14 +10,12 @@ import {
 const matchesPair = (activite: ActiviteDuPupitre, geste: GesteDePointage): boolean =>
   activite.operateurId === geste.operateurId && activite.posteId === geste.posteId;
 
+const finSansActivite = (suivi: SuiviDuPupitre, geste: GesteDePointage): boolean =>
+  geste.type === 'FIN' && !suivi.activites.some(activite => matchesPair(activite, geste));
+
 const applyPointage = (suivi: SuiviDuPupitre, geste: GesteDePointage): SuiviDuPupitre => {
-  if (geste.intention !== 'OUVERTURE') {
-    const cible = suivi.activites.find(activite => activite.ouverture === geste.cible);
-    if (cible === undefined) return suivi;
-  }
-  const activites = suivi.activites.filter(activite =>
-    geste.intention === 'OUVERTURE' ? !matchesPair(activite, geste) : activite.ouverture !== geste.cible,
-  );
+  if (finSansActivite(suivi, geste)) return suivi;
+  const activites = suivi.activites.filter(activite => !matchesPair(activite, geste));
   if (geste.type !== 'FIN') {
     activites.push({
       ouverture: geste.id,

@@ -1,4 +1,3 @@
-import { InstantPointage } from '../../../domain/acte/InstantPointage';
 import { ActiviteAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import {
@@ -22,26 +21,14 @@ import {
   instantTenuSur,
   lectureDeLaFrise,
   parDebut,
-  POSITION_DU_BORD,
   positionDeLaPoignee,
   positionDeLaPoigneeSansHeure,
   repereDe,
 } from './ElementsDeFrise';
 import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
 
-const LARGEUR_DE_DEUX_CIBLES_PX = 2 * HAUTEUR_D_UN_ELEMENT_PX;
-
 const ouvre = (activite: ActiviteAnomalie, pointage: PointageAnomalie): boolean =>
   activite.periode !== undefined && activite.ouvrant.pointage === pointage.id.pointage;
-
-const termineAuBout = (activite: ActiviteAnomalie, pointage: PointageAnomalie): boolean => {
-  const fin = finRecueDe(activite.etat, activite.periode?.fin);
-  return (
-    fin !== undefined
-    && pointage.fait.activiteVisee === activite.id.activite
-    && new InstantPointage(pointage.fait.instant).compareTo(new InstantPointage(fin)) === 0
-  );
-};
 
 interface RangeeDActivite {
   readonly activite: ActiviteAnomalie;
@@ -101,13 +88,12 @@ const rangeeDePlacementSur = (
     : {
         haut: visee.barre.haut,
         hauteur: HAUTEUR_D_UN_ELEMENT_PX,
-        desactivee: placement.desactivee,
         source: placement,
       };
 
 export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise => {
   const { vue, maintenant: now, poignee, placement, largeur } = entrees;
-  const { enCause, pointages, echelle } = lectureDeLaFrise(entrees);
+  const { pointages, echelle } = lectureDeLaFrise(entrees);
   const contexte = { now, echelle };
   const cible = vue.activites.find(activite => activite.id.activite === (poignee ?? placement)?.activiteVisee);
   const hautDesActivites = HAUTEUR_DE_L_AXE_PX + ESPACE_ENTRE_RANGEES_PX;
@@ -118,18 +104,11 @@ export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise =>
   const visee = rangees.find(({ activite }) => activite === cible);
   const surSaBarre = poignee === undefined || visee === undefined ? undefined : { ...visee, poignee };
   const barres = rangees.map(({ barre }) => barre);
-  const reperes = pointages.flatMap((pointage): readonly RepereFrise[] => {
-    const repere = repereDe(pointage, enCause.has(pointage.id.pointage));
-    const ouvertes = rangees.filter(({ activite }) => ouvre(activite, pointage));
-    if (ouvertes.length > 0) return ouvertes.map(({ barre }) => ({ ...repere, gauche: barre.gauche, haut: barre.haut, ancrage: 'GAUCHE' }));
-    return rangees
-      .filter(({ activite }) => termineAuBout(activite, pointage))
-      .map(({ barre }) => {
-        const gauche = positionSur(echelle, repere.instant);
-        const barreEtroite = ((gauche - barre.gauche) / POSITION_DU_BORD) * largeur < LARGEUR_DE_DEUX_CIBLES_PX;
-        return { ...repere, gauche, haut: barre.haut, ancrage: barreEtroite ? 'GAUCHE' : 'DROITE' };
-      });
-  });
+  const reperes = pointages.flatMap((pointage): readonly RepereFrise[] =>
+    rangees
+      .filter(({ activite }) => ouvre(activite, pointage))
+      .map(({ barre }) => ({ ...repereDe(pointage), gauche: barre.gauche, haut: barre.haut })),
+  );
   const elements = [...barres, ...reperes, ...positionsDePoignee(entrees, visee, echelle, largeur)].sort(
     (gauche, droite) => gauche.instant - droite.instant,
   );

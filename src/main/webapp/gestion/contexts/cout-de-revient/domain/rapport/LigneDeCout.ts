@@ -3,7 +3,7 @@ import { AnomalieDePointage, PointageDeCout } from '../pointage/PointageDeCout';
 import { TempsPasse } from '../temps/TempsPasse';
 import { NatureDOperation } from './NatureDOperation';
 
-const ORDRE_DES_ANOMALIES: readonly AnomalieDePointage[] = ['FIN_AUTOMATIQUE', 'PARTAGE_INCONNU'];
+const ORDRE_DES_ANOMALIES: readonly AnomalieDePointage[] = ['FIN_AUTOMATIQUE'];
 
 export interface CompteDAnomalies {
   readonly anomalie: AnomalieDePointage;

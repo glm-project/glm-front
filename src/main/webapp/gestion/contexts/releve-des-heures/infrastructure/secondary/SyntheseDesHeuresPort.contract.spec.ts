@@ -48,8 +48,7 @@ const syntheseFixture = (): RestSynthese => ({
   semaine: 38,
   operateur: { id: OPERATEUR, nom: 'Dupont', prenom: 'Jean' },
   evaluation: EVALUATION,
-  dureeOperationnelleTotale: { complete: true, valeur: 'PT57H30M' },
-  conflits: [],
+  dureeOperationnelleTotale: { valeur: 'PT57H30M' },
   elements: [
     {
       id: 'element-1',
@@ -57,21 +56,20 @@ const syntheseFixture = (): RestSynthese => ({
       nom: 'Moule',
       reference: '1015',
       description: 'Carter',
-      duree: { complete: true, valeur: 'PT15H30M' },
-      dureeNonConformite: { complete: true, valeur: 'PT50M' },
+      duree: { valeur: 'PT15H30M' },
+      dureeNonConformite: { valeur: 'PT50M' },
       postes: [{ poste: { id: 'poste-1', libelle: 'DMU 50' }, nature: 'Fraisage' }],
     },
   ],
   jours: SEMAINE.jours().map((jour, rang) => ({
     jour: jour.value,
-    dureeOperationnelle: { complete: true, valeur: rang === 0 ? 'PT2H' : 'PT0S' },
+    dureeOperationnelle: { valeur: rang === 0 ? 'PT2H' : 'PT0S' },
     pointages:
       rang === 0
         ? [
             {
               id: 'debut-a',
               type: 'DEBUT',
-              intention: 'OUVERTURE',
               dateDeSurvenue: '2026-09-14T08:00:00Z',
               element: 'element-1',
               poste: 'poste-1',
@@ -299,15 +297,15 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
   it('should transport the week total without adding the day totals', async () => {
     const releve = await harness.port.synthese(DEMANDE);
 
-    expect(releve?.operationnelTotal.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 3450 } });
-    expect(releve?.jours[0]?.operationnelTotal.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 120 } });
+    expect(releve?.operationnelTotal).toMatchObject({ minutes: 3450 });
+    expect(releve?.jours[0]?.operationnelTotal).toMatchObject({ minutes: 120 });
   });
 
   it('should transport element totals and their independent nonconformity', async () => {
     const releve = await harness.port.synthese(DEMANDE);
 
-    expect(releve?.elements[0]?.duree.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 930 } });
-    expect(releve?.elements[0]?.dureeNonConformite.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 50 } });
+    expect(releve?.elements[0]?.duree).toMatchObject({ minutes: 930 });
+    expect(releve?.elements[0]?.dureeNonConformite).toMatchObject({ minutes: 50 });
     expect(releve?.elements[0]?.numero()).toBe('1015');
     expect(releve?.elements[0]?.postes[0]?.libelle).toBe('DMU 50');
   });
@@ -319,46 +317,13 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
     expect(releve?.jours[1]?.estVide()).toBe(true);
   });
 
-  it('should keep incomplete totals without a numerical value and leave complete NC independent', async () => {
-    const synthese = syntheseFixture();
-    harness.seed(
-      releveFixture(SEMAINE, { 0: { operationnelle: false } }, { operationnelle: false }, [
-        elementFixture({ duree: false, dureeNonConformite: 'PT1H' }),
-      ]),
-      {
-        ...synthese,
-        dureeOperationnelleTotale: { complete: false, valeur: 'PT99H' },
-        elements: [
-          {
-            ...requiredFixture(synthese.elements[0]),
-            duree: { complete: false, valeur: 'PT99H' },
-            dureeNonConformite: { complete: true, valeur: 'PT1H' },
-          },
-        ],
-        jours: requiredFixture(synthese.jours).map((jour, rang) =>
-          rang === 0 ? { ...jour, dureeOperationnelle: { complete: false } } : jour,
-        ),
-      },
-      feuilleFixture(),
-    );
-
-    const releve = await harness.port.synthese(DEMANDE);
-
-    expect(releve?.operationnelTotal.snapshot()).toEqual({ complete: false });
-    expect(releve?.jours[0]?.operationnelTotal.snapshot()).toEqual({ complete: false });
-    expect(releve?.elements[0]?.duree.snapshot()).toEqual({ complete: false });
-    expect(releve?.elements[0]?.dureeNonConformite.snapshot()).toMatchObject({ complete: true, valeur: { minutes: 60 } });
-  });
-
   it('should preserve the received journal order and the element of each clocking', async () => {
     const synthese = syntheseFixture();
     const pointages: components['schemas']['RestPointageDeSyntheseDesHeures'][] = [
-      { id: 'fin-a', type: 'FIN', intention: 'FIN', cible: 'a', element: 'element-1', dateDeSurvenue: '2026-09-14T17:00:00Z' },
+      { id: 'fin-a', type: 'FIN', element: 'element-1', dateDeSurvenue: '2026-09-14T17:00:00Z' },
       {
         id: 'nc-b',
         type: 'NON_CONFORMITE',
-        intention: 'TRANSITION',
-        cible: 'a',
         element: 'element-1',
         dateDeSurvenue: '2026-09-14T12:00:00Z',
       },
@@ -622,7 +587,7 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     const synthese = syntheseFixture();
     const result = port.synthese(DEMANDE);
     whenBothRoutesAnswer(
-      { ...synthese, dureeOperationnelleTotale: { complete: true, valeur: duree } },
+      { ...synthese, dureeOperationnelleTotale: { valeur: duree } },
       {
         ...feuille,
         jours: requiredFixture(feuille.jours).map((jour, rang) =>
@@ -656,7 +621,7 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     });
     expect(releve?.jours[0]?.intervalles[0]?.poste).toBeUndefined();
     expect(releve?.jours[0]?.intervalles[0]?.fin?.value.toISOString()).toBe(fin === undefined ? undefined : '2026-09-14T11:00:00.000Z');
-    expect(releve?.operationnelTotal.snapshot()).toMatchObject({ complete: true, valeur: { minutes } });
+    expect(releve?.operationnelTotal).toMatchObject({ minutes });
   });
 
   it('should attach time sheet portions by date even when its days are returned in reverse order', async () => {
@@ -692,7 +657,7 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
 
   it('should reject an unreadable complete duration once', async () => {
     const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    whenBothRoutesAnswer({ ...syntheseFixture(), dureeOperationnelleTotale: { complete: true, valeur: 'P1D' } }, feuilleFixture());
+    whenBothRoutesAnswer({ ...syntheseFixture(), dureeOperationnelleTotale: { valeur: 'P1D' } }, feuilleFixture());
 
     expect(await result).toEqual(new Error('La durée « P1D » reçue du serveur n’est pas une durée de travail.'));
     expect(errorHandler.errors).toHaveLength(1);
@@ -750,29 +715,6 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     });
 
     expect(await result).toEqual(new Error('activite.fin manque dans la réponse du serveur'));
-    expect(errorHandler.errors).toHaveLength(1);
-  });
-
-  it('should reject a complete total missing its value', async () => {
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    whenBothRoutesAnswer({ ...syntheseFixture(), dureeOperationnelleTotale: { complete: true } }, feuilleFixture());
-
-    expect(await result).toEqual(new Error('duree.valeur manque dans la réponse du serveur'));
-    expect(errorHandler.errors).toHaveLength(1);
-  });
-
-  it('should reject an activity to resolve and report the failure once', async () => {
-    const feuille = feuilleFixture();
-    const source = activiteTermineeFixture();
-    const result = port.synthese(DEMANDE).catch((failure: unknown) => failure);
-    whenBothRoutesAnswer(syntheseFixture(), {
-      ...feuille,
-      jours: requiredFixture(feuille.jours).map((jour, rang) =>
-        rang === 0 ? { ...jour, activites: [{ ...source, activite: { id: 'a', debut: source.debut, etat: 'A_RESOUDRE' } }] } : jour,
-      ),
-    });
-
-    expect(await result).toEqual(new Error('Une activité à résoudre n’a pas de fin : le relevé ne peut pas être établi.'));
     expect(errorHandler.errors).toHaveLength(1);
   });
 

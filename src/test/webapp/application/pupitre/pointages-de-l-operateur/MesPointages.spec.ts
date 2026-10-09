@@ -32,22 +32,21 @@ const syntheseFixture = (semaine: number, evaluation: string) => ({
   semaine,
   operateur: { id: 'jean', nom: 'Dupont', prenom: 'Jean' },
   evaluation,
-  dureeOperationnelleTotale: { complete: true, valeur: 'PT7H45M' },
-  conflits: [],
+  dureeOperationnelleTotale: { valeur: 'PT7H45M' },
   elements: [
     {
       id: 'of-1',
       categorie: 'OF',
       nom: 'OF-2026-001240',
       reference: String(1202 + semaine),
-      duree: { complete: true, valeur: 'PT7H45M' },
-      dureeNonConformite: { complete: true, valeur: 'PT0S' },
+      duree: { valeur: 'PT7H45M' },
+      dureeNonConformite: { valeur: 'PT0S' },
       postes: [{ poste: { id: 'fraiseuse', libelle: 'Fraiseuse' }, nature: 'Fraisage' }],
     },
   ],
   jours: joursDe(semaine).map((jour, rang) => ({
     jour,
-    dureeOperationnelle: { complete: true, valeur: rang === 0 ? 'PT7H45M' : 'PT0S' },
+    dureeOperationnelle: { valeur: rang === 0 ? 'PT7H45M' : 'PT0S' },
   })),
 });
 
@@ -150,7 +149,7 @@ describe('Pupitre my pointages journey', () => {
       body: {
         genereLe: '2026-09-17T05:00:00Z',
         operateurs: referentielFixture.operateurs,
-        suivis: [{ id: 'piece-1', nom: '204', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], conflits: [] }],
+        suivis: [{ id: 'piece-1', nom: '204', etat: 'EN_ATTENTE', categorie: 'OF', activites: [] }],
         categories: ['OF'],
       },
     }).as('workshop');

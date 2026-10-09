@@ -1,19 +1,14 @@
-import { FaitPropose } from '@/gestion/contexts/anomalies-de-pointage/domain/acte/ActeResolution';
-import { SaisieActe } from '@/gestion/contexts/anomalies-de-pointage/domain/acte/SaisieActe';
 import { ActiviteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ActiviteAnomalieId';
 import {
   ActiviteAnomalie,
-  ChoixGuide,
   DossierAnomalie,
+  FaitDePointage,
   PointageAnomalie,
 } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
-import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalieId';
 import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
-import { PerimetreDuDossier } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PerimetreDuDossier';
 import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PointageAnomalieId';
-import { SuiviAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/SuiviAnomalieId';
 
-export const ARRET_FIXTURE = { type: 'FIN', intention: 'FIN' } as const;
+export const ARRET_FIXTURE = { type: 'FIN' } as const;
 
 export const instantDuJourFixture = (heure: string, jour = 14): string => {
   const [h = '0', m = '0'] = heure.split(':');
@@ -21,18 +16,20 @@ export const instantDuJourFixture = (heure: string, jour = 14): string => {
 };
 
 export const faitFixture = (
-  geste: Pick<FaitPropose, 'type' | 'intention'>,
+  geste: Pick<FaitDePointage, 'type'>,
   instant: string,
-  changement: Partial<FaitPropose> = {},
-): FaitPropose => ({ ...geste, activiteVisee: 'travail-8', operateur: 'op-camille', poste: 'poste-1', instant, ...changement });
+  changement: Partial<FaitDePointage> = {},
+): FaitDePointage => ({
+  ...geste,
+  operateur: 'op-camille',
+  instant,
+  ...changement,
+});
 
-export const pointageFixture = (id: string, fait: FaitPropose, changement: Partial<PointageAnomalie> = {}): PointageAnomalie => ({
+export const pointageFixture = (id: string, fait: FaitDePointage, changement: Partial<PointageAnomalie> = {}): PointageAnomalie => ({
   id: new PointageAnomalieId(id),
   fait,
   operateurNom: 'Camille Martin',
-  posteLibelle: 'DMU 50',
-  auteur: 'camille',
-  enregistre: fait.instant,
   regularisation: false,
   ...changement,
 });
@@ -46,41 +43,17 @@ export const activiteEchueFixture = (
   id: new ActiviteAnomalieId(id),
   libelle: '',
   etat: 'ECHUE',
-  temps: '',
   ouvrant: new PointageAnomalieId(`debut-${id}`),
-  periode: { categorie, debut: instantDuJourFixture(debut), fin: instantDuJourFixture(fin), duree: 'PT10H' },
-});
-
-export const regularisationFixture = (activite: string): ChoixGuide => ({
-  id: `REGULARISER_FIN:${activite}`,
-  code: 'REGULARISER_FIN',
-  libelle: '',
-  explication: '',
-  saisie: SaisieActe.regularise({ ...ARRET_FIXTURE, activiteVisee: activite, operateur: 'op-camille', poste: 'poste-1', instant: '' }),
+  periode: { categorie, debut: instantDuJourFixture(debut), fin: instantDuJourFixture(fin) },
 });
 
 export const dossierDeFinAutomatiqueFixture = (changement: Partial<DossierAnomalie> = {}): DossierAnomalie => ({
-  etat: 'FIN_AUTOMATIQUE',
-  ligne: {
-    adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-travail-8') },
-    element: new ElementAnomalieId('moule-42'),
-    designation: 'M-042',
-    operateur: 'Camille Martin',
-    poste: 'DMU 50',
-    date: instantDuJourFixture('08:00'),
-    explication: '',
-    nombrePointages: 1,
-  },
-  version: 1,
-  cloture: false,
-  engagement: instantDuJourFixture('07:30'),
   operateur: new OperateurAnomalieId('op-camille'),
+  operateurNom: 'Camille Martin',
+  posteLibelle: 'DMU 50',
+  echue: new ActiviteAnomalieId('travail-8'),
+  debut: instantDuJourFixture('08:00'),
   journal: [],
-  perimetre: new PerimetreDuDossier([]),
   activites: [activiteEchueFixture('travail-8', 'TRAVAIL', '08:00', '18:00')],
-  choix: [regularisationFixture('travail-8')],
-  enConflit: false,
-  finAutomatique: true,
-  consequences: [],
   ...changement,
 });

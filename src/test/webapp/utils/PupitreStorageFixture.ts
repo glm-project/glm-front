@@ -69,7 +69,6 @@ export const givenDurablePupitreFixture = (fixture: DurablePupitreFixture): void
             operateurId: fixture.geste.operateurId,
             nature: 'POINTAGE',
             suiviId: 'piece',
-            intention: 'OUVERTURE',
             type: 'DEBUT',
           },
         },

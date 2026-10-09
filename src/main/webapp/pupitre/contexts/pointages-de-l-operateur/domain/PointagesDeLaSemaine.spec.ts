@@ -1,5 +1,4 @@
 import { DureeTravaillee } from './duree/DureeTravaillee';
-import { TotalDeDuree } from './duree/TotalDeDuree';
 import { JourDePointages } from './JourDePointages';
 import { LigneDePointage } from './LigneDePointage';
 import { PointagesDeLaSemaine } from './PointagesDeLaSemaine';
@@ -17,13 +16,12 @@ const joursDe = (semaine: SemaineISO, rangsPointes: readonly number[] = []): rea
   semaine
     .jours()
     .map(
-      (jour: JourCalendaire, rang) =>
-        new JourDePointages(jour, TotalDeDuree.complet(new DureeTravaillee('PT0S')), rangsPointes.includes(rang) ? [ligne] : []),
+      (jour: JourCalendaire, rang) => new JourDePointages(jour, new DureeTravaillee('PT0S'), rangsPointes.includes(rang) ? [ligne] : []),
     );
 
 describe('PointagesDeLaSemaine', () => {
   it('should offer only the clocked days, from Monday to Sunday', () => {
-    const pointages = new PointagesDeLaSemaine(SEMAINE, TotalDeDuree.incomplet(), joursDe(SEMAINE, [0, 4]));
+    const pointages = new PointagesDeLaSemaine(SEMAINE, new DureeTravaillee('PT0S'), joursDe(SEMAINE, [0, 4]));
 
     expect(pointages.joursPointes().map(jour => jour.jour.value)).toEqual(['2026-10-05', '2026-10-09']);
   });
@@ -32,7 +30,7 @@ describe('PointagesDeLaSemaine', () => {
     ['2026-10-08', '2026-10-08'],
     ['2026-10-20', '2026-10-06'],
   ])('should show by default today when the week holds it, else its first clocked day (today %s)', (aujourdhui, attendu) => {
-    const pointages = new PointagesDeLaSemaine(SEMAINE, TotalDeDuree.incomplet(), joursDe(SEMAINE, [1, 3]));
+    const pointages = new PointagesDeLaSemaine(SEMAINE, new DureeTravaillee('PT0S'), joursDe(SEMAINE, [1, 3]));
 
     expect(pointages.jourParDefaut(new JourCalendaire(aujourdhui))?.jour.value).toBe(attendu);
   });
@@ -46,7 +44,7 @@ describe('PointagesDeLaSemaine', () => {
     ],
     ['a finished clocking', new LigneDePointage({ ...ligne.activite }, { etat: 'TERMINEE', fin: new Date(2026, 9, 5, 8) }), [0, false]],
   ])('should tell what a day holding %s still needs', (_cas, ligneDuJour, [enCours, finAutomatique]) => {
-    const jour = new JourDePointages(SEMAINE.lundi(), TotalDeDuree.incomplet(), [ligneDuJour]);
+    const jour = new JourDePointages(SEMAINE.lundi(), new DureeTravaillee('PT0S'), [ligneDuJour]);
 
     expect([jour.activitesEnCours(), jour.aUneFinAutomatique()]).toEqual([enCours, finAutomatique]);
   });
@@ -55,13 +53,13 @@ describe('PointagesDeLaSemaine', () => {
     [[1], true],
     [[], false],
   ])('should tell whether the week still holds ongoing activities', (rangsPointes, attendu) => {
-    const pointages = new PointagesDeLaSemaine(SEMAINE, TotalDeDuree.incomplet(), joursDe(SEMAINE, rangsPointes));
+    const pointages = new PointagesDeLaSemaine(SEMAINE, new DureeTravaillee('PT0S'), joursDe(SEMAINE, rangsPointes));
 
     expect(pointages.aDesActivitesEnCours()).toBe(attendu);
   });
 
   it('should show no day by default for a past week without any clocking', () => {
-    const pointages = new PointagesDeLaSemaine(SEMAINE, TotalDeDuree.incomplet(), joursDe(SEMAINE));
+    const pointages = new PointagesDeLaSemaine(SEMAINE, new DureeTravaillee('PT0S'), joursDe(SEMAINE));
 
     expect(pointages.jourParDefaut(new JourCalendaire('2026-10-20'))).toBeUndefined();
   });
@@ -71,7 +69,7 @@ describe('PointagesDeLaSemaine', () => {
     ['days in another order', [...joursDe(SEMAINE)].reverse()],
     ['the days of another week', joursDe(new SemaineISO(2026, 40))],
   ])('should refuse %s', (_cas, jours) => {
-    const construction = (): PointagesDeLaSemaine => new PointagesDeLaSemaine(SEMAINE, TotalDeDuree.incomplet(), jours);
+    const construction = (): PointagesDeLaSemaine => new PointagesDeLaSemaine(SEMAINE, new DureeTravaillee('PT0S'), jours);
 
     expect(construction).toThrow('Les jours reçus ne sont pas les sept jours de la semaine 41 de 2026.');
   });

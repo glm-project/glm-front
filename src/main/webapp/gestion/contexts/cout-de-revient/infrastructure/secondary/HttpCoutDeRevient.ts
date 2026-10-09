@@ -11,12 +11,11 @@ import { ElementChiffreId } from '../../domain/element/ElementChiffreId';
 import { ElementDisponible } from '../../domain/element/ElementDisponible';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
-import { TotalDeMontant } from '../../domain/montant/TotalDeMontant';
 import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
 import { ElementCite } from '../../domain/pointage/ElementCite';
 import { OperateurCite } from '../../domain/pointage/OperateurCite';
 import { PartDePointage } from '../../domain/pointage/PartDePointage';
-import { AnomalieDePointage, PointageDeCout } from '../../domain/pointage/PointageDeCout';
+import { PointageDeCout } from '../../domain/pointage/PointageDeCout';
 import { PosteCite } from '../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient } from '../../domain/rapport/CoutDeRevient';
@@ -27,7 +26,6 @@ import { DureePassee } from '../../domain/temps/DureePassee';
 import { InstantDeTravail } from '../../domain/temps/InstantDeTravail';
 import { PeriodeDeTravail } from '../../domain/temps/PeriodeDeTravail';
 import { TempsPasse } from '../../domain/temps/TempsPasse';
-import { TotalDeTemps } from '../../domain/temps/TotalDeTemps';
 
 type RestRapport = components['schemas']['RestCoutDeRevient'];
 type RestLigne = components['schemas']['RestLigneDeCout'];
@@ -41,15 +39,11 @@ type RestPoste = components['schemas']['RestPosteDuCout'];
 const ROUTE = '/api/couts-de-revient/{elementId}';
 const ELEMENT_INCONNU = 404;
 
-const toDuree = (total: components['schemas']['RestDureeDuCout'] | undefined, chemin: string): TotalDeTemps => {
-  const lu = required(total, chemin);
-  return lu.complete ? TotalDeTemps.complet(new DureePassee(required(lu.valeur, `${chemin}.valeur`))) : TotalDeTemps.incomplet();
-};
+const toDuree = (total: components['schemas']['RestDureeDuCout'] | undefined, chemin: string): DureePassee =>
+  new DureePassee(required(total, chemin).valeur);
 
-const toMontant = (total: components['schemas']['RestMontantDuCout'] | undefined, chemin: string): TotalDeMontant => {
-  const lu = required(total, chemin);
-  return lu.complete ? TotalDeMontant.complet(new Montant(required(lu.valeur, `${chemin}.valeur`))) : TotalDeMontant.incomplet();
-};
+const toMontant = (total: components['schemas']['RestMontantDuCout'] | undefined, chemin: string): Montant =>
+  new Montant(required(total, chemin).valeur);
 
 const toTemps = (temps: RestTemps | undefined, chemin: string): TempsPasse => {
   const lu = required(temps, chemin);
@@ -97,27 +91,16 @@ const toPart = (part: RestPart): PartDePointage =>
     diviseur: part.diviseur,
     mainDOeuvre: toMontant(part.mainDOeuvre, 'part.mainDOeuvre'),
     paralleles: required(part.paralleles, 'part.paralleles').map(toActivite),
-    bloquants: required(part.bloquants, 'part.bloquants').map(toActivite),
   });
-
-const toAnomalie = (anomalie: RestPointage['anomalies'][number]): AnomalieDePointage => {
-  if (anomalie === 'A_RESOUDRE') {
-    throw new Error('Un pointage à résoudre n’a pas de coût : le rapport ne peut pas être établi.');
-  }
-  return anomalie;
-};
 
 const toPointage = (pointage: RestPointage): PointageDeCout => {
   const operateur = required(pointage.operateur, 'pointage.operateur');
   return new PointageDeCout({
-    anomalies: required(pointage.anomalies, 'pointage.anomalies').map(toAnomalie),
+    anomalies: required(pointage.anomalies, 'pointage.anomalies'),
     operateur: new OperateurCite(required(operateur.id, 'pointage.operateur.id'), operateur.prenom, operateur.nom),
     poste: toPoste(pointage.poste),
     categorie: required(pointage.categorie, 'pointage.categorie'),
-    periode: new PeriodeDeTravail(
-      new InstantDeTravail(required(pointage.debut, 'pointage.debut')),
-      new InstantDeTravail(required(pointage.fin, 'pointage.fin')),
-    ),
+    periode: new PeriodeDeTravail(new InstantDeTravail(required(pointage.debut, 'pointage.debut')), new InstantDeTravail(pointage.fin)),
     duree: toDuree(pointage.duree, 'pointage.duree'),
     coutHoraire: toTarif(pointage.coutHoraire),
     tauxHoraire: toTarif(pointage.tauxHoraire),

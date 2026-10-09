@@ -8,7 +8,6 @@ import {
   localCalendarDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
-import { TotalDeDuree } from '../../domain/duree/TotalDeDuree';
 import { CategorieDActivite } from '../../domain/element/CategorieDActivite';
 import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
 import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
@@ -116,14 +115,8 @@ export const LIBELLES_RELEVE_DES_HEURES = {
   semaine: (semaine: SemaineISO): string =>
     `Semaine ${semaine.numero} · ${formatCalendarDayRange(semaine.lundi().value, semaine.dimanche().value)}`,
   identite: (nom: string, prenom: string): string => `${prenom} ${nom.toLocaleUpperCase('fr-FR')}`,
-  duree: (total: TotalDeDuree): string => {
-    const lecture = total.snapshot();
-    return lecture.complete ? formatDuree(lecture.valeur) : 'Incomplet';
-  },
-  nonConformite: (total: TotalDeDuree): string => {
-    const lecture = total.snapshot();
-    return lecture.complete ? `NC ${formatDuree(lecture.valeur)}` : 'NC Incomplet';
-  },
+  duree: formatDuree,
+  nonConformite: (duree: DureeTravaillee): string => `NC ${formatDuree(duree)}`,
   jour: (jour: JourCalendaire): string => formatCalendarDayShort(jour.value),
   nomDElement: nomDeLElement,
   heure,

@@ -2,14 +2,12 @@ import { CategorieDElementChiffre } from '../element/CategorieDElementChiffre';
 import { ElementChiffre } from '../element/ElementChiffre';
 import { Cout } from '../montant/Cout';
 import { Montant } from '../montant/Montant';
-import { TotalDeMontant } from '../montant/TotalDeMontant';
 import { OperateurCite } from '../pointage/OperateurCite';
 import { AnomalieDePointage, PointageDeCout } from '../pointage/PointageDeCout';
 import { DureePassee } from '../temps/DureePassee';
 import { InstantDeTravail } from '../temps/InstantDeTravail';
 import { PeriodeDeTravail } from '../temps/PeriodeDeTravail';
 import { TempsPasse } from '../temps/TempsPasse';
-import { TotalDeTemps } from '../temps/TotalDeTemps';
 import { ActivitesEnCoursExclues } from './ActivitesEnCoursExclues';
 import { CoutDeRevient } from './CoutDeRevient';
 import { LigneDeCout } from './LigneDeCout';
@@ -24,26 +22,18 @@ const pointageFixture = (anomalies: readonly AnomalieDePointage[]): PointageDeCo
     poste: undefined,
     categorie: 'TRAVAIL',
     periode: new PeriodeDeTravail(new InstantDeTravail('2026-05-11T09:00:00Z'), new InstantDeTravail('2026-05-11T11:00:00Z')),
-    duree: TotalDeTemps.complet(new DureePassee('PT2H')),
+    duree: new DureePassee('PT2H'),
     coutHoraire: undefined,
     tauxHoraire: undefined,
-    cout: new Cout(TotalDeMontant.complet(new Montant(0)), TotalDeMontant.complet(new Montant(0)), TotalDeMontant.complet(new Montant(0))),
+    cout: new Cout(new Montant(0), new Montant(0), new Montant(0)),
     parts: [],
   });
 
 const ligneFixture = (nature: string, pointages: readonly PointageDeCout[] = []): LigneDeCout =>
   new LigneDeCout({
     nature: new NatureDOperation(nature),
-    temps: new TempsPasse(
-      TotalDeTemps.complet(new DureePassee('PT2H')),
-      TotalDeTemps.complet(new DureePassee('PT0S')),
-      TotalDeTemps.complet(new DureePassee('PT2H')),
-    ),
-    cout: new Cout(
-      TotalDeMontant.complet(new Montant(90)),
-      TotalDeMontant.complet(new Montant(40)),
-      TotalDeMontant.complet(new Montant(130)),
-    ),
+    temps: new TempsPasse(new DureePassee('PT2H'), new DureePassee('PT0S'), new DureePassee('PT2H')),
+    cout: new Cout(new Montant(90), new Montant(40), new Montant(130)),
     pointages,
   });
 
@@ -52,16 +42,8 @@ const rapportFixture = (lignes: readonly LigneDeCout[], enCours = 0): CoutDeRevi
     lignes,
     evaluation: new InstantDeTravail('2026-05-11T12:00:00Z'),
     activitesEnCours: new ActivitesEnCoursExclues(enCours),
-    temps: new TempsPasse(
-      TotalDeTemps.complet(new DureePassee('PT4H')),
-      TotalDeTemps.complet(new DureePassee('PT0S')),
-      TotalDeTemps.complet(new DureePassee('PT4H')),
-    ),
-    cout: new Cout(
-      TotalDeMontant.complet(new Montant(180)),
-      TotalDeMontant.complet(new Montant(80)),
-      TotalDeMontant.complet(new Montant(260)),
-    ),
+    temps: new TempsPasse(new DureePassee('PT4H'), new DureePassee('PT0S'), new DureePassee('PT4H')),
+    cout: new Cout(new Montant(180), new Montant(80), new Montant(260)),
   });
 
 describe('CoutDeRevient', () => {
@@ -74,7 +56,7 @@ describe('CoutDeRevient', () => {
 
   it('should name the lines whose clockings carry an anomaly, in the order the server sent them', () => {
     const rapport = rapportFixture([
-      ligneFixture('Tournage', [pointageFixture(['PARTAGE_INCONNU'])]),
+      ligneFixture('Tournage', [pointageFixture(['FIN_AUTOMATIQUE'])]),
       ligneFixture('Fraisage', [pointageFixture([])]),
       ligneFixture('Polissage', [pointageFixture(['FIN_AUTOMATIQUE'])]),
     ]);
@@ -89,10 +71,7 @@ describe('CoutDeRevient', () => {
   it('should carry the total the server computed, never the sum of its lines', () => {
     const rapport = rapportFixture([ligneFixture('Fraisage'), ligneFixture('Tournage')]);
 
-    expect([rapport.temps.total.snapshot(), rapport.cout.total.snapshot()]).toEqual([
-      { complete: true, valeur: new DureePassee('PT4H') },
-      { complete: true, valeur: new Montant(260) },
-    ]);
+    expect([rapport.temps.total, rapport.cout.total]).toEqual([new DureePassee('PT4H'), new Montant(260)]);
   });
 
   it('should keep its lines in the order the server sent them', () => {

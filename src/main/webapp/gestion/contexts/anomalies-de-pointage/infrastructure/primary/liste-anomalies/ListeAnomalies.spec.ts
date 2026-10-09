@@ -6,7 +6,7 @@ import { dataSelector } from '@test/utils/DataSelector';
 import { BehaviorSubject, EMPTY } from 'rxjs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
-import { FiltreAnomalies, LectureDossier, LigneConflit, LigneFinAutomatique, PageAnomalies } from '../../../domain/dossier/DossierAnomalie';
+import { FiltreAnomalies, LectureDossier, LigneFinAutomatique, PageAnomalies } from '../../../domain/dossier/DossierAnomalie';
 import { ElementAnomalie } from '../../../domain/dossier/ElementAnomalie';
 import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
 import { OperateurAnomalie } from '../../../domain/dossier/OperateurAnomalie';
@@ -16,7 +16,7 @@ import { SuiviAnomalieId } from '../../../domain/dossier/SuiviAnomalieId';
 import { ListeAnomalies } from './ListeAnomalies';
 
 class AnomaliesReadFixture extends AnomaliesReadPort {
-  page: PageAnomalies = { nature: 'CONFLIT', lignes: [], total: 0, complete: true };
+  page: PageAnomalies = { lignes: [], total: 0 };
   failure: Error | undefined;
   operateursLus: readonly OperateurAnomalie[] = [
     { id: new OperateurAnomalieId('op-camille'), nom: 'Camille Martin', code: '007' },
@@ -87,7 +87,7 @@ class AnomaliesReadFixture extends AnomaliesReadPort {
   }
 
   override read(): Promise<LectureDossier> {
-    return Promise.resolve({ kind: 'INTROUVABLE', journal: [] });
+    return Promise.resolve({ kind: 'INTROUVABLE' });
   }
 
   override operateurs(): Promise<readonly OperateurAnomalie[]> {
@@ -126,17 +126,6 @@ class RouterFixture {
     return this.navigationFailure === undefined ? Promise.resolve(this.navigationResult) : Promise.reject(this.navigationFailure);
   }
 }
-
-const ligneFixture = (): LigneConflit => ({
-  adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-camille') },
-  element: new ElementAnomalieId('moule-42'),
-  designation: 'M-042',
-  operateur: 'Camille Martin',
-  poste: 'Fraiseuse',
-  date: new Date(2026, 9, 2, 9, 41).toISOString(),
-  explication: 'La fin vise une activité déjà terminée.',
-  nombrePointages: 3,
-});
 
 const finAutomatiqueFixture = (): LigneFinAutomatique => ({
   adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-camille') },
@@ -184,94 +173,22 @@ describe('Anomalies list', () => {
     expect(headingText()).toBe('Anomalies de pointage');
   });
 
-  it('should explain that the complete global list has no conflicts', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
+  it('should explain that the complete global list has no automatic end', async () => {
+    givenAnAddress({});
     await whenTheListIsRendered();
 
-    expect(textOf('anomalies-vide')).toBe('Aucun conflit à résoudre.');
+    expect(textOf('anomalies-vide')).toBe('Aucune fin automatique à traiter.');
     expect(present('anomalies-table')).toBe(false);
   });
 
-  it('should display only conflict consultation controls', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
-    await whenTheListIsRendered();
-
-    expect(present('anomalies-demo')).toBe(false);
-    expect(textOf('anomalies-vide')).toContain('Aucun conflit');
-  });
-
-  it('should present an unresolved operator and workstation without any identity in the conflict list', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
-    portFixture.page = {
-      nature: 'CONFLIT',
-      lignes: [{ ...ligneFixture(), operateur: '', poste: '', posteId: 'poste-supprime' }],
-      total: 1,
-      complete: true,
-    };
-
-    await whenTheListIsRendered();
-
-    expect(textOf('conflit-ligne')).toContain('Opérateur non résolu');
-    expect(textOf('conflit-ligne')).toContain('Poste non résolu');
-    expect(textOf('conflit-ligne')).not.toContain('poste-supprime');
-  });
-
-  it('should distinguish work clocked without a workstation from an unresolved workstation reference', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
-    portFixture.page = { nature: 'CONFLIT', lignes: [{ ...ligneFixture(), poste: '' }], total: 1, complete: true };
-
-    await whenTheListIsRendered();
-
-    expect(textOf('conflit-ligne')).toContain('Sans poste');
-    expect(textOf('conflit-ligne')).not.toContain('Poste non résolu');
-  });
-
-  it('should identify a conflicting sequence when the API supplies no presentation explanation', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
-    portFixture.page = { nature: 'CONFLIT', lignes: [{ ...ligneFixture(), explication: '' }], total: 1, complete: true };
-
-    await whenTheListIsRendered();
-
-    expect(textOf('conflit-ligne')).toContain('Séquence en conflit');
-  });
-
-  it('should show the date of a conflict as its long day and local time without the current year', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
-    portFixture.page = {
-      nature: 'CONFLIT',
-      lignes: [{ ...ligneFixture(), date: new Date(2026, 9, 2, 9, 41, 22).toISOString() }],
-      total: 1,
-      complete: true,
-    };
-
-    await whenTheListIsRendered();
-
-    expect(textOf('conflit-ligne')).toContain('vendredi 2 octobre à 09:41');
-    expect(textOf('conflit-ligne')).not.toContain('09:41:22');
-  });
-
-  it('should add the year to the date of a conflict that did not start during the current year', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
-    portFixture.page = {
-      nature: 'CONFLIT',
-      lignes: [{ ...ligneFixture(), date: new Date(2025, 9, 2, 9, 41).toISOString() }],
-      total: 1,
-      complete: true,
-    };
-
-    await whenTheListIsRendered();
-
-    expect(textOf('conflit-ligne')).toContain('jeudi 2 octobre 2025 à 09:41');
-  });
-
   it('should distinguish no matching conflicts from an empty global list', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille', element: 'moule-42', page: '2' });
+    givenAnAddress({ operateur: 'op-camille', element: 'moule-42', page: '2' });
 
     await whenTheListIsRendered();
 
-    expect(textOf('anomalies-vide-filtre')).toContain('Aucun conflit ne correspond');
+    expect(textOf('anomalies-vide-filtre')).toContain('Aucune fin automatique ne correspond');
     expect(present('anomalies-vide')).toBe(false);
-    expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: 'op-camille', element: 'moule-42', page: 2 }]);
+    expect(portFixture.demandes).toEqual([{ operateur: 'op-camille', element: 'moule-42', page: 2 }]);
     expect(textOf('anomalies-filtre-operateur')).toBe('Camille Martin · 007');
     expect(textOf('anomalies-filtre-element')).toBe('Moule M-042 · M-042');
   });
@@ -283,7 +200,7 @@ describe('Anomalies list', () => {
   });
 
   it('should offer every operator by name, after an entry for all of them', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
+    givenAnAddress({});
     await whenTheListIsRendered();
 
     await whenOpeningTheOperatorFilter();
@@ -293,7 +210,7 @@ describe('Anomalies list', () => {
   });
 
   it('should never show the identifier of an operator among the proposals', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
+    givenAnAddress({});
     await whenTheListIsRendered();
 
     await whenOpeningTheOperatorFilter();
@@ -302,7 +219,7 @@ describe('Anomalies list', () => {
   });
 
   it('should name the operator held by the address and never show its identifier', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    givenAnAddress({ operateur: 'op-camille' });
 
     await whenTheListIsRendered();
 
@@ -311,17 +228,17 @@ describe('Anomalies list', () => {
   });
 
   it('should hold the identifier of the chosen operator in the address once the filters are applied', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', page: '3' });
+    givenAnAddress({ page: '3' });
     await whenTheListIsRendered();
 
     await whenChoosingTheOperator('Jean Dupont');
     await whenFiltering();
 
-    expect(routerFixture.navigations).toEqual([{ nature: 'FIN_AUTOMATIQUE', operateur: 'op-jean', element: '', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ operateur: 'op-jean', element: '', page: 1 }]);
   });
 
   it('should name the chosen operator before the filters are applied', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+    givenAnAddress({});
     await whenTheListIsRendered();
 
     await whenChoosingTheOperator('Jean Dupont');
@@ -331,26 +248,26 @@ describe('Anomalies list', () => {
   });
 
   it('should drop the operator from the address when the manager chooses all the operators', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille', page: '2' });
+    givenAnAddress({ operateur: 'op-camille', page: '2' });
     await whenTheListIsRendered();
 
     await whenChoosingTheOperator('Tous les opérateurs');
     await whenFiltering();
 
-    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: '', element: '', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ operateur: '', element: '', page: 1 }]);
   });
 
   it('should keep the operator held by the address when the filters are applied without choosing another', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    givenAnAddress({ operateur: 'op-camille' });
     await whenTheListIsRendered();
 
     await whenFiltering();
 
-    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: 'op-camille', element: '', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ operateur: 'op-camille', element: '', page: 1 }]);
   });
 
   it('should name an operator of the address that the operators do not contain as unresolved, without its identifier', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-supprime' });
+    givenAnAddress({ operateur: 'op-supprime' });
 
     await whenTheListIsRendered();
 
@@ -359,27 +276,27 @@ describe('Anomalies list', () => {
   });
 
   it('should still list with an operator of the address that the operators do not contain', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-supprime' });
+    givenAnAddress({ operateur: 'op-supprime' });
 
     await whenTheListIsRendered();
 
-    expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: 'op-supprime', element: '', page: 1 }]);
+    expect(portFixture.demandes).toEqual([{ operateur: 'op-supprime', element: '', page: 1 }]);
   });
 
   it('should keep an operator of the address that the operators do not contain when the filters are applied', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-supprime' });
+    givenAnAddress({ operateur: 'op-supprime' });
     await whenTheListIsRendered();
 
     await whenFiltering();
 
-    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: 'op-supprime', element: '', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ operateur: 'op-supprime', element: '', page: 1 }]);
   });
 
   it('should follow the address when the operator it holds changes', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    givenAnAddress({ operateur: 'op-camille' });
     await whenTheListIsRendered();
 
-    await whenTheAddressBecomes({ nature: 'CONFLIT', operateur: 'op-jean' });
+    await whenTheAddressBecomes({ operateur: 'op-jean' });
 
     expect(textOf('anomalies-filtre-operateur')).toBe('Jean Dupont');
   });
@@ -404,7 +321,7 @@ describe('Anomalies list', () => {
   });
 
   it('should tell the manager that the operators are unavailable, keeping the operator filter disabled', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    givenAnAddress({ operateur: 'op-camille' });
     givenTheOperatorsAreUnavailable();
 
     await whenTheListIsRendered();
@@ -414,7 +331,7 @@ describe('Anomalies list', () => {
   });
 
   it('should keep the operator held by the address without calling it unresolved while the operators are unavailable', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    givenAnAddress({ operateur: 'op-camille' });
     givenTheOperatorsAreUnavailable();
 
     await whenTheListIsRendered();
@@ -424,25 +341,25 @@ describe('Anomalies list', () => {
   });
 
   it('should keep the list usable when the operators are unavailable', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    givenAnAddress({ operateur: 'op-camille' });
     givenTheOperatorsAreUnavailable();
     givenAConflict();
 
     await whenTheListIsRendered();
 
-    expect(textOf('conflit-ligne')).toContain('Camille Martin');
+    expect(textOf('fin-automatique-ligne')).toContain('Camille Martin');
     expect(present('anomalies-erreur')).toBe(false);
     expect(button('anomalies-filtrer').disabled).toBe(false);
   });
 
   it('should keep the operator held by the address when the filters are applied while the operators are unavailable', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille' });
+    givenAnAddress({ operateur: 'op-camille' });
     givenTheOperatorsAreUnavailable();
     await whenTheListIsRendered();
 
     await whenFiltering();
 
-    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: 'op-camille', element: '', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ operateur: 'op-camille', element: '', page: 1 }]);
   });
 
   it('should read the operators again and enable the operator filter when the manager retries', async () => {
@@ -504,7 +421,7 @@ describe('Anomalies list', () => {
   });
 
   it('should offer every element by its designation, after an entry for all of them', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
+    givenAnAddress({});
     await whenTheListIsRendered();
 
     await whenOpeningTheElementFilter();
@@ -514,7 +431,7 @@ describe('Anomalies list', () => {
   });
 
   it('should never show the identifier of an element among the proposals', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
+    givenAnAddress({});
     await whenTheListIsRendered();
 
     await whenOpeningTheElementFilter();
@@ -523,7 +440,7 @@ describe('Anomalies list', () => {
   });
 
   it('should name the element held by the address and never show its identifier', async () => {
-    givenAnAddress({ nature: 'CONFLIT', element: 'of-m24-0655' });
+    givenAnAddress({ element: 'of-m24-0655' });
 
     await whenTheListIsRendered();
 
@@ -532,17 +449,17 @@ describe('Anomalies list', () => {
   });
 
   it('should hold the identifier of the chosen element in the address once the filters are applied', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', page: '3' });
+    givenAnAddress({ page: '3' });
     await whenTheListIsRendered();
 
     await whenChoosingTheElement('Moule M-042 · M-042');
     await whenFiltering();
 
-    expect(routerFixture.navigations).toEqual([{ nature: 'FIN_AUTOMATIQUE', operateur: '', element: 'moule-42', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ operateur: '', element: 'moule-42', page: 1 }]);
   });
 
   it('should name the chosen element before the filters are applied', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+    givenAnAddress({});
     await whenTheListIsRendered();
 
     await whenChoosingTheElement('OF M24-0655');
@@ -552,26 +469,26 @@ describe('Anomalies list', () => {
   });
 
   it('should drop the element from the address when the manager chooses all the elements', async () => {
-    givenAnAddress({ nature: 'CONFLIT', element: 'moule-42', page: '2' });
+    givenAnAddress({ element: 'moule-42', page: '2' });
     await whenTheListIsRendered();
 
     await whenChoosingTheElement('Tous les éléments');
     await whenFiltering();
 
-    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: '', element: '', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ operateur: '', element: '', page: 1 }]);
   });
 
   it('should keep the element held by the address when the filters are applied without choosing another', async () => {
-    givenAnAddress({ nature: 'CONFLIT', element: 'moule-42' });
+    givenAnAddress({ element: 'moule-42' });
     await whenTheListIsRendered();
 
     await whenFiltering();
 
-    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: '', element: 'moule-42', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ operateur: '', element: 'moule-42', page: 1 }]);
   });
 
   it('should name an element of the address that the elements do not contain as unresolved, without its identifier', async () => {
-    givenAnAddress({ nature: 'CONFLIT', element: 'element-supprime' });
+    givenAnAddress({ element: 'element-supprime' });
 
     await whenTheListIsRendered();
 
@@ -580,27 +497,27 @@ describe('Anomalies list', () => {
   });
 
   it('should still list with an element of the address that the elements do not contain', async () => {
-    givenAnAddress({ nature: 'CONFLIT', element: 'element-supprime' });
+    givenAnAddress({ element: 'element-supprime' });
 
     await whenTheListIsRendered();
 
-    expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: '', element: 'element-supprime', page: 1 }]);
+    expect(portFixture.demandes).toEqual([{ operateur: '', element: 'element-supprime', page: 1 }]);
   });
 
   it('should keep an element of the address that the elements do not contain when the filters are applied', async () => {
-    givenAnAddress({ nature: 'CONFLIT', element: 'element-supprime' });
+    givenAnAddress({ element: 'element-supprime' });
     await whenTheListIsRendered();
 
     await whenFiltering();
 
-    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: '', element: 'element-supprime', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ operateur: '', element: 'element-supprime', page: 1 }]);
   });
 
   it('should follow the address when the element it holds changes', async () => {
-    givenAnAddress({ nature: 'CONFLIT', element: 'moule-42' });
+    givenAnAddress({ element: 'moule-42' });
     await whenTheListIsRendered();
 
-    await whenTheAddressBecomes({ nature: 'CONFLIT', element: 'of-m24-0655' });
+    await whenTheAddressBecomes({ element: 'of-m24-0655' });
 
     expect(textOf('anomalies-filtre-element')).toBe('OF M24-0655');
   });
@@ -629,7 +546,7 @@ describe('Anomalies list', () => {
   });
 
   it('should tell the manager that the elements are unavailable, keeping the element filter disabled and the operator filter usable', async () => {
-    givenAnAddress({ nature: 'CONFLIT', element: 'moule-42' });
+    givenAnAddress({ element: 'moule-42' });
     portFixture.elementsFailure = new Error('Éléments indisponibles');
 
     await whenTheListIsRendered();
@@ -641,16 +558,16 @@ describe('Anomalies list', () => {
   });
 
   it('should keep the list usable and the element held by the address when the elements are unavailable', async () => {
-    givenAnAddress({ nature: 'CONFLIT', element: 'moule-42' });
+    givenAnAddress({ element: 'moule-42' });
     portFixture.elementsFailure = new Error('Éléments indisponibles');
     givenAConflict();
     await whenTheListIsRendered();
 
     await whenFiltering();
 
-    expect(textOf('conflit-ligne')).toContain('Camille Martin');
+    expect(textOf('fin-automatique-ligne')).toContain('Camille Martin');
     expect(present('anomalies-erreur')).toBe(false);
-    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: '', element: 'moule-42', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ operateur: '', element: 'moule-42', page: 1 }]);
   });
 
   it('should leave the element filter usable when only the operators are unavailable', async () => {
@@ -678,7 +595,7 @@ describe('Anomalies list', () => {
   });
 
   it('should keep the element held by the address without calling it unresolved while the elements are unavailable', async () => {
-    givenAnAddress({ nature: 'CONFLIT', element: 'moule-42' });
+    givenAnAddress({ element: 'moule-42' });
     portFixture.elementsFailure = new Error('Éléments indisponibles');
 
     await whenTheListIsRendered();
@@ -722,7 +639,7 @@ describe('Anomalies list', () => {
   };
 
   const givenAConflict = (): void => {
-    portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 1, complete: true };
+    portFixture.page = { lignes: [finAutomatiqueFixture()], total: 1 };
   };
 
   const whenTheOperatorsAreRequested = async (): Promise<void> => {
@@ -790,18 +707,18 @@ describe('Anomalies list', () => {
   };
 
   it('should request the submitted filters on the first page', async () => {
-    givenAnAddress({ nature: 'CONFLIT', page: '2' });
+    givenAnAddress({ page: '2' });
     await whenTheListIsRendered();
 
     await whenChoosingTheOperator('Camille Martin · 007');
     await whenChoosingTheElement('Moule M-042 · M-042');
     await whenFiltering();
 
-    expect(routerFixture.navigations).toEqual([{ nature: 'CONFLIT', operateur: 'op-camille', element: 'moule-42', page: 1 }]);
+    expect(routerFixture.navigations).toEqual([{ operateur: 'op-camille', element: 'moule-42', page: 1 }]);
   });
 
   it('should explain an acquisition failure without showing an empty list', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
+    givenAnAddress({});
     portFixture.failure = new Error('Acquisition indisponible');
 
     await whenTheListIsRendered();
@@ -812,41 +729,30 @@ describe('Anomalies list', () => {
   });
 
   it('should reacquire the current filters when the operator retries a failed read', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille', page: '2' });
+    givenAnAddress({ operateur: 'op-camille', page: '2' });
     portFixture.failure = new Error('Acquisition indisponible');
     await whenTheListIsRendered();
 
     await whenTheReadingRecovers();
 
     expect(present('anomalies-erreur')).toBe(false);
-    expect(textOf('anomalies-vide-filtre')).toContain('Aucun conflit ne correspond');
+    expect(textOf('anomalies-vide-filtre')).toContain('Aucune fin automatique ne correspond');
     expect(portFixture.demandes).toEqual([
-      { nature: 'CONFLIT', operateur: 'op-camille', element: '', page: 2 },
-      { nature: 'CONFLIT', operateur: 'op-camille', element: '', page: 2 },
+      { operateur: 'op-camille', element: '', page: 2 },
+      { operateur: 'op-camille', element: '', page: 2 },
     ]);
   });
 
-  it('should never describe an empty partial acquisition as a complete global list', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
-    portFixture.page = { nature: 'CONFLIT', lignes: [], total: 0, complete: false };
-
-    await whenTheListIsRendered();
-
-    expect(textOf('anomalies-partiel')).toContain('Liste partielle');
-    expect(present('anomalies-vide')).toBe(false);
-    expect(present('anomalies-vide-filtre')).toBe(false);
-  });
-
   it('should show the second and last acquired page with only the previous page enabled', async () => {
-    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille', page: '2' });
-    portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 6, complete: true };
+    givenAnAddress({ operateur: 'op-camille', page: '2' });
+    portFixture.page = { lignes: [finAutomatiqueFixture()], total: 6 };
 
     await whenTheListIsRendered();
 
     expect(textOf('anomalies-pagination')).toContain('Page 2 sur 2');
     expect(button('anomalies-page-precedente').disabled).toBe(false);
     expect(button('anomalies-page-suivante').disabled).toBe(true);
-    expect(textOf('conflit-ligne')).toContain('Camille Martin');
+    expect(textOf('fin-automatique-ligne')).toContain('Camille Martin');
   });
 
   it('should refuse page zero without acquiring a misleading list', async () => {
@@ -868,30 +774,27 @@ describe('Anomalies list', () => {
     expect(portFixture.demandes).toEqual([]);
   });
 
-  it.each([{ nature: 'CONFLITS' }, { page: '0' }, { page: '1.5' }])(
-    'should not read the operators nor the elements for the refused address %j',
-    async address => {
-      givenAnAddress(address);
+  it.each([{ page: '0' }, { page: '1.5' }])('should not read the operators nor the elements for the refused address %j', async address => {
+    givenAnAddress(address);
 
-      await whenTheListIsRendered();
-
-      expect(portFixture.operateursLectures).toBe(0);
-      expect(portFixture.elementsLectures).toBe(0);
-    },
-  );
-
-  it('should read the operators and the elements once the refused address becomes valid', async () => {
-    givenAnAddress({ nature: 'CONFLITS' });
     await whenTheListIsRendered();
 
-    await whenTheAddressBecomes({ nature: 'CONFLIT' });
+    expect(portFixture.operateursLectures).toBe(0);
+    expect(portFixture.elementsLectures).toBe(0);
+  });
+
+  it('should read the operators and the elements once the refused address becomes valid', async () => {
+    givenAnAddress({ page: '0' });
+    await whenTheListIsRendered();
+
+    await whenTheAddressBecomes({});
 
     expect(portFixture.operateursLectures).toBe(1);
     expect(portFixture.elementsLectures).toBe(1);
   });
 
   it('should keep the operator held by a refused address without calling it unresolved', async () => {
-    givenAnAddress({ nature: 'CONFLITS', operateur: 'op-camille' });
+    givenAnAddress({ page: '0', operateur: 'op-camille' });
 
     await whenTheListIsRendered();
 
@@ -900,8 +803,8 @@ describe('Anomalies list', () => {
   });
 
   it('should distinguish a page emptied by resolutions from a list with no remaining conflicts', async () => {
-    givenAnAddress({ nature: 'CONFLIT', page: '3' });
-    portFixture.page = { nature: 'CONFLIT', lignes: [], total: 6, complete: true };
+    givenAnAddress({ page: '3' });
+    portFixture.page = { lignes: [], total: 6 };
 
     await whenTheListIsRendered();
 
@@ -911,34 +814,34 @@ describe('Anomalies list', () => {
   });
 
   it('should retain the acquired list when filter navigation is cancelled', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
-    portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 1, complete: true };
+    givenAnAddress({});
+    portFixture.page = { lignes: [finAutomatiqueFixture()], total: 1 };
     routerFixture.navigationResult = false;
     await whenTheListIsRendered();
 
     await whenFiltering();
 
     expect(textOf('anomalies-navigation-erreur')).toContain('Impossible d’appliquer les filtres');
-    expect(textOf('conflit-ligne')).toContain('Camille Martin');
+    expect(textOf('fin-automatique-ligne')).toContain('Camille Martin');
     expect(portFixture.demandes).toHaveLength(1);
   });
 
   it('should report a failed filter navigation once and retain the acquired list', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
+    givenAnAddress({});
     const failure = new Error('Navigation indisponible');
-    portFixture.page = { nature: 'CONFLIT', lignes: [ligneFixture()], total: 1, complete: true };
+    portFixture.page = { lignes: [finAutomatiqueFixture()], total: 1 };
     routerFixture.navigationFailure = failure;
     await whenTheListIsRendered();
 
     await whenFiltering();
 
     expect(textOf('anomalies-navigation-erreur')).toContain('Impossible d’appliquer les filtres');
-    expect(textOf('conflit-ligne')).toContain('Camille Martin');
+    expect(textOf('fin-automatique-ligne')).toContain('Camille Martin');
     expect(errorFixture.errors).toEqual([failure]);
   });
 
   it('should distinguish a pending acquisition from a complete empty list', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
+    givenAnAddress({});
     const release = portFixture.holdReading();
     await whenTheReadingStarts();
 
@@ -946,80 +849,18 @@ describe('Anomalies list', () => {
 
     expect(pending).toEqual({ loading: true, empty: false });
     expect(present('anomalies-chargement')).toBe(false);
-    expect(textOf('anomalies-vide')).toContain('Aucun conflit');
+    expect(textOf('anomalies-vide')).toContain('Aucune fin automatique');
   });
 
-  it.each([
-    { nature: undefined, attendu: 'Chargement des fins automatiques…' },
-    { nature: 'CONFLIT', attendu: 'Chargement des conflits…' },
-    { nature: 'FIN_AUTOMATIQUE', attendu: 'Chargement des fins automatiques…' },
-  ])('should word the pending acquisition of the nature $nature as "$attendu"', async ({ nature, attendu }) => {
-    givenAnAddress(nature === undefined ? {} : { nature });
-    const release = portFixture.holdReading();
-    await whenTheReadingStarts();
-
-    const loading = textOf('anomalies-chargement');
-    await whenTheReadingCompletes(release);
-
-    expect(loading).toBe(attendu);
-  });
-
-  it('should acquire the automatic ends and mark their tab as the current one when the address names no nature', async () => {
+  it('should acquire the automatic ends of the first page when the address names nothing', async () => {
     await whenTheListIsRendered();
 
-    expect(portFixture.demandes).toEqual([{ nature: 'FIN_AUTOMATIQUE', operateur: '', element: '', page: 1 }]);
-    expect(currentTab()).toBe('anomalies-onglet-fins-automatiques');
-  });
-
-  it('should acquire the conflicts and mark their tab as the current one when the address names them', async () => {
-    givenAnAddress({ nature: 'CONFLIT' });
-
-    await whenTheListIsRendered();
-
-    expect(portFixture.demandes).toEqual([{ nature: 'CONFLIT', operateur: '', element: '', page: 1 }]);
-    expect(currentTab()).toBe('anomalies-onglet-conflits');
-  });
-
-  it('should offer the automatic ends tab before the conflicts tab', async () => {
-    await whenTheListIsRendered();
-
-    expect(tabOrder()).toEqual(['anomalies-onglet-fins-automatiques', 'anomalies-onglet-conflits']);
-  });
-
-  it('should acquire the automatic ends and mark their tab as the current one when the address names them', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
-
-    await whenTheListIsRendered();
-
-    expect(portFixture.demandes).toEqual([{ nature: 'FIN_AUTOMATIQUE', operateur: '', element: '', page: 1 }]);
-    expect(currentTab()).toBe('anomalies-onglet-fins-automatiques');
-  });
-
-  it('should refuse an unknown nature without acquiring a list and keep both tabs reachable', async () => {
-    givenAnAddress({ nature: 'CONFLITS' });
-
-    await whenTheListIsRendered();
-
-    expect(textOf('anomalies-adresse-invalide')).toContain('Nature d’anomalie inconnue');
-    expect(portFixture.demandes).toEqual([]);
-    expect(currentTab()).toBe('');
-    expect(tabs()).toHaveLength(2);
-  });
-
-  it('should keep the nature when the filters are submitted from the automatic ends tab', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', page: '2' });
-    await whenTheListIsRendered();
-
-    await whenChoosingTheOperator('Jean Dupont');
-    await whenChoosingTheElement('OF M24-0655');
-    await whenFiltering();
-
-    expect(routerFixture.navigations).toEqual([{ nature: 'FIN_AUTOMATIQUE', operateur: 'op-jean', element: 'of-m24-0655', page: 1 }]);
+    expect(portFixture.demandes).toEqual([{ operateur: '', element: '', page: 1 }]);
   });
 
   it('should show an automatic end with its element, operator, workstation and the received start and automatic end', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
-    portFixture.page = { nature: 'FIN_AUTOMATIQUE', lignes: [finAutomatiqueFixture()], total: 1, complete: true };
+    givenAnAddress({});
+    portFixture.page = { lignes: [finAutomatiqueFixture()], total: 1 };
 
     await whenTheListIsRendered();
 
@@ -1027,13 +868,11 @@ describe('Anomalies list', () => {
     expect(textOf('fin-automatique-ligne')).toContain('Camille Martin');
     expect(textOf('fin-automatique-ligne')).toContain('Fraiseuse 1');
     expect(textOf('fin-automatique-ligne')).toContain('Début jeu. 1 à 09:26 · fin automatique à 22:26');
-    expect(present('conflit-ligne')).toBe(false);
   });
 
   it('should name the day of an automatic end that falls after the start day', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+    givenAnAddress({});
     portFixture.page = {
-      nature: 'FIN_AUTOMATIQUE',
       lignes: [
         {
           ...finAutomatiqueFixture(),
@@ -1042,7 +881,6 @@ describe('Anomalies list', () => {
         },
       ],
       total: 1,
-      complete: true,
     };
 
     await whenTheListIsRendered();
@@ -1051,15 +889,13 @@ describe('Anomalies list', () => {
   });
 
   it('should present unresolved identities without any identifier and work without workstation in the automatic ends', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+    givenAnAddress({});
     portFixture.page = {
-      nature: 'FIN_AUTOMATIQUE',
       lignes: [
         { ...finAutomatiqueFixture(), operateur: '', poste: '', posteId: 'poste-supprime' },
         { ...finAutomatiqueFixture(), poste: '' },
       ],
       total: 2,
-      complete: true,
     };
 
     await whenTheListIsRendered();
@@ -1071,7 +907,7 @@ describe('Anomalies list', () => {
   });
 
   it('should explain that no automatic end remains', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+    givenAnAddress({});
 
     await whenTheListIsRendered();
 
@@ -1079,7 +915,7 @@ describe('Anomalies list', () => {
   });
 
   it('should explain that no automatic end matches the filters', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', operateur: 'op-camille' });
+    givenAnAddress({ operateur: 'op-camille' });
 
     await whenTheListIsRendered();
 
@@ -1087,25 +923,16 @@ describe('Anomalies list', () => {
   });
 
   it('should word the emptied page of the automatic ends', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', page: '3' });
-    portFixture.page = { nature: 'FIN_AUTOMATIQUE', lignes: [], total: 6, complete: true };
+    givenAnAddress({ page: '3' });
+    portFixture.page = { lignes: [], total: 6 };
 
     await whenTheListIsRendered();
 
     expect(textOf('anomalies-page-vide')).toContain('D’autres fins automatiques restent dans la sélection.');
   });
 
-  it('should word the partial acquisition of the automatic ends', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
-    portFixture.page = { nature: 'FIN_AUTOMATIQUE', lignes: [], total: 0, complete: false };
-
-    await whenTheListIsRendered();
-
-    expect(textOf('anomalies-partiel')).toContain('toutes les fins automatiques');
-  });
-
   it('should word the acquisition failure of the automatic ends', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE' });
+    givenAnAddress({});
     portFixture.failure = new Error('Acquisition indisponible');
 
     await whenTheListIsRendered();
@@ -1114,8 +941,8 @@ describe('Anomalies list', () => {
   });
 
   it('should paginate the automatic ends with their own wording', async () => {
-    givenAnAddress({ nature: 'FIN_AUTOMATIQUE', page: '2' });
-    portFixture.page = { nature: 'FIN_AUTOMATIQUE', lignes: [finAutomatiqueFixture()], total: 6, complete: true };
+    givenAnAddress({ page: '2' });
+    portFixture.page = { lignes: [finAutomatiqueFixture()], total: 6 };
 
     await whenTheListIsRendered();
 
@@ -1209,12 +1036,6 @@ describe('Anomalies list', () => {
   const texts = (selector: string): string[] =>
     Array.from(root().querySelectorAll(dataSelector(selector)), element => element.textContent.trim());
   const labelOf = (selector: string): string | null => requiredElement(selector).getAttribute('aria-label');
-  const tabs = (): HTMLElement[] => Array.from(requiredElement('anomalies-onglets').querySelectorAll<HTMLElement>('a'));
-  const tabOrder = (): string[] => tabs().map(tab => tab.getAttribute('data-selector') ?? '');
-  const currentTab = (): string =>
-    tabs()
-      .find(tab => tab.getAttribute('aria-current') === 'page')
-      ?.getAttribute('data-selector') ?? '';
   const present = (selector: string): boolean => root().querySelector(dataSelector(selector)) !== null;
   const textOf = (selector: string): string => root().querySelector(dataSelector(selector))?.textContent.trim() ?? '';
 });

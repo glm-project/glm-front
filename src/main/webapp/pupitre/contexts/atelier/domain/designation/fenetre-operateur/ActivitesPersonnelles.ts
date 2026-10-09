@@ -1,5 +1,4 @@
-import { ActiviteDuPupitre, SuiviDuPupitre, TypeDePointage } from '../../journal-du-pupitre/JournalDuPupitre';
-import { CibleDePointage } from './DecisionDePointage';
+import { ActiviteDuPupitre, SuiviDuPupitre } from '../../journal-du-pupitre/JournalDuPupitre';
 import { OperateurDesigne } from './OperateurDesigne';
 import { LotDeTransitions, TransitionDePointage } from './TransitionDePointage';
 import { ActiviteDePointage } from './VueDePointage';
@@ -46,29 +45,11 @@ export class ActivitesPersonnelles {
     };
   }
 
-  decide(cible: CibleDePointage): DecisionDesActivites {
+  decide(): DecisionDesActivites {
     if (this.etat.kind === 'INACTIF') return this.etat;
-    const activites = [this.etat.premiere, ...this.etat.suivantes];
-    if (cible === 'PRINCIPALE') return { kind: 'ACTIF', transitions: this.transitionAll('FIN', this.etat) };
-    const premiereNonConforme = activites.find(activite => activite.categorie === 'NON_CONFORMITE');
-    if (premiereNonConforme !== undefined) {
-      return {
-        kind: 'ACTIF',
-        transitions: {
-          premiere: this.transition('DEBUT', premiereNonConforme),
-          suivantes: activites
-            .filter(activite => activite !== premiereNonConforme && activite.categorie === 'NON_CONFORMITE')
-            .map(activite => this.transition('DEBUT', activite)),
-        },
-      };
-    }
-    return { kind: 'ACTIF', transitions: this.transitionAll('NON_CONFORMITE', this.etat) };
-  }
-
-  private transitionAll(type: TypeDePointage, etat: Extract<EtatDesActivites, { readonly kind: 'ACTIF' }>): LotDeTransitions {
     return {
-      premiere: this.transition(type, etat.premiere),
-      suivantes: etat.suivantes.map(activite => this.transition(type, activite)),
+      kind: 'ACTIF',
+      transitions: { premiere: this.fin(this.etat.premiere), suivantes: this.etat.suivantes.map(activite => this.fin(activite)) },
     };
   }
 
@@ -76,9 +57,7 @@ export class ActivitesPersonnelles {
     return activites.some(activite => activite.categorie === 'NON_CONFORMITE');
   }
 
-  private transition(type: TypeDePointage, activite: ActiviteDuPupitre): TransitionDePointage {
-    const cible = activite.ouverture;
-    const poste = activite.posteId === undefined ? {} : { posteId: activite.posteId };
-    return type === 'FIN' ? { ...poste, intention: 'FIN', type, cible } : { ...poste, intention: 'TRANSITION', type, cible };
+  private fin(activite: ActiviteDuPupitre): TransitionDePointage {
+    return activite.posteId === undefined ? { type: 'FIN' } : { type: 'FIN', posteId: activite.posteId };
   }
 }

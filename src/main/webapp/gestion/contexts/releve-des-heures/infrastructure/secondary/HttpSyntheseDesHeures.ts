@@ -6,7 +6,6 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
 import { inject, Injectable } from '@angular/core';
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
-import { TotalDeDuree } from '../../domain/duree/TotalDeDuree';
 import { ActiviteDuReleve } from '../../domain/element/ActiviteDuReleve';
 import { CategorieDElement } from '../../domain/element/CategorieDElement';
 import { ElementDuReleve } from '../../domain/element/ElementDuReleve';
@@ -65,8 +64,7 @@ const toPointage = (pointage: RestPointage): PointageDeReleve =>
     cible: toCible(pointage),
   });
 
-const toTotal = (duree: components['schemas']['RestDureeDeSynthese']): TotalDeDuree =>
-  duree.complete ? TotalDeDuree.complet(new DureeTravaillee(required(duree.valeur, 'duree.valeur'))) : TotalDeDuree.incomplet();
+const toTotal = (duree: components['schemas']['RestDureeDeSynthese']): DureeTravaillee => new DureeTravaillee(duree.valeur);
 
 const toPoste = ({ poste, nature }: RestPosteDeLElement): PosteDeLElement =>
   new PosteDeLElement(new PosteReleveId(poste.id), poste.libelle, nature);
@@ -93,8 +91,6 @@ const toActivite = (activite: components['schemas']['RestActiviteInterpreteeDeLa
       return { ...commun, etat: activite.etat, fin: new InstantDeReleve(required(activite.fin, 'activite.fin')) };
     case 'EN_COURS':
       return { ...commun, etat: activite.etat };
-    case 'A_RESOUDRE':
-      throw new Error('Une activité à résoudre n’a pas de fin : le relevé ne peut pas être établi.');
   }
 };
 

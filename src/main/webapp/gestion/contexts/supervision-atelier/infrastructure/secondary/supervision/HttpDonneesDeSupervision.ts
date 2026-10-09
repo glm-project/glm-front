@@ -21,7 +21,6 @@ type RestOperateur = components['schemas']['RestOperateurDeSupervision'];
 type RestElement = components['schemas']['RestElementDeSupervision'];
 type RestPoste = components['schemas']['RestPosteDeSupervision'];
 type RestActivite = components['schemas']['RestActiviteDeSupervision'];
-type RestDescription = components['schemas']['RestDescriptionDActiviteDeSupervision'];
 
 const toOperateur = (operateur: RestOperateur): OperateurDeclare =>
   new OperateurDeclare({
@@ -45,7 +44,7 @@ const toPoste = (poste: RestPoste): PosteDeSupervision =>
     ...(poste.nature === undefined ? {} : { nature: new NatureDeTravail(poste.nature) }),
   });
 
-const toDescription = (activite: RestDescription): DescriptionActivite => ({
+const toDescription = (activite: RestActivite): DescriptionActivite => ({
   id: new IdentifiantActivite(activite.id),
   operateurId: new IdentifiantOperateur(activite.operateurId),
   objet: toElement(activite.element),

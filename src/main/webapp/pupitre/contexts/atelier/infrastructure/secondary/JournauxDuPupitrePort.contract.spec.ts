@@ -38,7 +38,6 @@ const ouvertureFixture: GesteDePointage = {
   dateDeSurvenue: '2026-09-05T08:00:00Z',
   operateurId: 'jean',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
 const finFixture: GesteDePointage = {
@@ -47,8 +46,6 @@ const finFixture: GesteDePointage = {
   nature: 'POINTAGE',
   type: 'FIN',
   suiviId: 'piece',
-  intention: 'FIN',
-  cible: 'ouverture-fixture',
 };
 const pointageFixture: GesteDePointage = {
   ...ouvertureFixture,
@@ -56,7 +53,6 @@ const pointageFixture: GesteDePointage = {
   nature: 'POINTAGE',
   type: 'DEBUT',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
 };
 const pointageEnAttenteFixture: GesteDePointage = {
   ...ouvertureFixture,
@@ -64,7 +60,6 @@ const pointageEnAttenteFixture: GesteDePointage = {
   nature: 'POINTAGE',
   type: 'DEBUT',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
 };
 const pointageAutreSuiviFixture: GesteDePointage = {
   ...ouvertureFixture,
@@ -72,7 +67,6 @@ const pointageAutreSuiviFixture: GesteDePointage = {
   nature: 'POINTAGE',
   type: 'DEBUT',
   suiviId: 'autre-piece',
-  intention: 'OUVERTURE',
 };
 
 const suspensionFixture: GesteDePointage = {
@@ -83,8 +77,6 @@ const suspensionFixture: GesteDePointage = {
   suiviId: 'piece',
   posteId: 'tour',
   suspension: { pause: 'pause-de-midi', reouverture: 'NON_CONFORMITE' },
-  intention: 'FIN',
-  cible: 'activite-fixture-47',
 };
 
 const refusFixture = { code: 'CONFLIT', message: 'refusé' };
@@ -386,10 +378,7 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
       const after = await whenRestartingJournal();
       const restoredWindow = windowOf(after);
       expect(stop.gestes).toHaveLength(count);
-      expect(stop.gestes.map(geste => geste.intention)).toEqual(Array<string>(count).fill('FIN'));
-      expect(stop.gestes.map(geste => (geste.intention === 'OUVERTURE' ? undefined : geste.cible))).toEqual(
-        activites.map(activite => activite.ouverture),
-      );
+      expect(stop.gestes.map(geste => geste.type)).toEqual(Array<string>(count).fill('FIN'));
       expect(after.evenements.slice(0, before.evenements.length)).toEqual(before.evenements);
       expect(after.evenements.slice(before.evenements.length)).toEqual(stop.gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' })));
       expect(after.pausesArretees).toEqual(['pause-de-midi']);
@@ -447,14 +436,8 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
 
     await expect(failed).rejects.toThrow('Transaction locale interrompue');
     expect(after).toEqual(before);
-    expect(stop.gestes).toMatchObject([
-      { intention: 'FIN', cible: 'a', type: 'FIN' },
-      { intention: 'FIN', cible: 'b', type: 'FIN', posteId: 'fraiseuse' },
-    ]);
-    expect(retry.gestes).toMatchObject([
-      { intention: 'FIN', cible: 'a', type: 'FIN' },
-      { intention: 'FIN', cible: 'b', type: 'FIN', posteId: 'fraiseuse' },
-    ]);
+    expect(stop.gestes).toMatchObject([{ type: 'FIN' }, { type: 'FIN', posteId: 'fraiseuse' }]);
+    expect(retry.gestes).toMatchObject([{ type: 'FIN' }, { type: 'FIN', posteId: 'fraiseuse' }]);
     expect(elementsDeLaZoneFixture(restoredWindow.pointage(), 'MOULE')[0]?.isActive()).toBe(true);
     expect(restoredWindow.commandesGlobales().permet('PAUSE')).toBe(true);
   });
@@ -573,7 +556,7 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
     await storage.update('atelier:entreprise-a', legacy, () => legacy);
   };
   const givenAReferenceStoredBeforeCategories = async (): Promise<void> => {
-    const suivi = { conflits: [], nom: 'OF-1', etat: 'EN_ATTENTE', activites: [], evenements: [] };
+    const suivi = { nom: 'OF-1', etat: 'EN_ATTENTE', activites: [], evenements: [] };
     const avantLesCategories = {
       connecte: true,
       evenements: [],

@@ -37,9 +37,7 @@ const transitionFixture: GesteDePointage = {
   operateurId: 'jean',
   suiviId: 'piece',
   posteId: 'tour',
-  intention: 'TRANSITION',
   type: 'NON_CONFORMITE',
-  cible: 'ouverture-a',
 };
 const finFixture: GesteDePointage = {
   nature: 'POINTAGE',
@@ -48,27 +46,21 @@ const finFixture: GesteDePointage = {
   operateurId: 'jean',
   suiviId: 'piece',
   posteId: 'tour',
-  intention: 'FIN',
   type: 'FIN',
-  cible: 'ouverture-a',
 };
 const transitionBodyFixture = {
   id: '4e12c8ad-cf5e-4fb5-b526-372dfc21a001',
   dateDeSurvenue: '2026-09-05T12:00:00Z',
   operateur: 'jean',
   poste: 'tour',
-  intention: 'TRANSITION',
   type: 'NON_CONFORMITE',
-  cible: 'ouverture-a',
 };
 const finBodyFixture = {
   id: '1f7e0c56-4059-4b3f-8972-0b4e3f17a002',
   dateDeSurvenue: '2026-09-05T17:00:00Z',
   operateur: 'jean',
   poste: 'tour',
-  intention: 'FIN',
   type: 'FIN',
-  cible: 'ouverture-a',
 };
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
@@ -103,7 +95,6 @@ const publicationFixture = {
   engagePar: 'gestionnaire',
   activitesEnCours: [],
   journal: [],
-  conflits: [],
 } satisfies components['schemas']['RestSuiviDAtelier'];
 
 describe('Durable pupitre HTTP exchange', () => {
@@ -241,9 +232,7 @@ describe('Durable pupitre HTTP exchange', () => {
           dateDeSurvenue: '2026-09-05T18:00:00Z',
           operateur: 'marie',
           poste: 'tour',
-          intention: 'FIN',
           type: 'FIN',
-          cible: 'activite-entreprise-b',
         },
       },
       { method: 'GET', url: '/api/pupitre/referentiel', body: null },
@@ -255,9 +244,7 @@ describe('Durable pupitre HTTP exchange', () => {
           dateDeSurvenue: '2026-09-05T17:00:00Z',
           operateur: 'marie',
           poste: 'tour',
-          intention: 'FIN',
           type: 'FIN',
-          cible: 'activite-entreprise-a',
         },
       },
       { method: 'GET', url: '/api/pupitre/referentiel', body: null },
@@ -276,7 +263,6 @@ describe('Durable pupitre HTTP exchange', () => {
       ...finFixture,
       id: `suspension-${company}`,
       dateDeSurvenue: '2026-09-05T12:00:00Z',
-      cible: `activite-suspendue-${company}`,
       suspension: { pause: `pause-${company}`, reouverture: 'NON_CONFORMITE' },
     };
     const pending: GesteDePointage = {
@@ -284,7 +270,6 @@ describe('Durable pupitre HTTP exchange', () => {
       id: '90807c80-0588-4d6a-a002-fc355de16530',
       dateDeSurvenue: occurrence,
       operateurId: 'marie',
-      cible: `activite-${company}`,
     };
     await journal.saveReferentiel(entreprise, companyReferenceFixture(company));
     await journal.append(entreprise, [suspension, pending]);

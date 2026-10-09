@@ -14,7 +14,6 @@ const gestureFixture: GesteDePointage = {
   dateDeSurvenue: dateFixture,
   operateurId: 'operator-1',
   suiviId: 'workshop-item-1',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
 const finishFixture: GesteDePointage = {
@@ -23,9 +22,7 @@ const finishFixture: GesteDePointage = {
   dateDeSurvenue: '2026-09-05T08:15:00Z',
   operateurId: 'operator-1',
   suiviId: 'workshop-item-1',
-  intention: 'FIN',
   type: 'FIN',
-  cible: idFixture,
 };
 const acceptedFinishFixture = { geste: finishFixture, etat: 'ACCEPTE' } as const;
 const referenceFixture: ReferentielDuPupitre = {
@@ -40,9 +37,7 @@ const otherCompanyGestureFixture: GesteDePointage = {
   dateDeSurvenue: '2026-09-05T10:00:00Z',
   operateurId: 'other-company-operator',
   suiviId: 'other-company-item',
-  intention: 'TRANSITION',
   type: 'NON_CONFORMITE',
-  cible: '09d88f99-1094-4a13-b1ea-bd206ee388fa',
 };
 const otherCompanyReferenceFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'other-company-operator', nom: 'Martin', prenom: 'Marie', identifiant: '049', postes: [] }],
@@ -353,7 +348,7 @@ const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
     expect(state.pushes).to.deep.equal([
       {
         authorization: `Bearer ${tokenFixture}`,
-        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1', type: 'DEBUT', intention: 'OUVERTURE' },
+        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1', type: 'DEBUT' },
       },
     ]);
   });
@@ -363,7 +358,7 @@ const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
     .should('deep.equal', [
       {
         authorization: `Bearer ${tokenFixture}`,
-        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1', type: 'DEBUT', intention: 'OUVERTURE' },
+        body: { id: idFixture, dateDeSurvenue: dateFixture, operateur: 'operator-1', type: 'DEBUT' },
       },
       {
         authorization: `Bearer ${tokenFixture}`,
@@ -372,8 +367,6 @@ const thenTheOriginalGestureWasReplayedAndAccepted = (): void => {
           dateDeSurvenue: '2026-09-05T08:15:00Z',
           operateur: 'operator-1',
           type: 'FIN',
-          intention: 'FIN',
-          cible: '59ef737b-c3dd-47f8-8e63-4d5526a17df3',
         },
       },
     ]);

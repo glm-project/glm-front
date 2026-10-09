@@ -1,12 +1,9 @@
 import { ActiviteAnomalie } from '../dossier/DossierAnomalie';
-import { InstantPointage } from './InstantPointage';
 
 export interface BornesDuFait {
   readonly min?: string;
   readonly max: string;
 }
-
-export type DepassementDuFait = 'INSTANT_AVANT_CIBLE' | 'INSTANT_FUTUR';
 
 export class CadreDuFait {
   private constructor(
@@ -25,18 +22,5 @@ export class CadreDuFait {
   bornes(fait: { readonly activiteVisee: string }): BornesDuFait {
     const min = this.debuts.get(fait.activiteVisee);
     return min === undefined ? { max: this.maintenant } : { min, max: this.maintenant };
-  }
-
-  depassements(fait: { readonly activiteVisee: string; readonly instant: string }): readonly DepassementDuFait[] {
-    const instant = new InstantPointage(fait.instant);
-    const { min, max } = this.bornes(fait);
-    const depassements: DepassementDuFait[] = [];
-    if (this.precede(instant, min)) depassements.push('INSTANT_AVANT_CIBLE');
-    if (instant.compareTo(new InstantPointage(max)) > 0) depassements.push('INSTANT_FUTUR');
-    return depassements;
-  }
-
-  private precede(instant: InstantPointage, borne: string | undefined): boolean {
-    return borne !== undefined && instant.compareTo(new InstantPointage(borne)) < 0;
   }
 }

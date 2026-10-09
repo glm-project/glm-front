@@ -54,12 +54,7 @@ interface IdentiteDuPointage extends IdentiteDuGeste {
   readonly suspension?: Suspension;
 }
 
-export type GesteDePointage = IdentiteDuPointage
-  & (
-    | { readonly intention: 'OUVERTURE'; readonly type: TypeDOuverture }
-    | { readonly intention: 'TRANSITION'; readonly type: TypeDOuverture; readonly cible: string }
-    | { readonly intention: 'FIN'; readonly type: 'FIN'; readonly cible: string }
-  );
+export type GesteDePointage = IdentiteDuPointage & { readonly type: TypeDePointage };
 
 export const toReouverture = (activite: ActiviteDuPupitre): TypeDOuverture =>
   activite.categorie === 'NON_CONFORMITE' ? 'NON_CONFORMITE' : 'DEBUT';

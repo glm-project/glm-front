@@ -98,9 +98,6 @@ const longDayOf = (instant: Date, now: Date): string =>
 
 export const formatInstantLongDay = (instant: Date, now: Date): string => `${longDayOf(instant, now)} à ${TIME.format(instant)}`;
 
-export const formatInstantLongDayWithSeconds = (instant: Date, now: Date): string =>
-  `${longDayOf(instant, now)} à ${TIME_WITH_SECONDS.format(instant)}`;
-
 export const formatCalendarDayRange = (first: string, last: string): string =>
   CALENDAR_DAY_SHORT_DAY_MONTH_YEAR.formatRange(utcMidnightOf(first), utcMidnightOf(last));
 
