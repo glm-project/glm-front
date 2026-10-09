@@ -42,7 +42,7 @@ const persistPupitreFixture = (window: Cypress.AUTWindow, fixture: StoredPupitre
           referentiel: fixture.referentiel,
           evenements: fixture.evenements,
         },
-        `atelier-activites-v1:${fixture.entreprise}`,
+        `atelier-activites-v2:${fixture.entreprise}`,
       );
       transaction.oncomplete = () => {
         database.close();

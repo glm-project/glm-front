@@ -314,6 +314,15 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
     expect(state).toEqual(EMPTY_JOURNAL_DU_PUPITRE);
   });
 
+  it('should ignore and discard a journal stored before the maximum activity duration was received', async () => {
+    await givenAJournalStoredBeforeTheMaximumActivityDuration();
+
+    const state = await whenReadingCompany('entreprise-a');
+
+    expect(state).toEqual(EMPTY_JOURNAL_DU_PUPITRE);
+    await thenThePreviousJournalIsGone();
+  });
+
   it('should read the category of every element in a reference stored before categories existed', async () => {
     await givenAReferenceStoredBeforeCategories();
 
@@ -452,13 +461,13 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
   const givenOtherCompanyAndDeviceDocuments = async (): Promise<void> => {
     await storage.update('atelier:entreprise-b', { ancien: true }, value => value);
     await storage.update('device-enrolment', 'secret-device', value => value);
-    await storage.update('atelier-activites-v1:entreprise-b', EMPTY_JOURNAL_DU_PUPITRE, value => value);
+    await storage.update(keyFor(Entreprise.of('entreprise-b')), EMPTY_JOURNAL_DU_PUPITRE, value => value);
   };
   const thenOnlyObsoleteWorkshopDocumentsAreGone = async (): Promise<void> => {
     expect(await storage.read('atelier:entreprise-a')).toBeUndefined();
     expect(await storage.read('atelier:entreprise-b')).toBeUndefined();
     expect(await storage.read('device-enrolment')).toBe('secret-device');
-    expect(await storage.read('atelier-activites-v1:entreprise-b')).toEqual(EMPTY_JOURNAL_DU_PUPITRE);
+    expect(await storage.read(keyFor(Entreprise.of('entreprise-b')))).toEqual(EMPTY_JOURNAL_DU_PUPITRE);
   };
   const givenTheBrowserAbortsWrites = (): void => {
     const originalPut: unknown = Object.getOwnPropertyDescriptor(IDBObjectStore.prototype, 'put')?.value;
@@ -562,6 +571,29 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
       ],
     };
     await storage.update('atelier:entreprise-a', legacy, () => legacy);
+  };
+  const thenThePreviousJournalIsGone = async (): Promise<void> => {
+    expect(await storage.read('atelier-activites-v1:entreprise-a')).toBeUndefined();
+  };
+  const givenAJournalStoredBeforeTheMaximumActivityDuration = async (): Promise<void> => {
+    const avantLaDuree = {
+      connecte: true,
+      evenements: [
+        {
+          etat: 'EN_ATTENTE',
+          geste: {
+            nature: 'POINTAGE',
+            id: 'ancien',
+            dateDeSurvenue: '2026-09-05T08:00:00Z',
+            operateurId: 'jean',
+            suiviId: 'piece',
+            type: 'DEBUT',
+          },
+        },
+      ],
+      referentiel: { operateurs: [], suivis: [], categories: [] },
+    };
+    await storage.update('atelier-activites-v1:entreprise-a', avantLaDuree, () => avantLaDuree);
   };
   const givenAReferenceStoredBeforeCategories = async (): Promise<void> => {
     const suivi = { nom: 'OF-1', etat: 'EN_ATTENTE', activites: [], evenements: [] };
