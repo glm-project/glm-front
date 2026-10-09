@@ -176,6 +176,7 @@ describe('Anomalies list', () => {
     await whenTheListIsRendered();
 
     expect(textOf('anomalies-sous-titre')).toBe('Activités arrêtées par la fin automatique : ouvrez un dossier pour placer la fin réelle.');
+    thenThePageNeverMentions('choisir une correction', 'vérifier ses conséquences', 'enregistrer');
   });
 
   it('should ignore the nature held by the address of an old link', async () => {
@@ -710,6 +711,12 @@ describe('Anomalies list', () => {
   const whenTheAddressBecomes = async (params: Record<string, string>): Promise<void> => {
     givenAnAddress(params);
     await componentFixture.whenStable();
+  };
+
+  const thenThePageNeverMentions = (...phrases: string[]): void => {
+    phrases.forEach(phrase => {
+      expect(document.body.textContent.toLowerCase()).not.toContain(phrase);
+    });
   };
 
   const thenNoIdentifierIsShown = (identifier: string): void => {
