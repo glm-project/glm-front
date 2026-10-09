@@ -24,10 +24,11 @@ describe('Company settings in gestion', () => {
     thenTheDurationWasSavedAs(api, '10');
   });
 
-  it('should send the chosen logo at once and show it', () => {
+  it('should send the chosen logo on save and show it', () => {
     const api = givenSettings();
     whenVisitingSettings();
     whenChoosingTheLogo(pngFixture(50, 50));
+    whenSavingTheLogo();
 
     thenTheLogoIsShown(api);
   });
@@ -63,10 +64,11 @@ describe('Company settings in gestion', () => {
     thenTheTabShowsTheCompanyLogo();
   });
 
-  it('should show the chosen logo in the header at once, without reloading the page', () => {
+  it('should show the saved logo in the header at once, without reloading the page', () => {
     const api = givenSettings();
     whenVisitingSettings();
     whenChoosingTheLogo(pngFixture(50, 50));
+    whenSavingTheLogo();
 
     thenTheLogoIsShown(api);
     thenTheHeaderShowsTheCompanyLogo();
@@ -139,6 +141,10 @@ const whenChoosingTheLogo = (octets: Uint8Array): void => {
     { contents: Cypress.Buffer.from(octets), fileName: 'logo.png', mimeType: 'image/png' },
     { force: true },
   );
+};
+
+const whenSavingTheLogo = (): void => {
+  cy.get(dataSelector('logo-enregistrer')).click();
 };
 
 const whenVisitingSettingsAsAConsultant = (): void => {

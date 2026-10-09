@@ -46,4 +46,17 @@ describe('FichierDeLogo', () => {
   ])('should refuse a file %s, saying why', (_cas, octets, refus) => {
     expect(new FichierDeLogo(octets).refus()).toBe(refus);
   });
+
+  it.each([
+    ['a PNG', Uint8Array.from([...pngFixture(1, 1)]), 'data:image/png;base64,'],
+    ['a JPEG', Uint8Array.from([...jpegFixture(1, 1)]), 'data:image/jpeg;base64,'],
+  ])('should preview %s as an inline image of its own bytes', (_cas, octets, prefixe) => {
+    const apercu = new FichierDeLogo(octets).apercu();
+
+    expect(apercu.adresse).toBe(`${prefixe}${btoa(String.fromCodePoint(...octets))}`);
+  });
+
+  it('should have no preview for a file that is not a PNG nor a JPEG', () => {
+    expect(() => new FichierDeLogo(texteFixture()).apercu()).toThrow('Un fichier qui n’est pas une image PNG ou JPEG n’a pas d’aperçu.');
+  });
 });
