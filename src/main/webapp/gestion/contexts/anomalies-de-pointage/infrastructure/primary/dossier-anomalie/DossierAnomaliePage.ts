@@ -27,7 +27,10 @@ export class DossierAnomaliePage {
     element: this.parametres().get('element'),
     page: this.parametres().get('page'),
   }));
-  protected readonly lecture = resource({ params: () => ({ adresse: this.adresse() }), loader: ({ params }) => this.read(params.adresse) });
+  protected readonly lecture = resource({
+    params: () => ({ adresse: this.adresse() }),
+    loader: ({ params, abortSignal }) => this.read(params.adresse, abortSignal),
+  });
   private readonly operateurs = resource({ loader: () => this.port.operateurs() });
   protected readonly operateursConnus = computed(() => (this.operateurs.hasValue() ? this.operateurs.value() : undefined));
   private readonly resultatLecture = computed(() => (this.lecture.error() ? undefined : this.lecture.value()));
@@ -44,10 +47,15 @@ export class DossierAnomaliePage {
   });
   protected readonly dossierRelu = linkedSignal({ source: this.adresse, computation: () => false });
 
-  private async read(adresse: AdresseDossier | undefined): Promise<LectureDossier | undefined> {
+  private async read(adresse: AdresseDossier | undefined, abandon: AbortSignal): Promise<LectureDossier | undefined> {
     const lecture = adresse === undefined ? undefined : await this.port.read(adresse);
-    if (lecture?.kind !== 'DOSSIER') await this.router.navigate(['/anomalies'], { queryParams: this.retour(), replaceUrl: true });
+    if (lecture?.kind !== 'DOSSIER') await this.ramenerALaListe(abandon);
     return lecture;
+  }
+
+  private async ramenerALaListe(abandon: AbortSignal): Promise<void> {
+    if (abandon.aborted) return;
+    await this.router.navigate(['/anomalies'], { queryParams: this.retour(), replaceUrl: true });
   }
 
   protected reload(): void {

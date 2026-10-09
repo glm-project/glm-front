@@ -62,10 +62,23 @@ class DossierReadFixture extends AnomaliesReadPort {
     });
   }
 
-  read(adresse: AdresseDossier): Promise<LectureDossier> {
+  private held: Promise<void> | undefined;
+
+  holdTheNextReading(): () => void {
+    let release = (): void => undefined;
+    this.held = new Promise(resolve => {
+      release = resolve;
+    });
+    return release;
+  }
+
+  async read(adresse: AdresseDossier): Promise<LectureDossier> {
     this.demandes.push(adresse);
     const failure = this.failure;
     const result = this.result;
+    const held = this.held;
+    this.held = undefined;
+    await held;
     return roundTripFixture(() => {
       if (failure !== undefined) throw failure;
       return result;
@@ -265,6 +278,28 @@ describe('Anomaly dossier page', () => {
 
     thenTheManagerIsLedTo('/anomalies?operateur=op-camille&element=element-1&page=2');
     thenAbsent('anomalie-resolution');
+  });
+
+  it('should not lead back to the list when the page was left while its reading was in flight', async () => {
+    read.result = { kind: 'INTROUVABLE' };
+    const release = read.holdTheNextReading();
+    whenRenderingWithoutWaiting();
+
+    await whenLeavingThePageAndTheReadingEnds(release);
+
+    thenTheManagerStaysOnTheDossier();
+  });
+
+  it('should not lead back to the list when the address changed while the reading of the former one was in flight', async () => {
+    read.result = { kind: 'INTROUVABLE' };
+    const release = read.holdTheNextReading();
+    whenRenderingWithoutWaiting();
+    read.result = { kind: 'DOSSIER', dossier: dossierFinAutomatiqueFixture() };
+
+    await whenTheAddressChangesAndTheFormerReadingEnds(release);
+
+    thenTheManagerStaysOnTheDossier();
+    thenTheResolutionViewIsShown();
   });
 
   it('should lead back to the list when the dossier read again after a retry is not found', async () => {
@@ -555,6 +590,23 @@ describe('Anomaly dossier page', () => {
   const whenAskingForTheNextAnomaly = async (): Promise<void> => {
     element('anomalie-resolution-suivante').click();
     await fixture.whenStable();
+    await roundTripFixture(() => undefined);
+    await fixture.whenStable();
+  };
+
+  const whenLeavingThePageAndTheReadingEnds = async (release: () => void): Promise<void> => {
+    await roundTripFixture(() => undefined);
+    console.log('DEMANDES', read.demandes.length);
+    fixture.destroy();
+    release();
+    await roundTripFixture(() => undefined);
+    await roundTripFixture(() => undefined);
+  };
+
+  const whenTheAddressChangesAndTheFormerReadingEnds = async (release: () => void): Promise<void> => {
+    route.queryParamMap.next(convertToParamMap({ pointage: 'fin-18' }));
+    fixture.detectChanges();
+    release();
     await roundTripFixture(() => undefined);
     await fixture.whenStable();
   };
