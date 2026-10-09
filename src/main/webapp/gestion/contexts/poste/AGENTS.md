@@ -26,6 +26,10 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 - **RequetePostes** : objet de requête paginée portant l'indice de page et le nombre d'éléments par page (`page`, `taille`).
 - **FormulairePosteDeTravail** : modèle riche d'interaction pour la création et la modification, validant les entrées brutes, produisant la commande adéquate et effaçant l'erreur de doublon dès que le libellé est modifié.
 - **PostesPort** : port secondaire exposant la consultation paginée via `RequetePostes`, la collecte des natures uniques de l'atelier, la création (`CommandeCreationPoste`), la modification (`CommandeModificationPoste`) et la suppression protégée par un `Result<T, Refus>`.
+- **NatureDeTravailId** : Value Object de l'identifiant d'une nature du référentiel des natures de travail.
+- **NatureGeree** : une nature telle que la page la présente : identifiant, libellé et nombre de postes qui la portent
+  (champ `postes` de l'API). `porte(poste)` reconnaît ses postes à leur libellé de nature, unique dans l'entreprise.
+- **NaturesDeTravailPort** : port secondaire du référentiel des natures (`/api/natures-de-travail`), lu en entier.
 - **Refus de commande** : `LibellePosteDejaUtilise` (unicité de libellé en création/modification), `PosteIntrouvable` (poste inexistant en modification/suppression), et `PosteNonSupprimable` (pointages ou habilitations associées en suppression).
 
 ## Responsabilités et invariants
@@ -45,6 +49,14 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 ## Règles locales
 
 Pour les formulaires et la validation des saisies, appliquer l'[ADR 0036](../../../../../../documentation/adr/0036-rich-domain-models-for-form-interactions.md) : la saisie et ses invariants sont portés par un modèle de domaine riche (`FormulairePosteDeTravail`), sans `ReactiveFormsModule`.
+
+## Natures à gauche, postes à droite
+
+La page Postes de travail présente les natures dans une colonne qui sert de filtre (disposition retenue pour
+glm-project/glm-front#267) : « Toutes », puis chaque nature avec son nombre de postes. La nature choisie est
+gardée dans l'adresse (`?nature=<id>`) ; une adresse qui nomme une nature disparue montre tous les postes. Le
+tableau d'une nature choisie n'affiche plus la colonne Nature. Une panne de lecture des natures vaut une panne
+de lecture de la page.
 
 ## Recherche du référentiel
 

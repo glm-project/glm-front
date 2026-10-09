@@ -23,88 +23,139 @@
     <button mat-stroked-button type="button" (click)="reload()" data-selector="postes-refresh">Actualiser</button>
   </section>
 
-  <section class="gestion-carte" [attr.aria-busy]="etat().chargement" aria-label="Référentiel des postes de travail">
-    @if (etat().chargement) {
-    <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="postes-loading">Chargement des postes de travail…</p>
-    } @else if (etat().echec) {
-    <glm-error-message
-      class="py-16 text-center"
-      data-selector="postes-error"
-      message="Impossible de charger les postes. Vérifiez la connexion puis réessayez."
-      retryLabel="Réessayer"
-      retrySelector="postes-retry"
-      (retryRequested)="reload()"
-    />
-    } @else if (etat().totalElementsCount === 0) {
-    <div class="px-6 py-16 text-center" data-selector="postes-empty">
-      <h2 class="text-section">Aucun poste de travail</h2>
-      <p class="mx-auto mb-6 mt-2 max-w-lg text-body text-ink-muted">
-        Ajoutez le premier poste pour décrire les machines et les emplacements de votre atelier.
-      </p>
-      <button mat-flat-button (click)="openForm()" data-selector="postes-empty-create">
-        <glm-icon name="plus" /> Créer le premier poste
-      </button>
-    </div>
-    } @else if (resultats().length === 0) {
-    <p role="status" class="px-6 py-12 text-center text-body text-ink-muted" data-selector="postes-no-results">
-      Aucun poste ne correspond à cette recherche.
-    </p>
-    } @else {
-    <div class="gestion-table" tabindex="0" role="region" aria-label="Tableau des postes, défilement horizontal disponible">
-      <table mat-table [dataSource]="affiches()" aria-label="Postes de travail">
-        <ng-container matColumnDef="libelle">
-          <th mat-header-cell *matHeaderCellDef scope="col">Libellé</th>
-          <td mat-cell *matCellDef="let poste" class="font-semibold">{{ poste.libelle.value }}</td>
-        </ng-container>
-        <ng-container matColumnDef="nature">
-          <th mat-header-cell *matHeaderCellDef scope="col">Nature</th>
-          <td mat-cell *matCellDef="let poste" data-selector="poste-nature-cell">{{ poste.nature.value }}</td>
-        </ng-container>
-        <ng-container matColumnDef="coutHoraire">
-          <th mat-header-cell *matHeaderCellDef scope="col">Coût horaire</th>
-          <td mat-cell *matCellDef="let poste" [class.text-ink-muted]="poste.coutHoraire === undefined" data-selector="poste-cout-cell">
-            {{ formatCout(poste.coutHoraire) }}
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef scope="col"><span class="sr-only">Actions</span></th>
-          <td mat-cell *matCellDef="let poste">
-            <div class="gestion-actions">
-              <button
-                mat-icon-button
-                (click)="openForm(poste)"
-                [attr.aria-label]="'Modifier ' + poste.libelle.value"
-                data-selector="poste-edit"
-              >
-                <glm-icon name="pencil" />
-              </button>
-              <button
-                mat-icon-button
-                (click)="confirmDeletion(poste)"
-                [attr.aria-label]="'Supprimer ' + poste.libelle.value"
-                data-selector="poste-delete"
-              >
-                <glm-icon name="trash2" />
-              </button>
-            </div>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
-        <tr mat-row *matRowDef="let row; columns: colonnes" data-selector="poste-row"></tr>
-      </table>
-    </div>
-    }
+  <div class="postes-disposition">
+    <nav class="gestion-carte natures-colonne" aria-labelledby="natures-heading" data-selector="natures">
+      <h2 id="natures-heading" class="px-2 pb-2 pt-1 text-label text-ink-muted">Natures</h2>
+      <ul class="flex flex-col gap-0.5" data-selector="natures-list">
+        <li>
+          <button
+            type="button"
+            class="nature-filtre"
+            [attr.aria-pressed]="natureChoisie() === undefined"
+            (click)="choisir(undefined)"
+            data-selector="nature-filter-all"
+          >
+            <span class="flex-1">Toutes</span>
+            <span class="text-body-sm text-ink-muted">{{ etat().postes.length }}</span>
+          </button>
+        </li>
+        @for (nature of etat().natures; track nature.id.value) {
+        <li>
+          <button
+            type="button"
+            class="nature-filtre"
+            [attr.aria-pressed]="nature === natureChoisie()"
+            (click)="choisir(nature)"
+            data-selector="nature-filter"
+          >
+            <span class="flex-1" data-selector="nature-filter-label">{{ nature.libelle.value }}</span>
+            <span class="text-body-sm text-ink-muted" data-selector="nature-filter-count">{{ nature.postes }}</span>
+          </button>
+        </li>
+        }
+      </ul>
+      @if (!etat().chargement && !etat().echec && etat().natures.length === 0) {
+      <p class="px-2 py-3 text-body-sm text-ink-muted" data-selector="natures-empty">Aucune nature enregistrée.</p>
+      }
+    </nav>
 
-    <mat-paginator
-      [length]="resultats().length"
-      [pageIndex]="etat().page"
-      [pageSize]="etat().taille"
-      [pageSizeOptions]="[10, 20, 50]"
-      [disabled]="etat().chargement || etat().echec"
-      showFirstLastButtons
-      (page)="changePage($event)"
-      aria-label="Pagination des postes de travail"
-      data-selector="postes-pagination"
-    />
-  </section>
+    <section class="gestion-carte postes-tableau" [attr.aria-busy]="etat().chargement" aria-labelledby="postes-selection-title">
+      <header class="flex flex-wrap items-baseline gap-3 border-b border-border px-4 py-3">
+        <h2 id="postes-selection-title" class="text-section" data-selector="postes-selection-title">
+          {{ natureChoisie()?.libelle?.value ?? 'Tous les postes' }}
+        </h2>
+        <span class="text-body-sm text-ink-muted" data-selector="postes-selection-count">
+          {{ compte(natureChoisie()?.postes ?? etat().postes.length) }}
+        </span>
+      </header>
+      @if (etat().chargement) {
+      <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="postes-loading">
+        Chargement des postes de travail…
+      </p>
+      } @else if (etat().echec) {
+      <glm-error-message
+        class="py-16 text-center"
+        data-selector="postes-error"
+        message="Impossible de charger les postes. Vérifiez la connexion puis réessayez."
+        retryLabel="Réessayer"
+        retrySelector="postes-retry"
+        (retryRequested)="reload()"
+      />
+      } @else if (etat().totalElementsCount === 0) {
+      <div class="px-6 py-16 text-center" data-selector="postes-empty">
+        <h2 class="text-section">Aucun poste de travail</h2>
+        <p class="mx-auto mb-6 mt-2 max-w-lg text-body text-ink-muted">
+          Ajoutez le premier poste pour décrire les machines et les emplacements de votre atelier.
+        </p>
+        <button mat-flat-button (click)="openForm()" data-selector="postes-empty-create">
+          <glm-icon name="plus" /> Créer le premier poste
+        </button>
+      </div>
+      } @else if (resultats().length === 0 && recherche().trim() === '') {
+      <p role="status" class="px-6 py-12 text-center text-body text-ink-muted" data-selector="postes-nature-empty">
+        Aucun poste de cette nature.
+      </p>
+      } @else if (resultats().length === 0) {
+      <p role="status" class="px-6 py-12 text-center text-body text-ink-muted" data-selector="postes-no-results">
+        Aucun poste ne correspond à cette recherche.
+      </p>
+      } @else {
+      <div class="gestion-table" tabindex="0" role="region" aria-label="Tableau des postes, défilement horizontal disponible">
+        <table mat-table [dataSource]="affiches()" aria-label="Postes de travail">
+          <ng-container matColumnDef="libelle">
+            <th mat-header-cell *matHeaderCellDef scope="col">Libellé</th>
+            <td mat-cell *matCellDef="let poste" class="font-semibold">{{ poste.libelle.value }}</td>
+          </ng-container>
+          <ng-container matColumnDef="nature">
+            <th mat-header-cell *matHeaderCellDef scope="col">Nature</th>
+            <td mat-cell *matCellDef="let poste" data-selector="poste-nature-cell">{{ poste.nature.value }}</td>
+          </ng-container>
+          <ng-container matColumnDef="coutHoraire">
+            <th mat-header-cell *matHeaderCellDef scope="col">Coût horaire</th>
+            <td mat-cell *matCellDef="let poste" [class.text-ink-muted]="poste.coutHoraire === undefined" data-selector="poste-cout-cell">
+              {{ formatCout(poste.coutHoraire) }}
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef scope="col"><span class="sr-only">Actions</span></th>
+            <td mat-cell *matCellDef="let poste">
+              <div class="gestion-actions">
+                <button
+                  mat-icon-button
+                  (click)="openForm(poste)"
+                  [attr.aria-label]="'Modifier ' + poste.libelle.value"
+                  data-selector="poste-edit"
+                >
+                  <glm-icon name="pencil" />
+                </button>
+                <button
+                  mat-icon-button
+                  (click)="confirmDeletion(poste)"
+                  [attr.aria-label]="'Supprimer ' + poste.libelle.value"
+                  data-selector="poste-delete"
+                >
+                  <glm-icon name="trash2" />
+                </button>
+              </div>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="colonnes()"></tr>
+          <tr mat-row *matRowDef="let row; columns: colonnes()" data-selector="poste-row"></tr>
+        </table>
+      </div>
+      }
+
+      <mat-paginator
+        [length]="resultats().length"
+        [pageIndex]="etat().page"
+        [pageSize]="etat().taille"
+        [pageSizeOptions]="[10, 20, 50]"
+        [disabled]="etat().chargement || etat().echec"
+        showFirstLastButtons
+        (page)="changePage($event)"
+        aria-label="Pagination des postes de travail"
+        data-selector="postes-pagination"
+      />
+    </section>
+  </div>
 </main>

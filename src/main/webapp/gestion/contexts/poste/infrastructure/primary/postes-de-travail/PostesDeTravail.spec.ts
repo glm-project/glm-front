@@ -3,8 +3,10 @@ import { Page } from '@/app/shared/pagination/domain/Page';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
+import { provideRouter, Router } from '@angular/router';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { NaturesDeTravailFixture } from '@test/unit/fixtures/gestion/poste/NaturesDeTravailFixture';
 import { PostesFixture } from '@test/unit/fixtures/gestion/poste/PostesFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
@@ -12,6 +14,9 @@ import { firstValueFrom } from 'rxjs';
 import { CoutHoraire } from '../../../domain/CoutHoraire';
 import { LibellePoste } from '../../../domain/LibellePoste';
 import { NatureDeTravail } from '../../../domain/NatureDeTravail';
+import { NatureDeTravailId } from '../../../domain/NatureDeTravailId';
+import { NatureGeree } from '../../../domain/NatureGeree';
+import { NaturesDeTravailPort } from '../../../domain/NaturesDeTravailPort';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PosteDeTravailId } from '../../../domain/PosteDeTravailId';
 import { PostesPort } from '../../../domain/PostesPort';
@@ -28,15 +33,23 @@ const scieFixture = new PosteDeTravail(new PosteDeTravailId('scie-1'), {
   coutHoraire: undefined,
 });
 
+const tournageFixture = new NatureGeree(new NatureDeTravailId('nature-tournage'), new NatureDeTravail('tournage'), 1);
+const sciageFixture = new NatureGeree(new NatureDeTravailId('nature-sciage'), new NatureDeTravail('sciage'), 1);
+const peintureFixture = new NatureGeree(new NatureDeTravailId('nature-peinture'), new NatureDeTravail('peinture'), 0);
+
 describe('PostesDeTravail page', () => {
   let fixture: ComponentFixture<PostesDeTravail>;
   let port: PostesFixture;
+  let natures: NaturesDeTravailFixture;
   beforeEach(() => {
     port = new PostesFixture();
+    natures = new NaturesDeTravailFixture();
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: PostesPort, useValue: port },
+        { provide: NaturesDeTravailPort, useValue: natures },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
       ],
     });
@@ -213,6 +226,117 @@ describe('PostesDeTravail page', () => {
     expect(texts('poste-row')).toEqual([expect.stringContaining('Scie 1')]);
     expect(text('postes-pagination')).toContain('1–1 sur 1');
   });
+
+  describe('natures column', () => {
+    it('should list every nature with its poste count after the whole referential', async () => {
+      givenWorkstationsAndNatures();
+
+      await whenOpening();
+
+      expect(texts('nature-filter-label')).toEqual(['peinture', 'sciage', 'tournage']);
+      expect(texts('nature-filter-count')).toEqual(['0', '1', '1']);
+      expect(text('nature-filter-all')).toContain('2');
+      expect(text('postes-selection-title')).toBe('Tous les postes');
+      expect(text('postes-selection-count')).toBe('2 postes');
+    });
+
+    it('should show only the postes of the chosen nature, without the nature column', async () => {
+      givenWorkstationsAndNatures();
+      await whenOpening();
+
+      await whenChoosingNature('tournage');
+
+      expect(texts('poste-row')).toEqual([expect.stringContaining('Tour 1')]);
+      expect(texts('poste-nature-cell')).toEqual([]);
+      expect(text('postes-selection-title')).toBe('tournage');
+      expect(text('postes-selection-count')).toBe('1 poste');
+      expect(pressedNatures()).toEqual(['tournage']);
+      thenAddressIs('/?nature=nature-tournage');
+    });
+
+    it('should show every poste again when choosing all natures', async () => {
+      givenWorkstationsAndNatures();
+      await whenOpening();
+      await whenChoosingNature('tournage');
+
+      await whenClicking('nature-filter-all');
+
+      expect(texts('poste-row')).toHaveLength(2);
+      thenAddressIs('/');
+    });
+
+    it('should open on the nature named in the address', async () => {
+      givenWorkstationsAndNatures();
+      await givenAddress('/?nature=nature-sciage');
+
+      await whenOpening();
+
+      expect(texts('poste-row')).toEqual([expect.stringContaining('Scie 1')]);
+    });
+
+    it('should show every poste when the address names a nature that no longer exists', async () => {
+      givenWorkstationsAndNatures();
+      await givenAddress('/?nature=nature-disparue');
+
+      await whenOpening();
+
+      expect(texts('poste-row')).toHaveLength(2);
+      expect(text('postes-selection-title')).toBe('Tous les postes');
+    });
+
+    it('should say that a nature has no poste yet', async () => {
+      givenWorkstationsAndNatures();
+      await whenOpening();
+
+      await whenChoosingNature('peinture');
+
+      expect(text('postes-nature-empty')).toBe('Aucun poste de cette nature.');
+      expect(text('postes-selection-count')).toBe('aucun poste');
+    });
+
+    it('should invite to declare natures when none exists', async () => {
+      givenWorkstations();
+
+      await whenOpening();
+
+      expect(text('natures-empty')).toBe('Aucune nature enregistrée.');
+    });
+
+    it('should report a failure to read the natures like a failure to read the postes', async () => {
+      givenWorkstationsAndNatures();
+      givenNaturesCannotBeRead();
+
+      await whenOpening();
+
+      expect(text('postes-error')).toContain('Impossible de charger les postes');
+    });
+  });
+
+  const givenWorkstationsAndNatures = (): void => {
+    givenWorkstations();
+    natures.liste = [tournageFixture, sciageFixture, peintureFixture];
+  };
+  const givenAddress = async (url: string): Promise<void> => {
+    await TestBed.inject(Router).navigateByUrl(url);
+  };
+  const givenNaturesCannotBeRead = (): void => {
+    natures.lectureFailure = new Error('Natures unavailable');
+  };
+  const thenAddressIs = (url: string): void => {
+    expect(TestBed.inject(Router).url).toBe(url);
+  };
+  const whenChoosingNature = async (libelle: string): Promise<void> => {
+    const bouton = [...document.querySelectorAll<HTMLButtonElement>(dataSelector('nature-filter'))].find(
+      candidat => candidat.querySelector(dataSelector('nature-filter-label'))?.textContent.trim() === libelle,
+    );
+    requiredFixture(bouton, libelle).click();
+    await new Promise(resolve => setTimeout(resolve));
+    await fixture.whenStable();
+  };
+  const pressedNatures = (): string[] =>
+    [...document.querySelectorAll(dataSelector('nature-filter'))]
+      .filter(bouton => bouton.getAttribute('aria-pressed') === 'true')
+      .map(bouton => bouton.querySelector(dataSelector('nature-filter-label'))?.textContent.trim() ?? '');
 
   const givenManyWorkstations = (count: number): void => {
     port.liste = Array.from(

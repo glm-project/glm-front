@@ -69,6 +69,15 @@ describe('Workstation settings in gestion', () => {
 
     thenNatureIsSelected();
   });
+  it('should show the workstations of the chosen nature and keep it in the address', () => {
+    givenReferential(3);
+    whenVisitingSettings();
+    whenFilteringByNature('ponçage');
+
+    thenOnlyWorkstationsAreListed(['Poste 03']);
+    thenAddressNamesNature('nature-poncage');
+  });
+
   it('should reach workstation settings from the gestion menu', () => {
     givenAnEmptyWorkshop();
     whenOpeningFromTheMenu();
@@ -163,4 +172,16 @@ const thenFirstPageOfTwentyIsVisible = (): void => {
 };
 const thenNatureIsSelected = (): void => {
   cy.get(dataSelector('poste-nature')).should('have.value', 'ponçage');
+};
+const whenFilteringByNature = (libelle: string): void => {
+  cy.get(dataSelector('nature-filter')).contains(libelle).click();
+};
+const thenOnlyWorkstationsAreListed = (libelles: string[]): void => {
+  cy.get(dataSelector('poste-row')).should('have.length', libelles.length);
+  for (const libelle of libelles) {
+    cy.get(dataSelector('poste-row')).should('contain.text', libelle);
+  }
+};
+const thenAddressNamesNature = (id: string): void => {
+  cy.location('search').should('eq', '?nature=' + id);
 };

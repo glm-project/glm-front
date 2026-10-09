@@ -44,9 +44,22 @@ export class PostesApiFixture {
         totalElementsCount: this.postes.length,
       });
     }).as('postesRead');
+    this.installNatures();
     this.installCreation();
     this.installModification();
     this.installDeletion();
+  }
+
+  private installNatures(): void {
+    cy.intercept({ method: 'GET', pathname: '/api/natures-de-travail' }, request => {
+      const natures = new Map<string, { id: string; libelle: string; utilisee: boolean; postes: number }>();
+      for (const poste of this.postes) {
+        const connue = natures.get(poste.natureId);
+        natures.set(poste.natureId, { id: poste.natureId, libelle: poste.nature, utilisee: true, postes: (connue?.postes ?? 0) + 1 });
+      }
+      const content = [...natures.values()].sort((gauche, droite) => gauche.libelle.localeCompare(droite.libelle, 'fr'));
+      request.reply({ content, currentPage: 0, pageSize: Number(request.query['size'] ?? 20), totalElementsCount: content.length });
+    }).as('naturesRead');
   }
 
   private installCreation(): void {
