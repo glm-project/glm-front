@@ -7,6 +7,7 @@ import { Atelier } from './contexts/atelier/infrastructure/primary/atelier/Ateli
 import { CoutDeRevientDeLElement } from './contexts/cout-de-revient/infrastructure/primary/cout-de-revient/CoutDeRevientDeLElement';
 import { Produits } from './contexts/element-de-fabrication/infrastructure/primary/produits/Produits';
 import { Operateurs } from './contexts/operateur/infrastructure/primary/operateurs/Operateurs';
+import { Parametres } from './contexts/parametrage/infrastructure/primary/parametres/Parametres';
 import { PostesDeTravail } from './contexts/poste/infrastructure/primary/postes-de-travail/PostesDeTravail';
 import { SyntheseDesHeures } from './contexts/releve-des-heures/infrastructure/primary/synthese-des-heures/SyntheseDesHeures';
 import { SupervisionAtelier } from './contexts/supervision-atelier/infrastructure/primary/supervision-atelier/supervision-atelier';
@@ -21,6 +22,7 @@ const ECRANS: [string, unknown][] = [
   ['operateurs', Operateurs],
   ['operateurs/:operateur/heures', SyntheseDesHeures],
   ['couts-de-revient/:element', CoutDeRevientDeLElement],
+  ['parametres', Parametres],
 ];
 
 const routesEcrans = routes.flatMap(

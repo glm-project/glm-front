@@ -38,6 +38,20 @@
     </nav>
 
     <div class="ml-auto flex items-center gap-1">
+      @if (gestionnaire()) {
+      <a
+        class="action"
+        routerLink="/parametres"
+        routerLinkActive="action-active"
+        ariaCurrentWhenActive="page"
+        [attr.aria-label]="libelles.parametres"
+        [attr.title]="libelles.parametres"
+        data-selector="gestion-parametres"
+        (click)="fermerMenu()"
+      >
+        <glm-icon name="settings" />
+      </a>
+      }
       <button type="button" class="action" [attr.aria-label]="libelles.deconnexion" data-selector="gestion-logout" (click)="logout()">
         <glm-icon name="logOut" />
         <span class="action-libelle" aria-hidden="true">{{ libelles.deconnexion }}</span>

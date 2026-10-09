@@ -1,0 +1,53 @@
+<main class="mx-auto max-w-7xl px-4 py-6 text-ink md:px-8 md:py-8" aria-labelledby="parametres-heading">
+  <header class="mb-6">
+    <h1 id="parametres-heading" class="text-title">{{ libelles.titre }}</h1>
+    <p class="mt-1 max-w-3xl text-body text-ink-muted">{{ libelles.introduction }}</p>
+  </header>
+
+  @if (chargement()) {
+  <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="parametres-loading">{{ libelles.chargement }}</p>
+  } @else if (echec()) {
+  <glm-error-message
+    class="py-16 text-center"
+    data-selector="parametres-error"
+    [message]="libelles.erreur"
+    [retryLabel]="libelles.reessayer"
+    retrySelector="parametres-retry"
+    (retryRequested)="reload()"
+  />
+  } @else {
+  <div class="reglages">
+    <section class="gestion-carte reglage" aria-labelledby="parametres-activites">
+      <h2 id="parametres-activites" class="text-section">{{ libelles.activites }}</h2>
+      <form class="flex flex-col gap-3" novalidate (submit)="enregistrer($event)" data-selector="duree-form">
+        <glm-text-field
+          fieldId="duree-max"
+          name="dureeMaxDActivite"
+          [label]="libelles.duree"
+          [labelComplement]="libelles.dureeComplement"
+          [value]="formulaire().saisie"
+          inputMode="decimal"
+          [required]="true"
+          [help]="libelles.dureeAide"
+          [error]="erreur()"
+          (valueChanged)="changeDuree($event)"
+        />
+        @if (exemple(); as exemple) {
+        <p class="text-body-sm text-ink-muted" data-selector="duree-exemple">{{ exemple }}</p>
+        }
+        <div class="flex flex-wrap items-center gap-3">
+          <button mat-flat-button type="submit" [disabled]="enregistrement() || erreur() !== undefined" data-selector="duree-save">
+            {{ enregistrement() ? libelles.enregistrement : libelles.enregistrer }}
+          </button>
+          @if (enregistree()) {
+          <span role="status" class="text-body-sm text-ok" data-selector="duree-saved">{{ libelles.enregistree }}</span>
+          }
+        </div>
+        @if (erreurTechnique()) {
+        <p role="alert" class="text-body-sm text-danger" data-selector="duree-technical-error">{{ libelles.erreurEnregistrement }}</p>
+        }
+      </form>
+    </section>
+  </div>
+  }
+</main>

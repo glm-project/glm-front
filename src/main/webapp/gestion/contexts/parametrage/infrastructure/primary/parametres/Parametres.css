@@ -1,0 +1,12 @@
+.reglages {
+  display: grid;
+  gap: 1rem;
+  max-width: 48rem;
+}
+
+.reglage {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+}
