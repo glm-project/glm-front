@@ -68,6 +68,9 @@ describe('Beyond the contract: HTTP regularisation of an automatic end', () => {
     { code: 'date-de-survenue-future', status: 400 },
     { code: 'fin-avant-debut', status: 409 },
     { code: 'fin-apres-borne', status: 409 },
+    { code: 'operateur-non-habilite', status: 409 },
+    { code: 'operateur-introuvable', status: 404 },
+    { code: 'poste-de-travail-introuvable', status: 404 },
   ] as const)('should resolve the refusal $code as a refusal of the regularisation and report nothing', async ({ code, status }) => {
     const envoi = await whenRegularisingAnsweredWith(status, { type: `urn:glm:erreur:atelier:${code}` });
 

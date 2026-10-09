@@ -41,6 +41,9 @@ const REFUS_DE_REGULARISATION = {
   'date-de-survenue-future': 'La fin ne peut pas être placée dans le futur.',
   'fin-avant-debut': 'La fin doit être postérieure au début de l’activité.',
   'fin-apres-borne': 'La fin ne peut pas dépasser le démarrage suivant ni la clôture.',
+  'operateur-non-habilite': 'L’opérateur de cette activité n’est plus habilité sur son poste : la fin ne peut pas être régularisée.',
+  'operateur-introuvable': 'L’opérateur de cette activité est introuvable.',
+  'poste-de-travail-introuvable': 'Le poste de cette activité est introuvable.',
 } as const satisfies Readonly<Record<CodeRefusRegularisation, string>>;
 
 const REGULARISATION = {

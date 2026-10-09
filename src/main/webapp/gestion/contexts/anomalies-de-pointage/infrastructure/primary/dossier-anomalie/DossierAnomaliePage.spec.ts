@@ -355,6 +355,12 @@ describe('Anomaly dossier page', () => {
       { code: 'date-de-survenue-future', message: 'La fin ne peut pas être placée dans le futur.' },
       { code: 'fin-avant-debut', message: 'La fin doit être postérieure au début de l’activité.' },
       { code: 'fin-apres-borne', message: 'La fin ne peut pas dépasser le démarrage suivant ni la clôture.' },
+      {
+        code: 'operateur-non-habilite',
+        message: 'L’opérateur de cette activité n’est plus habilité sur son poste : la fin ne peut pas être régularisée.',
+      },
+      { code: 'operateur-introuvable', message: 'L’opérateur de cette activité est introuvable.' },
+      { code: 'poste-de-travail-introuvable', message: 'Le poste de cette activité est introuvable.' },
     ] as const)('should say the refusal $code to the manager and let him validate again', async ({ code, message }) => {
       givenTheRegularisationAnswers({ kind: 'REFUS', code });
       await whenRendering();

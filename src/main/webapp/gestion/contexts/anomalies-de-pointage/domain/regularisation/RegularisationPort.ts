@@ -8,6 +8,9 @@ export const CODES_REFUS_REGULARISATION = [
   'date-de-survenue-future',
   'fin-avant-debut',
   'fin-apres-borne',
+  'operateur-non-habilite',
+  'operateur-introuvable',
+  'poste-de-travail-introuvable',
 ] as const;
 
 export type CodeRefusRegularisation = (typeof CODES_REFUS_REGULARISATION)[number];
