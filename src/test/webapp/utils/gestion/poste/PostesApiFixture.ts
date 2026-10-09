@@ -24,6 +24,7 @@ export class PostesApiFixture {
   protectedCode: string | undefined;
   readonly writes: Commande[] = [];
   readonly deletions: string[] = [];
+  natures: { id: string; libelle: string; utilisee: boolean; postes: number }[] = [];
 
   constructor(postes: RestPoste[] = []) {
     this.postes = postes;
@@ -52,7 +53,7 @@ export class PostesApiFixture {
 
   private installNatures(): void {
     cy.intercept({ method: 'GET', pathname: '/api/natures-de-travail' }, request => {
-      const natures = new Map<string, { id: string; libelle: string; utilisee: boolean; postes: number }>();
+      const natures = new Map(this.natures.map(nature => [nature.id, nature]));
       for (const poste of this.postes) {
         const connue = natures.get(poste.natureId);
         natures.set(poste.natureId, { id: poste.natureId, libelle: poste.nature, utilisee: true, postes: (connue?.postes ?? 0) + 1 });
@@ -60,6 +61,12 @@ export class PostesApiFixture {
       const content = [...natures.values()].sort((gauche, droite) => gauche.libelle.localeCompare(droite.libelle, 'fr'));
       request.reply({ content, currentPage: 0, pageSize: Number(request.query['size'] ?? 20), totalElementsCount: content.length });
     }).as('naturesRead');
+    cy.intercept('POST', '/api/natures-de-travail', request => {
+      const { libelle } = request.body as { libelle: string };
+      const nature = { id: 'nature-' + String(this.natures.length + 1), libelle, utilisee: false, postes: 0 };
+      this.natures.push(nature);
+      request.reply({ statusCode: 201, body: nature });
+    }).as('natureCreate');
   }
 
   private installCreation(): void {

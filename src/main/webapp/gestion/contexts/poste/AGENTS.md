@@ -29,7 +29,14 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 - **NatureDeTravailId** : Value Object de l'identifiant d'une nature du référentiel des natures de travail.
 - **NatureGeree** : une nature telle que la page la présente : identifiant, libellé et nombre de postes qui la portent
   (champ `postes` de l'API). `porte(poste)` reconnaît ses postes à leur libellé de nature, unique dans l'entreprise.
-- **NaturesDeTravailPort** : port secondaire du référentiel des natures (`/api/natures-de-travail`), lu en entier.
+- **NaturesDeTravailPort** : port secondaire du référentiel des natures (`/api/natures-de-travail`) : lecture
+  entière et enregistrement, qui rend le refus `NatureDejaExistante` (409 `nature-deja-existante`).
+- **FormulaireNature** : modèle de la saisie d'une nature. `decider` refuse un nom vide, trop long ou déjà porté
+  par une autre nature (casse, accents et espaces ignorés), signale une nature **ressemblante** tant que la
+  ressemblance n'est pas acceptée, et rend sinon le libellé prêt à enregistrer.
+- **RessemblanceDeNature** : `memeNom` et `ressemble`. Deux noms se ressemblent quand, une fois en minuscules et
+  sans accents, ils partagent leurs 4 premières lettres ou ne diffèrent que de 2 modifications au plus. C'est un
+  avertissement, jamais un blocage.
 - **Refus de commande** : `LibellePosteDejaUtilise` (unicité de libellé en création/modification), `PosteIntrouvable` (poste inexistant en modification/suppression), et `PosteNonSupprimable` (pointages ou habilitations associées en suppression).
 
 ## Responsabilités et invariants
@@ -55,7 +62,9 @@ Pour les formulaires et la validation des saisies, appliquer l'[ADR 0036](../../
 La page Postes de travail présente les natures dans une colonne qui sert de filtre (disposition retenue pour
 glm-project/glm-front#267) : « Toutes », puis chaque nature avec son nombre de postes. La nature choisie est
 gardée dans l'adresse (`?nature=<id>`) ; une adresse qui nomme une nature disparue montre tous les postes. Le
-tableau d'une nature choisie n'affiche plus la colonne Nature. Une panne de lecture des natures vaut une panne
+tableau d'une nature choisie n'affiche plus la colonne Nature. « + Nouvelle nature », en bas de la colonne,
+ouvre la saisie sur place : « Enregistrer » (jamais « Déclarer »), puis « Enregistrer quand même » après une
+alerte de ressemblance ; Échap ou Annuler referme sans écrire. Une nature enregistrée relit la page. Une panne de lecture des natures vaut une panne
 de lecture de la page.
 
 ## Recherche du référentiel

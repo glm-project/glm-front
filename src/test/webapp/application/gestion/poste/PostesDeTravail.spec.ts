@@ -78,6 +78,14 @@ describe('Workstation settings in gestion', () => {
     thenAddressNamesNature('nature-poncage');
   });
 
+  it('should save a new nature and list it with no workstation yet', () => {
+    givenReferential(1);
+    whenVisitingSettings();
+    whenSavingNature('Rectification');
+
+    thenNatureIsListed('Rectification', '0');
+  });
+
   it('should reach workstation settings from the gestion menu', () => {
     givenAnEmptyWorkshop();
     whenOpeningFromTheMenu();
@@ -184,4 +192,14 @@ const thenOnlyWorkstationsAreListed = (libelles: string[]): void => {
 };
 const thenAddressNamesNature = (id: string): void => {
   cy.location('search').should('eq', '?nature=' + id);
+};
+const whenSavingNature = (libelle: string): void => {
+  cy.get(dataSelector('nature-new')).click();
+  cy.get('#nature-libelle').type(libelle);
+  cy.get(dataSelector('nature-save')).click();
+  cy.wait('@natureCreate');
+};
+const thenNatureIsListed = (libelle: string, postes: string): void => {
+  cy.get(dataSelector('nature-filter')).contains(libelle).parents(dataSelector('nature-filter')).should('contain.text', postes);
+  cy.get(dataSelector('nature-success')).should('contain.text', libelle);
 };

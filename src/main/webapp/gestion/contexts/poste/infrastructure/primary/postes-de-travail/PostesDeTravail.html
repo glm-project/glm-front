@@ -31,6 +31,7 @@
       [total]="etat().postes.length"
       [lue]="!etat().chargement && !etat().echec"
       (choisir)="choisir($event)"
+      (enregistree)="reload()"
     />
 
     <section class="gestion-carte postes-tableau" [attr.aria-busy]="etat().chargement" aria-labelledby="postes-selection-title">

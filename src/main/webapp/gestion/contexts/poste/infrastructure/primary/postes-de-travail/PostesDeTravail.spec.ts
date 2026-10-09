@@ -294,6 +294,15 @@ describe('PostesDeTravail page', () => {
       expect(text('postes-selection-count')).toBe('aucun poste');
     });
 
+    it('should list a nature right after saving it', async () => {
+      givenWorkstationsAndNatures();
+      await whenOpening();
+
+      await whenSavingNature('Rectification');
+
+      expect(texts('nature-filter-label')).toEqual(['peinture', 'Rectification', 'sciage', 'tournage']);
+    });
+
     it('should invite to declare natures when none exists', async () => {
       givenWorkstations();
 
@@ -324,6 +333,14 @@ describe('PostesDeTravail page', () => {
   };
   const thenAddressIs = (url: string): void => {
     expect(TestBed.inject(Router).url).toBe(url);
+  };
+  const whenSavingNature = async (libelle: string): Promise<void> => {
+    await whenClicking('nature-new');
+    const champ = requiredFixture(document.querySelector<HTMLInputElement>('#nature-libelle'), 'nature-libelle');
+    champ.value = libelle;
+    champ.dispatchEvent(new Event('input'));
+    await whenClicking('nature-save');
+    await whenViewSettles();
   };
   const whenChoosingNature = async (libelle: string): Promise<void> => {
     const bouton = [...document.querySelectorAll<HTMLButtonElement>(dataSelector('nature-filter'))].find(

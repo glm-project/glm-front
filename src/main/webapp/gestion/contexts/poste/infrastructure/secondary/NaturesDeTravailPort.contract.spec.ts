@@ -1,11 +1,12 @@
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse, provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { NaturesDeTravailFixture } from '@test/unit/fixtures/gestion/poste/NaturesDeTravailFixture';
 import { defer, Observable, of, switchMap, throwError } from 'rxjs';
+import { NatureDejaExistante } from '../../domain/NatureDejaExistante';
 import { NatureDeTravail } from '../../domain/NatureDeTravail';
 import { NatureDeTravailId } from '../../domain/NatureDeTravailId';
 import { NatureGeree } from '../../domain/NatureGeree';
@@ -13,6 +14,7 @@ import { NaturesDeTravailPort } from '../../domain/NaturesDeTravailPort';
 import { HttpNaturesDeTravail } from './HttpNaturesDeTravail';
 
 const ROUTE = '/api/natures-de-travail';
+const URN = 'urn:glm:erreur:nature-de-travail:';
 
 interface NatureFixture {
   readonly id: string;
@@ -30,11 +32,24 @@ class NaturesHttpBackendFixture implements HttpBackend {
     );
   }
 
+  private enregistrer(body: { libelle: string }): HttpResponse<unknown> | HttpErrorResponse {
+    const cle = cleFixture(body.libelle);
+    if (this.natures.some(nature => cleFixture(nature.libelle) === cle)) {
+      return new HttpErrorResponse({ status: 409, statusText: 'Conflict', error: { type: `${URN}nature-deja-existante` } });
+    }
+    const nature = { id: `nature-${String(this.natures.length + 1)}`, libelle: body.libelle.trim(), utilisee: false, postes: 0 };
+    this.natures = [...this.natures, nature];
+    return new HttpResponse({ status: 201, body: nature });
+  }
+
   private async answer(request: HttpRequest<unknown>): Promise<HttpResponse<unknown> | HttpErrorResponse> {
     await new Promise(resolve => setTimeout(resolve));
     const url = new URL(request.urlWithParams, 'http://localhost');
     if (url.pathname !== ROUTE) {
       return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
+    }
+    if (request.method === 'POST') {
+      return this.enregistrer(request.body as { libelle: string });
     }
     const page = Number(url.searchParams.get('page') ?? '0');
     const size = Number(url.searchParams.get('size') ?? '20');
@@ -50,6 +65,8 @@ class NaturesHttpBackendFixture implements HttpBackend {
     });
   }
 }
+
+const cleFixture = (libelle: string): string => libelle.normalize('NFD').replace(/\p{M}/gu, '').trim().toLocaleLowerCase('fr-FR');
 
 interface NaturesHarness {
   readonly port: NaturesDeTravailPort;
@@ -89,6 +106,9 @@ const createFixtureHarness = (): NaturesHarness => {
 const geree = (nature: NatureFixture): NatureGeree =>
   new NatureGeree(new NatureDeTravailId(nature.id), new NatureDeTravail(nature.libelle), nature.postes);
 
+const libellesEtPostes = (natures: readonly NatureGeree[]): [string, number][] =>
+  natures.map(nature => [nature.libelle.value, nature.postes]);
+
 const tournageFixture: NatureFixture = { id: 'nature-tournage', libelle: 'Tournage', utilisee: true, postes: 2 };
 const dessinFixture: NatureFixture = { id: 'nature-dessin', libelle: 'Dessin', utilisee: false, postes: 0 };
 const peintureFixture: NatureFixture = { id: 'nature-peinture', libelle: 'Peinture', utilisee: true, postes: 0 };
@@ -111,6 +131,26 @@ describe.each(adapters)('NaturesDeTravailPort contract, honoured by %s', (_adapt
     const natures = await harness.port.natures();
 
     expect(natures).toEqual([geree(dessinFixture), geree(peintureFixture), geree(tournageFixture)]);
+  });
+
+  it('should save a new nature with no poste yet', async () => {
+    harness.declare([tournageFixture]);
+
+    const resultat = await harness.port.enregistrer(new NatureDeTravail('Rectification'));
+
+    expect(resultat).toEqual({ ok: true, value: undefined });
+    expect(libellesEtPostes(await harness.port.natures())).toEqual([
+      ['Rectification', 0],
+      ['Tournage', 2],
+    ]);
+  });
+
+  it('should refuse a nature whose name already exists, whatever its case and accents', async () => {
+    harness.declare([tournageFixture]);
+
+    const resultat = await harness.port.enregistrer(new NatureDeTravail('TOURNÂGE'));
+
+    expect(resultat).toEqual({ ok: false, error: new NatureDejaExistante() });
   });
 });
 
@@ -139,6 +179,21 @@ describe('Beyond the contract: HttpNaturesDeTravail', () => {
     server.verify();
   });
 
+  it('should keep an unknown refusal of a saving as a technical failure', async () => {
+    const result = port.enregistrer(new NatureDeTravail('Rectification')).catch((failure: unknown) => failure);
+    await whenServerAnswers(409, { type: `${URN}inconnu` });
+
+    expect(await result).toBeInstanceOf(HttpErrorResponse);
+  });
+
+  it('should send the name alone', async () => {
+    const result = port.enregistrer(new NatureDeTravail('Rectification'));
+    const request = await whenServerAnswers(201, { id: 'nature-1', libelle: 'Rectification', utilisee: false, postes: 0 });
+
+    await result;
+    expect(request.request.body).toEqual({ libelle: 'Rectification' });
+  });
+
   it('should report a technical read failure once and reject', async () => {
     const result = port.natures().catch((failure: unknown) => failure);
     await whenServerFails();
@@ -148,7 +203,12 @@ describe('Beyond the contract: HttpNaturesDeTravail', () => {
   });
 
   const whenServerFails = async (): Promise<void> => {
+    await whenServerAnswers(500, {});
+  };
+  const whenServerAnswers = async (status: number, body: object): Promise<TestRequest> => {
     await new Promise(resolve => setTimeout(resolve));
-    server.expectOne(candidate => candidate.url === ROUTE).flush({}, { status: 500, statusText: 'Response' });
+    const request = server.expectOne(candidate => candidate.url === ROUTE);
+    request.flush(body, { status, statusText: 'Response' });
+    return request;
   };
 });
