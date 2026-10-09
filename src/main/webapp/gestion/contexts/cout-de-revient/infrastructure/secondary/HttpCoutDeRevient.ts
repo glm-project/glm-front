@@ -40,10 +40,10 @@ const ROUTE = '/api/couts-de-revient/{elementId}';
 const ELEMENT_INCONNU = 404;
 
 const toDuree = (total: components['schemas']['RestDureeDuCout'] | undefined, chemin: string): DureePassee =>
-  new DureePassee(required(total, chemin).valeur);
+  new DureePassee(required(required(total, chemin).valeur, `${chemin}.valeur`));
 
 const toMontant = (total: components['schemas']['RestMontantDuCout'] | undefined, chemin: string): Montant =>
-  new Montant(required(total, chemin).valeur);
+  new Montant(required(required(total, chemin).valeur, `${chemin}.valeur`));
 
 const toTemps = (temps: RestTemps | undefined, chemin: string): TempsPasse => {
   const lu = required(temps, chemin);
@@ -88,7 +88,7 @@ const toPart = (part: RestPart): PartDePointage =>
     debut: new InstantDeTravail(required(part.debut, 'part.debut')),
     fin: new InstantDeTravail(required(part.fin, 'part.fin')),
     duree: new DureePassee(required(part.duree, 'part.duree')),
-    diviseur: part.diviseur,
+    diviseur: required(part.diviseur, 'part.diviseur'),
     mainDOeuvre: toMontant(part.mainDOeuvre, 'part.mainDOeuvre'),
     paralleles: required(part.paralleles, 'part.paralleles').map(toActivite),
   });
@@ -100,7 +100,10 @@ const toPointage = (pointage: RestPointage): PointageDeCout => {
     operateur: new OperateurCite(required(operateur.id, 'pointage.operateur.id'), operateur.prenom, operateur.nom),
     poste: toPoste(pointage.poste),
     categorie: required(pointage.categorie, 'pointage.categorie'),
-    periode: new PeriodeDeTravail(new InstantDeTravail(required(pointage.debut, 'pointage.debut')), new InstantDeTravail(pointage.fin)),
+    periode: new PeriodeDeTravail(
+      new InstantDeTravail(required(pointage.debut, 'pointage.debut')),
+      new InstantDeTravail(required(pointage.fin, 'pointage.fin')),
+    ),
     duree: toDuree(pointage.duree, 'pointage.duree'),
     coutHoraire: toTarif(pointage.coutHoraire),
     tauxHoraire: toTarif(pointage.tauxHoraire),

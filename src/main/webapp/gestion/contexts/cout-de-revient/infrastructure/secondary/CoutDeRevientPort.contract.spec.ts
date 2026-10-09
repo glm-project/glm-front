@@ -780,6 +780,55 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     expect(await result).toEqual(new Error(`ligne.${champ} manque dans la réponse du serveur`));
   });
 
+  const rapportAvecUnPointageSans = (champ: 'fin' | 'diviseur'): RestRapport => {
+    const rapport = toRest([fraisageFixture]);
+    const part = {
+      debut: '2026-09-12T07:30:00Z',
+      fin: '2026-09-12T09:00:00Z',
+      duree: 'PT1H30M',
+      diviseur: 2,
+      mainDOeuvre: valeurFixture(26.25),
+      paralleles: [],
+    };
+    const pointage = {
+      anomalies: [],
+      operateur: { id: 'operateur-1' },
+      categorie: 'TRAVAIL',
+      debut: '2026-09-12T07:30:00Z',
+      fin: '2026-09-12T09:00:00Z',
+      duree: valeurFixture('PT1H30M'),
+      cout: { machine: valeurFixture(72), mainDOeuvre: valeurFixture(26.25), total: valeurFixture(98.25) },
+      parts: [champ === 'diviseur' ? { ...part, diviseur: undefined } : part],
+    };
+    return {
+      ...rapport,
+      lignes: [{ ...premiereLigneDe(rapport), pointages: [champ === 'fin' ? { ...pointage, fin: undefined } : pointage] }],
+    } as RestRapport;
+  };
+
+  it.each([
+    ['fin', 'pointage.fin'],
+    ['diviseur', 'part.diviseur'],
+  ] as const)('should reject a clocking missing %s and report it once', async (champ, chemin) => {
+    const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
+    await whenServerAnswers(rapportAvecUnPointageSans(champ));
+
+    expect(await result).toEqual(new Error(`${chemin} manque dans la réponse du serveur`));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it.each([
+    ['temps', 'rapport.temps.total'],
+    ['cout', 'rapport.cout.total'],
+  ] as const)('should reject a %s total missing its value and report it once', async (groupe, chemin) => {
+    const rapport = toRest([fraisageFixture]);
+    const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
+    await whenServerAnswers({ ...rapport, [groupe]: { ...rapport[groupe], total: {} } } as RestRapport);
+
+    expect(await result).toEqual(new Error(`${chemin}.valeur manque dans la réponse du serveur`));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
   it('should reject a server answer missing the element name', async () => {
     const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
     await whenServerAnswers({ ...toRest([fraisageFixture]), element: { id: ELEMENT, categorie: 'OF' } });
