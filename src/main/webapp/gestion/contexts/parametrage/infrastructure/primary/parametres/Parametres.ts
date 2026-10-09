@@ -4,9 +4,9 @@ import { MarqueGlm } from '@/gestion/shared/design-system/infrastructure/primary
 import { TextField } from '@/gestion/shared/design-system/infrastructure/primary/text-field/TextField';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { LogoAffiche } from '../../../application/LogoAffiche';
 import { FichierDeLogo } from '../../../domain/FichierDeLogo';
 import { FormulaireDureeMaxDActivite } from '../../../domain/FormulaireDureeMaxDActivite';
-import { ImageDuLogo } from '../../../domain/ImageDuLogo';
 import { ParametragePort } from '../../../domain/ParametragePort';
 import { VersionDuLogo } from '../../../domain/VersionDuLogo';
 import { LIBELLES_PARAMETRES } from '../LibellesParametrage';
@@ -23,6 +23,7 @@ const HEURE_DE_DEBUT_DE_L_EXEMPLE = 8;
 export class Parametres implements OnInit {
   private readonly port = inject(ParametragePort);
   private readonly errors = inject(ErrorHandlerPort);
+  private readonly logoAffiche = inject(LogoAffiche);
 
   protected readonly libelles = LIBELLES_PARAMETRES;
   protected readonly chargement = signal(true);
@@ -31,7 +32,7 @@ export class Parametres implements OnInit {
   protected readonly enregistrement = signal(false);
   protected readonly enregistree = signal(false);
   protected readonly erreurTechnique = signal(false);
-  protected readonly image = signal<ImageDuLogo | undefined>(undefined);
+  protected readonly image = this.logoAffiche.image;
   protected readonly imageIndisponible = signal(false);
   protected readonly depot = signal(false);
   protected readonly refusLogo = signal<string | undefined>(undefined);
@@ -145,11 +146,9 @@ export class Parametres implements OnInit {
 
   private async afficherLogo(version: VersionDuLogo | undefined): Promise<void> {
     this.logo.set(version);
-    this.image.set(undefined);
     this.imageIndisponible.set(false);
-    if (version === undefined) return;
     try {
-      this.image.set(await this.port.imageDuLogo(version));
+      await this.logoAffiche.montrer(version);
     } catch {
       this.imageIndisponible.set(true);
     }

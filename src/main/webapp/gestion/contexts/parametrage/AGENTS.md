@@ -21,6 +21,7 @@ Ce contexte appartient exclusivement à `gestion`. Il porte les réglages que l'
 - **FichierDeLogo** : le fichier choisi et ses refus, dans l'ordre poids, format, dimensions.
 - **LogoRefuse** : le refus `logo-invalide` du serveur, avec sa raison.
 - **ParametragePort** : lit le paramétrage, fixe la durée max d'une activité, lit l'image du logo, dépose et retire le logo.
+- **LogoAffiche** (`application/`) : l'image du logo que la gestion affiche, seul état partagé entre l'en-tête et la page Paramètres. Fourni une seule fois, à la racine de la gestion (`parametrage.provider.ts`) : un second injecteur, sur la route par exemple, couperait la page de l'en-tête.
 
 ## Responsabilités et invariants
 
@@ -29,6 +30,7 @@ Ce contexte appartient exclusivement à `gestion`. Il porte les réglages que l'
 - Le serveur accepte une durée à la minute. Ce front n'écrit que des heures entières ; une durée lue qui n'en est pas une est une panne technique de lecture, signalée une fois, jamais arrondie en silence.
 - Un logo choisi est envoyé sans autre clic, et seulement s'il respecte les trois règles : un fichier refusé par `FichierDeLogo` n'est jamais envoyé. Le retrait se confirme dans la carte, sans boîte de dialogue.
 - Sans logo, la page montre `MarqueGlm`, le logo GLM du design system de la gestion.
+- Un logo déposé ou retiré s'affiche aussitôt dans l'en-tête, sans recharger la page : la page Paramètres le donne à `LogoAffiche`, que l'en-tête lit. L'en-tête lit le logo une fois, à l'ouverture de la session.
 - Chaque lecture repart du serveur (ADR 0048) ; l'image, elle, vient du cache du navigateur tant que sa version ne change pas.
 
 ## Relations de contexte

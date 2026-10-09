@@ -6,6 +6,7 @@ import { pngFixture } from '@test/unit/fixtures/gestion/parametrage/ImagesFixtur
 import { ParametrageFixture } from '@test/unit/fixtures/gestion/parametrage/ParametrageFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
+import { LogoAffiche } from '../../../application/LogoAffiche';
 import { DureeMaxDActivite } from '../../../domain/DureeMaxDActivite';
 import { ImageDuLogo } from '../../../domain/ImageDuLogo';
 import { ParametragePort } from '../../../domain/ParametragePort';
@@ -26,6 +27,7 @@ describe('Parametres page', () => {
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: ParametragePort, useValue: port },
         { provide: ErrorHandlerPort, useValue: errors },
+        LogoAffiche,
       ],
     });
   });

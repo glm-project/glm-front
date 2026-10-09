@@ -55,6 +55,15 @@ describe('Company settings in gestion', () => {
     thenTheHeaderShowsTheCompanyLogo();
   });
 
+  it('should show the chosen logo in the header at once, without reloading the page', () => {
+    const api = givenSettings();
+    whenVisitingSettings();
+    whenChoosingTheLogo(pngFixture(50, 50));
+
+    thenTheLogoIsShown(api);
+    thenTheHeaderShowsTheCompanyLogo();
+  });
+
   it('should fit a wide logo in the header, without deforming it', () => {
     givenSettingsWithAWideLogo();
     whenVisitingSettings();
