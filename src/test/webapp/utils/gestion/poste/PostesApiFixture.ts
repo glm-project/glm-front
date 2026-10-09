@@ -2,6 +2,21 @@ import { components } from '@/app/generated/schema';
 type RestPoste = components['schemas']['RestPosteDeTravail'];
 type Commande = components['schemas']['RestCreationPosteDeTravail'];
 
+interface CommandeAvecLibelleDeNature {
+  readonly libelle: string;
+  readonly nature?: string;
+  readonly natureId?: string;
+  readonly coutHoraire?: number;
+}
+
+const posteDe = (id: string, commande: CommandeAvecLibelleDeNature): RestPoste => ({
+  id,
+  libelle: commande.libelle,
+  nature: commande.nature ?? '',
+  natureId: commande.natureId ?? 'nature-' + (commande.nature ?? ''),
+  ...(commande.coutHoraire === undefined ? {} : { coutHoraire: commande.coutHoraire }),
+});
+
 export class PostesApiFixture {
   postes: RestPoste[];
   failRead = false;
@@ -46,7 +61,7 @@ export class PostesApiFixture {
         request.reply({ statusCode: 409, body: { type: 'urn:glm:erreur:poste-de-travail:libelle-deja-utilise' } });
         return;
       }
-      const poste = { id: 'created-poste', ...commande };
+      const poste = posteDe('created-poste', commande);
       this.postes.push(poste);
       request.reply({ statusCode: 201, body: poste });
     }).as('posteCreate');
@@ -57,7 +72,7 @@ export class PostesApiFixture {
       const commande = request.body as Commande;
       const id = request.url.split('/').slice(-1)[0];
       this.writes.push(commande);
-      this.postes = this.postes.map(poste => (poste.id === id ? { id, ...commande } : poste));
+      this.postes = this.postes.map(poste => (poste.id === id ? posteDe(id, commande) : poste));
       request.reply({ statusCode: 200, body: this.postes.find(poste => poste.id === id) });
     }).as('posteUpdate');
   }
@@ -81,5 +96,6 @@ export const postesFixture = (nombre: number): RestPoste[] =>
     id: 'poste-' + String(index + 1),
     libelle: 'Poste ' + (index < 9 ? '0' + String(index + 1) : String(index + 1)),
     nature: index === nombre - 1 ? 'ponçage' : 'tournage',
+    natureId: index === nombre - 1 ? 'nature-poncage' : 'nature-tournage',
     coutHoraire: 45.5,
   }));

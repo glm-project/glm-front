@@ -14,7 +14,7 @@ const MODIFICATION_POSTE = {
   nature: 'tournage',
   coutHoraire: 45.5,
 } satisfies components['schemas']['RestModificationPosteDeTravail'];
-const UN_POSTE = { id: POSTE_ID, ...MODIFICATION_POSTE } satisfies components['schemas']['RestPosteDeTravail'];
+const UN_POSTE = { id: POSTE_ID, natureId: 'nature-tournage', ...MODIFICATION_POSTE } satisfies components['schemas']['RestPosteDeTravail'];
 
 const UNE_PAGE_DOPERATEURS = {
   content: [{ id: OPERATEUR_ID, nom: 'Dupont', prenom: 'Jean', natures: [], postes: [] }],
