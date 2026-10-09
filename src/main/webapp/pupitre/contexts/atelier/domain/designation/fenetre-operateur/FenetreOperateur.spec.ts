@@ -45,6 +45,15 @@ const nonConformiteFixture: ActiviteDuPupitre = {
   depuis: '2026-09-05T08:30:00Z',
 };
 
+const travailALaFraiseuseFixture: ActiviteDuPupitre = {
+  ouverture: 'activite-fixture-21',
+  echeance: '2026-09-05T20:00:00.000Z',
+  operateurId: 'jean',
+  categorie: 'TRAVAIL',
+  depuis: '2026-09-05T07:00:00Z',
+  posteId: 'fraiseuse',
+};
+
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
@@ -111,6 +120,7 @@ const vueFixture: JournalDuPupitre = {
             operateurId: 'jean',
             categorie: 'NON_CONFORMITE',
             depuis: '2026-09-05T08:45:00Z',
+            posteId: 'fraiseuse',
           },
         ],
         evenements: [],
@@ -342,18 +352,37 @@ describe('FenetreOperateur', () => {
     const gestes = captureGestures(nonConformite);
 
     thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE']);
-    thenPointageTypesAre(nonConformite, ['FIN', 'NON_CONFORMITE']);
-    thenPointagesKeepTheirWorkstations(nonConformite, ['tour', 'tour']);
+    thenTypesAndWorkstationsAre(nonConformite, [
+      ['FIN', 'tour'],
+      ['NON_CONFORMITE', 'tour'],
+    ]);
   });
 
-  it('should finish then reopen as work every non conforming activity, leaving the work untouched, when the secondary target is asked on a started element', () => {
+  it('should finish then open a non conformity on each workstation in turn when several works are running', () => {
+    const deuxTravaux = givenAWindowWithActivities({ 'of-204': [travailAuTourFixture, travailALaFraiseuseFixture] });
+
+    const nonConformites = whenDecidingWith(deuxTravaux, 'of-204', 'SECONDAIRE');
+
+    thenTypesAndWorkstationsAre(nonConformites, [
+      ['FIN', 'tour'],
+      ['NON_CONFORMITE', 'tour'],
+      ['FIN', 'fraiseuse'],
+      ['NON_CONFORMITE', 'fraiseuse'],
+    ]);
+  });
+
+  it('should finish then reopen as work each non conformity on its workstation, leaving the work untouched, when the secondary target is asked on a started element', () => {
     const retourAuTravail = whenDeciding('of-204', 'SECONDAIRE');
 
     const gestes = captureGestures(retourAuTravail);
 
     thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE']);
-    thenPointageTypesAre(retourAuTravail, ['FIN', 'DEBUT', 'FIN', 'DEBUT']);
-    thenPointagesKeepTheirWorkstations(retourAuTravail, [undefined, undefined, undefined, undefined]);
+    thenTypesAndWorkstationsAre(retourAuTravail, [
+      ['FIN', undefined],
+      ['DEBUT', undefined],
+      ['FIN', 'fraiseuse'],
+      ['DEBUT', 'fraiseuse'],
+    ]);
   });
 
   it('should finish every personal activity on its workstation when stopping all', () => {
@@ -369,7 +398,7 @@ describe('FenetreOperateur', () => {
       { suiviId: 'moule-1015', type: 'FIN', posteId: 'tour' },
       { suiviId: 'of-204', type: 'FIN', posteId: undefined },
       { suiviId: 'of-204', type: 'FIN', posteId: 'tour' },
-      { suiviId: 'of-204', type: 'FIN', posteId: undefined },
+      { suiviId: 'of-204', type: 'FIN', posteId: 'fraiseuse' },
     ]);
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
     expect(new Set(gestes.map(geste => geste.dateDeSurvenue))).toEqual(new Set(['2026-09-05T08:00:00.000Z']));
@@ -538,7 +567,7 @@ describe('FenetreOperateur', () => {
     const stop = whenDeciding('of-204', 'PRINCIPALE');
 
     thenPointageTypesAre(stop, ['FIN', 'FIN', 'FIN']);
-    thenPointagesKeepTheirWorkstations(stop, [undefined, 'tour', undefined]);
+    thenPointagesKeepTheirWorkstations(stop, [undefined, 'tour', 'fraiseuse']);
   });
 
   it('should open without a workstation when the operator holds none', () => {
@@ -1181,6 +1210,12 @@ describe('FenetreOperateur', () => {
     expect(pointagesOf(decision).map(geste => geste.type)).toEqual(types);
   };
   const captureGestures = (decision: DecisionDePointage): readonly GesteDePointage[] => fenetre.capture(gesturesOf(decision));
+  const thenTypesAndWorkstationsAre = (
+    decision: DecisionDePointage,
+    expected: readonly (readonly [string, string | undefined])[],
+  ): void => {
+    expect(pointagesOf(decision).map(geste => [geste.type, geste.posteId])).toEqual(expected);
+  };
   const thenPointagesKeepTheirWorkstations = (decision: DecisionDePointage, postes: (string | undefined)[]): void => {
     expect(pointagesOf(decision).map(geste => geste.posteId)).toEqual(postes);
   };
