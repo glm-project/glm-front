@@ -87,14 +87,12 @@ owns that workflow.
 For the Gestion operational report, the single read port composes synthesis and time sheet with one
 `evaluation` sampled when acquisition starts. Both responses must echo that instant; compare instants rather
 than ISO spellings. A 400 refusal or an inconsistent echo rejects the reading and is reported once. The
-technical evaluation stays outside the view URL. Received complete/incomplete totals and interpreted activity
-states are translated into context values; the adapter does not reconstruct them from raw clockings.
+technical evaluation stays outside the view URL. Received totals and interpreted activity states are
+translated into context values; the adapter does not reconstruct them from raw clockings.
 
 The cost reading also keeps one domain port for the element. Its server evaluation, excluded current-activity
-count, automatic periods and every responsible conflict are translated directly, including other elements.
-Each duration and amount total carries its own completeness: incomplete totals have no value, while a complete
-total missing its optional wire value rejects the read. Periods without a reliable finish keep that absence.
-The adapter preserves the received totals, rounding and category independence.
+count and automatic periods are translated directly. A pointage received without an end, or a total missing its
+wire value, rejects the read. The adapter preserves the received totals, rounding and category independence.
 
 ## Translate refusals by stable code
 
@@ -104,26 +102,38 @@ its own refusal type.
 
 A known business refusal rejects the promise with the context refusal and original message. A context whose users must
 never see what the message embeds, such as identifiers, keeps only the code and renders its own wording: the
-anomalies de pointage acts resolve `{ kind: 'REFUS', code }` and drop the message. An unknown code
+anomalies de pointage regularisation resolves `{ kind: 'REFUS', code }` and drops the message. An unknown code
 stays a technical failure: expanding the domain union is a deliberate change, and a forgotten code must fail
 loudly rather than take the wrong business branch.
 
 Workshop publication is the exception: `AtelierExchangePort.send` resolves a readonly
-`Result<PublicationAcceptee, RefusDePublication>`. Every structured business refusal recognized by `findApiErrorIn` retains
+`Result<void, RefusDePublication>`. Every structured business refusal recognized by `findApiErrorIn` retains
 its original code and message, including codes without a known replay motif, as required by ADR 0007 and
 ADR 0009. Unexpected technical failures still reject; synchronization reports them through `ErrorHandlerPort`
 and preserves pending work while marking disconnection. This result describes the server exchange, not local
 durable acceptance. Its minimal type and constructors stay in the atelier synchronization domain; see the
 [publication amendment in ADR 0006](adr/0006-how-the-front-calls-the-back.md#publication-amendment).
 
-A 200 or 201 publication remains accepted when its response contains conflicts. `PublicationAcceptee`
-retains those diagnostics, including unresolved optional operator or workstation references. Persist them
-with the accepted gesture before refreshing the reference. Stable missing or inconsistent target refusals
-remain final.
+A 200 or 201 publication is accepted; 200 answers the replay of an identifier the server already holds. A pointage
+the server judges incompatible with the state of its key (operator, element and workstation) is not an error of the
+gesture: it answers 409 `pointage-ignore`, which the adapter returns as a durable refusal like any other code. The
+pupitre drops the local effect of that gesture and realigns on the reference at the next synchronization; it never
+shows it to the operator. Of all the refusals, only `suivi-d-atelier-cloture` is shown (`MotifDeRefus`); the others
+stay in the local journal ([ADR 0049](adr/0049-forget-integrated-gestures-at-reference-activation.md)).
 
-Pointage bodies carry the captured `intention`: an opening has no target, a transition and a finish carry
-`cible`, the original stable opening identity. The adapter sends these fields directly and never infers
-intent from category or workstation. Concurrency rereads only the affected workshop item.
+Pointage bodies carry the captured `type` (`DEBUT`, `NON_CONFORMITE`, `FIN`), the operator, the optional workstation,
+the UUID and the business timestamp: no `intention` and no `cible`. A tile press that changes the category of an
+activity sends two pointages with the same timestamp, the `FIN` first, in order. The adapter sends these fields
+directly and never infers anything from category or workstation. Concurrency rereads only the affected workshop
+item. The reference carries `dureeMaximaleDActivite` (ISO-8601, `PT13H` today), which the adapter turns into
+milliseconds; an absent, unreadable or null value rejects the read rather than invent a duration.
+
+The regularisation of an automatic end by the gestionnaire is `POST /api/atelier/suivis/{id}/regularisations` with
+`{ id, activite, dateDeSurvenue }`. The identifier is generated once per entry, so that a resent request is the
+same command; 201 and 200 are both successes. The refusals the context translates are `activite-visee-introuvable`
+(404), `activite-deja-regularisee`, `activite-non-echue`, `fin-avant-debut` and `fin-apres-borne` (409),
+`date-de-survenue-future` (400), `operateur-non-habilite` (409), `operateur-introuvable` and
+`poste-de-travail-introuvable` (404); `saisie-concurrente` is not a refusal but a request to reread the dossier.
 
 `GesteReplayPolicy` owns the single `saisie-concurrente` retry. The transport
 normalizes the workshop motif but keeps the original diagnostic code. A concurrent refusal triggers a reread
