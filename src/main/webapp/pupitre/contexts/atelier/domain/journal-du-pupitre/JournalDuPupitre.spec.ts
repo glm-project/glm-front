@@ -117,6 +117,24 @@ describe('JournalDuPupitre', () => {
     expect(event).toEqual({ geste: pointage, etat: 'ACCEPTE' });
   });
 
+  it('should preserve and clone the logo of the company kept with the referential', () => {
+    const journal: JournalDuPupitre = {
+      ...EMPTY_JOURNAL_DU_PUPITRE,
+      referentiel: {
+        operateurs: [],
+        suivis: [],
+        categories: [],
+        dureeMaximaleDActiviteEnMs: 46_800_000,
+        logo: { version: '0123456789abcdef', image: 'data:image/png;base64,iVBORw0K' },
+      },
+    };
+
+    const snapshot = snapshotDuJournal(journal);
+
+    expect(snapshot.referentiel?.logo).toEqual({ version: '0123456789abcdef', image: 'data:image/png;base64,iVBORw0K' });
+    expect(snapshot.referentiel?.logo).not.toBe(journal.referentiel?.logo);
+  });
+
   it('should preserve and clone suivi events in journal referential', () => {
     const journal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,

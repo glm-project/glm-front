@@ -199,6 +199,9 @@ class ServerFixture extends AtelierExchangePort {
     }
     return this.reference;
   }
+  override imageDuLogo(): Promise<string> {
+    return Promise.reject(new Error('aucun logo'));
+  }
   override async send(geste: GesteDePointage): Promise<Result<void, RefusDePublication>> {
     await roundTrip();
     this.chronology.push(geste.id);

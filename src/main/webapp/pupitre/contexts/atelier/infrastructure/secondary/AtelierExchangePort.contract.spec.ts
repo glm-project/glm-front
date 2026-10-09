@@ -153,6 +153,30 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     await thenItFailed(reference, "La durée maximale d'une activité n'est pas lisible");
   });
 
+  it('should give no logo for a company without one', async () => {
+    const reference = whenReadingReference();
+
+    await whenServerReturnsTheReference();
+
+    await thenTheLogoIs(reference, undefined);
+  });
+
+  it('should give the version of the logo received with the reference, without its image', async () => {
+    const reference = whenReadingReference();
+
+    await whenServerReturnsTheReference({ ...referentielFixture, logo: { version: '0123456789abcdef' } });
+
+    await thenTheLogoIs(reference, { version: '0123456789abcdef' });
+  });
+
+  it('should read the image of a version of the logo as an inline image', async () => {
+    const image = whenReadingTheImageOfTheLogo('0123456789abcdef');
+
+    await whenServerReturnsTheImage('0123456789abcdef', Uint8Array.from([0x89, 0x50, 0x4e, 0x47]));
+
+    await thenTheImageIs(image, 'data:image/png;base64,iVBORw==');
+  });
+
   it('should make no referential request without authorization', async () => {
     givenNoAuthorization();
 
@@ -269,6 +293,17 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     const request = http.expectOne('/api/pupitre/referentiel');
     request.flush(body);
     return request;
+  };
+  const whenReadingTheImageOfTheLogo = (version: string): Promise<string> => observeRejection(serveur.imageDuLogo(version));
+  const whenServerReturnsTheImage = async (version: string, octets: Uint8Array<ArrayBuffer>): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    http.expectOne(`/api/parametrage/logo/${version}`).flush(new Blob([octets], { type: 'image/png' }));
+  };
+  const thenTheImageIs = async (operation: Promise<string>, image: string): Promise<void> => {
+    expect(await operation).toBe(image);
+  };
+  const thenTheLogoIs = async (operation: Promise<ReferentielDuPupitre>, logo: ReferentielDuPupitre['logo']): Promise<void> => {
+    expect((await operation).logo).toEqual(logo);
   };
   const whenServerAcceptsWrite = async (url: string): Promise<ReturnType<HttpTestingController['expectOne']>> => {
     await new Promise(resolve => setTimeout(resolve));

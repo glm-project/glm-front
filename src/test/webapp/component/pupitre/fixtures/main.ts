@@ -46,6 +46,7 @@ const authenticationFixture: AuthenticationPort = {
 const unexpectedNetworkFixture = (): Promise<never> => Promise.reject(new Error('Designation must not contact the server'));
 const serveurFixture: AtelierExchangePort = {
   referentiel: unexpectedNetworkFixture,
+  imageDuLogo: unexpectedNetworkFixture,
   send: unexpectedNetworkFixture,
   reread: unexpectedNetworkFixture,
 };
