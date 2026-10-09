@@ -1,4 +1,3 @@
-import { InstantLongDayPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Component, computed, inject, linkedSignal, resource } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -19,7 +18,7 @@ import { PARAMETRE_PLUS_AUCUNE_ANOMALIE } from './PlusAucuneAnomalie';
 
 @Component({
   selector: 'glm-liste-anomalies',
-  imports: [RouterLink, InstantLongDayPipe, SelecteurOperateurAnomalie, SelecteurElementAnomalie],
+  imports: [RouterLink, SelecteurOperateurAnomalie, SelecteurElementAnomalie],
   templateUrl: './ListeAnomalies.html',
   styleUrl: './ListeAnomalies.css',
 })
