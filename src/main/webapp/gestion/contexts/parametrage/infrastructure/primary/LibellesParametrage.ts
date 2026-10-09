@@ -26,7 +26,7 @@ export const LIBELLES_PARAMETRES = {
   tailleReelle: 'Taille réelle',
   logoGlm: 'Logo GLM',
   logoIndisponible: 'Le logo n’a pas pu être affiché. Rechargez la page pour réessayer.',
-  regles: ['Image PNG ou JPEG', '256 × 256 pixels au plus, en longueur ou en carré', '20 Ko au plus'],
+  regles: ['Image PNG ou JPEG', '256 × 256 pixels au plus, en longueur ou en carré', '50 Ko au plus'],
   choisirLogo: 'Choisir une image…',
   depotEnCours: 'Envoi du logo…',
   logoEnregistre: 'Logo enregistré.',
