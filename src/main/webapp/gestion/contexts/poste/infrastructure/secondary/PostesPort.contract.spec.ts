@@ -14,11 +14,13 @@ import { LibellePoste } from '../../domain/LibellePoste';
 import { LibellePosteDejaUtilise } from '../../domain/LibellePosteDejaUtilise';
 import { NatureDeTravail } from '../../domain/NatureDeTravail';
 import { NatureDeTravailId } from '../../domain/NatureDeTravailId';
+import { NatureInconnue } from '../../domain/NatureInconnue';
 import { PosteDeTravail } from '../../domain/PosteDeTravail';
 import { PosteDeTravailId } from '../../domain/PosteDeTravailId';
 import { PosteIntrouvable } from '../../domain/PosteIntrouvable';
 import { PosteNonSupprimable } from '../../domain/PosteNonSupprimable';
 import { PostesPort } from '../../domain/PostesPort';
+import { RefusCreationPoste } from '../../domain/RefusCreationPoste';
 import { RefusModificationPoste } from '../../domain/RefusModificationPoste';
 import { RefusSuppressionPoste } from '../../domain/RefusSuppressionPoste';
 import { RequetePostes } from '../../domain/RequetePostes';
@@ -266,7 +268,7 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
 
   const whenQueryingPage = (page: number, size: number): Promise<Page<PosteDeTravail>> => port.postes(new RequetePostes(page, size));
 
-  const whenCreatingWorkstation = (libelle: string, nature: string, coutHoraire?: number): Promise<Result<void, LibellePosteDejaUtilise>> =>
+  const whenCreatingWorkstation = (libelle: string, nature: string, coutHoraire?: number): Promise<Result<void, RefusCreationPoste>> =>
     port.creer({
       type: 'CREATION',
       libelle: new LibellePoste(libelle),
@@ -371,6 +373,8 @@ describe('Beyond the contract: HttpPostes', () => {
   it.each([
     ['creer', '/api/postes-de-travail', 409, 'libelle-deja-utilise', new LibellePosteDejaUtilise()],
     ['modifier', '/api/postes-de-travail/tour-1', 409, 'libelle-deja-utilise', new LibellePosteDejaUtilise()],
+    ['creer', '/api/postes-de-travail', 422, 'nature-inconnue', new NatureInconnue()],
+    ['modifier', '/api/postes-de-travail/tour-1', 422, 'nature-inconnue', new NatureInconnue()],
     ['modifier', '/api/postes-de-travail/tour-1', 404, 'poste-de-travail-introuvable', new PosteIntrouvable()],
     ['supprimer', '/api/postes-de-travail/tour-1', 404, 'poste-de-travail-introuvable', new PosteIntrouvable()],
     ['supprimer', '/api/postes-de-travail/tour-1', 409, 'poste-de-travail-pointe', new PosteNonSupprimable()],

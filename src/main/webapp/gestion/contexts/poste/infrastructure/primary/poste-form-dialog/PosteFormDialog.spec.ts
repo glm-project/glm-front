@@ -16,6 +16,7 @@ import { LibellePosteDejaUtilise } from '../../../domain/LibellePosteDejaUtilise
 import { NatureDeTravail } from '../../../domain/NatureDeTravail';
 import { NatureDeTravailId } from '../../../domain/NatureDeTravailId';
 import { NatureGeree } from '../../../domain/NatureGeree';
+import { NatureInconnue } from '../../../domain/NatureInconnue';
 import { NaturesDeTravailPort } from '../../../domain/NaturesDeTravailPort';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PosteDeTravailId } from '../../../domain/PosteDeTravailId';
@@ -112,6 +113,30 @@ describe('PosteFormDialog', () => {
 
     expect(text('poste-nature-error')).toBe('Choisissez une nature dans la liste.');
     expect(port.enregistrements).toEqual([]);
+  });
+
+  it('should ask for another nature when the chosen one disappeared meanwhile', async () => {
+    givenCreationRefusesAnUnknownNature();
+    await whenOpening();
+    await whenFillingValidEntries();
+    await whenTheChosenNatureIsRemovedMeanwhile();
+
+    await whenSubmitting();
+
+    expect(text('poste-nature-error')).toBe("Cette nature n'existe plus : choisissez-en une autre dans la liste.");
+    expect(closed).toEqual([]);
+  });
+
+  it('should offer a fresh list of natures after an unknown nature refusal', async () => {
+    givenCreationRefusesAnUnknownNature();
+    await whenOpening();
+    await whenFillingValidEntries();
+    await whenTheChosenNatureIsRemovedMeanwhile();
+    await whenSubmitting();
+
+    await whenEntering('poste-nature', 'tour');
+
+    expect(texts('poste-nature-option')).toEqual([]);
   });
 
   it('should start on the nature given by the page', async () => {
@@ -213,6 +238,13 @@ describe('PosteFormDialog', () => {
     expect(closed).toEqual([false]);
   });
 
+  const givenCreationRefusesAnUnknownNature = (): void => {
+    port.creation = err(new NatureInconnue());
+  };
+  const whenTheChosenNatureIsRemovedMeanwhile = async (): Promise<void> => {
+    natures.liste = [soudageFixture];
+    await fixture.whenStable();
+  };
   const givenDuplicateLabelIsRefused = (): void => {
     port.creation = err(new LibellePosteDejaUtilise());
   };

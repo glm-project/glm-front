@@ -4,6 +4,7 @@ import { LibellePoste } from './LibellePoste';
 import { LibellePosteDejaUtilise } from './LibellePosteDejaUtilise';
 import { NatureDeTravail } from './NatureDeTravail';
 import { NatureDeTravailId } from './NatureDeTravailId';
+import { NatureInconnue } from './NatureInconnue';
 import { PosteDeTravail } from './PosteDeTravail';
 import { PosteDeTravailId } from './PosteDeTravailId';
 import { PosteIntrouvable } from './PosteIntrouvable';
@@ -145,6 +146,28 @@ describe('FormulairePosteDeTravail', () => {
     const formulaire = formulaireValideFixture().avecNature('tournage');
 
     expect(formulaire.erreurNature()).toBeUndefined();
+  });
+
+  it('should explain on the nature that it disappeared meanwhile', () => {
+    const formulaire = formulaireValideFixture().avecRefus(new NatureInconnue());
+
+    expect(formulaire.erreurNature()).toBe("Cette nature n'existe plus : choisissez-en une autre dans la liste.");
+    expect(formulaire.produireCommande().ok).toBe(false);
+  });
+
+  it('should forget the disappeared nature once another one is chosen', () => {
+    const soudage = { id: new NatureDeTravailId('nature-soudage'), libelle: new NatureDeTravail('soudage') };
+
+    const formulaire = formulaireValideFixture().avecRefus(new NatureInconnue()).choisirNature(soudage);
+
+    expect(formulaire.erreurNature()).toBeUndefined();
+    expect(formulaire.estValide()).toBe(true);
+  });
+
+  it('should keep a duplicate label refusal when choosing another nature', () => {
+    const formulaire = formulaireValideFixture().avecRefus(new LibellePosteDejaUtilise()).choisirNature(tournageFixture);
+
+    expect(formulaire.erreurLibelle()).toBe('Un autre poste porte déjà ce libellé.');
   });
 
   it('should start a creation on the nature given by the page', () => {

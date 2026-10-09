@@ -14,11 +14,13 @@ import { LibellePoste } from '../../domain/LibellePoste';
 import { LibellePosteDejaUtilise } from '../../domain/LibellePosteDejaUtilise';
 import { NatureDeTravail } from '../../domain/NatureDeTravail';
 import { NatureDeTravailId } from '../../domain/NatureDeTravailId';
+import { NatureInconnue } from '../../domain/NatureInconnue';
 import { PosteDeTravail } from '../../domain/PosteDeTravail';
 import { PosteDeTravailId } from '../../domain/PosteDeTravailId';
 import { PosteIntrouvable } from '../../domain/PosteIntrouvable';
 import { PosteNonSupprimable } from '../../domain/PosteNonSupprimable';
 import { PostesPort } from '../../domain/PostesPort';
+import { RefusCreationPoste } from '../../domain/RefusCreationPoste';
 import { RefusModificationPoste } from '../../domain/RefusModificationPoste';
 import { RefusSuppressionPoste } from '../../domain/RefusSuppressionPoste';
 import { RequetePostes } from '../../domain/RequetePostes';
@@ -37,11 +39,15 @@ const toRequest = (commande: CommandeCreationPoste | CommandeModificationPoste):
   ...(commande.coutHoraire === undefined ? {} : { coutHoraire: commande.coutHoraire.value }),
 });
 
-const refusCreation = (urn: string | undefined): LibellePosteDejaUtilise | undefined => {
-  if (urn === 'urn:glm:erreur:poste-de-travail:libelle-deja-utilise') {
-    return new LibellePosteDejaUtilise();
+const refusCreation = (urn: string | undefined): RefusCreationPoste | undefined => {
+  switch (urn) {
+    case 'urn:glm:erreur:poste-de-travail:libelle-deja-utilise':
+      return new LibellePosteDejaUtilise();
+    case 'urn:glm:erreur:poste-de-travail:nature-inconnue':
+      return new NatureInconnue();
+    default:
+      return undefined;
   }
-  return undefined;
 };
 
 const refusModification = (urn: string | undefined): RefusModificationPoste | undefined => {
@@ -50,6 +56,8 @@ const refusModification = (urn: string | undefined): RefusModificationPoste | un
       return new LibellePosteDejaUtilise();
     case 'urn:glm:erreur:poste-de-travail:poste-de-travail-introuvable':
       return new PosteIntrouvable();
+    case 'urn:glm:erreur:poste-de-travail:nature-inconnue':
+      return new NatureInconnue();
     default:
       return undefined;
   }
@@ -95,7 +103,7 @@ export class HttpPostes extends PostesPort {
     return buildPageFrom(response, toPoste, requete);
   }
 
-  override creer(commande: CommandeCreationPoste): Promise<Result<void, LibellePosteDejaUtilise>> {
+  override creer(commande: CommandeCreationPoste): Promise<Result<void, RefusCreationPoste>> {
     return this.execute(this.api.write('/api/postes-de-travail', { body: toRequest(commande) }), refusCreation);
   }
 

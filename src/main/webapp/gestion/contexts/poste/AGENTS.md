@@ -40,7 +40,7 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 - **RessemblanceDeNature** : `memeNom` et `ressemble`. Deux noms se ressemblent quand, une fois en minuscules et
   sans accents, ils partagent leurs 4 premières lettres ou ne diffèrent que de 2 modifications au plus. C'est un
   avertissement, jamais un blocage.
-- **Refus de commande** : `LibellePosteDejaUtilise` (unicité de libellé en création/modification), `PosteIntrouvable` (poste inexistant en modification/suppression), et `PosteNonSupprimable` (pointages ou habilitations associées en suppression).
+- **Refus de commande** : `LibellePosteDejaUtilise` (unicité de libellé en création/modification), `NatureInconnue` (422 `nature-inconnue`, la nature choisie a été supprimée entre-temps : le champ Nature le dit, le formulaire relit les natures et attend qu'on en choisisse une autre), `PosteIntrouvable` (poste inexistant en modification/suppression), et `PosteNonSupprimable` (pointages ou habilitations associées en suppression).
 
 ## Responsabilités et invariants
 

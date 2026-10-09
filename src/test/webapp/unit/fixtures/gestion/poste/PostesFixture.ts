@@ -2,10 +2,10 @@ import { Page } from '@/app/shared/pagination/domain/Page';
 import { ok, Result } from '@/app/shared/result/domain/Result';
 import { CommandeCreationPoste } from '@/gestion/contexts/poste/domain/CommandeCreationPoste';
 import { CommandeModificationPoste } from '@/gestion/contexts/poste/domain/CommandeModificationPoste';
-import { LibellePosteDejaUtilise } from '@/gestion/contexts/poste/domain/LibellePosteDejaUtilise';
 import { PosteDeTravail } from '@/gestion/contexts/poste/domain/PosteDeTravail';
 import { PosteDeTravailId } from '@/gestion/contexts/poste/domain/PosteDeTravailId';
 import { PostesPort } from '@/gestion/contexts/poste/domain/PostesPort';
+import { RefusCreationPoste } from '@/gestion/contexts/poste/domain/RefusCreationPoste';
 import { RefusModificationPoste } from '@/gestion/contexts/poste/domain/RefusModificationPoste';
 import { RefusSuppressionPoste } from '@/gestion/contexts/poste/domain/RefusSuppressionPoste';
 import { RequetePostes } from '@/gestion/contexts/poste/domain/RequetePostes';
@@ -16,13 +16,13 @@ export class PostesFixture extends PostesPort {
   liste: readonly PosteDeTravail[] = [];
   readonly enregistrements: (CommandeCreationPoste | CommandeModificationPoste)[] = [];
   readonly suppressions: PosteDeTravailId[] = [];
-  creation: Result<void, LibellePosteDejaUtilise> = ok(undefined);
+  creation: Result<void, RefusCreationPoste> = ok(undefined);
   modification: Result<void, RefusModificationPoste> = ok(undefined);
   suppression: Result<void, RefusSuppressionPoste> = ok(undefined);
   lectureFailure: Error | undefined;
   ecritureFailure: Error | undefined;
   lectureDifferee: Promise<Page<PosteDeTravail>> | undefined;
-  creationDifferee: Promise<Result<void, LibellePosteDejaUtilise>> | undefined;
+  creationDifferee: Promise<Result<void, RefusCreationPoste>> | undefined;
   suppressionDifferee: Promise<Result<void, RefusSuppressionPoste>> | undefined;
   private lectureSignal: SignalFixture | undefined;
 
@@ -45,7 +45,7 @@ export class PostesFixture extends PostesPort {
     );
   }
 
-  override async creer(commande: CommandeCreationPoste): Promise<Result<void, LibellePosteDejaUtilise>> {
+  override async creer(commande: CommandeCreationPoste): Promise<Result<void, RefusCreationPoste>> {
     this.enregistrements.push(commande);
     const resultat = await this.answerEnregistrement(this.creationDifferee ?? Promise.resolve(this.creation));
     if (resultat.ok) {

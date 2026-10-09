@@ -7,9 +7,11 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { CommandePoste, FormulairePosteDeTravail } from '../../../domain/FormulairePosteDeTravail';
 import { NatureChoisie } from '../../../domain/NatureChoisie';
 import { NatureGeree } from '../../../domain/NatureGeree';
+import { NatureInconnue } from '../../../domain/NatureInconnue';
 import { NaturesDeTravailPort } from '../../../domain/NaturesDeTravailPort';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PostesPort } from '../../../domain/PostesPort';
+import { RefusModificationPoste } from '../../../domain/RefusModificationPoste';
 
 export interface PosteFormDialogData {
   readonly poste: PosteDeTravail | null;
@@ -45,6 +47,10 @@ export class PosteFormDialog implements OnInit {
   });
 
   ngOnInit(): void {
+    this.chargerNatures();
+  }
+
+  private chargerNatures(): void {
     this.errors.observe(
       this.naturesPort.natures().then(natures => {
         this.natures.set(natures);
@@ -89,6 +95,7 @@ export class PosteFormDialog implements OnInit {
         this.dialog.close(true);
       } else {
         this.formulaire.update(formulaire => formulaire.avecRefus(resultat.error));
+        this.relireNaturesApres(resultat.error);
       }
     } catch (failure) {
       this.erreurTechnique.set(true);
@@ -96,6 +103,12 @@ export class PosteFormDialog implements OnInit {
     } finally {
       this.enregistrement.set(false);
       this.dialog.disableClose = false;
+    }
+  }
+
+  private relireNaturesApres(refus: RefusModificationPoste): void {
+    if (refus instanceof NatureInconnue) {
+      this.chargerNatures();
     }
   }
 

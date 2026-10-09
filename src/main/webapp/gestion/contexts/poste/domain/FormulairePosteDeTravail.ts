@@ -94,7 +94,11 @@ export class FormulairePosteDeTravail {
   }
 
   choisirNature(nature: NatureChoisie): FormulairePosteDeTravail {
-    return this.avec({ saisie: { ...this.saisie, nature: nature.libelle.value }, natureChoisie: nature });
+    return this.avec({
+      saisie: { ...this.saisie, nature: nature.libelle.value },
+      natureChoisie: nature,
+      refus: this.refus?.code === 'nature-inconnue' ? undefined : this.refus,
+    });
   }
 
   avecCoutHoraire(coutHoraire: string): FormulairePosteDeTravail {
@@ -110,6 +114,9 @@ export class FormulairePosteDeTravail {
   }
 
   erreurNature(): string | undefined {
+    if (this.refus?.code === 'nature-inconnue') {
+      return this.refus.message;
+    }
     return this.natureChoisie === undefined ? 'Choisissez une nature dans la liste.' : undefined;
   }
 
