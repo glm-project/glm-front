@@ -2,6 +2,7 @@ import { AuthenticationPort } from '@/app/shared/authentication/domain/Authentic
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
 import { isReservedToGestionnaire } from '@/gestion/shared/authentication/infrastructure/primary/gestionnaire';
+import { MarqueGlm } from '@/gestion/shared/design-system/infrastructure/primary/marque-glm/MarqueGlm';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive } from '@angular/router';
@@ -50,7 +51,7 @@ const LIBELLES_EN_TETE = {
   host: { 'data-selector': 'gestion-header' },
   templateUrl: './header.html',
   styleUrl: './header.css',
-  imports: [Icon, RouterLink, RouterLinkActive],
+  imports: [Icon, MarqueGlm, RouterLink, RouterLinkActive],
 })
 export class GestionHeader {
   readonly heading = input.required<string>();

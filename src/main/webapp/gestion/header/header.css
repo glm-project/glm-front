@@ -29,14 +29,6 @@
   flex-shrink: 0;
 }
 
-.marque-logo-fond {
-  fill: var(--color-accent);
-}
-
-.marque-logo-moule {
-  fill: var(--color-on-accent);
-}
-
 .marque-texte {
   display: flex;
   align-items: baseline;
