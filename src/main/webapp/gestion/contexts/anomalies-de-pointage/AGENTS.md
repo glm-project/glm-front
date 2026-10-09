@@ -46,15 +46,14 @@ les paramètres de la liste ; « Retour aux anomalies » ramène aux mêmes filt
 
 Les filtres sont des brouillons jusqu'à « Filtrer », qui inscrit les choix dans l'adresse avec `page=1`.
 `SelecteurOperateurAnomalie` et `SelecteurElementAnomalie` habillent `SelecteurRecherchable` (recherche sans accents,
-entrée « Tous… »). L'adresse garde l'identifiant ; le champ ne l'affiche jamais et nomme « … non résolu (référence
-actuelle) » une valeur que le référentiel ne contient pas. Opérateurs et éléments sont lus entiers (`collectAllPages`,
-toutes les pages, aucune collection tronquée) à chaque ouverture de la liste, séparément : la panne de l'un
-désactive son seul filtre (« … actuel conservé », « Réessayer » qui reste affiché et garde le focus) sans toucher à
-l'autre filtre ni à la liste. La première lecture seule remplace le filtre par « Chargement… ».
+entrée « Tous… »). L'adresse garde l'identifiant ; le champ ne l'affiche jamais et nomme « non résolu » une valeur que
+le référentiel ne contient pas. Opérateurs et éléments sont lus entiers (`collectAllPages`, aucune collection
+tronquée) à chaque ouverture de la liste, séparément : la panne de l'un désactive son seul filtre, avec un « Réessayer »
+qui reste affiché et garde le focus, sans toucher à l'autre filtre ni à la liste. Seule la première lecture remplace
+le filtre par un message de chargement.
 
-Le sous-titre dit ce que la liste contient : « Activités arrêtées par la fin automatique : ouvrez un dossier pour
-placer la fin réelle. » `?plusAucune=1`, écrit par « Anomalie suivante », affiche « Plus aucune anomalie » au-dessus
-de la liste ; tout changement de filtre ou de page l'abandonne.
+Le sous-titre dit ce que la liste contient (`LibellesAnomalies.ts`). `?plusAucune=1`, écrit par « Anomalie suivante »,
+affiche « Plus aucune anomalie » au-dessus de la liste ; tout changement de filtre ou de page l'abandonne.
 
 ### Dossier
 
@@ -69,9 +68,8 @@ un 404 : elle garde l'écran d'erreur avec « Réessayer ». Une adresse dont l'
 sur cet écran d'erreur.
 
 L'en-tête de « Régulariser la fin » dit l'élément (désignation), l'opérateur · poste · début, puis la phrase du
-problème : « Le travail démarré à 08:00 n'a jamais été arrêté : fin automatique à 18:00. » (« La non-conformité
-démarrée… » en NC). Aucun identifiant n'est jamais affiché : « Opérateur non résolu », « Poste non résolu »,
-« Sans poste ». Le domaine garde chaque instant en texte ISO ; le primaire l'affiche en heure locale par
+problème (`PhrasesDuProbleme.ts`). Aucun identifiant n'est jamais affiché : une fiche non résolue se dit
+« non résolu », un pointage sans poste « Sans poste » (`PresentationIdentites.ts`). Le domaine garde chaque instant en texte ISO ; le primaire l'affiche en heure locale par
 `app/shared/date-format`. La page lit `now` une fois pour l'affichage ; `maintenant`, qui sert aux bornes, est relue
 à chaque action.
 
@@ -80,10 +78,10 @@ au jour local du début de l'activité échue. Ce contexte ne calcule aucune sem
 
 ### Poignée
 
-La poignée se place en tirant le bout de la barre, en cliquant sur la frise (arrondi à 5 minutes) ou au clavier
-(flèches : 1 minute, Maj : 15, Origine et Fin : aux bornes). Avant toute heure elle se tient « sans heure »
-(« Heure ? ») sur la fin automatique : aucune heure n'est inventée, « Valider la fin » est inactif. Ses bornes
-viennent de `CadreDeLaFin.depuis(dossier, maintenant)` :
+Avant toute heure la poignée se tient « sans heure » sur la fin automatique : aucune heure n'est inventée et
+« Valider la fin » est inactif. Le clic sur la frise (arrondi à 5 minutes), le glissé ou une touche posent l'heure
+initiale ; ensuite seuls le glisser et le clavier (flèches : 1 minute, Maj : 15, Origine et Fin : aux bornes)
+la déplacent, le clic n'agit plus. Ses bornes viennent de `CadreDeLaFin.depuis(dossier, maintenant)` :
 
 - **minimum** : la première minute entière strictement après le début de l'activité ; le serveur refuse une
   fin qui n'est pas postérieure au début ;
@@ -100,7 +98,7 @@ La frise (`glm-frise-dossier`) dessine, du plus tôt au plus tard :
 
 - la barre de l'activité échue, `accent` pour le travail et `nc` pour la non-conformité, finie à l'échéance par
   l'embout hachuré `warn` de Gestion ; avec une poignée, elle finit à l'heure proposée, la portion retirée se
-  dessine jusqu'à l'échéance et la fin automatique reste tracée (« Fin automatique HH:MM ») ;
+  dessine jusqu'à l'échéance et la fin automatique reste tracée ;
 - le repère du pointage qui ouvre l'activité ;
 - la **borne tracée** : le repère du `DEBUT` ou de la `NON_CONFORMITE` du journal dont l'instant égale
   `borneDeFin` (`demarrageDeLaBorne`, comparaison à la nanoseconde ; une `FIN` n'en est jamais un), sinon un
@@ -110,7 +108,7 @@ La frise (`glm-frise-dossier`) dessine, du plus tôt au plus tard :
 Les autres pointages de la clé ne sont pas tracés. L'échelle va d'une heure avant le premier instant dessiné à
 une heure après le dernier, par heures entières, et s'étend jusqu'à la borne de la poignée. Elle tient dans la
 largeur de l'hôte, sans défilement (`ResizeObserver` créé dans `afterNextRender`) : les graduations s'espacent selon
-la largeur, jamais à moins de 64 px, et repères et poignée restent à 22 px des bords. Le repère de la borne est serré
+la largeur, jamais à moins de 64 px, la poignée reste à 22 px des bords et les repères restent dans le plan. Le repère de la borne est serré
 contre le bord droit pour rester entier ; son heure reste exacte dans son texte. Barres et repères sont des images
 (`role="img"`) ; la poignée est un `slider` dans l'ordre de tabulation. Les tests lisent les attributs `data-*`,
 jamais les classes ; la position horizontale se prouve en Cypress sur la géométrie rendue des graduations
@@ -129,19 +127,17 @@ réussie dont la réponse s'est perdue ferait afficher la nouvelle heure alors q
 avec lui, le serveur répond honnêtement `activite-deja-regularisee`. `RegularisationDeLaFin` n'envoie rien sans
 heure lisible, pendant un envoi ni après le succès.
 
-**Refus traduits** : le port rend `{ kind: 'REFUS', code }` pour les codes de `CODES_REFUS_REGULARISATION`
-(`activite-visee-introuvable`, `activite-deja-regularisee`, `activite-non-echue`, `date-de-survenue-future`,
-`fin-avant-debut`, `fin-apres-borne`, `operateur-non-habilite`, `operateur-introuvable`,
-`poste-de-travail-introuvable`) et ne transmet jamais le message du serveur, qui contient des identifiants ; le
-primaire affiche le libellé du code sous le bouton ([API](../../../../../../documentation/api.md)).
+**Refus traduits** : le port rend `{ kind: 'REFUS', code }` pour les codes de `CODES_REFUS_REGULARISATION` (liste et
+statuts dans [`api.md`](../../../../../../documentation/api.md)) et ne transmet jamais le message du serveur, qui
+contient des identifiants ; le primaire affiche le libellé du code sous le bouton (`LibellesAnomalies.ts`).
 `activite-non-echue` couvre deux cas : l'échéance n'est pas atteinte, ou un pointage ou la clôture a déjà terminé
-l'activité. **`saisie-concurrente` relit le dossier** : la page le recharge, rebâtit la vue et dit « Le dossier a
-changé pendant la saisie : il a été relu. Placez de nouveau la fin. » Tout autre échec est signalé une fois par
-`ErrorHandlerPort`, rejeté, et affiche « La fin n'a pas pu être enregistrée. Votre saisie est conservée : réessayez. »
+l'activité. **`saisie-concurrente` relit le dossier** : la page le recharge, rebâtit la vue et dit que le dossier a
+changé, la fin est à replacer. Tout autre échec est signalé une fois par `ErrorHandlerPort`, rejeté, et affiche un
+message qui conserve la saisie.
 
 ### Après la régularisation
 
-La vue affiche **« Fin régularisée à HH:MM »** et **« Anomalie suivante »**; la poignée et « Valider » disparaissent.
+La vue affiche **« Fin régularisée à HH:MM »** et **« Anomalie suivante »** ; la poignée et « Valider » disparaissent.
 `RechercheDeLAnomalieSuivante` lit la liste avec les filtres de l'adresse de retour et mène, dans l'ordre : à la
 première ligne autre que l'adresse d'origine de la page demandée, puis de la page précédente (une seule) ; sinon
 à la liste, `page` retirée et `plusAucune=1` ; si la lecture de la liste échoue, à la liste d'origine, qui affiche
@@ -162,5 +158,6 @@ Les règles de test sont dans [`documentation/testing.md`](../../../../../../doc
 ## Ce qui a disparu
 
 Le contexte a perdu les conflits, la vue complète, les actions directes, la correction, l'annulation, l'aperçu,
-la confirmation, le reçu et la proposition signée avec le chantier #254 : le serveur ignore désormais les
-pointages incohérents au lieu d'en faire des anomalies. Ne rien rouvrir de cela sans nouvelle décision.
+la confirmation, le reçu et la proposition signée : le serveur ignore désormais les pointages incohérents au lieu
+d'en faire des anomalies ([ADR 0054](../../../../../../documentation/adr/0054-ignore-incoherent-pointages-at-reception.md)).
+Ne rien rouvrir de cela sans nouvelle décision.

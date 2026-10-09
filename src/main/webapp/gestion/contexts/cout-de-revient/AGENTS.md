@@ -18,8 +18,8 @@ Le rapport signale les anomalies de fin automatique reçues du back et peut pré
 Quand une activité se termine, son entrée dans le diviseur peut réduire le coût d'une autre activité
 déjà terminée lors de la lecture suivante. Le front affiche ce recalcul sans effectuer sa propre somme.
 Après régularisation de la fin automatique par une fin réelle, le rapport retire l'alerte active par
-recalcul. La fin automatique et l'anomalie sont dérivées par le back ; seuls les pointages sont conservés
-dans l'historique.
+recalcul. La fin automatique et l'anomalie sont dérivées par le back ; seuls les pointages et les régularisations
+sont conservés dans l'historique.
 
 La seule anomalie du rapport est la **fin automatique** : une activité arrêtée à son échéance faute de fin
 pointée. Elle est signalée dans ce rapport ; sa régularisation se fait dans le contexte

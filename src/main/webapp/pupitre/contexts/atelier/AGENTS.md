@@ -14,13 +14,14 @@ elle ne constitue pas une durée comptabilisée dans les rapports.
 **Clé d'activité** : opérateur et poste, au sein d'un suivi. Une clé porte au plus une activité en cours.
 Le pupitre n'envoie que trois pointages (`DEBUT`, `NON_CONFORMITE`, `FIN`), sans intention ni cible : une
 `FIN` ferme l'activité de sa clé, et une ouverture sur une clé déjà occupée est ignorée par le serveur
-(`DEJA_EN_COURS`). La projection locale suit la même règle : une ouverture sur une clé occupée est sans effet.
+(`DEJA_EN_COURS`). La projection locale suit la même règle : une ouverture sur une clé occupée est sans effet. La règle
+de réception est posée par l'[ADR 0054](../../../../../../documentation/adr/0054-ignore-incoherent-pointages-at-reception.md).
 
 **Geste composé** : un appui qui change la catégorie d'un travail envoie deux pointages à la même heure, la
 `FIN` d'abord, avec le poste de chaque activité. NC pendant un travail envoie une `FIN` puis une
 `NON_CONFORMITE` par activité en travail ; « FIN NC » (cible secondaire d'une tuile en non-conformité,
 ancien « BON ») envoie une `FIN` puis un `DEBUT` par activité en non-conformité. Le pupitre ne relance pas :
-il ferme l'activité par une `FIN` explicite avant d'en ouvrir une autre.
+il ferme l'activité par une `FIN` explicite avant d'en ouvrir une autre ([ADR 0054](../../../../../../documentation/adr/0054-ignore-incoherent-pointages-at-reception.md)).
 
 **Durée maximale** : durée d'une activité sans fin pointée, lue du référentiel (`dureeMaximaleDActivite`,
 ISO-8601, par exemple `PT13H`) et gardée en millisecondes. Le pupitre ne connaît aucune valeur en dur : une
@@ -36,7 +37,7 @@ expiration y compris hors ligne, sans créer de `FIN`. Le gel de la durée indic
 
 **Pointage ignoré** : pointage que le serveur juge incompatible avec l'état de sa clé et refuse en 409
 `pointage-ignore`. Le pupitre retire son effet local et se recale sur le référentiel de la synchronisation
-suivante, par le mécanisme existant ; le refus reste au journal local (ADR 0049).
+suivante, par le mécanisme existant ; le refus reste au journal local (ADR 0049, [ADR 0054](../../../../../../documentation/adr/0054-ignore-incoherent-pointages-at-reception.md)).
 
 **Refus affiché** : seul le refus `suivi-d-atelier-cloture` est montré à l'opérateur
 (`MotifDeRefus.isShownToTheOperator()`). Tout autre refus, y compris un code que l'adaptateur ne reconnaît
@@ -96,7 +97,7 @@ clôture.
 - « Tout arrêter » forme un unique lot local atomique et ordonné de fins, une par activité personnelle, avec l'invalidation durable de la reprise. Un échec d'acceptation locale n'en conserve aucune partie ; après acceptation, le rejeu FIFO poursuit les gestes suivants malgré un refus métier connu.
 - PAUSE forme de même un unique lot atomique de fins : une fin par activité personnelle connue, sur son poste, portant sa suspension. La suspension ne quitte jamais le pupitre. Une pause ne ferme que ce que le référentiel du pupitre connaît; une activité ouverte ailleurs depuis le dernier rafraîchissement court pendant la pause.
 - `PauseEnCours` est le seul propriétaire de la fin d'une pause et de ce qu'elle rouvre. La pause d'un opérateur est celle de sa dernière suspension; elle prend fin à REPRENDRE, à tout autre geste de cet opérateur ajouté au journal de ce pupitre, quel que soit son sort à la publication, et dès que le référentiel projeté montre une activité de l'opérateur autre qu'une activité dont la suspension a été refusée. Une pause n'expire jamais ; seules les activités interprétables non expirées font obstacle à sa reprise. L'oubli des gestes acceptés à l'activation du référentiel ne change pas son résultat : il garde le dernier geste de chaque opérateur et les gestes de sa dernière pause, que `DernierePause` désigne pour les deux règles.
-- REPRENDRE rouvre, sur le même poste et par le pointage retenu, chaque activité suspendue dont la suspension n'a pas été refusée, dont l'élément est encore au référentiel projeté, dont le poste est encore habilité et qui n'est pas déjà ouverte au même élément et au même poste — un `NON_CONFORMITE` sur une activité en cours la basculerait en non-conformité. La reprise n'a lieu que sur le pupitre qui a pris la pause.
+- REPRENDRE rouvre, sur le même poste et par le pointage retenu, chaque activité suspendue dont la suspension n'a pas été refusée, dont l'élément est encore au référentiel projeté, dont le poste est encore habilité et qui n'est pas déjà ouverte au même élément et au même poste — une ouverture sur une clé occupée serait ignorée. La reprise n'a lieu que sur le pupitre qui a pris la pause.
 - Une commande globale pressée pendant des captures déjà initiées est conservée puis décidée sur la fenêtre mise à jour après leur acceptation. PAUSE ou REPRENDRE décidée sur une fenêtre où il n'y a plus rien à suspendre ou à rouvrir n'enregistre aucun geste, aucun pointage. Dès cette intention, les tuiles et les commandes globales restent indisponibles jusqu'à l'acceptation locale du lot; « J'ai fini » reste disponible, ferme immédiatement la vue et laisse les gestes initiés se terminer.
 - Un échec de la lecture du référentiel ne remplace jamais le dernier référentiel complet. Cette lecture est un appel unique et non paginé avec des identifiants uniques. Le backend utilise READ COMMITTED : ses requêtes successives peuvent observer des commits concurrents. Le pupitre ignore la version reçue ; l'acquisition complète ne garantit aucun instantané transactionnel commun.
 - Un référentiel n'est disponible pour l'enrôlement que si la vue active appartient à l'entreprise actuellement sélectionnée.
