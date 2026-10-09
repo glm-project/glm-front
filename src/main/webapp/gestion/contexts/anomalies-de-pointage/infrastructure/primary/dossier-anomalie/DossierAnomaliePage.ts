@@ -21,17 +21,17 @@ export class DossierAnomaliePage {
   private readonly parametres = toSignal(this.route.queryParamMap, { requireSync: true });
   protected readonly now = new Date();
   protected readonly libelles = LIBELLES_ANOMALIES;
-  protected readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
+  private readonly adresse = computed(() => adresseDossier(this.chemin().get('suivi'), this.parametres().get('pointage')));
   protected readonly retour = computed(() => ({
     operateur: this.parametres().get('operateur'),
     element: this.parametres().get('element'),
     page: this.parametres().get('page'),
   }));
   protected readonly lecture = resource({ params: () => ({ adresse: this.adresse() }), loader: ({ params }) => this.read(params.adresse) });
-  protected readonly operateurs = resource({ loader: () => this.port.operateurs() });
+  private readonly operateurs = resource({ loader: () => this.port.operateurs() });
   protected readonly operateursConnus = computed(() => (this.operateurs.hasValue() ? this.operateurs.value() : undefined));
-  protected readonly resultatLecture = computed(() => (this.lecture.error() ? undefined : this.lecture.value()));
-  protected readonly dossier = computed(() => {
+  private readonly resultatLecture = computed(() => (this.lecture.error() ? undefined : this.lecture.value()));
+  private readonly dossier = computed(() => {
     if (this.lecture.isLoading()) return undefined;
     const lecture = this.resultatLecture();
     return lecture?.kind === 'DOSSIER' ? lecture.dossier : undefined;
