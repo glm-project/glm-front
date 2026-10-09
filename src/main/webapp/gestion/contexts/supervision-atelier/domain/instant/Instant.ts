@@ -29,10 +29,4 @@ export class Instant {
   compare(other: Instant): number {
     return this.milliseconds - other.milliseconds || this.nanosecondsWithinMillisecond - other.nanosecondsWithinMillisecond;
   }
-
-  afterElapsedMilliseconds(milliseconds: number): Instant {
-    const utcMilliseconds = new Date(this.milliseconds + milliseconds).toISOString();
-    const fractionBeyondMilliseconds = this.value.slice(this.value.indexOf('.') + 4, -1);
-    return new Instant(`${utcMilliseconds.slice(0, -1)}${fractionBeyondMilliseconds}Z`);
-  }
 }

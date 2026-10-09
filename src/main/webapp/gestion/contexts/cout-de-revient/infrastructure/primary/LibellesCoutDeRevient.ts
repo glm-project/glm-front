@@ -7,12 +7,10 @@ import {
 import { CategorieDElementChiffre } from '../../domain/element/CategorieDElementChiffre';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
-import { TotalDeMontant } from '../../domain/montant/TotalDeMontant';
 import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
 import { OperateurCite } from '../../domain/pointage/OperateurCite';
 import { PartDePointage } from '../../domain/pointage/PartDePointage';
 import { AnomalieDePointage, PointageDeCout } from '../../domain/pointage/PointageDeCout';
-import { TypeDePointage } from '../../domain/pointage/PointageEnConflit';
 import { PosteCite } from '../../domain/pointage/PosteCite';
 import { ActivitesEnCoursExclues } from '../../domain/rapport/ActivitesEnCoursExclues';
 import { CoutDeRevient } from '../../domain/rapport/CoutDeRevient';
@@ -20,7 +18,6 @@ import { CompteDAnomalies, LigneDeCout } from '../../domain/rapport/LigneDeCout'
 import { DureePassee } from '../../domain/temps/DureePassee';
 import { InstantDeTravail } from '../../domain/temps/InstantDeTravail';
 import { TempsPasse } from '../../domain/temps/TempsPasse';
-import { TotalDeTemps } from '../../domain/temps/TotalDeTemps';
 
 const EUROS = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
@@ -30,19 +27,9 @@ const DECIMALES = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, max
 
 const MINUTES_PAR_HEURE = 60;
 
-const formatDureeCertaine = (duree: DureePassee): string => `${duree.heures} h ${String(duree.minutesRestantes).padStart(2, '0')}`;
+const formatDuree = (duree: DureePassee): string => `${duree.heures} h ${String(duree.minutesRestantes).padStart(2, '0')}`;
 
-const formatMontantCertain = (montant: Montant): string => EUROS.format(montant.euros);
-
-const formatDuree = (total: TotalDeTemps): string => {
-  const lecture = total.snapshot();
-  return lecture.complete ? formatDureeCertaine(lecture.valeur) : 'Incomplet';
-};
-
-const formatMontant = (total: TotalDeMontant): string => {
-  const lecture = total.snapshot();
-  return lecture.complete ? formatMontantCertain(lecture.valeur) : 'Incomplet';
-};
+const formatMontant = (montant: Montant): string => EUROS.format(montant.euros);
 
 const memeJour = (debut: InstantDeTravail, fin: InstantDeTravail): boolean => localCalendarDay(debut.value) === localCalendarDay(fin.value);
 
@@ -51,9 +38,6 @@ const borne = (instant: InstantDeTravail): string => `${formatInstantShortDayMon
 const plageDuPointage = (pointage: PointageDeCout): string => {
   const debut = pointage.periode.debut;
   const fin = pointage.periode.fin;
-  if (fin === undefined) {
-    return `${formatInstantShortDayMonth(debut.value)} · ${formatInstantTime(debut.value)} → fin à résoudre`;
-  }
   return memeJour(debut, fin)
     ? `${formatInstantShortDayMonth(debut.value)} · ${formatInstantTime(debut.value)} → ${formatInstantTime(fin.value)}`
     : `${borne(debut)} → ${borne(fin)}`;
@@ -74,14 +58,11 @@ const activiteCitee = (activite: ActiviteCitee): string => {
   return activite.nature === undefined ? lieu : `${lieu} (${activite.nature.value})`;
 };
 
-const tarif = (montant: Montant): string => `${formatMontantCertain(montant)}/h`;
+const tarif = (montant: Montant): string => `${formatMontant(montant)}/h`;
 
 const heuresDecimales = (part: PartDePointage): string => DECIMALES.format(part.duree.minutes / MINUTES_PAR_HEURE);
 
 const contexteDePart = (part: PartDePointage): string => {
-  if (part.partageInconnu()) {
-    return `partage inconnu : pointage à résoudre sur ${part.bloquants.map(activiteCitee).join(', ')}`;
-  }
   if (part.paralleles.length > 0) {
     return `aussi sur ${part.paralleles.map(activiteCitee).join(', ')}`;
   }
@@ -92,8 +73,7 @@ const calculDePart = (pointage: PointageDeCout, part: PartDePointage): string =>
   if (pointage.tauxHoraire === undefined) {
     return 'Opérateur non valorisé';
   }
-  const operation = `${DECIMALES.format(pointage.tauxHoraire.euros)} × ${heuresDecimales(part)} ÷ ${part.diviseur ?? '?'}`;
-  return part.partageInconnu() ? `${operation} = inconnu` : `${operation} = ${formatMontant(part.mainDOeuvre)}`;
+  return `${DECIMALES.format(pointage.tauxHoraire.euros)} × ${heuresDecimales(part)} ÷ ${part.diviseur} = ${formatMontant(part.mainDOeuvre)}`;
 };
 
 const calculMachine = (pointage: PointageDeCout): string => {
@@ -108,38 +88,19 @@ const calculMachine = (pointage: PointageDeCout): string => {
 
 const ANOMALIES: Record<AnomalieDePointage, string> = {
   FIN_AUTOMATIQUE: 'Fin automatique',
-  A_RESOUDRE: 'À résoudre',
-  PARTAGE_INCONNU: 'Partage inconnu',
-};
-
-const TYPES_DE_POINTAGE: Record<TypeDePointage, string> = {
-  DEBUT: 'début',
-  NON_CONFORMITE: 'reprise en non-conformité',
-  FIN: 'fin',
 };
 
 const pluriel = (nombre: number, singulier: string, pluriel: string): string => `${nombre} ${nombre === 1 ? singulier : pluriel}`;
 
 const COMPTES_D_ANOMALIES: Record<AnomalieDePointage, (nombre: number) => string> = {
   FIN_AUTOMATIQUE: nombre => pluriel(nombre, 'fin automatique', 'fins automatiques'),
-  A_RESOUDRE: nombre => `${nombre} à résoudre`,
-  PARTAGE_INCONNU: nombre => pluriel(nombre, 'partage inconnu', 'partages inconnus'),
 };
 
 const compteDAnomalies = (compte: CompteDAnomalies): string => COMPTES_D_ANOMALIES[compte.anomalie](compte.nombre);
 
-const contradictoires = (pointage: PointageDeCout): string =>
-  pointage.contradictoires.map(fait => `${TYPES_DE_POINTAGE[fait.type]} à ${borne(fait.survenue)}`).join(', ');
-
-const EXPLICATIONS: Record<AnomalieDePointage, (pointage: PointageDeCout) => string> = {
-  FIN_AUTOMATIQUE: () =>
-    'Aucune fin n’a été pointée : l’activité a été arrêtée automatiquement après 13 h et elle est comptée ainsi. Il faut ajouter le pointage de fin réel.',
-  A_RESOUDRE: pointage =>
-    pointage.contradictoires.length === 0
-      ? 'Les pointages de cette activité se contredisent : il faut les corriger pour connaître sa durée et son coût.'
-      : `Pointages contradictoires : ${contradictoires(pointage)}. Il faut les corriger pour connaître la durée et le coût de ce pointage.`,
-  PARTAGE_INCONNU: pointage =>
-    `Ce pointage est correct, mais ${nomDeLOperateur(pointage.operateur)} a un pointage à résoudre sur un autre poste pendant ce temps : tant qu’il n’est pas corrigé, on ne sait pas comment partager son temps.`,
+const EXPLICATIONS: Record<AnomalieDePointage, string> = {
+  FIN_AUTOMATIQUE:
+    'Aucune fin n’a été pointée : l’activité a été arrêtée automatiquement à son échéance et elle est comptée ainsi. Il faut régulariser la fin automatique.',
 };
 
 const naturesEnAnomalie = (lignes: readonly LigneDeCout[]): string => {
@@ -181,7 +142,6 @@ export const LIBELLES_COUT_DE_REVIENT = {
     activites.nombre === 1
       ? '1 activité en cours exclue du temps, du coût et du partage humain.'
       : `${String(activites.nombre)} activités en cours exclues du temps, du coût et du partage humain.`,
-  sansValeur: '—',
 
   indicateurCout: 'Coût de revient',
   indicateurTemps: 'Temps passé',
@@ -225,13 +185,12 @@ export const LIBELLES_COUT_DE_REVIENT = {
     plage: plageDuPointage,
     plageDePart,
     tarif,
-    diviseur: (part: PartDePointage): string => `÷${part.diviseur ?? '?'}`,
+    diviseur: (part: PartDePointage): string => `÷${part.diviseur}`,
     contexteDePart,
     calculDePart,
     calculMachine,
     anomalie: (anomalie: AnomalieDePointage): string => ANOMALIES[anomalie],
-    explication: (pointage: PointageDeCout, anomalie: AnomalieDePointage): string => EXPLICATIONS[anomalie](pointage),
-    finAuPlusTard: (instant: InstantDeTravail): string => `fin au plus tard ${borne(instant)}`,
+    explication: (anomalie: AnomalieDePointage): string => EXPLICATIONS[anomalie],
   },
   anomalies: {
     compte: compteDAnomalies,
@@ -250,7 +209,6 @@ export const LIBELLES_COUT_DE_REVIENT = {
   identite: (categorie: CategorieDElementChiffre, nom: string): string => `${categorie.value} · ${nom}`,
   montant: formatMontant,
   duree: formatDuree,
-  dureeCertaine: formatDureeCertaine,
   nature: (nature: string | undefined): string => nature ?? SANS_POSTE,
 
   repartition: (cout: Cout): string => `Machine ${formatMontant(cout.machine)} · Main d’œuvre ${formatMontant(cout.mainDOeuvre)}`,

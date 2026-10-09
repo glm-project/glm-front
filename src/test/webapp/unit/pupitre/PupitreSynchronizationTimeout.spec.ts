@@ -13,8 +13,10 @@ import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@a
 import { TestBed } from '@angular/core/testing';
 import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
+import { referentielApiFixture } from '@test/utils/pupitre/ReferentielApiFixture';
 
 const entrepriseFixture = Entreprise.of('entreprise-a');
 const gesteFixture: GesteDePointage = {
@@ -23,19 +25,16 @@ const gesteFixture: GesteDePointage = {
   operateurId: 'jean',
   nature: 'POINTAGE',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
-const targetedFinishFixture: GesteDePointage = {
+const finishFixture: GesteDePointage = {
   nature: 'POINTAGE',
   id: '34f2039a-722a-43fc-ad88-4ecb928b5e99',
   dateDeSurvenue: '2026-09-05T17:00:00Z',
   operateurId: 'jean',
   suiviId: 'piece',
   posteId: 'tour',
-  intention: 'FIN',
   type: 'FIN',
-  cible: 'ouverture-originale',
 };
 const referenceFixture: ReferentielDuPupitre = {
   operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [{ id: 'tour', libelle: 'Tour' }] }],
@@ -55,17 +54,16 @@ const referenceFixture: ReferentielDuPupitre = {
           echeance: '2026-09-05T21:00:00Z',
         },
       ],
-      conflits: [],
       evenements: [],
     },
   ],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const openingBodyFixture = {
   id: 'arrivee-originale',
   dateDeSurvenue: '2026-09-05T08:00:00Z',
   operateur: 'jean',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
 const finishBodyFixture = {
@@ -73,9 +71,7 @@ const finishBodyFixture = {
   dateDeSurvenue: '2026-09-05T17:00:00Z',
   operateur: 'jean',
   poste: 'tour',
-  intention: 'FIN',
   type: 'FIN',
-  cible: 'ouverture-originale',
 };
 
 class TimeoutSessionFixture extends DeviceSessionPort {
@@ -138,10 +134,10 @@ describe('Pupitre synchronization over stalled HTTP', () => {
   it.each([
     { stage: 'send' as const, geste: gesteFixture, body: openingBodyFixture },
     { stage: 'reread' as const, geste: gesteFixture, body: openingBodyFixture },
-    { stage: 'send' as const, geste: targetedFinishFixture, body: finishBodyFixture },
-    { stage: 'reread' as const, geste: targetedFinishFixture, body: finishBodyFixture },
+    { stage: 'send' as const, geste: finishFixture, body: finishBodyFixture },
+    { stage: 'reread' as const, geste: finishFixture, body: finishBodyFixture },
   ])(
-    'should retain $geste.intention after a stalled $stage, release the session and replay its original body',
+    'should retain $geste.type after a stalled $stage, release the session and replay its original body',
     async ({ stage, geste, body }) => {
       await givenPendingWork(geste);
       const first = whenSynchronizing();
@@ -196,7 +192,6 @@ describe('Pupitre synchronization over stalled HTTP', () => {
   };
   const whenServerAccepts = (request: TestRequest): void => {
     request.flush({
-      conflits: [],
       activitesEnCours: [],
       journal: [],
       id: 'piece',
@@ -218,7 +213,7 @@ describe('Pupitre synchronization over stalled HTTP', () => {
   const whenReferenceRefreshCompletes = async (): Promise<void> => {
     await requestArrived.promise;
     requestArrived = new SignalFixture();
-    http.expectOne('/api/pupitre/referentiel').flush({ genereLe: '2026-09-05T08:05:00Z', operateurs: [], suivis: [] });
+    http.expectOne('/api/pupitre/referentiel').flush(referentielApiFixture());
   };
   const thenGestureIsPending = (state: Awaited<ReturnType<JournauxDuPupitrePort['read']>>, geste: GesteDePointage): void => {
     expect(state.evenements).toEqual([{ geste, etat: 'EN_ATTENTE' }]);

@@ -25,8 +25,8 @@ import { HttpPostes } from './HttpPostes';
 
 type RestPoste = components['schemas']['RestPosteDeTravail'];
 
-const tourFixture: RestPoste = { id: 'tour-1', libelle: 'Tour 1', nature: 'tournage', coutHoraire: 45.5 };
-const scieFixture: RestPoste = { id: 'scie-1', libelle: 'Scie 1', nature: 'sciage' };
+const tourFixture: RestPoste = { id: 'tour-1', libelle: 'Tour 1', nature: 'tournage', natureId: 'nature-tournage', coutHoraire: 45.5 };
+const scieFixture: RestPoste = { id: 'scie-1', libelle: 'Scie 1', nature: 'sciage', natureId: 'nature-sciage' };
 
 class PostesHttpBackendFixture implements HttpBackend {
   postes: RestPoste[] = [];
@@ -80,6 +80,7 @@ class PostesHttpBackendFixture implements HttpBackend {
       id: 'created-poste',
       libelle: body.libelle,
       nature: body.nature,
+      natureId: 'nature-' + body.nature,
       ...(body.coutHoraire !== undefined ? { coutHoraire: body.coutHoraire } : {}),
     };
     this.postes = [...this.postes, created];
@@ -100,6 +101,7 @@ class PostesHttpBackendFixture implements HttpBackend {
             id,
             libelle: body.libelle,
             nature: body.nature,
+            natureId: 'nature-' + body.nature,
             ...(body.coutHoraire !== undefined ? { coutHoraire: body.coutHoraire } : {}),
           }
         : p,
@@ -212,10 +214,10 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
 
   it('should return distinct suggestions in French alphabetical order', async () => {
     givenWorkstations([
-      { id: '1', libelle: 'Poste 1', nature: 'tournage' },
-      { id: '2', libelle: 'Poste 2', nature: 'sciage' },
-      { id: '3', libelle: 'Poste 3', nature: 'Tournage' },
-      { id: '4', libelle: 'Poste 4', nature: 'ébavurage' },
+      { id: '1', libelle: 'Poste 1', nature: 'tournage', natureId: 'nature-tournage' },
+      { id: '2', libelle: 'Poste 2', nature: 'sciage', natureId: 'nature-sciage' },
+      { id: '3', libelle: 'Poste 3', nature: 'Tournage', natureId: 'nature-Tournage' },
+      { id: '4', libelle: 'Poste 4', nature: 'ébavurage', natureId: 'nature-ébavurage' },
     ]);
 
     await whenQueryingNatures();
@@ -226,9 +228,14 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
 
   it('should include a nature beyond the first hundred workstations and deduplicate across pages', async () => {
     givenWorkstations([
-      ...Array.from({ length: 100 }, (_, index) => ({ id: `p-${index}`, libelle: `Poste ${index}`, nature: 'tournage' })),
-      { id: 'p-100', libelle: 'Poste 100', nature: 'Tournage' },
-      { id: 'p-101', libelle: 'Poste 101', nature: 'soudage' },
+      ...Array.from({ length: 100 }, (_, index) => ({
+        id: `p-${index}`,
+        libelle: `Poste ${index}`,
+        nature: 'tournage',
+        natureId: 'nature-tournage',
+      })),
+      { id: 'p-100', libelle: 'Poste 100', nature: 'Tournage', natureId: 'nature-Tournage' },
+      { id: 'p-101', libelle: 'Poste 101', nature: 'soudage', natureId: 'nature-soudage' },
     ]);
 
     const natures = await whenQueryingNatures();
@@ -305,6 +312,7 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
       id: `p-${index}`,
       libelle: `Poste ${index}`,
       nature: 'fraisage',
+      natureId: 'nature-fraisage',
     }));
     harness.seed(postes);
   };
@@ -435,8 +443,13 @@ describe('Beyond the contract: HttpPostes', () => {
     const failure = await result;
     const retry = port.natures();
     await whenReferentialAnswers([
-      ...Array.from({ length: 100 }, (_, index) => ({ id: `p-${index}`, libelle: `Poste ${index}`, nature: 'tournage' })),
-      { id: 'p-100', libelle: 'Poste 100', nature: 'soudage' },
+      ...Array.from({ length: 100 }, (_, index) => ({
+        id: `p-${index}`,
+        libelle: `Poste ${index}`,
+        nature: 'tournage',
+        natureId: 'nature-tournage',
+      })),
+      { id: 'p-100', libelle: 'Poste 100', nature: 'soudage', natureId: 'nature-soudage' },
     ]);
 
     expect(failure).toBeInstanceOf(HttpErrorResponse);
@@ -522,7 +535,12 @@ describe('Beyond the contract: HttpPostes', () => {
     await new Promise(resolve => setTimeout(resolve));
     const request = server.expectOne('/api/postes-de-travail?page=0&size=100');
     request.flush({
-      content: Array.from({ length: 100 }, (_, index) => ({ id: `p-${index}`, libelle: `Poste ${index}`, nature: 'tournage' })),
+      content: Array.from({ length: 100 }, (_, index) => ({
+        id: `p-${index}`,
+        libelle: `Poste ${index}`,
+        nature: 'tournage',
+        natureId: 'nature-tournage',
+      })),
       currentPage: 0,
       pageSize: 100,
       totalElementsCount: 101,

@@ -17,9 +17,15 @@ import { chargementProviders } from '@/pupitre/contexts/enrolement/infrastructur
 import { Injector, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 
-const referentielFixture: ReferentielDuPupitre = { operateurs: [], suivis: [], categories: [] };
+const referentielFixture: ReferentielDuPupitre = {
+  operateurs: [],
+  suivis: [],
+  categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
+};
 
 class AtelierCoordinatorFixture {
   readonly reference = signal<ReferentielDuPupitre | undefined>(undefined);

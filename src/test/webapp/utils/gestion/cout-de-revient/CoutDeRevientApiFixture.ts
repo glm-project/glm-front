@@ -6,7 +6,7 @@ type RestPointage = components['schemas']['RestPointageDuCout'];
 
 const ROUTE = '/api/couts-de-revient/*';
 
-const completFixture = <T>(valeur: T): { complete: true; valeur: T } => ({ complete: true, valeur });
+const valeurFixture = <T>(valeur: T): { valeur: T } => ({ valeur });
 
 const PERIODE = { debut: '2026-05-11T09:00:00Z', fin: '2026-05-11T12:00:00Z' };
 
@@ -17,26 +17,25 @@ const pointageDeFraisage: RestPointage = {
   categorie: 'TRAVAIL',
   debut: '2026-05-11T09:00:00Z',
   fin: '2026-05-11T12:00:00Z',
-  duree: completFixture('PT3H'),
+  duree: valeurFixture('PT3H'),
   coutHoraire: 45,
   tauxHoraire: 20,
-  cout: { machine: completFixture(135), mainDOeuvre: completFixture(50), total: completFixture(185) },
+  cout: { machine: valeurFixture(135), mainDOeuvre: valeurFixture(50), total: valeurFixture(185) },
   parts: [
     {
       debut: '2026-05-11T09:00:00Z',
       fin: '2026-05-11T10:00:00Z',
       duree: 'PT1H',
       diviseur: 1,
-      mainDOeuvre: completFixture(20),
+      mainDOeuvre: valeurFixture(20),
       paralleles: [],
-      bloquants: [],
     },
     {
       debut: '2026-05-11T10:00:00Z',
       fin: '2026-05-11T11:00:00Z',
       duree: 'PT1H',
       diviseur: 2,
-      mainDOeuvre: completFixture(10),
+      mainDOeuvre: valeurFixture(10),
       paralleles: [
         {
           element: { id: 'element-192', nom: 'OF-2026-000192', categorie: 'OF' },
@@ -44,112 +43,68 @@ const pointageDeFraisage: RestPointage = {
           nature: 'Fraisage',
         },
       ],
-      bloquants: [],
     },
     {
       debut: '2026-05-11T11:00:00Z',
       fin: '2026-05-11T12:00:00Z',
       duree: 'PT1H',
       diviseur: 1,
-      mainDOeuvre: completFixture(20),
+      mainDOeuvre: valeurFixture(20),
       paralleles: [],
-      bloquants: [],
     },
-  ],
-  contradictoires: [],
-};
-
-const pointageAResoudre: RestPointage = {
-  anomalies: ['A_RESOUDRE'],
-  operateur: { id: 'operateur-julien', prenom: 'Julien', nom: 'Martin' },
-  poste: { id: 'poste-dmg', libelle: 'DMG DMU 50' },
-  categorie: 'TRAVAIL',
-  debut: '2026-05-11T08:00:00Z',
-  finAuPlusTard: '2026-05-11T11:40:00Z',
-  duree: { complete: false },
-  coutHoraire: 45,
-  tauxHoraire: 20,
-  cout: { machine: { complete: false }, mainDOeuvre: { complete: false }, total: { complete: false } },
-  parts: [],
-  contradictoires: [
-    { id: 'fait-1', type: 'DEBUT', survenue: '2026-05-11T08:00:00Z' },
-    { id: 'fait-2', type: 'DEBUT', survenue: '2026-05-11T09:10:00Z' },
   ],
 };
 
 const fraisage: RestLigne = {
   nature: 'Fraisage',
   periode: PERIODE,
-  temps: { travail: completFixture('PT2H'), nonConformite: completFixture('PT1H'), total: completFixture('PT3H') },
+  temps: { travail: valeurFixture('PT2H'), nonConformite: valeurFixture('PT1H'), total: valeurFixture('PT3H') },
   finsAutomatiques: [],
   nonConformites: [{ debut: '2026-05-11T10:00:00Z', fin: '2026-05-11T11:00:00Z' }],
-  cout: { machine: completFixture(135), mainDOeuvre: completFixture(60), total: completFixture(195) },
+  cout: { machine: valeurFixture(135), mainDOeuvre: valeurFixture(60), total: valeurFixture(195) },
   pointages: [pointageDeFraisage],
 };
 
 const tournage: RestLigne = {
   nature: 'Tournage',
   periode: PERIODE,
-  temps: { travail: completFixture('PT1H'), nonConformite: completFixture('PT0S'), total: completFixture('PT1H') },
+  temps: { travail: valeurFixture('PT1H'), nonConformite: valeurFixture('PT0S'), total: valeurFixture('PT1H') },
   finsAutomatiques: [],
   nonConformites: [],
-  cout: { machine: completFixture(60), mainDOeuvre: completFixture(20), total: completFixture(80) },
+  cout: { machine: valeurFixture(60), mainDOeuvre: valeurFixture(20), total: valeurFixture(80) },
   pointages: [],
 };
 
 const sansPoste: RestLigne = {
   periode: PERIODE,
-  temps: { travail: completFixture('PT1H'), nonConformite: completFixture('PT0S'), total: completFixture('PT1H') },
+  temps: { travail: valeurFixture('PT1H'), nonConformite: valeurFixture('PT0S'), total: valeurFixture('PT1H') },
   finsAutomatiques: [],
   nonConformites: [],
-  cout: { machine: completFixture(0), mainDOeuvre: completFixture(20), total: completFixture(20) },
+  cout: { machine: valeurFixture(0), mainDOeuvre: valeurFixture(20), total: valeurFixture(20) },
   pointages: [],
 };
 
 export const coutDeRevientFixture = (): RestRapport => ({
   evaluation: '2026-05-11T12:00:00Z',
   activitesEnCours: 0,
-  conflits: [],
   element: { id: 'element-1', nom: 'OF-2026-000001', categorie: 'OF' },
   lignes: [fraisage, tournage, sansPoste],
-  temps: { travail: completFixture('PT4H'), nonConformite: completFixture('PT1H'), total: completFixture('PT5H') },
-  cout: { machine: completFixture(195), mainDOeuvre: completFixture(100), total: completFixture(295) },
+  temps: { travail: valeurFixture('PT4H'), nonConformite: valeurFixture('PT1H'), total: valeurFixture('PT5H') },
+  cout: { machine: valeurFixture(195), mainDOeuvre: valeurFixture(100), total: valeurFixture(295) },
 });
 
 export const rapportVideFixture = (): RestRapport => ({
   evaluation: '2026-05-11T12:00:00Z',
   activitesEnCours: 0,
-  conflits: [],
   element: { id: 'element-1', nom: 'OF-2026-000001', categorie: 'OF' },
   lignes: [],
-  temps: { travail: completFixture('PT0S'), nonConformite: completFixture('PT0S'), total: completFixture('PT0S') },
-  cout: { machine: completFixture(0), mainDOeuvre: completFixture(0), total: completFixture(0) },
+  temps: { travail: valeurFixture('PT0S'), nonConformite: valeurFixture('PT0S'), total: valeurFixture('PT0S') },
+  cout: { machine: valeurFixture(0), mainDOeuvre: valeurFixture(0), total: valeurFixture(0) },
 });
 
-export const rapportIncompletFixture = (): RestRapport => {
-  const temps = { travail: completFixture('PT5H'), nonConformite: { complete: false }, total: { complete: false } };
-  const cout = { machine: completFixture(300), mainDOeuvre: { complete: false }, total: { complete: false } };
-  return {
-    ...coutDeRevientFixture(),
-    temps,
-    cout,
-    lignes: [{ ...fraisage, temps, cout, periode: { debut: '2026-05-11T08:00:00Z' }, nonConformites: [], pointages: [pointageAResoudre] }],
-    conflits: [
-      {
-        element: 'element-1',
-        operateur: 'operateur-a',
-        poste: 'poste-a',
-        activites: ['activite-a', 'activite-b'],
-        pointages: ['pointage-a', 'pointage-b'],
-      },
-      { element: 'autre-element', operateur: 'operateur-b', activites: [], pointages: ['pointage-c'] },
-    ],
-  };
-};
-
 export const rapportAutomatiqueFixture = (): RestRapport => {
-  const temps = { travail: completFixture('PT13H'), nonConformite: completFixture('PT0S'), total: completFixture('PT13H') };
-  const cout = { machine: completFixture(585), mainDOeuvre: completFixture(260), total: completFixture(845) };
+  const temps = { travail: valeurFixture('PT13H'), nonConformite: valeurFixture('PT0S'), total: valeurFixture('PT13H') };
+  const cout = { machine: valeurFixture(585), mainDOeuvre: valeurFixture(260), total: valeurFixture(845) };
   const periode = { debut: '2026-05-11T08:00:00Z', fin: '2026-05-11T21:00:00Z' };
   return {
     ...coutDeRevientFixture(),
@@ -169,7 +124,7 @@ export const rapportAutomatiqueFixture = (): RestRapport => {
             anomalies: ['FIN_AUTOMATIQUE'],
             debut: periode.debut,
             fin: periode.fin,
-            duree: completFixture('PT13H'),
+            duree: valeurFixture('PT13H'),
             cout,
             parts: [],
           },

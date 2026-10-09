@@ -6,10 +6,10 @@ Accepted. Refines the ownership in [ADR 0007](0007-durable-offline-pupitre.md); 
 extraction in [ADR 0008](0008-extract-methods-to-expose-intent.md). Complemented by
 [ADR 0013](0013-keep-business-decisions-in-rich-domain-models.md), which generalizes the same ownership rule
 to every context and brings interaction and lifecycle rules into the domain. Revised under
-[ADR 0045](0045-keep-the-pause-on-the-pupitre.md) and [ADR 0047](0047-count-only-finished-activities.md):
-activity intentions retain precise targets, accepted conflicts retain diagnostics, and pause/resumption
-memory has its own local domain owner. Complemented by [ADR 0050](0050-erase-workshop-journals-on-explicit-reset.md):
-the device-wide erasure of the journals has its own port, apart from the per-company `JournauxDuPupitrePort`.
+[ADR 0045](0045-keep-the-pause-on-the-pupitre.md): pause/resumption
+memory has its own local domain owner. Amended by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md): the window prepares requested
+pointages (a type and a workstation), no target, and `MotifDeRefus` decides which refusal the operator sees.
+Complemented by [ADR 0050](0050-erase-workshop-journals-on-explicit-reset.md): the device-wide erasure of the journals has its own port, apart from the per-company `JournauxDuPupitrePort`.
 
 ## Context
 
@@ -28,9 +28,9 @@ contextual refusal exceptions independently. Tests reaching into document keys o
 
 ## Decision
 
-`FenetreOperateur` resolves the local operator, checks workstation qualifications, prepares targeted
-activity intentions and maintains the window's frozen view. Gesture identity and business time are supplied
-at the action. A deferred global intention prepares its batch when the capture queue reaches the updated
+`FenetreOperateur` resolves the local operator, checks workstation qualifications, prepares the pointages a tile press
+asks for (a finish, or a finish then an opening at the same time) and maintains the window's frozen view. Gesture
+identity and business time are supplied at the action. A deferred global intention prepares its batch when the capture queue reaches the updated
 window, preserving its original root identity and time. Only successful durable acceptance advances the
 window, without giving the domain an asynchronous storage dependency. `PauseEnCours` alone owns local
 suspension and resumption eligibility; TOUT ARRÊTER invalidates that memory in its atomic journal mutation.

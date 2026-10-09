@@ -2,7 +2,6 @@ import { components } from '@/app/generated/schema';
 
 type RestSupervision = components['schemas']['RestSupervisionDAtelier'];
 type RestActivite = components['schemas']['RestActiviteDeSupervision'];
-type RestDescription = components['schemas']['RestDescriptionDActiviteDeSupervision'];
 type RestElement = components['schemas']['RestElementDeSupervision'];
 type RestPoste = components['schemas']['RestPosteDeSupervision'];
 type RestOperateur = components['schemas']['RestOperateurDeSupervision'];
@@ -31,7 +30,6 @@ const MOULE_1017 = moule('1017', 'PRD-2026-000003');
 const OF_3001 = of('3001', 'OF-2026-000039');
 const OF_3004 = of('3004', 'OF-2026-000042');
 const OF_3005 = of('3005', 'OF-2026-000043');
-const OF_3006 = of('3006', 'OF-2026-000044');
 const OF_PERSO: RestElement = { id: 'of-perso', categorie: 'OF', nom: 'OF Perso' };
 const OF_SANS_REFERENCE: RestElement = { id: 'of-sans-reference', categorie: 'OF', nom: 'OF-2026-000048' };
 
@@ -46,23 +44,6 @@ const FIL_2 = poste('poste-fil-2', 'Fil 2', 'Découpe à fil');
 
 const operateur = (id: string, nom: string, prenom: string, metiers: string[]): RestOperateur => ({ id, nom, prenom, metiers });
 
-const description = (
-  id: string,
-  operateurId: string,
-  element: RestElement,
-  debut: string,
-  echeance: string,
-  poste?: RestPoste,
-): RestDescription => ({
-  id,
-  operateurId,
-  element,
-  debut,
-  echeance,
-  ...(poste === undefined ? {} : { poste }),
-  categorie: 'TRAVAIL',
-});
-
 const activite = (
   id: string,
   operateurId: string,
@@ -71,7 +52,13 @@ const activite = (
   echeance: string,
   poste?: RestPoste,
 ): RestActivite => ({
-  ...description(id, operateurId, element, debut, echeance, poste),
+  id,
+  operateurId,
+  element,
+  debut,
+  echeance,
+  ...(poste === undefined ? {} : { poste }),
+  categorie: 'TRAVAIL',
   etat: 'EN_COURS',
 });
 
@@ -113,26 +100,6 @@ export const supervisionFixture = (): RestSupervision => ({
       categorie: 'NON_CONFORMITE',
     },
     activite('act-vidal', 'op-vidal', OF_SANS_REFERENCE, instantFixture(9, 2), instantFixture(22, 2)),
-  ],
-  sequencesEnConflit: [
-    {
-      id: 'sequence-perrin',
-      operateurId: 'op-perrin',
-      poste: TOUR_1,
-      activites: [description('act-perrin-a-resoudre', 'op-perrin', OF_3006, instantFixture(6, 20), instantFixture(19, 20), TOUR_1)],
-    },
-    {
-      id: 'sequence-morel',
-      operateurId: 'op-morel',
-      poste: ERODEUSE_F,
-      activites: [
-        {
-          ...description('act-morel-a-resoudre', 'op-morel', OF_PERSO, instantFixture(19, 10, 23), instantFixture(8, 10), ERODEUSE_F),
-          categorie: 'NON_CONFORMITE',
-        },
-      ],
-    },
-    { id: 'sequence-schmitt', operateurId: 'op-schmitt', activites: [] },
   ],
 });
 

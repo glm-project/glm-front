@@ -9,9 +9,7 @@ import { CategorieActivite, ValeurCategorieActivite } from '../../../domain/acti
 import { CategorieDElement } from '../../../domain/activite/CategorieDElement';
 import { ElementTravaille } from '../../../domain/activite/ElementTravaille';
 import { IdentifiantActivite } from '../../../domain/activite/IdentifiantActivite';
-import { IdentifiantSequence } from '../../../domain/activite/IdentifiantSequence';
 import { ReferenceDElement } from '../../../domain/activite/ReferenceDElement';
-import { SequenceEnConflit } from '../../../domain/activite/SequenceEnConflit';
 import { Instant } from '../../../domain/instant/Instant';
 import { IdentifiantOperateur } from '../../../domain/operateur/IdentifiantOperateur';
 import { OperateurDeclare } from '../../../domain/operateur/OperateurDeclare';
@@ -45,6 +43,7 @@ const posteFixture = (libelle: string, nature: string): PosteDeSupervision =>
   new PosteDeSupervision({ id: new IdentifiantPoste(`poste-${libelle}`), libelle, nature: new NatureDeTravail(nature) });
 
 const instantFixture = (heure: number, minute = 0, jour = 13): Instant => new Instant(new Date(2026, 8, jour, heure, minute).toISOString());
+const treizeHeuresApres = (debut: Instant): Instant => new Instant(new Date(Date.parse(debut.value) + 13 * 60 * 60 * 1000).toISOString());
 const veilleFixture = (heure: number, minute = 0): Instant => instantFixture(heure, minute, 12);
 
 const mouleFixture = (reference: string, nom = 'PRD-2026-000001'): ElementTravaille =>
@@ -71,6 +70,7 @@ const activiteFixture = (
     objet,
     categorie: new CategorieActivite(categorie),
     debut,
+    echeance: treizeHeuresApres(debut),
     ...(poste === undefined ? {} : { poste }),
   });
 
@@ -79,7 +79,6 @@ const bobFixture = operateurFixture('bob', 'Durand', 'Bob');
 const chloeFixture = operateurFixture('chloe', 'Bernard', 'Chloé');
 const donneesFixture: DonneesDeSupervision = {
   evaluation: instantFixture(10),
-  sequencesEnConflit: [],
   operateurs: [aliceFixture, bobFixture, chloeFixture],
 
   activites: [],
@@ -97,7 +96,6 @@ const vidalFixture = operateurFixture('op-vidal', 'Vidal', 'Hugo');
 
 const atelierFixture: DonneesDeSupervision = {
   evaluation: instantFixture(10),
-  sequencesEnConflit: [],
   operateurs: [
     vidalFixture,
     schmittFixture,
@@ -145,7 +143,6 @@ const operateursNcFixture = (nombre: number): DonneesDeSupervision => {
   const operateurs = Array.from({ length: nombre }, (_, index) => operateurFixture(`op-${index}`, `Opérateur ${index}`, 'Actif'));
   return {
     evaluation: instantFixture(10),
-    sequencesEnConflit: [],
     operateurs,
 
     activites: operateurs.map(operateur =>
@@ -186,7 +183,7 @@ describe('Supervision atelier component', () => {
   });
 
   afterEach(async () => {
-    sourceFixture.response.resolve({ evaluation: instantFixture(10), sequencesEnConflit: [], operateurs: [], activites: [] });
+    sourceFixture.response.resolve({ evaluation: instantFixture(10), operateurs: [], activites: [] });
     await componentFixture.whenStable();
     componentFixture.destroy();
     vi.restoreAllMocks();
@@ -201,7 +198,7 @@ describe('Supervision atelier component', () => {
     const beforeDeadline = { cards: displayedOperatorCount(), reading: isReadingAgain() };
     await whenTimePasses(1);
     const atDeadline = { cards: displayedOperatorCount(), reading: isReadingAgain() };
-    await whenDonneesArrive({ sequencesEnConflit: [], operateurs: [], activites: [] });
+    await whenDonneesArrive({ operateurs: [], activites: [] });
 
     expect(beforeDeadline).toEqual({ cards: 3, reading: false });
     expect(atDeadline).toEqual({ cards: 3, reading: true });
@@ -225,7 +222,7 @@ describe('Supervision atelier component', () => {
     const beforeNextDeadline = displayedOperatorCount();
     await whenTimePasses(1);
     const atNextDeadline = isReadingAgain();
-    await whenDonneesArrive({ sequencesEnConflit: [], operateurs: [], activites: [] });
+    await whenDonneesArrive({ operateurs: [], activites: [] });
 
     expect(whileHidden).toBe(3);
     expect(onReturn).toBe(true);
@@ -244,7 +241,7 @@ describe('Supervision atelier component', () => {
     await whenTimePasses(60_000);
     const readsBeforeRelease = sourceFixture.reads;
     sourceFixture.prepare();
-    obsoleteResponse.resolve({ evaluation: instantFixture(10), sequencesEnConflit: [], operateurs: [], activites: [] });
+    obsoleteResponse.resolve({ evaluation: instantFixture(10), operateurs: [], activites: [] });
     await whenSupervisionOpened();
     const obsoleteResultWasWithheld = { cards: displayedOperatorCount(), reading: isReadingAgain() };
     const readsAfterRelease = sourceFixture.reads;
@@ -284,7 +281,7 @@ describe('Supervision atelier component', () => {
     whenSupervisionRemounted();
     await whenSupervisionOpened();
     await whenDonneesArrive();
-    obsoleteResponse.resolve({ evaluation: instantFixture(10), sequencesEnConflit: [], operateurs: [], activites: [] });
+    obsoleteResponse.resolve({ evaluation: instantFixture(10), operateurs: [], activites: [] });
     await obsoleteResponse.promise;
     await whenViewSettles();
 
@@ -313,7 +310,7 @@ describe('Supervision atelier component', () => {
     whenRefreshClicked();
     const readsWhilePending = sourceFixture.reads;
     const manualRefreshDisabled = isRefreshDisabled();
-    await whenDonneesArrive({ sequencesEnConflit: [], operateurs: [], activites: [] });
+    await whenDonneesArrive({ operateurs: [], activites: [] });
 
     expect(readsWhilePending).toBe(2);
     expect(sourceFixture.reads).toBe(2);
@@ -352,7 +349,7 @@ describe('Supervision atelier component', () => {
     await whenDonneesArrive();
     sourceFixture.prepare();
     await whenTimePasses(30_000);
-    await whenDonneesArrive({ sequencesEnConflit: [], operateurs: [], activites: [] });
+    await whenDonneesArrive({ operateurs: [], activites: [] });
 
     expect(timersAfterClosing).toBe(0);
     expect(readsAfterClosing).toBe(1);
@@ -416,35 +413,6 @@ describe('Supervision atelier component', () => {
     thenLoadingIsDisplayed();
   });
 
-  it('should keep every conflicting object explicit even when its sequence has no workstation', async () => {
-    await givenAcquisitionInProgress();
-    const sequence = new SequenceEnConflit({
-      id: new IdentifiantSequence('conflict-without-poste'),
-      operateurId: aliceFixture.id,
-      activites: [
-        activiteFixture(aliceFixture, {
-          id: 'conflict-perso',
-          objet: new ElementTravaille({ categorie: new CategorieDElement('OF'), nom: 'OF Perso' }),
-          debut: instantFixture(8),
-        }),
-        activiteFixture(aliceFixture, {
-          id: 'conflict-without-reference',
-          objet: ofSansReferenceFixture('OF-2026-000048'),
-          debut: instantFixture(9),
-        }),
-      ],
-    });
-
-    await whenDonneesArrive({ operateurs: [aliceFixture], activites: [], sequencesEnConflit: [sequence] });
-
-    expect(signal('supervision-sequence-en-conflit')).toContain('Séquence en conflit · Sans poste');
-    expect(elements('supervision-conflit-activite').map(texte)).toEqual(['OF OF Perso · À résoudre', 'OF OF-2026-000048 · À résoudre']);
-    thenLanesAre([
-      { couloir: 'au-travail', nombre: '0', operateurs: [] },
-      { couloir: 'sans-activite', nombre: '1', operateurs: ['Martin Alice'] },
-    ]);
-  });
-
   it('should display the retained automatic end instead of the received deadline', async () => {
     const activite = new ActiviteDeSupervision({
       id: new IdentifiantActivite('retained-automatic-end'),
@@ -458,9 +426,27 @@ describe('Supervision atelier component', () => {
     });
     await givenAcquisitionInProgress();
 
-    await whenDonneesArrive({ operateurs: [aliceFixture], activites: [activite], sequencesEnConflit: [] });
+    await whenDonneesArrive({ operateurs: [aliceFixture], activites: [activite] });
 
     expect(signal('supervision-anomalie')).toBe('Activité terminée automatiquement · fin 08:45');
+  });
+
+  it('should open the report at the ISO week and day of the retained end, not of the observation', async () => {
+    const activite = new ActiviteDeSupervision({
+      id: new IdentifiantActivite('retained-end-previous-week'),
+      operateurId: aliceFixture.id,
+      objet: ofFixture('3001'),
+      categorie: new CategorieActivite('TRAVAIL'),
+      debut: new Instant(new Date(2026, 8, 5, 21).toISOString()),
+      echeance: new Instant(new Date(2026, 8, 6, 10).toISOString()),
+      etat: 'TERMINEE_AUTOMATIQUEMENT',
+      finRetenue: new Instant(new Date(2026, 8, 6, 8, 45).toISOString()),
+    });
+    await givenAcquisitionInProgress();
+
+    await whenDonneesArrive({ operateurs: [aliceFixture], activites: [activite] });
+
+    thenAnomalyLinkIs('/operateurs/alice/heures?annee=2026&semaine=36&jour=2026-09-06');
   });
 
   it('should order several automatic-end warnings by workstation while preserving their end instants', async () => {
@@ -478,7 +464,7 @@ describe('Supervision atelier component', () => {
       poste: posteFixture('Érodeuse', 'Érosion'),
     });
 
-    await whenDonneesArrive({ operateurs: [aliceFixture], activites: [dernier, premier], sequencesEnConflit: [] });
+    await whenDonneesArrive({ operateurs: [aliceFixture], activites: [dernier, premier] });
 
     expect(elements('supervision-anomalie').map(texte)).toEqual([
       'Activité terminée automatiquement · fin 08:00',
@@ -494,7 +480,7 @@ describe('Supervision atelier component', () => {
       objet: mouleFixture('1015'),
       debut: new Instant(new Date(2026, 8, 12, 21, 0, 30).toISOString()),
     });
-    const donnees = { operateurs: [aliceFixture], activites: [activite], sequencesEnConflit: [] };
+    const donnees = { operateurs: [aliceFixture], activites: [activite] };
     await whenDonneesArrive(donnees);
 
     await whenTimePasses(29_999);
@@ -511,44 +497,11 @@ describe('Supervision atelier component', () => {
     expect(signal('supervision-anomalie')).toBe('Activité terminée automatiquement · fin 10:00');
   });
 
-  it('should show a conflicting sequence alongside independent interpretable work', async () => {
-    await givenAcquisitionInProgress();
-    const activite = activiteFixture(aliceFixture, {
-      id: 'current',
-      objet: ofFixture('3004'),
-      debut: instantFixture(9),
-      poste: posteFixture('Tour 1', 'Tournage'),
-    });
-    const conflictuelle = activiteFixture(aliceFixture, {
-      id: 'conflict',
-      objet: mouleFixture('1015'),
-      debut: veilleFixture(8),
-      categorie: 'NON_CONFORMITE',
-    });
-    const sequence = new SequenceEnConflit({
-      id: new IdentifiantSequence('conflict-sequence'),
-      operateurId: aliceFixture.id,
-      activites: [conflictuelle],
-      poste: posteFixture('Fraiseuse 1', 'Fraisage'),
-    });
-
-    await whenDonneesArrive({ operateurs: [aliceFixture], activites: [activite], sequencesEnConflit: [sequence] });
-
-    expect(activitiesOf('alice').map(({ element }) => element)).toEqual(['OF 3004']);
-    expect(signal('supervision-sequence-en-conflit')).toBe('Séquence en conflit · Fraiseuse 1 MOULE 1015 · À résoudre');
-    expect(signal('supervision-signal-nc')).toBe('0 en NC');
-    expect(signal('supervision-signal-a-verifier')).toBe('1 à vérifier : Martin Alice');
-    thenLanesAre([
-      { couloir: 'au-travail', nombre: '1', operateurs: ['Martin Alice'] },
-      { couloir: 'sans-activite', nombre: '0', operateurs: [] },
-    ]);
-  });
-
-  it('should show an automatic end at thirteen elapsed hours without a current activity', async () => {
+  it('should show an automatic end without a current activity', async () => {
     await givenAcquisitionInProgress();
     const activite = activiteFixture(aliceFixture, { id: 'expired', objet: mouleFixture('1015'), debut: veilleFixture(21) });
 
-    await whenDonneesArrive({ sequencesEnConflit: [], operateurs: [aliceFixture], activites: [activite] });
+    await whenDonneesArrive({ operateurs: [aliceFixture], activites: [activite] });
 
     expect(activitiesOf('alice')).toEqual([]);
     expect(signal('supervision-anomalie')).toBe('Activité terminée automatiquement · fin 10:00');
@@ -604,7 +557,6 @@ describe('Supervision atelier component', () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive({
-      sequencesEnConflit: [],
       operateurs: [aubertFixture],
 
       activites: [
@@ -693,7 +645,6 @@ describe('Supervision atelier component', () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive({
-      sequencesEnConflit: [],
       operateurs: [lefevreFixture],
 
       activites: [],
@@ -735,7 +686,7 @@ describe('Supervision atelier component', () => {
   it('should display an empty state when there are no declared operators', async () => {
     await givenAcquisitionInProgress();
 
-    await whenDonneesArrive({ sequencesEnConflit: [], operateurs: [], activites: [] });
+    await whenDonneesArrive({ operateurs: [], activites: [] });
 
     thenEmptyStateIsDisplayed();
     thenLanesAre([
@@ -748,7 +699,6 @@ describe('Supervision atelier component', () => {
     await givenAcquisitionInProgress();
 
     await whenDonneesArrive({
-      sequencesEnConflit: [],
       operateurs: [aliceFixture],
 
       activites: [
@@ -758,6 +708,7 @@ describe('Supervision atelier component', () => {
           objet: ofFixture('42'),
           categorie: new CategorieActivite('NON_CONFORMITE'),
           debut: new Instant('2026-09-13T10:00:00Z'),
+          echeance: new Instant('2026-09-14T00:00:00Z'),
         }),
       ],
     });
@@ -786,7 +737,6 @@ describe('Supervision atelier component', () => {
 
     await refresh();
     await whenDonneesArrive({
-      sequencesEnConflit: [],
       operateurs: [aliceFixture],
 
       activites: [
@@ -796,6 +746,7 @@ describe('Supervision atelier component', () => {
           objet: ofFixture('42'),
           categorie: new CategorieActivite('NON_CONFORMITE'),
           debut: new Instant('2026-09-13T10:00:00Z'),
+          echeance: new Instant('2026-09-14T00:00:00Z'),
         }),
       ],
     });
@@ -876,6 +827,10 @@ describe('Supervision atelier component', () => {
     ).toEqual(expected);
     expect(element('supervision-loading')).toBeNull();
     expect(element('supervision-error')).toBeNull();
+  };
+
+  const thenAnomalyLinkIs = (href: string): void => {
+    expect(requiredFixture(element('supervision-anomalie'), 'supervision-anomalie').getAttribute('href')).toBe(href);
   };
 
   const thenEmptyStateIsDisplayed = (): void => {

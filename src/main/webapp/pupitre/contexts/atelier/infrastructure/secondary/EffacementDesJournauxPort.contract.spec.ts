@@ -9,6 +9,7 @@ import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { EffacementDesJournauxFixture } from '@test/unit/fixtures/pupitre/atelier/EffacementDesJournauxFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { IDBFactory } from 'fake-indexeddb';
+import { keyFor } from './local/ClesDesJournaux';
 import { IndexedDbEffacementDesJournaux } from './local/IndexedDbEffacementDesJournaux';
 import { IndexedDbJournauxDuPupitre } from './local/IndexedDbJournauxDuPupitre';
 
@@ -23,7 +24,6 @@ const gesteFixture = (id: string): GesteDePointage => ({
   dateDeSurvenue: '2026-09-05T08:00:00Z',
   operateurId: 'jean',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 });
 
@@ -133,7 +133,7 @@ describe('IndexedDbEffacementDesJournaux', () => {
 
   const givenADeviceEnrolmentAndAJournal = async (): Promise<void> => {
     await storage.update('enrolement', 'session-de-l-appareil', value => value);
-    await storage.update('atelier-activites-v1:entreprise-a', EMPTY_JOURNAL_DU_PUPITRE, value => value);
+    await storage.update(keyFor(Entreprise.of('entreprise-a')), EMPTY_JOURNAL_DU_PUPITRE, value => value);
   };
 
   const thenTheEnrolmentIsKept = async (): Promise<void> => {
@@ -141,6 +141,6 @@ describe('IndexedDbEffacementDesJournaux', () => {
   };
 
   const thenTheJournalIsGone = async (): Promise<void> => {
-    expect(await storage.read('atelier-activites-v1:entreprise-a')).toBeUndefined();
+    expect(await storage.read(keyFor(Entreprise.of('entreprise-a')))).toBeUndefined();
   };
 });

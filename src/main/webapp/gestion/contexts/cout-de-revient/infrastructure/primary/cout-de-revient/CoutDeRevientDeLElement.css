@@ -187,12 +187,6 @@
   color: var(--color-on-accent);
 }
 
-.diviseur-inconnu {
-  border: 1px dashed var(--color-warn);
-  background: transparent;
-  color: var(--color-warn);
-}
-
 .bandeau-anomalies {
   padding: 0.875rem 1rem;
   border: 1px solid var(--color-warn);
@@ -215,16 +209,6 @@
   color: var(--color-on-accent);
 }
 
-.pastille[data-anomalie='A_RESOUDRE'] {
-  background: var(--color-warn);
-  color: var(--color-on-accent);
-}
-
-.pastille[data-anomalie='PARTAGE_INCONNU'] {
-  border: 1px solid var(--color-warn);
-  color: var(--color-warn);
-}
-
 .pointages-table th .pastille {
   display: block;
   width: fit-content;
@@ -237,10 +221,6 @@
 
 .pointages-table tbody tr.explication td {
   padding-top: 0;
-  color: var(--color-warn);
-}
-
-.pointages-table tbody tr.explication[data-anomalie='FIN_AUTOMATIQUE'] td {
   color: var(--color-danger);
 }
 

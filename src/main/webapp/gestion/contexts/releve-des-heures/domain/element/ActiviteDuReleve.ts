@@ -8,10 +8,4 @@ export type ActiviteDuReleve =
       readonly etat: 'TERMINEE' | 'TERMINEE_AUTOMATIQUEMENT';
       readonly fin: InstantDeReleve;
     }
-  | { readonly id: ActiviteReleveId; readonly debut: InstantDeReleve; readonly etat: 'EN_COURS' }
-  | {
-      readonly id: ActiviteReleveId;
-      readonly debut: InstantDeReleve;
-      readonly etat: 'A_RESOUDRE';
-      readonly finAuPlusTard: InstantDeReleve | undefined;
-    };
+  | { readonly id: ActiviteReleveId; readonly debut: InstantDeReleve; readonly etat: 'EN_COURS' };

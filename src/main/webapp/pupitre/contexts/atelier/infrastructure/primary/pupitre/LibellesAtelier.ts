@@ -20,9 +20,8 @@ export const toLibelleContexteAtelier = (contexte: ContexteDeGesteDAtelier): str
 
 export const LIBELLES_POINTAGE = {
   nonConformite: 'NC',
-  conflit: 'En conflit — nouvelle ouverture possible',
   actionPrincipale: (element: ElementDePointage): 'DÉMARRER' | 'ARRÊTER' => (element.isActive() ? 'ARRÊTER' : 'DÉMARRER'),
-  actionSecondaire: (element: ElementDePointage): 'NC' | 'BON' => (element.isNonConforme() ? 'BON' : 'NC'),
+  actionSecondaire: (element: ElementDePointage): 'NC' | 'FIN NC' => (element.isNonConforme() ? 'FIN NC' : 'NC'),
   duree: (dureeMs: number): string => `depuis ${formatDuree(dureeMs)}`,
   actionsGlobales: 'Pointages globaux',
   pause: COMMANDES_GLOBALES.PAUSE,

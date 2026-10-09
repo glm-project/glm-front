@@ -33,7 +33,7 @@ time.
 
 ## Domain owners decide the gesture
 
-`FenetreOperateur` resolves the operator, checks workstation qualifications, captures explicit targeted activity intentions, turns
+`FenetreOperateur` resolves the operator, checks workstation qualifications, captures the pointages a tile press asks for, turns
 PAUSE and REPRENDRE into finishes and restarts, and maintains the frozen view of one operator window. `PauseEnCours` decides, from the journal that remains, whether a pause is in progress and what it reopens. Only a
 successfully committed capture advances that view.
 
@@ -206,34 +206,44 @@ OS sleep, as agreed in #74: no separate OS-resume detection or timer-delay thres
 The first action contains only its captured activity gesture. Its chrome identifies the designated operator
 and a local pause when one is in progress. Aggregate rereads concern only the affected workshop item.
 
-`TOUT ARRÊTER` is one atomic local mutation: N targeted FIN gestures and durable invalidation of this
+`TOUT ARRÊTER` is one atomic local mutation: N FIN gestures and durable invalidation of this
 operator's resumption memory, including N=0. It retains pending publications and refusals. An aborted transaction changes neither the batch nor the resumption memory; the window
 advances only after completion.
 
-`PAUSE` captures one targeted FIN per known interpretable personal activity that has not expired and is
-outside a conflict. Each finish carries its local suspension and the opening category to resume. The HTTP
-adapter sends only the pointage fields. `REPRENDRE` opens fresh activities with new identities and no former
-target, on still eligible workstations and elements. A refused or conflicting suspension is not resumed.
+`PAUSE` captures one FIN per known interpretable personal activity that has not expired. Each finish carries its local suspension and the opening category to resume. The HTTP
+adapter sends only the pointage fields. `REPRENDRE` opens fresh activities with new identities, on still
+eligible workstations and elements. A refused suspension is not resumed.
 `PauseEnCours` reads that memory from the journal that remains, which always holds the last pause of each
 operator; a pause itself never expires.
 
-At the server-provided deadline, inclusive, an activity stops being actionable locally, including offline.
+At the deadline, inclusive, an activity stops being actionable locally, including offline. The deadline of an
+activity the server knows is the one the reference gives; that of an activity opened locally is the gesture time plus
+`dureeMaximaleDActivite`, which the reference carries and the adapter turns into milliseconds. No duration is written in
+the pupitre: an absent, unreadable or null value rejects the reference read, which keeps the previous one. The server
+fixes the duration when it receives the opening, not at the gesture time, and keeps no history of the setting.
 Every decision receives its evaluation time explicitly. A separate activity timer reevaluates the window
 without closing the designation or synthesizing FIN. The indicative duration remains frozen at window
-opening. A capture initiated before the deadline keeps its target and occurrence through delayed I/O.
+opening. A capture initiated before the deadline keeps its occurrence through delayed I/O.
 
-Conflicts remain separate from current activities, including sequences without an activity or workstation.
-A new opening remains possible; FIN or transition never targets a conflicting activity. Other interpretable
-activities stay actionable. A stale target never applies to its replacement. An accepted 200/201 conflict
-is persisted with the gesture so a failed refresh preserves its diagnosis. Canonical activation forgets
-the accepted gestures the reference integrates, keeps the identifiers of the accepted gestures it retains and replaces the
-reference diagnostics without applying the optimistic effect twice.
+An activity belongs to a key, operator and workstation within an element, and a key holds at most one activity. A FIN
+closes the activity of its key; an opening on a key that is still busy has no local effect, as the server ignores it.
+An expired activity frees its key: an opening whose time reaches the deadline replaces it, locally as on the server,
+which counts the expired activity as finished. A tile press that changes the category of an activity composes two
+pointages with the same timestamp, the FIN first: NC during a work sends a FIN then a `NON_CONFORMITE`, and FIN NC
+(the secondary target of a tile in non-conformity) a FIN then a `DEBUT`. The pupitre never relaunches an activity.
 
-The activity journal uses `atelier-activites-v1:<tenant>`. The old `atelier:` documents are discarded by
-prefix through `LocalStoragePort`, without reading or migrating them. No credential,
-enrolment, common database or new company journal is removed. This format reset is independent of TOUT
-ARRÊTER, which retains the current journal. [ADR 0045](adr/0045-keep-the-pause-on-the-pupitre.md) owns local
-pause memory and [ADR 0047](adr/0047-count-only-finished-activities.md) owns precise targeting and expiry.
+A pointage the server judges incompatible with its key answers 409 `pointage-ignore`. The gesture stays refused in the
+journal ([ADR 0049](adr/0049-forget-integrated-gestures-at-reference-activation.md)), its optimistic effect disappears
+when the window reconciles, and the next synchronization realigns the projection on the reference. Only the closure refusal
+is shown to the operator.
+
+The activity journal uses `atelier-activites-v2:<tenant>`. The documents of the obsolete prefixes, `atelier:` and
+`atelier-activites-v1:`, are discarded through `LocalStoragePort` when the journal is read, without reading or migrating
+them: the pupitres are reset at deployment, and their pending gestures are lost. The key changes whenever the stored
+format or a projected rule changes. No credential, enrolment, common database or new company journal is removed. This
+format reset is independent of TOUT ARRÊTER, which retains the current journal. [ADR 0045](adr/0045-keep-the-pause-on-the-pupitre.md)
+owns local pause memory and [ADR 0054](adr/0054-ignore-incoherent-pointages-at-reception.md) owns the reception rule and
+the composed gestures.
 
 A global command pressed while captures are already in flight is retained and decided from the updated
 window after those captures settle locally. From that intention until local acceptance, tiles and global
@@ -252,7 +262,9 @@ complete reference is active, and the workshop views afterwards. That switch rea
 projected state, never the reference alone: an administration reset returns the pupitre to enrolment at once,
 before the erasure of the journals ends, so the keypad never waits for the disk. The header's own reset gesture opens a confirmation the page
 owns. The same chrome identifies a
-rejected pointage by its element number and a rejected gesture of a global command by the originating `PAUSE`,
-`REPRENDRE` or `TOUT ARRÊTER` action. It shows the server message and only the latest refusal in a batch. Any local
+refused pointage by its element number and a refused gesture of a global command by the originating `PAUSE`,
+`REPRENDRE` or `TOUT ARRÊTER` action. Only the closure refusal (`suivi-d-atelier-cloture`) is shown to the
+operator, with the server message and only the latest one in a batch; every other refusal stays in the journal
+without display. Any local
 acceptance failure instead shows “Action non enregistrée — recommencez” until the next durable local success
 or window closure.

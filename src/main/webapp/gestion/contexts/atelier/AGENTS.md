@@ -13,7 +13,7 @@ ont leurs propres contextes ; leurs valeurs sont acquises par leurs ports.
 proposée. Le back l'horodate sur son horloge au moment du clic.
 
 **Clôturer** : l'acte du gestionnaire qui déclare l'élément terminé. Il le retire des écrans opérateurs. Il ne
-fige rien pour le gestionnaire : régularisation, annulation et correction restent admises ensuite.
+fige rien pour le gestionnaire : la régularisation d'une fin automatique reste admise ensuite, bornée par la clôture.
 
 **Rouvrir** : l'acte qui retire la clôture. L'élément redevient pointable.
 
@@ -64,8 +64,8 @@ l'expression.
   le back date sur `clock.now()`. Le client a écarté la planification — « on ne planifie rien avec le
   logiciel ». L'engagement par anticipation, c'est engager **tôt**, pas engager **pour plus tard**.
 - **Clôturer envoie un corps vide.** L'API accepte une `dateDeSurvenue` ; l'écran ne l'envoie pas. Un champ de
-  date sur l'acte le plus courant rouvrirait la planification et hériterait du 409 « journal postérieur ». Le
-  déplacement d'une clôture appartient à la correction d'un pointage.
+  date sur l'acte le plus courant rouvrirait la planification et hériterait du 409 « journal postérieur ». Aucun
+  écran ne déplace une clôture : la correction d'un pointage n'existe plus.
 - **`nom` et `categorie` sont une photographie.** Copiés à l'engagement, ils divergent du référentiel après un
   renommage — c'est l'invariant que cet acte rend possible. Ne jamais aller les rafraîchir.
 - **L'élément de fabrication ne porte pas de statut propre.** Son activité se lit par la présence d'un suivi

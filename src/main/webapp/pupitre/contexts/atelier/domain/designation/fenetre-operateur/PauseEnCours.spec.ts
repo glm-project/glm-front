@@ -8,6 +8,8 @@ import {
 } from '../../journal-du-pupitre/JournalDuPupitre';
 import { ActiviteSuspendue, PauseEnCours } from './PauseEnCours';
 
+const dureeMaximaleFixtureEnMs = 13 * 60 * 60 * 1000;
+
 const travailAuTourFixture: ActiviteDuPupitre = {
   ouverture: 'activite-fixture-10',
   echeance: '2026-09-05T21:00:00.000Z',
@@ -17,7 +19,6 @@ const travailAuTourFixture: ActiviteDuPupitre = {
   posteId: 'tour',
 };
 const suiviFixture = (id: string, activites: readonly ActiviteDuPupitre[]): SuiviDuPupitre => ({
-  conflits: [],
   id,
   nom: id,
   etat: activites.length === 0 ? 'EN_ATTENTE' : 'EN_COURS',
@@ -40,12 +41,9 @@ const referentielFixture: ReferentielDuPupitre = {
   ],
   suivis: [suiviFixture('of-204', [travailAuTourFixture])],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
-const suspensionFixture = (
-  suiviId: string,
-  extra: Partial<Omit<Extract<GesteDePointage, { readonly intention: 'FIN' }>, 'intention' | 'type'>>,
-  pause = 'pause-de-midi',
-): GesteDePointage => ({
+const suspensionFixture = (suiviId: string, extra: Partial<Omit<GesteDePointage, 'type'>>, pause = 'pause-de-midi'): GesteDePointage => ({
   id: `fin-${suiviId}-${pause}`,
   dateDeSurvenue: '2026-09-05T12:00:00Z',
   nature: 'POINTAGE',
@@ -54,8 +52,6 @@ const suspensionFixture = (
   type: 'FIN',
   suspension: { pause, reouverture: 'DEBUT' },
   ...extra,
-  intention: 'FIN',
-  cible: suiviId === 'of-205' ? 'activite-fixture-12' : 'activite-fixture-10',
 });
 
 const nonConformiteFixture: ActiviteDuPupitre = {
@@ -258,36 +254,16 @@ describe('PauseEnCours', () => {
     thenThereIsNoPause(pause);
   });
 
-  it('should not resume a suspension diagnosed as a conflict by the canonical reference', () => {
-    const suspension = suspensionFixture('of-204', { posteId: 'tour' });
-    const referentiel = withSuivis(referentielFixture, [
-      {
-        ...suiviFixture('of-204', []),
-        evenements: [suspension.id],
-        conflits: [{ operateurId: 'jean', activites: [], pointages: [suspension.id] }],
-      },
-      suiviFixture('of-205', []),
-    ]);
-    const journal = givenJournal(referentiel, accepted(suspension));
-
-    const pause = whenReadingThePauseOf(journal, 'jean');
-
-    thenThereIsNoPause(pause);
-  });
-
-  it.each(['expired', 'conflicting'])('should preserve resumption when another known activity is %s', kind => {
+  it('should preserve resumption when another known activity is expired', () => {
     const suspension = suspensionFixture('of-204', { posteId: 'tour' });
     const otherActivity = {
       ...travailAuTourFixture,
       ouverture: 'autre-ouverture',
-      echeance: kind === 'expired' ? '2026-09-05T12:00:00Z' : travailAuTourFixture.echeance,
+      echeance: '2026-09-05T12:00:00Z',
     };
     const referentiel = withSuivis(referentielFixture, [
       { ...suiviFixture('of-204', []), evenements: [suspension.id] },
-      {
-        ...suiviFixture('of-206', [otherActivity]),
-        conflits: kind === 'conflicting' ? [{ operateurId: 'jean', activites: [otherActivity.ouverture], pointages: ['autre-fin'] }] : [],
-      },
+      suiviFixture('of-206', [otherActivity]),
     ]);
     const journal = givenJournal(referentiel, accepted(suspension));
 
@@ -328,7 +304,6 @@ const accepted = (...gestes: readonly GesteDePointage[]): EvenementDuJournal[] =
 const refused = (...gestes: readonly GesteDePointage[]): EvenementDuJournal[] =>
   gestes.map(geste => ({ geste, etat: 'REFUSE', refus: { code: 'refus', message: 'Refusé.' } }));
 const debutFixture = (suiviId: string): GesteDePointage => ({
-  intention: 'OUVERTURE',
   id: `debut-${suiviId}`,
   dateDeSurvenue: '2026-09-05T13:00:00Z',
   nature: 'POINTAGE',

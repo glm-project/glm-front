@@ -29,7 +29,7 @@ Les trois référentiels permettent une recherche sans accents et sur toutes les
 
 Le rapport de coût lit la désignation via l’endpoint existant de l’élément. Après rebase sur `origin/main` (`388c1e5`, Angular 22), il conserve le sélecteur d’élément et les états indépendants de chargement, d’erreur et de nouvelle tentative de sa collection. L’identité sélectionnée utilise `element.numero()` : référence d’entreprise lorsqu’elle existe, sinon nom interne. Le nom interne et la description restent sous le sélecteur. L’identité doit correspondre au rapport. Les montants restent ceux du serveur.
 
-Les liens de supervision conservent l’opérateur, la semaine ISO et le jour de la fin automatique ou du début d’activité conflictuel. Les conflits sans activité ouvrent le relevé de la personne sans inventer de date. Aucun nouveau mécanisme de résolution des pointages.
+Les liens de supervision conservent l’opérateur, la semaine ISO et le jour de la fin automatique.
 
 Les états automatiques sont courts dans la semaine et explicites dans le détail et la vérification. Les libellés longs restent lisibles. Les états de chargement, d’erreur, d’absence et de refus sont conservés.
 
@@ -37,7 +37,7 @@ La recherche des trois référentiels partage le contrôle `gestion-recherche` d
 
 La supervision conserve ses couloirs. Lorsqu’un couloir est vide, il devient compact ; le couloir occupé peut alors présenter trois colonnes sur grand écran. Les noms liés gardent un espacement explicite entre nom et prénom et peuvent revenir à la ligne.
 
-Le bandeau d’un conflit contenant des activités datées est statique ; chaque activité porte son propre lien vers sa date réelle. Le conflit sans activité garde le lien général vers la personne. Dans « À vérifier », l’action « Voir les pointages » reste explicitement bleue et soulignée.
+Dans « À vérifier », l’action « Voir les pointages » reste explicitement bleue et soulignée.
 
 ## Comparaison avec le système établi
 
@@ -55,7 +55,7 @@ Après rebase, les quatorze captures ont été renouvelées sous Angular 22 par 
 
 La proposition approuvée provient de la branche jetable `prototype/gestion-proposition-a`, commit `72d06ea`. Ses captures `desktop-A.png` et `mobile-A.png` dans `artifacts/gestion-design-prototype/review/` du checkout initial servent de références de critique. L’aperçu Angular à backend synthétique en lecture seule et les fichiers ignorés `artifacts/gestion-review/` servent à la revue ; ils ne constituent pas un backend de production.
 
-La revue indépendante a demandé trois corrections : séparation des noms liés, destination datée de chaque activité en conflit et affordance explicite de « Voir les pointages ». Son dernier verdict est `ship` au périmètre de ces trois corrections, toutes notées résolues. Ce passage de verdict ne constitue pas une nouvelle revue complète de toutes les surfaces.
+Historique : la revue indépendante a demandé trois corrections : séparation des noms liés, destination datée de chaque activité en conflit (les conflits n'existent plus, ADR 0054) et affordance explicite de « Voir les pointages ». Son dernier verdict est `ship` au périmètre de ces trois corrections, toutes notées résolues. Ce passage de verdict ne constitue pas une nouvelle revue complète de toutes les surfaces.
 
 Le détecteur signale le soulignement bleu de sélection du jour (3 px) comme side-tab. La revue accepte cet indicateur d’onglet temporel ; l’état reste également exposé par `aria-current`. L’exception est limitée à cette sélection de date, sans règle d’ignorance globale.
 

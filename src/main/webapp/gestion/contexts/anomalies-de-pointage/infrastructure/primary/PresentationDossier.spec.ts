@@ -1,25 +1,40 @@
+import { activiteEchueFixture, instantDuJourFixture } from '@test/unit/fixtures/gestion/anomalies-de-pointage/DossierAnomalie.fixture';
 import { describe, expect, it } from 'vitest';
-import { faitDuGeste, libelleDuGeste, selectionInitiale } from './PresentationDossier';
+import { heureDe, libelleActivite, libelleCategorie, libelleDuGeste } from './PresentationDossier';
 
-describe('Initial selection of a dossier', () => {
-  it('should select nothing while no dossier is read', () => {
-    expect(selectionInitiale(undefined)).toBeUndefined();
-  });
-});
+const NOW = new Date(2026, 9, 5, 10, 0);
 
-describe('Name of a fact outside the five gestures', () => {
+describe('Name of a gesture', () => {
   it.each([
-    { type: 'FIN', intention: 'OUVERTURE', libelle: 'Fin · Ouverture' },
-    { type: 'DEBUT', intention: '', libelle: 'Travail' },
-    { type: '', intention: 'OUVERTURE', libelle: 'Ouverture' },
-    { type: '', intention: '', libelle: '' },
-  ] as const)('should name the type "$type" with the intention "$intention" as "$libelle"', ({ type, intention, libelle }) => {
-    expect(libelleDuGeste({ type, intention })).toBe(libelle);
+    { type: 'DEBUT', libelle: 'Démarrage' },
+    { type: 'NON_CONFORMITE', libelle: 'Démarrage en NC' },
+    { type: 'FIN', libelle: 'Arrêt' },
+  ] as const)('should name the type "$type" by the button the operator pressed: "$libelle"', ({ type, libelle }) => {
+    expect(libelleDuGeste({ type })).toBe(libelle);
   });
 });
 
-describe('Gesture read from a choice', () => {
-  it('should read no type and no intention from a choice that names none of the five gestures', () => {
-    expect(faitDuGeste('')).toEqual({ type: '', intention: '' });
+describe('Hour of an instant', () => {
+  it('should be the local hour and minute of a readable instant', () => {
+    expect(heureDe(instantDuJourFixture('08:05'))).toBe('08:05');
+  });
+
+  it('should be the text itself when it is not an instant', () => {
+    expect(heureDe('pas un instant')).toBe('pas un instant');
+  });
+});
+
+describe('Label of an activity', () => {
+  it.each([
+    { categorie: 'TRAVAIL' as const, libelle: 'Travail' },
+    { categorie: 'NON_CONFORMITE' as const, libelle: 'Non-conformité' },
+  ])('should name the category $categorie as $libelle', ({ categorie, libelle }) => {
+    expect(libelleCategorie(categorie)).toBe(libelle);
+  });
+
+  it('should tell the start and the automatic end of an expired activity', () => {
+    const activite = activiteEchueFixture('travail-8', 'TRAVAIL', '08:00', '18:00');
+
+    expect(libelleActivite(activite, NOW)).toBe('Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 18:00');
   });
 });

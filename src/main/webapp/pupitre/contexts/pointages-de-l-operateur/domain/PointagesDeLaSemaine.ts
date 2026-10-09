@@ -1,4 +1,4 @@
-import { TotalDeDuree } from './duree/TotalDeDuree';
+import { DureeTravaillee } from './duree/DureeTravaillee';
 import { JourDePointages } from './JourDePointages';
 import { JourCalendaire } from './semaine/JourCalendaire';
 import { SemaineISO } from './semaine/SemaineISO';
@@ -11,7 +11,7 @@ const correspondentALaSemaine = (semaine: SemaineISO, jours: readonly JourDePoin
 export class PointagesDeLaSemaine {
   constructor(
     readonly semaine: SemaineISO,
-    readonly total: TotalDeDuree,
+    readonly total: DureeTravaillee,
     private readonly jours: readonly JourDePointages[],
   ) {
     if (!correspondentALaSemaine(semaine, jours)) {

@@ -1,22 +1,9 @@
-import { adresseDeLaDestination, dansLaPage, finRestante, pageAvant } from './AnomalieSuivante';
+import { adresseDeLaDestination, dansLaPage, pageAvant } from './AnomalieSuivante';
 import { AdresseDossier, FiltreAnomalies, LigneFinAutomatique, PageAnomalies } from './DossierAnomalie';
-import { ElementAnomalieId } from './ElementAnomalieId';
 import { PointageAnomalieId } from './PointageAnomalieId';
 import { SuiviAnomalieId } from './SuiviAnomalieId';
 
 describe('Next anomaly', () => {
-  describe('after the act', () => {
-    it('should lead to the first automatic end remaining on the dossier', () => {
-      const issue = { finsAutomatiquesRestantes: [uneAdresse('suivi-1', 'debut-8'), uneAdresse('suivi-1', 'debut-10')] };
-
-      expect(finRestante(issue)).toEqual({ kind: 'FIN_AUTOMATIQUE_RESTANTE', adresse: uneAdresse('suivi-1', 'debut-8') });
-    });
-
-    it('should lead nowhere yet when no automatic end remains on the dossier', () => {
-      expect(finRestante({ finsAutomatiquesRestantes: [] })).toBeUndefined();
-    });
-  });
-
   describe('in a page of the list', () => {
     it('should lead to the first row of the page', () => {
       const page = unePage([uneLigne('suivi-2', 'debut-2'), uneLigne('suivi-3', 'debut-3')]);
@@ -55,13 +42,13 @@ describe('Next anomaly', () => {
 
   describe('page before', () => {
     it('should step back one page and keep the other filters', () => {
-      const filtre: FiltreAnomalies = { nature: 'CONFLIT', operateur: 'op-1', element: 'el-1', page: 3 };
+      const filtre: FiltreAnomalies = { operateur: 'op-1', element: 'el-1', page: 3 };
 
-      expect(pageAvant(filtre)).toEqual({ nature: 'CONFLIT', operateur: 'op-1', element: 'el-1', page: 2 });
+      expect(pageAvant(filtre)).toEqual({ operateur: 'op-1', element: 'el-1', page: 2 });
     });
 
     it('should not step back before the first page', () => {
-      expect(pageAvant({ nature: 'FIN_AUTOMATIQUE', operateur: '', element: '', page: 1 })).toBeUndefined();
+      expect(pageAvant({ operateur: '', element: '', page: 1 })).toBeUndefined();
     });
   });
 
@@ -84,7 +71,6 @@ describe('Next anomaly', () => {
 
   const uneLigne = (suivi: string, pointage: string): LigneFinAutomatique => ({
     adresse: uneAdresse(suivi, pointage),
-    element: new ElementAnomalieId('element-1'),
     designation: 'Pièce',
     operateur: 'Luc',
     poste: 'Scie',
@@ -93,9 +79,7 @@ describe('Next anomaly', () => {
   });
 
   const unePage = (lignes: readonly LigneFinAutomatique[]): PageAnomalies => ({
-    nature: 'FIN_AUTOMATIQUE',
     lignes,
     total: lignes.length,
-    complete: true,
   });
 });

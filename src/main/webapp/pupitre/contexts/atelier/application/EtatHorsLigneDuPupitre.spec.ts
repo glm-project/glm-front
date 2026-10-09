@@ -7,6 +7,7 @@ import {
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { Injector } from '@angular/core';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { EtatHorsLigneDuPupitre, SourceDOuverture } from './EtatHorsLigneDuPupitre';
 import { PupitreSynchronization } from './PupitreSynchronization';
@@ -111,6 +112,7 @@ describe('EtatHorsLigneDuPupitre', () => {
         operateurs: [{ id: 'op1', identifiant: '123', nom: 'Durand', prenom: 'Paul', postes: [] }],
         suivis: [],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
 
@@ -132,7 +134,6 @@ describe('EtatHorsLigneDuPupitre', () => {
     etat: 'EN_ATTENTE',
     geste: {
       nature: 'POINTAGE',
-      intention: 'OUVERTURE',
       type: 'DEBUT',
       id: 'geste',
       operateurId: 'jean',

@@ -1,15 +1,7 @@
 import { formatInstantTimeUnambiguous } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
-import { BornesDuFait, CadreDuFait } from '../../../domain/acte/CadreDuFait';
-import { InstantPointage } from '../../../domain/acte/InstantPointage';
-import { PropositionActe, termineUneActivite } from '../../../domain/acte/SaisieActe';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { finDeLaPortee, instantsRecus } from './EchelleFrise';
-import { pointagesDeLaFrise } from './PointagesDeLaFrise';
-
-export interface BornesDePoignee {
-  readonly min: string;
-  readonly max: string;
-}
+import { InstantPointage } from '../../../domain/dossier/InstantPointage';
+import { BornesDeLaFin, CadreDeLaFin } from '../../../domain/regularisation/CadreDeLaFin';
 
 export type DemandeDeDeplacement =
   | { readonly kind: 'DE'; readonly minutes: number }
@@ -17,39 +9,22 @@ export type DemandeDeDeplacement =
   | { readonly kind: 'VERS'; readonly instant: number };
 
 export interface PlacementDeLInstant {
-  readonly activiteVisee: string;
-  readonly bornes: BornesDePoignee;
-  readonly desactivee: boolean;
+  readonly bornes: BornesDeLaFin;
 }
 
 export interface PlacementDemande {
   readonly demande: DemandeDeDeplacement;
-  readonly placement: PlacementDeLInstant;
 }
 
 export interface PoigneeDeFrise {
   readonly instant: string;
-  readonly origine?: string;
-  readonly activiteVisee: string;
-  readonly bornes: BornesDePoignee;
-  readonly desactivee: boolean;
+  readonly bornes: BornesDeLaFin;
 }
 
-type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'perimetre' | 'activites' | 'diagnostics'>;
+type DossierDeLaFrise = Pick<DossierAnomalie, 'activite' | 'borneDeFin'>;
 
-const plafondDansLaPortee = (dossier: DossierDeLaFrise, bornes: Required<BornesDuFait>): string => {
-  const portee = finDeLaPortee([Date.parse(bornes.min), ...instantsRecus(pointagesDeLaFrise(dossier), dossier.activites)]);
-  return Date.parse(bornes.max) <= portee ? bornes.max : new Date(portee).toISOString();
-};
-
-export const bornesDuDeplacement = (
-  cadre: CadreDuFait,
-  dossier: DossierDeLaFrise,
-  visant: Pick<PoigneeDeFrise, 'activiteVisee' | 'bornes'>,
-): BornesDePoignee => ({
-  min: visant.bornes.min,
-  max: plafondDansLaPortee(dossier, { min: visant.bornes.min, max: cadre.bornes(visant).max }),
-});
+export const bornesDuFait = (dossier: DossierDeLaFrise, maintenant: string): BornesDeLaFin =>
+  CadreDeLaFin.depuis(dossier, maintenant).bornes();
 
 export const texteDeLHeure = (instant: string): string => formatInstantTimeUnambiguous(new Date(instant));
 
@@ -73,53 +48,11 @@ export const demandeDeLaTouche = (touche: Pick<KeyboardEvent, 'key' | 'shiftKey'
   return borne === undefined ? undefined : { kind: 'BORNE', borne };
 };
 
-const proposeUnFait = (proposition: PropositionActe | undefined): proposition is Exclude<PropositionActe, { kind: 'ANNULATION' }> =>
-  proposition !== undefined && proposition.kind !== 'ANNULATION';
+export const poigneeDuDossier = (dossier: DossierDeLaFrise, instant: string, maintenant: string): PoigneeDeFrise | undefined =>
+  new InstantPointage(instant).isValid() ? { instant, bornes: bornesDuFait(dossier, maintenant) } : undefined;
 
-const proposeUnFaitQuiTermine = (
-  proposition: PropositionActe | undefined,
-): proposition is Exclude<PropositionActe, { kind: 'ANNULATION' }> => proposeUnFait(proposition) && termineUneActivite(proposition.fait);
-
-const bornesDuFait = (
-  dossier: DossierDeLaFrise,
-  fait: { readonly activiteVisee: string },
-  maintenant: string,
-): BornesDePoignee | undefined => {
-  const { min, max } = CadreDuFait.depuis(dossier.activites, maintenant).bornes(fait);
-  return min === undefined ? undefined : { min, max: plafondDansLaPortee(dossier, { min, max }) };
-};
-
-export const poigneeDuDossier = (
-  dossier: DossierDeLaFrise,
-  proposition: PropositionActe | undefined,
-  maintenant: string,
-  desactivee: boolean,
-): PoigneeDeFrise | undefined => {
-  if (!proposeUnFaitQuiTermine(proposition)) return undefined;
-  const fait = proposition.fait;
-  if (!new InstantPointage(fait.instant).isValid()) return undefined;
-  const bornes = bornesDuFait(dossier, fait, maintenant);
-  if (bornes === undefined) return undefined;
-  return {
-    instant: fait.instant,
-    ...(proposition.kind === 'CORRECTION' ? { origine: proposition.pointage } : {}),
-    activiteVisee: fait.activiteVisee,
-    bornes,
-    desactivee,
-  };
-};
-
-export const placementDuDossier = (
-  dossier: DossierDeLaFrise,
-  proposition: PropositionActe | undefined,
-  maintenant: string,
-  desactivee: boolean,
-): PlacementDeLInstant | undefined => {
-  if (!proposeUnFaitQuiTermine(proposition)) return undefined;
-  if (new InstantPointage(proposition.fait.instant).isValid()) return undefined;
-  const bornes = bornesDuFait(dossier, proposition.fait, maintenant);
-  return bornes === undefined ? undefined : { activiteVisee: proposition.fait.activiteVisee, bornes, desactivee };
-};
+export const placementDuDossier = (dossier: DossierDeLaFrise, instant: string, maintenant: string): PlacementDeLInstant | undefined =>
+  new InstantPointage(instant).isValid() ? undefined : { bornes: bornesDuFait(dossier, maintenant) };
 
 export interface DeplacementDemande {
   readonly demande: DemandeDeDeplacement;

@@ -30,37 +30,35 @@ const syntheseFixture = (): RestSynthese => ({
   semaine: 41,
   operateur: { id: OPERATEUR, nom: 'Dupont', prenom: 'Jean' },
   evaluation: '2026-10-08T12:00:00Z',
-  dureeOperationnelleTotale: { complete: true, valeur: 'PT15H25M' },
-  conflits: [],
+  dureeOperationnelleTotale: { valeur: 'PT15H25M' },
   elements: [
     {
       id: 'of-1',
       categorie: 'OF',
       nom: 'OF-2026-000204',
       reference: '204',
-      duree: { complete: true, valeur: 'PT15H25M' },
-      dureeNonConformite: { complete: true, valeur: 'PT35M' },
+      duree: { valeur: 'PT15H25M' },
+      dureeNonConformite: { valeur: 'PT35M' },
       postes: [{ poste: { id: 'tour', libelle: 'Tour' }, nature: 'Tournage' }],
     },
     {
       id: 'of-2',
       categorie: 'OF',
       nom: 'OF-2026-000205',
-      duree: { complete: true, valeur: 'PT0S' },
-      dureeNonConformite: { complete: true, valeur: 'PT0S' },
+      duree: { valeur: 'PT0S' },
+      dureeNonConformite: { valeur: 'PT0S' },
       postes: [],
     },
   ],
   jours: SEMAINE.jours().map((jour, rang) => ({
     jour: jour.value,
-    dureeOperationnelle: { complete: true, valeur: ['PT7H45M', 'PT7H40M'][rang] ?? 'PT0S' },
+    dureeOperationnelle: { valeur: ['PT7H45M', 'PT7H40M'][rang] ?? 'PT0S' },
     ...(rang < 2
       ? {
           pointages: [
             {
               id: `debut-${String(rang)}`,
               type: 'DEBUT',
-              intention: 'OUVERTURE',
               dateDeSurvenue: `${jour.value}T05:00:00Z`,
               element: 'of-1',
             },
@@ -199,15 +197,15 @@ describe.each(adapters)('PointagesDeLOperateurPort contract, honoured by %s', (_
     const pointages = await harness.port.semaine(DEMANDE);
 
     expect(pointages.semaine).toEqual(SEMAINE);
-    expect(pointages.total.snapshot()).toMatchObject({ complete: true, valeur: { heures: 15, minutesRestantes: 25 } });
+    expect(pointages.total).toMatchObject({ heures: 15, minutesRestantes: 25 });
   });
 
   it('should offer only the clocked days, in calendar order, with their own totals', async () => {
     const pointages = await harness.port.semaine(DEMANDE);
 
-    expect(pointages.joursPointes().map(jour => [jour.jour.value, jour.total.snapshot()])).toEqual([
-      ['2026-10-05', { complete: true, valeur: { heures: 7, minutesRestantes: 45 } }],
-      ['2026-10-06', { complete: true, valeur: { heures: 7, minutesRestantes: 40 } }],
+    expect(pointages.joursPointes().map(jour => [jour.jour.value, jour.total])).toMatchObject([
+      ['2026-10-05', { heures: 7, minutesRestantes: 45 }],
+      ['2026-10-06', { heures: 7, minutesRestantes: 40 }],
     ]);
   });
 
@@ -220,11 +218,11 @@ describe.each(adapters)('PointagesDeLOperateurPort contract, honoured by %s', (_
     ]);
   });
 
-  it('should transport an automatic end and a clocking to check as such', async () => {
+  it('should transport an automatic end as such', async () => {
     harness.seed(
       semaineFixture(SEMAINE, {
         2: {
-          total: false,
+          total: 'PT0S',
           lignes: [
             ligneFixture({
               element: '204',
@@ -233,7 +231,6 @@ describe.each(adapters)('PointagesDeLOperateurPort contract, honoured by %s', (_
               fin: new Date('2026-10-07T17:00:00Z'),
               automatique: true,
             }),
-            ligneFixture({ element: '204', poste: 'Tour', debut: new Date('2026-10-07T18:00:00Z'), aVerifier: true }),
           ],
         },
       }),
@@ -249,10 +246,6 @@ describe.each(adapters)('PointagesDeLOperateurPort contract, honoured by %s', (_
                     ...activiteFixture('2026-10-07T04:00:00Z', '2026-10-07T17:00:00Z'),
                     activite: { id: 'auto', debut: '2026-10-07T04:00:00Z', fin: '2026-10-07T17:00:00Z', etat: 'TERMINEE_AUTOMATIQUEMENT' },
                   },
-                  {
-                    ...activiteFixture('2026-10-07T18:00:00Z', undefined),
-                    activite: { id: 'conflit', debut: '2026-10-07T18:00:00Z', finAuPlusTard: '2026-10-08T07:00:00Z', etat: 'A_RESOUDRE' },
-                  },
                 ]
               : [],
         })),
@@ -263,17 +256,7 @@ describe.each(adapters)('PointagesDeLOperateurPort contract, honoured by %s', (_
 
     expect(pointages.joursPointes()[0]?.lignes.map(ligne => ligne.etat)).toEqual([
       { etat: 'TERMINEE_AUTOMATIQUEMENT', fin: new Date('2026-10-07T17:00:00Z') },
-      { etat: 'A_RESOUDRE' },
     ]);
-  });
-
-  it('should keep an incomplete total without any value', async () => {
-    const synthese = { ...syntheseFixture(), dureeOperationnelleTotale: { complete: false, valeur: 'PT99H' } };
-    harness.seed(semaineFixture(SEMAINE, {}, false), synthese);
-
-    const pointages = await harness.port.semaine(DEMANDE);
-
-    expect(pointages.total.snapshot()).toEqual({ complete: false });
   });
 
   it('should reject an unavailable week instead of showing partial figures', async () => {

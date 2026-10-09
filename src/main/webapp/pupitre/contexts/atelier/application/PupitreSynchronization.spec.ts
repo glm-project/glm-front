@@ -8,27 +8,48 @@ import {
   JournalDuPupitre,
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { projectReferentiel } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitreProjection';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
-import { MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
+import { CodeDeRefusDAtelier, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
 import { DeviceSessionPort } from '@/pupitre/shared/authentication/domain/DeviceSessionPort';
 import { Injector } from '@angular/core';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
 import { DeviceSessionFixture } from '@test/unit/fixtures/pupitre/DeviceSessionFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 import { PupitreSynchronization } from './PupitreSynchronization';
 
-const referenceFixture: ReferentielDuPupitre = { operateurs: [], suivis: [], categories: [] };
+const referenceFixture: ReferentielDuPupitre = {
+  operateurs: [],
+  suivis: [],
+  categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
+};
+const suiviSansActiviteFixture = {
+  id: 'piece',
+  nom: 'OF-1',
+  categorie: 'MOULE',
+  etat: 'EN_ATTENTE',
+  activites: [],
+  evenements: [],
+} as const;
+const activiteDuServeurFixture = {
+  operateurId: 'jean',
+  categorie: 'TRAVAIL',
+  depuis: '2026-09-05T07:30:00Z',
+  ouverture: 'ouverture-du-serveur',
+  echeance: '2026-09-05T20:30:00.000Z',
+} as const;
 const gesteFixture: GesteDePointage = {
   id: 'arrivee',
   dateDeSurvenue: '2026-09-05T08:00:00Z',
   operateurId: 'jean',
   nature: 'POINTAGE',
   suiviId: 'piece',
-  intention: 'OUVERTURE',
   type: 'DEBUT',
 };
 const roundTrip = (): Promise<void> => new Promise(resolve => setTimeout(resolve));
@@ -40,10 +61,7 @@ class ServerFixture extends AtelierExchangePort {
   private readonly heldReferences: ReferentielExchangeFixture[] = [];
   onReferentiel: (() => Promise<ReferentielDuPupitre> | ReferentielDuPupitre) | undefined;
   onSend:
-    | ((
-        geste: GesteDePointage,
-      ) =>
-        Promise<Result<PublicationAcceptee, RefusDePublication> | undefined> | Result<PublicationAcceptee, RefusDePublication> | undefined)
+    | ((geste: GesteDePointage) => Promise<Result<void, RefusDePublication> | undefined> | Result<void, RefusDePublication> | undefined)
     | undefined;
 
   override async referentiel(): Promise<ReferentielDuPupitre> {
@@ -65,7 +83,7 @@ class ServerFixture extends AtelierExchangePort {
     return exchange;
   }
 
-  override async send(geste: GesteDePointage): Promise<Result<PublicationAcceptee, RefusDePublication>> {
+  override async send(geste: GesteDePointage): Promise<Result<void, RefusDePublication>> {
     await roundTrip();
     if (this.onSend !== undefined) {
       const result = await this.onSend(geste);
@@ -74,7 +92,7 @@ class ServerFixture extends AtelierExchangePort {
       }
     }
     this.received.push(structuredClone(geste));
-    return ok({ conflits: [] });
+    return ok(undefined);
   }
 
   override async reread(geste: GesteDePointage): Promise<void> {
@@ -218,11 +236,9 @@ describe('PupitreSynchronization', () => {
     }).get(PupitreSynchronization);
   });
 
-  it('should persist accepted conflicts and keep them after the complete reference refresh fails', async () => {
+  it('should persist accepted gestures and keep the reference after the complete reference refresh fails', async () => {
     await givenASelectedCompanyWithPendingWork();
     givenAnAuthorizedSession();
-    const conflits = [{ operateurId: 'jean', activites: ['arrivee'], pointages: ['arrivee'] }];
-    server.onSend = () => ok({ conflits });
     server.onReferentiel = () => {
       throw new Error('référentiel indisponible');
     };
@@ -230,7 +246,7 @@ describe('PupitreSynchronization', () => {
     await whenSynchronizing();
 
     const stored = await journal.read(Entreprise.of('entreprise-a'));
-    expect(stored.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE', conflits }]);
+    expect(stored.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE' }]);
     expect(stored.referentiel).toEqual(referenceFixture);
     expect(stored.connecte).toBe(true);
     expect(server.rereadGestes).toEqual([]);
@@ -435,6 +451,17 @@ describe('PupitreSynchronization', () => {
     thenNoTechnicalFailureWasReported();
   });
 
+  it('should drop the local effect of an ignored pointage and settle on the referential, keeping the refusal in the journal', async () => {
+    await givenAPendingOpeningOnAPieceWithoutActivity();
+    givenAnAuthorizedSession();
+    givenTheServerIgnoresThePointageAndShowsItsOwnActivity();
+
+    await whenSynchronizing();
+
+    thenOnlyTheActivityOfTheServerRemains();
+    thenEventRefused('urn:glm:erreur:atelier:pointage-ignore', 'Pointage ignoré', 'pointage-ignore');
+  });
+
   it('should mark disconnected when unexpected technical failure occurs during exchange', async () => {
     await givenASelectedCompanyWithPendingWork();
     givenAnAuthorizedSession();
@@ -563,6 +590,7 @@ describe('PupitreSynchronization', () => {
         operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
         suivis: [],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       };
     };
   };
@@ -573,6 +601,7 @@ describe('PupitreSynchronization', () => {
         operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
         suivis: [],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       };
     };
   };
@@ -628,6 +657,18 @@ describe('PupitreSynchronization', () => {
     };
   };
 
+  const givenAPendingOpeningOnAPieceWithoutActivity = async (): Promise<void> => {
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), { ...referenceFixture, suivis: [suiviSansActiviteFixture] });
+    await journal.append(Entreprise.of('entreprise-a'), [gesteFixture]);
+  };
+  const givenTheServerIgnoresThePointageAndShowsItsOwnActivity = (): void => {
+    server.onSend = () =>
+      err(new RefusDePublication('urn:glm:erreur:atelier:pointage-ignore', 'Pointage ignoré', MotifDeRefus.from('pointage-ignore')));
+    server.onReferentiel = (): ReferentielDuPupitre => ({
+      ...referenceFixture,
+      suivis: [{ ...suiviSansActiviteFixture, etat: 'EN_COURS', activites: [activiteDuServeurFixture] }],
+    });
+  };
   const givenUnauthorizedGestureRefusal = (): void => {
     server.onSend = () => err(new RefusDePublication('refus-invalide', 'Opérateur non habilité'));
   };
@@ -641,6 +682,7 @@ describe('PupitreSynchronization', () => {
       operateurs: [{ id: 'autre', identifiant: '9999', nom: 'Autre', prenom: 'Op', postes: [] }],
       suivis: [],
       categories: [],
+      dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
     });
   };
   const givenSessionTokenExpiresBeforePush = (): void => {
@@ -720,8 +762,13 @@ describe('PupitreSynchronization', () => {
   const thenEventAccepted = (): void => {
     expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'ACCEPTE' }]);
   };
-  const thenEventRefused = (code: string, message: string): void => {
-    expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'REFUSE', refus: { code, message } }]);
+  const thenOnlyTheActivityOfTheServerRemains = (): void => {
+    const projected = exposed === undefined ? undefined : projectReferentiel(exposed);
+    expect(projected?.suivis[0]?.activites).toEqual([activiteDuServeurFixture]);
+  };
+  const thenEventRefused = (code: string, message: string, motif?: CodeDeRefusDAtelier): void => {
+    const refus = motif === undefined ? { code, message } : { code, message, motif };
+    expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'REFUSE', refus }]);
   };
   const thenDisconnectedStatusObserved = (): void => {
     expect(exposed?.connecte).toBe(false);

@@ -1,4 +1,3 @@
-import { TotalDeDuree } from '@/gestion/contexts/releve-des-heures/domain/duree/TotalDeDuree';
 import { PointageReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageReleveId';
 import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { CategorieDElement } from '../element/CategorieDElement';
@@ -6,17 +5,13 @@ import { ElementDuReleve } from '../element/ElementDuReleve';
 import { ElementReleveId } from '../element/ElementReleveId';
 import { JourCalendaire } from '../semaine/JourCalendaire';
 import { SemaineISO } from '../semaine/SemaineISO';
-import { ActiviteReleveId } from './ActiviteReleveId';
 import { CibleDePointage } from './CibleDePointage';
 import { IdentiteOperateur } from './IdentiteOperateur';
 import { InstantDeReleve } from './InstantDeReleve';
 import { JourDeReleve } from './JourDeReleve';
 import { JourAOuvrir, jourOuvert } from './JourOuvert';
-import { IntentionDePointage, PointageDElement } from './PointageDElement';
+import { PointageDElement } from './PointageDElement';
 import { ReleveDesHeures } from './ReleveDesHeures';
-
-const intentionFixture = (type: string): IntentionDePointage =>
-  type === 'FIN' ? { type: 'FIN', activiteVisee: new ActiviteReleveId('a') } : { type: 'OUVERTURE' };
 
 const elementFixture = (): ElementDuReleve =>
   new ElementDuReleve({
@@ -25,8 +20,8 @@ const elementFixture = (): ElementDuReleve =>
     nom: 'Moule',
     reference: undefined,
     description: undefined,
-    duree: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
-    dureeNonConformite: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
+    duree: new DureeTravaillee('PT0S'),
+    dureeNonConformite: new DureeTravaillee('PT0S'),
     postes: [],
   });
 
@@ -39,7 +34,7 @@ const jourFixture = (jour: JourCalendaire, fiche: { pointe?: boolean; couvert?: 
   const instant = new InstantDeReleve(`${jour.value}T08:00:00Z`);
   return new JourDeReleve({
     jour,
-    operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
+    operationnelTotal: new DureeTravaillee('PT0S'),
     intervalles: [],
     pointages:
       fiche.pointe === true
@@ -49,7 +44,6 @@ const jourFixture = (jour: JourCalendaire, fiche: { pointe?: boolean; couvert?: 
               type: 'DEBUT',
               instant: instant,
               cible: new CibleDePointage(new ElementReleveId('element-1'), undefined),
-              intention: intentionFixture('DEBUT'),
             }),
           ]
         : [],
@@ -60,9 +54,8 @@ const releveFixture = (semaine: SemaineISO, jours: Readonly<Record<number, { poi
   new ReleveDesHeures(semaine, {
     operateur: new IdentiteOperateur('Dupont', 'Jean'),
     elements: [elementFixture()],
-    operationnelTotal: TotalDeDuree.complet(new DureeTravaillee('PT0S')),
+    operationnelTotal: new DureeTravaillee('PT0S'),
     jours: semaine.jours().map((jour, rang) => jourFixture(jour, jours[rang] ?? {})),
-    conflits: [],
   });
 
 describe('jourOuvert', () => {

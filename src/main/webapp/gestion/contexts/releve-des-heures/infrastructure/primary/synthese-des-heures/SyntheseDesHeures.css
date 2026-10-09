@@ -389,12 +389,6 @@
   background-image: linear-gradient(90deg, var(--color-accent) 0 8px, transparent 8px), var(--gestion-hachure-fin-automatique);
 }
 
-.barre.a-resoudre {
-  width: 3px;
-  border: 1px dashed var(--color-warn);
-  background: var(--color-surface);
-}
-
 .numero {
   color: inherit;
   text-decoration: underline;

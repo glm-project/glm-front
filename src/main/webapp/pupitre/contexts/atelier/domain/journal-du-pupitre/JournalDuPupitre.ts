@@ -1,3 +1,6 @@
+import { CodeDeRefusDAtelier, MotifDeRefus } from '../refus/MotifDeRefus';
+import { RefusDePublication } from '../refus/RefusDePublication';
+
 export type EtatDAtelier = 'EN_ATTENTE' | 'EN_COURS' | 'INTERROMPU';
 export type TypeDePointage = 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
 
@@ -18,13 +21,6 @@ export interface ActiviteDuPupitre {
   readonly posteId?: string;
 }
 
-export interface ConflitDuPupitre {
-  readonly operateurId?: string;
-  readonly posteId?: string;
-  readonly activites: readonly string[];
-  readonly pointages: readonly string[];
-}
-
 export interface SuiviDuPupitre {
   readonly id: string;
   readonly nom: string;
@@ -32,7 +28,6 @@ export interface SuiviDuPupitre {
   readonly etat: EtatDAtelier;
   readonly categorie: string;
   readonly activites: readonly ActiviteDuPupitre[];
-  readonly conflits: readonly ConflitDuPupitre[];
   readonly evenements: readonly string[];
 }
 
@@ -40,6 +35,7 @@ export interface ReferentielDuPupitre {
   readonly operateurs: readonly OperateurDuPupitre[];
   readonly suivis: readonly SuiviDuPupitre[];
   readonly categories: readonly string[];
+  readonly dureeMaximaleDActiviteEnMs: number;
 }
 
 export interface IdentiteDuGeste {
@@ -62,12 +58,7 @@ interface IdentiteDuPointage extends IdentiteDuGeste {
   readonly suspension?: Suspension;
 }
 
-export type GesteDePointage = IdentiteDuPointage
-  & (
-    | { readonly intention: 'OUVERTURE'; readonly type: TypeDOuverture }
-    | { readonly intention: 'TRANSITION'; readonly type: TypeDOuverture; readonly cible: string }
-    | { readonly intention: 'FIN'; readonly type: 'FIN'; readonly cible: string }
-  );
+export type GesteDePointage = IdentiteDuPointage & { readonly type: TypeDePointage };
 
 export const toReouverture = (activite: ActiviteDuPupitre): TypeDOuverture =>
   activite.categorie === 'NON_CONFORMITE' ? 'NON_CONFORMITE' : 'DEBUT';
@@ -83,14 +74,13 @@ export interface EvenementEnAttente {
 export interface EvenementAccepte {
   readonly geste: GesteDePointage;
   readonly etat: 'ACCEPTE';
-  readonly conflits?: readonly ConflitDuPupitre[];
   readonly refus?: never;
 }
 
 export interface EvenementRefuse {
   readonly geste: GesteDePointage;
   readonly etat: 'REFUSE';
-  readonly refus: { readonly code: string; readonly message: string };
+  readonly refus: { readonly code: string; readonly message: string; readonly motif?: CodeDeRefusDAtelier };
 }
 
 export interface JournalDuPupitre {
@@ -108,16 +98,9 @@ const snapshotEvenement = (evenement: EvenementDuJournal): EvenementDuJournal =>
       ? { ...evenement.geste, suspension: { ...evenement.geste.suspension } }
       : { ...evenement.geste };
   if (evenement.etat === 'REFUSE') return { geste, etat: 'REFUSE', refus: { ...evenement.refus } };
-  if (evenement.etat === 'ACCEPTE')
-    return { geste, etat: 'ACCEPTE', ...(evenement.conflits === undefined ? {} : { conflits: evenement.conflits.map(snapshotConflit) }) };
+  if (evenement.etat === 'ACCEPTE') return { geste, etat: 'ACCEPTE' };
   return { geste, etat: 'EN_ATTENTE' };
 };
-
-const snapshotConflit = (conflit: ConflitDuPupitre): ConflitDuPupitre => ({
-  ...conflit,
-  activites: [...conflit.activites],
-  pointages: [...conflit.pointages],
-});
 
 export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre => ({
   connecte: journal.connecte,
@@ -134,18 +117,18 @@ export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre =
           suivis: journal.referentiel.suivis.map(suivi => ({
             ...suivi,
             activites: suivi.activites.map(activite => ({ ...activite })),
-            conflits: suivi.conflits.map(snapshotConflit),
             evenements: [...suivi.evenements],
           })),
           categories: [...journal.referentiel.categories],
+          dureeMaximaleDActiviteEnMs: journal.referentiel.dureeMaximaleDActiviteEnMs,
         },
       }),
 });
 
-const isRefusalAmong =
+const isShownRefusalAmong =
   (gesteIds: ReadonlySet<string>) =>
   (evenement: EvenementDuJournal): evenement is EvenementRefuse =>
-    evenement.etat === 'REFUSE' && gesteIds.has(evenement.geste.id);
+    evenement.etat === 'REFUSE' && gesteIds.has(evenement.geste.id) && MotifDeRefus.from(evenement.refus.motif).isShownToTheOperator();
 
 export class EvenementsDuJournal {
   private readonly evenements: readonly EvenementDuJournal[];
@@ -166,22 +149,21 @@ export class EvenementsDuJournal {
     return this.evenements.some(evenement => evenement.geste.id === gesteId);
   }
 
-  latestRefusalAmong(gesteIds: ReadonlySet<string>): EvenementRefuse | undefined {
-    return [...this.evenements].reverse().find(isRefusalAmong(gesteIds));
+  latestShownRefusalAmong(gesteIds: ReadonlySet<string>): EvenementRefuse | undefined {
+    return [...this.evenements].reverse().find(isShownRefusalAmong(gesteIds));
   }
 }
 
-export const acceptPublication = (geste: GesteDePointage, conflits: readonly ConflitDuPupitre[]): EvenementAccepte => ({
-  geste,
-  etat: 'ACCEPTE',
-  ...(conflits.length === 0 ? {} : { conflits: conflits.map(snapshotConflit) }),
-});
+export const acceptPublication = (geste: GesteDePointage): EvenementAccepte => ({ geste, etat: 'ACCEPTE' });
 
-export const refusePublication = (geste: GesteDePointage, refus: EvenementRefuse['refus']): EvenementRefuse => ({
-  geste,
-  etat: 'REFUSE',
-  refus: { code: refus.code, message: refus.message },
-});
+export const refusePublication = (geste: GesteDePointage, refus: RefusDePublication): EvenementRefuse => {
+  const motif = refus.motif.code();
+  return {
+    geste,
+    etat: 'REFUSE',
+    refus: { code: refus.code, message: refus.message, ...(motif === undefined ? {} : { motif }) },
+  };
+};
 
 const suspensionOf = (geste: GesteDePointage, operateurId: string): geste is GesteDePointage & { readonly suspension: Suspension } =>
   geste.operateurId === operateurId && geste.suspension !== undefined;

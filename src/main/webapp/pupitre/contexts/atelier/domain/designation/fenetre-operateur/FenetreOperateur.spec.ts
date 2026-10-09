@@ -17,6 +17,8 @@ import { DecisionDePointage, LotDeGestesDAtelier } from './DecisionDePointage';
 import { FenetreOperateur } from './FenetreOperateur';
 import { ElementDePointage, VueDePointage } from './VueDePointage';
 
+const dureeMaximaleFixtureEnMs = 13 * 60 * 60 * 1000;
+
 const isMissingFixture = (value: unknown): value is null | undefined => value === null || value === undefined;
 
 const requiredFixture = <T>(value: T | null | undefined, description: string): T => {
@@ -45,6 +47,19 @@ const nonConformiteFixture: ActiviteDuPupitre = {
   depuis: '2026-09-05T08:30:00Z',
 };
 
+const travailALaFraiseuseFixture: ActiviteDuPupitre = {
+  ouverture: 'activite-fixture-21',
+  echeance: '2026-09-05T20:00:00.000Z',
+  operateurId: 'jean',
+  categorie: 'TRAVAIL',
+  depuis: '2026-09-05T07:00:00Z',
+  posteId: 'fraiseuse',
+};
+
+const POINTAGE_IGNORE = 'pointage-ignore';
+const NON_HABILITE = 'operateur-non-habilite';
+const SUIVI_CLOTURE = 'suivi-d-atelier-cloture';
+type MotifFixture = typeof POINTAGE_IGNORE | typeof NON_HABILITE | typeof SUIVI_CLOTURE;
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
@@ -59,7 +74,6 @@ const vueFixture: JournalDuPupitre = {
     ],
     suivis: [
       {
-        conflits: [],
         id: 'moule-1015',
         nom: 'PR-2026-000015',
         reference: '1015',
@@ -85,7 +99,6 @@ const vueFixture: JournalDuPupitre = {
         evenements: [],
       },
       {
-        conflits: [],
         id: 'of-204',
         nom: 'OF-2026-000204',
         reference: '204',
@@ -113,12 +126,12 @@ const vueFixture: JournalDuPupitre = {
             operateurId: 'jean',
             categorie: 'NON_CONFORMITE',
             depuis: '2026-09-05T08:45:00Z',
+            posteId: 'fraiseuse',
           },
         ],
         evenements: [],
       },
       {
-        conflits: [],
         id: 'of-1015',
         nom: 'OF-2026-000042',
         etat: 'EN_ATTENTE',
@@ -128,6 +141,7 @@ const vueFixture: JournalDuPupitre = {
       },
     ],
     categories: [],
+    dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
   },
 };
 
@@ -161,30 +175,16 @@ describe('FenetreOperateur', () => {
     expect(deadlines).toEqual([Date.parse('2026-09-05T19:00:00Z'), Date.parse('2026-09-05T21:30:00Z'), undefined]);
   });
 
-  it('should keep another operator conflict separate from the designated operator and unresolved conflicts', () => {
-    const reference = requiredFixture(vueFixture.referentiel, 'reference');
-    const owners = ['jean', 'marie', undefined];
+  it('should schedule the deadline of an activity opened here from the maximum duration received with the reference', () => {
     const window = givenAWindowOpenedOn({
-      ...EMPTY_JOURNAL_DU_PUPITRE,
-      referentiel: {
-        ...reference,
-        suivis: reference.suivis.map((suivi, index) => ({
-          ...suivi,
-          activites: [],
-          conflits: [
-            {
-              ...(owners[index] === undefined ? {} : { operateurId: owners[index] }),
-              activites: [],
-              pointages: ['conflit-' + suivi.id],
-            },
-          ],
-        })),
-      },
+      ...vueFixture,
+      referentiel: { ...requiredFixture(vueFixture.referentiel, 'reference'), dureeMaximaleDActiviteEnMs: 8 * 60 * 60 * 1000 },
     });
 
-    const pointage = window.pointage();
+    const started = window.afterDeciding('of-1015', 'PRINCIPALE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
+    const accepted = started.fenetre.prepareAcceptance(gesturesOf(started.decision)).applyTo(started.fenetre);
 
-    expect(pointage.conflits.map(conflit => conflit.id)).toEqual(['moule-1015', 'of-1015']);
+    expect(accepted.prochaineEcheance()).toBe(Date.parse('2026-09-05T16:00:00Z'));
   });
 
   it('should request no resumption invalidation when accepting an ordinary opening', () => {
@@ -193,7 +193,7 @@ describe('FenetreOperateur', () => {
     const accepted = fenetre.prepareAcceptance(gesturesOf(decision));
 
     expect(accepted).not.toHaveProperty('repriseAEffacer');
-    expect(accepted.gestes).toMatchObject([{ intention: 'OUVERTURE', suiviId: 'of-1015' }]);
+    expect(accepted.gestes).toMatchObject([{ type: 'DEBUT', suiviId: 'of-1015' }]);
   });
 
   it('should capture only one activity opening for the first operator action', () => {
@@ -202,7 +202,7 @@ describe('FenetreOperateur', () => {
     const gestes = captureGestures(decision);
 
     expect(gestes).toHaveLength(1);
-    expect(gestes[0]).toMatchObject({ intention: 'OUVERTURE', nature: 'POINTAGE', type: 'DEBUT' });
+    expect(gestes[0]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT' });
   });
 
   it('should finish the stable original opening of the displayed activity', () => {
@@ -211,7 +211,7 @@ describe('FenetreOperateur', () => {
 
     const decision = whenDecidingWith(window, 'moule-1015', 'PRINCIPALE');
 
-    expect(captureGestures(decision)).toMatchObject([{ intention: 'FIN', type: 'FIN', cible: 'original-opening' }]);
+    expect(captureGestures(decision)).toMatchObject([{ type: 'FIN' }]);
   });
 
   it('should decide a new opening at the inclusive thirteen-hour deadline even before any timer callback', () => {
@@ -229,7 +229,6 @@ describe('FenetreOperateur', () => {
         suiviId: 'moule-1015',
         posteId: 'tour',
         type: 'DEBUT',
-        intention: 'OUVERTURE',
       },
     ]);
   });
@@ -262,14 +261,12 @@ describe('FenetreOperateur', () => {
         operateurId: 'jean',
         suiviId: 'moule-1015',
         posteId: 'tour',
-        intention: 'FIN',
         type: 'FIN',
-        cible: travailAuTourFixture.ouverture,
       },
     ]);
   });
 
-  it('should pause only known interpretable nonexpired activities while retaining conflict diagnostics', () => {
+  it('should pause only known nonexpired activities', () => {
     const journal = structuredClone(vueFixture);
     const reference = requiredFixture(journal.referentiel, 'reference');
     const first = requiredFixture(reference.suivis[0], 'first item');
@@ -283,9 +280,7 @@ describe('FenetreOperateur', () => {
             activites: [
               travailAuTourFixture,
               { ...travailAuTourFixture, ouverture: 'encore-active', posteId: 'fraiseuse', echeance: '2026-09-05T22:00:00Z' },
-              { ...travailAuTourFixture, ouverture: 'contradictoire', echeance: '2026-09-05T22:00:00Z' },
             ],
-            conflits: [{ operateurId: 'jean', activites: ['contradictoire'], pointages: ['contradiction'] }],
           },
         ],
       },
@@ -297,61 +292,8 @@ describe('FenetreOperateur', () => {
 
     const gestes = intention.prepare(window).capture();
 
-    expect(gestes).toMatchObject([{ intention: 'FIN', cible: 'encore-active', posteId: 'fraiseuse' }]);
+    expect(gestes).toMatchObject([{ type: 'FIN', posteId: 'fraiseuse' }]);
     expect(gestes).toHaveLength(1);
-    expect(window.pointage().conflits.map(conflit => conflit.numero.toString())).toEqual([first.reference ?? first.nom]);
-  });
-
-  it('should allow only a new opening for an activity in conflict while keeping another workstation actionable', () => {
-    const reference = requiredFixture(vueFixture.referentiel, 'reference');
-    const suivi = requiredFixture(
-      reference.suivis.find(item => item.id === 'moule-1015'),
-      'item',
-    );
-    const window = givenAWindowOpenedOn({
-      ...EMPTY_JOURNAL_DU_PUPITRE,
-      referentiel: {
-        ...reference,
-        suivis: [
-          {
-            ...suivi,
-            activites: [travailAuTourFixture],
-            conflits: [{ operateurId: 'jean', activites: [travailAuTourFixture.ouverture], pointages: ['contradiction'] }],
-          },
-        ],
-      },
-    });
-
-    const decision = window.afterDeciding(suivi.id, 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
-
-    expect(captureGestures(decision.decision)).toMatchObject([{ intention: 'OUVERTURE', type: 'NON_CONFORMITE' }]);
-    expect(window.pointage().conflits).toHaveLength(1);
-  });
-
-  it('should expose a conflict without an activity or a workstation and omit another operator conflict', () => {
-    const reference = requiredFixture(vueFixture.referentiel, 'reference');
-    const suivi = requiredFixture(reference.suivis[0], 'item');
-    const window = givenAWindowOpenedOn({
-      ...EMPTY_JOURNAL_DU_PUPITRE,
-      referentiel: {
-        ...reference,
-        suivis: [
-          {
-            ...suivi,
-            activites: [],
-            conflits: [
-              { activites: [], pointages: ['inconnu'] },
-              { operateurId: 'marie', activites: [], pointages: ['autre'] },
-            ],
-          },
-        ],
-      },
-    });
-
-    const pointage = window.pointage();
-
-    expect(pointage.conflits).toEqual([{ id: suivi.id, numero: NumeroDElement.from(suivi) }]);
-    expect(elementsDeLaZone(pointage, 'MOULE')[0]?.isActive()).toBe(false);
   });
 
   it('should resolve the operator from the company referential', () => {
@@ -414,7 +356,7 @@ describe('FenetreOperateur', () => {
     thenOpeningSharesBusinessTime(firstGestures);
   });
 
-  it('should capture a first targeted finish', () => {
+  it('should capture a first finish', () => {
     const fin = whenDeciding('moule-1015', 'PRINCIPALE');
 
     const gestes = captureGestures(fin);
@@ -423,22 +365,43 @@ describe('FenetreOperateur', () => {
     thenPointageTypesAre(fin, ['FIN']);
   });
 
-  it('should transition work to non conformity', () => {
+  it('should finish the work then open a non conformity on the same workstation when non conformity is asked during work', () => {
     const nonConformite = whenDeciding('moule-1015', 'SECONDAIRE');
 
     const gestes = captureGestures(nonConformite);
 
-    thenGesturesAre(gestes, ['POINTAGE']);
-    thenPointageTypesAre(nonConformite, ['NON_CONFORMITE']);
+    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE']);
+    thenTypesAndWorkstationsAre(nonConformite, [
+      ['FIN', 'tour'],
+      ['NON_CONFORMITE', 'tour'],
+    ]);
   });
 
-  it('should transition non conformity back to work', () => {
-    const travail = whenDeciding('of-204', 'SECONDAIRE');
+  it('should finish then open a non conformity on each workstation in turn when several works are running', () => {
+    const deuxTravaux = givenAWindowWithActivities({ 'of-204': [travailAuTourFixture, travailALaFraiseuseFixture] });
 
-    const gestes = captureGestures(travail);
+    const nonConformites = whenDecidingWith(deuxTravaux, 'of-204', 'SECONDAIRE');
 
-    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE']);
-    thenPointageTypesAre(travail, ['DEBUT', 'DEBUT']);
+    thenTypesAndWorkstationsAre(nonConformites, [
+      ['FIN', 'tour'],
+      ['NON_CONFORMITE', 'tour'],
+      ['FIN', 'fraiseuse'],
+      ['NON_CONFORMITE', 'fraiseuse'],
+    ]);
+  });
+
+  it('should finish then reopen as work each non conformity on its workstation, leaving the work untouched, when the secondary target is asked on a started element', () => {
+    const retourAuTravail = whenDeciding('of-204', 'SECONDAIRE');
+
+    const gestes = captureGestures(retourAuTravail);
+
+    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE']);
+    thenTypesAndWorkstationsAre(retourAuTravail, [
+      ['FIN', undefined],
+      ['DEBUT', undefined],
+      ['FIN', 'fraiseuse'],
+      ['DEBUT', 'fraiseuse'],
+    ]);
   });
 
   it('should finish every personal activity on its workstation when stopping all', () => {
@@ -454,7 +417,7 @@ describe('FenetreOperateur', () => {
       { suiviId: 'moule-1015', type: 'FIN', posteId: 'tour' },
       { suiviId: 'of-204', type: 'FIN', posteId: undefined },
       { suiviId: 'of-204', type: 'FIN', posteId: 'tour' },
-      { suiviId: 'of-204', type: 'FIN', posteId: undefined },
+      { suiviId: 'of-204', type: 'FIN', posteId: 'fraiseuse' },
     ]);
     expect(new Set(gestes.map(geste => geste.id)).size).toBe(gestes.length);
     expect(new Set(gestes.map(geste => geste.dateDeSurvenue))).toEqual(new Set(['2026-09-05T08:00:00.000Z']));
@@ -560,7 +523,13 @@ describe('FenetreOperateur', () => {
 
     whenReconciling({
       ...structuredClone(vueFixture),
-      evenements: [{ geste: fin, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
+      evenements: [
+        {
+          geste: fin,
+          etat: 'REFUSE',
+          refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture', message: "L'élément a été clôturé." },
+        },
+      ],
     });
 
     expect(fenetre.refusal()).toEqual({
@@ -579,7 +548,13 @@ describe('FenetreOperateur', () => {
 
     const reconciled = acceptance.applyTo(window).afterReconciling(Entreprise.of('entreprise-a'), {
       ...window.snapshot(),
-      evenements: [{ geste: pointage, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: 'Le pointage est refusé.' } }],
+      evenements: [
+        {
+          geste: pointage,
+          etat: 'REFUSE',
+          refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture', message: 'Le pointage est refusé.' },
+        },
+      ],
     });
 
     expect(reconciled.refusal()).toEqual({
@@ -595,7 +570,13 @@ describe('FenetreOperateur', () => {
     );
     const journalWithPreviousRefusal: JournalDuPupitre = {
       ...structuredClone(vueFixture),
-      evenements: [{ geste: previousGesture, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
+      evenements: [
+        {
+          geste: previousGesture,
+          etat: 'REFUSE',
+          refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture', message: "L'élément a été clôturé." },
+        },
+      ],
     };
     fenetre = givenAWindowOpenedOn(journalWithPreviousRefusal, 2);
 
@@ -613,21 +594,23 @@ describe('FenetreOperateur', () => {
 
     fenetre = acceptedAfterNewerIntent.afterReconciling(Entreprise.of('entreprise-a'), {
       ...structuredClone(vueFixture),
-      evenements: [{ geste: refusedGesture, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
+      evenements: [
+        {
+          geste: refusedGesture,
+          etat: 'REFUSE',
+          refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture', message: "L'élément a été clôturé." },
+        },
+      ],
     });
 
     expect(fenetre.refusal()).toBeUndefined();
   });
 
-  it('should turn every personal activity off from the primary target and normalize only necessary secondary transitions', () => {
+  it('should turn every personal activity off from the primary target, keeping its workstation', () => {
     const stop = whenDeciding('of-204', 'PRINCIPALE');
-    const backToWork = whenDeciding('of-204', 'SECONDAIRE');
-    const toNonConformity = whenDeciding('moule-1015', 'SECONDAIRE');
 
     thenPointageTypesAre(stop, ['FIN', 'FIN', 'FIN']);
-    thenPointageTypesAre(backToWork, ['DEBUT', 'DEBUT']);
-    thenPointageTypesAre(toNonConformity, ['NON_CONFORMITE']);
-    thenPointagesKeepTheirWorkstations(stop, [undefined, 'tour', undefined]);
+    thenPointagesKeepTheirWorkstations(stop, [undefined, 'tour', 'fraiseuse']);
   });
 
   it('should open without a workstation when the operator holds none', () => {
@@ -664,6 +647,46 @@ describe('FenetreOperateur', () => {
     thenLatestRefusalNamesTheElement();
   });
 
+  it('should expose the last shown refusal of a lot when several pointages were refused for the closed element', () => {
+    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+
+    whenReconciling(givenTheGesturesWereRefusedForClosureInOrder(gestures, ['Premier refus.', 'Dernier refus.']));
+
+    expect(fenetre.refusal()?.message).toBe('Dernier refus.');
+  });
+
+  it.each<MotifFixture>([POINTAGE_IGNORE, NON_HABILITE])(
+    'should never expose the %s refusal, only the closed element refusal is shown',
+    motif => {
+      const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+
+      whenReconciling(givenTheGesturesWereRefusedWith(gestures, [motif, motif]));
+
+      thenNoRefusalIsVisible();
+    },
+  );
+
+  it('should never expose a refusal whose reason the adapter did not recognize', () => {
+    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+
+    whenReconciling(givenTheGesturesWereRefusedWithoutReason(gestures));
+
+    thenNoRefusalIsVisible();
+  });
+
+  it.each<[string, readonly MotifFixture[]]>([
+    ['ignored then closed', [POINTAGE_IGNORE, SUIVI_CLOTURE]],
+    ['closed then ignored', [SUIVI_CLOTURE, POINTAGE_IGNORE]],
+    ['not authorized then closed', [NON_HABILITE, SUIVI_CLOTURE]],
+    ['closed then not authorized', [SUIVI_CLOTURE, NON_HABILITE]],
+  ])('should expose the closed element refusal of a lot whose other pointage was %s', (_order, motifs) => {
+    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+
+    whenReconciling(givenTheGesturesWereRefusedWith(gestures, motifs));
+
+    thenLatestRefusalNamesTheElement();
+  });
+
   it('should stop exposing a refusal as soon as another intent starts', () => {
     const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
     whenReconciling(givenTheDecisionWasRefused(gestures));
@@ -675,10 +698,10 @@ describe('FenetreOperateur', () => {
 
   it('should preserve an earlier window while recognizing a refusal reconciled before durable acceptance', () => {
     const previous = fenetre;
-    const transition = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
-    const refused = givenTheDecisionWasRefused(gesturesOf(transition.decision).capture());
+    const secondaire = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
+    const refused = givenTheDecisionWasRefused(gesturesOf(secondaire.decision).capture());
 
-    const reconciled = transition.fenetre.afterReconciling(Entreprise.of('entreprise-a'), refused);
+    const reconciled = secondaire.fenetre.afterReconciling(Entreprise.of('entreprise-a'), refused);
 
     expect(previous.refusal()).toBeUndefined();
     expect(reconciled.refusal()).toEqual({
@@ -695,6 +718,7 @@ describe('FenetreOperateur', () => {
         operateurs: [],
         suivis: structuredClone(requiredFixture(vueFixture.referentiel, 'referential').suivis),
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     });
 
@@ -710,7 +734,13 @@ describe('FenetreOperateur', () => {
     const reconciled = {
       ...structuredClone(vueFixture),
       evenements: gestures.map((geste, index) =>
-        index === 0 ? acceptedFixture(geste) : { geste, etat: 'REFUSE' as const, refus: { code: 'suivi-cloture', message: 'Clôturé.' } },
+        index === 0
+          ? acceptedFixture(geste)
+          : {
+              geste,
+              etat: 'REFUSE' as const,
+              refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture' as const, message: 'Clôturé.' },
+            },
       ),
     };
 
@@ -793,7 +823,6 @@ describe('FenetreOperateur', () => {
     [[], ['MOULE', 'OF', 'PIECE']],
   ])('should order the zones as the reference orders the categories %j, unknown ones last by code', (categories, attendu) => {
     const element = (id: string, categorie: string) => ({
-      conflits: [],
       id,
       nom: id,
       etat: 'EN_ATTENTE' as const,
@@ -807,6 +836,7 @@ describe('FenetreOperateur', () => {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [element('piece-1', 'PIECE'), element('of-1', 'OF'), element('moule-1', 'MOULE')],
         categories,
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
 
@@ -822,7 +852,6 @@ describe('FenetreOperateur', () => {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
           {
-            conflits: [],
             id: 'of-nc',
             nom: 'OF-NC',
             etat: 'EN_COURS',
@@ -840,6 +869,7 @@ describe('FenetreOperateur', () => {
           },
         ],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
     const onlyNcWindow = givenAWindowOpenedOn(onlyNcJournal);
@@ -849,81 +879,18 @@ describe('FenetreOperateur', () => {
     expect(elementsDeLaZone(pointage, 'OF')[0]?.isNonConforme()).toBe(true);
   });
 
-  it('should resume only non conforming activities preserving their respective workstations', () => {
-    const multiNcJournal: JournalDuPupitre = {
-      ...EMPTY_JOURNAL_DU_PUPITRE,
-      referentiel: {
-        operateurs: [
-          {
-            id: 'jean',
-            nom: 'Dupont',
-            prenom: 'Jean',
-            identifiant: '049',
-            postes: [
-              { id: 'poste-1', libelle: 'Poste 1' },
-              { id: 'poste-2', libelle: 'Poste 2' },
-              { id: 'poste-3', libelle: 'Poste 3' },
-            ],
-          },
-        ],
-        suivis: [
-          {
-            conflits: [],
-            id: 'of-multi-nc',
-            nom: 'OF-MULTI',
-            etat: 'EN_COURS',
-            categorie: 'OF',
-            activites: [
-              {
-                ouverture: 'activite-fixture-23',
-                echeance: '2026-09-05T21:00:00.000Z',
-                operateurId: 'jean',
-                categorie: 'NON_CONFORMITE',
-                depuis: '2026-09-05T08:00:00Z',
-                posteId: 'poste-1',
-              },
-              {
-                ouverture: 'activite-fixture-24',
-                echeance: '2026-09-05T21:15:00.000Z',
-                operateurId: 'jean',
-                categorie: 'TRAVAIL',
-                depuis: '2026-09-05T08:15:00Z',
-                posteId: 'poste-2',
-              },
-              {
-                ouverture: 'activite-fixture-25',
-                echeance: '2026-09-05T21:30:00.000Z',
-                operateurId: 'jean',
-                categorie: 'NON_CONFORMITE',
-                depuis: '2026-09-05T08:30:00Z',
-                posteId: 'poste-3',
-              },
-            ],
-            evenements: [],
-          },
-        ],
-        categories: [],
-      },
-    };
-    const multiWindow = givenAWindowOpenedOn(multiNcJournal);
-
-    const decision = whenDecidingWith(multiWindow, 'of-multi-nc', 'SECONDAIRE');
-
-    thenPointageTypesAre(decision, ['DEBUT', 'DEBUT']);
-    thenPointagesKeepTheirWorkstations(decision, ['poste-1', 'poste-3']);
-  });
-
   it('should sort elements using natural numeric order', () => {
     const unsortedJournal: JournalDuPupitre = {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
-          { conflits: [], id: 'of-10', nom: 'OF-10', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
-          { conflits: [], id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
-          { conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
+          { id: 'of-10', nom: 'OF-10', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
+          { id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
+          { id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
         ],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
     const sortWindow = givenAWindowOpenedOn(unsortedJournal);
@@ -940,7 +907,6 @@ describe('FenetreOperateur', () => {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
         suivis: [
           {
-            conflits: [],
             id: 'of-1',
             nom: 'OF-1',
             reference: 'M-30',
@@ -949,9 +915,8 @@ describe('FenetreOperateur', () => {
             activites: [],
             evenements: [],
           },
-          { conflits: [], id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
+          { id: 'of-2', nom: 'OF-2', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] },
           {
-            conflits: [],
             id: 'of-3',
             nom: 'OF-3',
             reference: 'M-4',
@@ -962,6 +927,7 @@ describe('FenetreOperateur', () => {
           },
         ],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
     const sortWindow = givenAWindowOpenedOn(referencedJournal);
@@ -977,7 +943,7 @@ describe('FenetreOperateur', () => {
     const gestures = whenChoosingWith(multiposte, 'of-1015', 'PRINCIPALE', 'fraiseuse').capture();
 
     thenGesturesAre(gestures, ['POINTAGE']);
-    expect(gestures[0]).toMatchObject({ intention: 'OUVERTURE', nature: 'POINTAGE', type: 'DEBUT', posteId: 'fraiseuse' });
+    expect(gestures[0]).toMatchObject({ nature: 'POINTAGE', type: 'DEBUT', posteId: 'fraiseuse' });
   });
 
   it('should expose no refusal after a workstation choice until one is reconciled', () => {
@@ -1072,6 +1038,7 @@ describe('FenetreOperateur', () => {
         operateurs: referentiel.operateurs,
         suivis: referentiel.suivis.map(suivi => ({ ...suivi, activites: activitesParSuivi[suivi.id] ?? [] })),
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     });
   };
@@ -1094,8 +1061,9 @@ describe('FenetreOperateur', () => {
       ...EMPTY_JOURNAL_DU_PUPITRE,
       referentiel: {
         operateurs: [{ id: 'jean', nom: 'Dupont', prenom: 'Jean', identifiant: '049', postes: [] }],
-        suivis: [{ conflits: [], id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] }],
+        suivis: [{ id: 'of-1', nom: 'OF-1', etat: 'EN_ATTENTE', categorie: 'OF', activites: [], evenements: [] }],
         categories: [],
+        dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
       },
     };
     const initialWindow = givenAWindowOpenedOn(inactiveJournalFixture);
@@ -1107,7 +1075,7 @@ describe('FenetreOperateur', () => {
     return start.fenetre.prepareAcceptance(gesturesOf(start.decision)).gestes;
   };
   const thenTheFirstGestureIsAnOpening = (gestes: readonly GesteDePointage[]): void => {
-    expect(gestes).toMatchObject([{ intention: 'OUVERTURE', nature: 'POINTAGE', type: 'DEBUT' }]);
+    expect(gestes).toMatchObject([{ nature: 'POINTAGE', type: 'DEBUT' }]);
   };
   const givenAPreparedPointage = (): (() => readonly GesteDePointage[]) => {
     const result = fenetre.afterDeciding('of-1015', 'PRINCIPALE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
@@ -1137,7 +1105,6 @@ describe('FenetreOperateur', () => {
   const givenAJournalWithEveryEventState = (): JournalDuPupitre => {
     const geste = {
       nature: 'POINTAGE' as const,
-      intention: 'OUVERTURE' as const,
       type: 'DEBUT' as const,
       suiviId: 'piece',
       operateurId: 'jean',
@@ -1216,7 +1183,39 @@ describe('FenetreOperateur', () => {
     evenements: gestures.map(geste => ({
       geste,
       etat: 'REFUSE',
-      refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." },
+      refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture', message: "L'élément a été clôturé." },
+    })),
+  });
+  const messageOf = (motif: MotifFixture): { code: string; message: string; motif: MotifFixture } => ({
+    code: 'code-de-diagnostic',
+    motif,
+    message: motif === SUIVI_CLOTURE ? "L'élément a été clôturé." : 'Refus silencieux.',
+  });
+  const givenTheGesturesWereRefusedForClosureInOrder = (
+    gestures: readonly GesteDePointage[],
+    messages: readonly string[],
+  ): JournalDuPupitre => ({
+    ...structuredClone(vueFixture),
+    evenements: gestures.map((geste, index) => ({
+      geste,
+      etat: 'REFUSE' as const,
+      refus: { code: 'code-de-diagnostic', motif: SUIVI_CLOTURE, message: requiredFixture(messages[index], 'refusal message') },
+    })),
+  });
+  const givenTheGesturesWereRefusedWithoutReason = (gestures: readonly GesteDePointage[]): JournalDuPupitre => ({
+    ...structuredClone(vueFixture),
+    evenements: gestures.map(geste => ({
+      geste,
+      etat: 'REFUSE' as const,
+      refus: { code: 'code-inconnu', message: 'Refus sans motif connu.' },
+    })),
+  });
+  const givenTheGesturesWereRefusedWith = (gestures: readonly GesteDePointage[], codes: readonly MotifFixture[]): JournalDuPupitre => ({
+    ...structuredClone(vueFixture),
+    evenements: gestures.map((geste, index) => ({
+      geste,
+      etat: 'REFUSE',
+      refus: messageOf(requiredFixture(codes[index], 'refusal code')),
     })),
   });
   const givenTheDecisionWasRefusedAfterTheElementDisappeared = (
@@ -1339,6 +1338,12 @@ describe('FenetreOperateur', () => {
     expect(pointagesOf(decision).map(geste => geste.type)).toEqual(types);
   };
   const captureGestures = (decision: DecisionDePointage): readonly GesteDePointage[] => fenetre.capture(gesturesOf(decision));
+  const thenTypesAndWorkstationsAre = (
+    decision: DecisionDePointage,
+    expected: readonly (readonly [string, string | undefined])[],
+  ): void => {
+    expect(pointagesOf(decision).map(geste => [geste.type, geste.posteId])).toEqual(expected);
+  };
   const thenPointagesKeepTheirWorkstations = (decision: DecisionDePointage, postes: (string | undefined)[]): void => {
     expect(pointagesOf(decision).map(geste => geste.posteId)).toEqual(postes);
   };
@@ -1382,7 +1387,7 @@ describe('FenetreOperateur', () => {
     expect(elementsDeLaZone(pointage, 'MOULE')[0]?.dureeMs()).toBe(0);
   };
   const thenPointageViewIsEmpty = (): void => {
-    expect(fenetre.pointage()).toEqual({ conflits: [], zones: [] });
+    expect(fenetre.pointage()).toEqual({ zones: [] });
   };
   const thenWindowIsRefused = (refusal: unknown): void => {
     expect(refusal).toBeInstanceOf(Error);

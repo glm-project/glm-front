@@ -14,10 +14,10 @@ const touchesVers = (instant: Date, depart: Date): string => {
   return `${posee}${minuteParMinute}{shift}${quartParQuart}`;
 };
 
-export const whenPlacingTheHourWithTheHandleAt = (instant: Date, finRecue = echeanceFinAutomatiqueLocalFixture): void => {
+export const whenPlacingTheHourWithTheHandleAt = (instant: Date, echeance = echeanceFinAutomatiqueLocalFixture): void => {
   cy.get(dataSelector('anomalie-poignee')).should('have.attr', 'data-sans-heure');
   cy.get(dataSelector('anomalie-poignee')).focus();
-  cy.get(dataSelector('anomalie-poignee')).type(touchesVers(instant, finRecue));
+  cy.get(dataSelector('anomalie-poignee')).type(touchesVers(instant, echeance));
   cy.get(dataSelector('anomalie-poignee')).should('have.attr', 'aria-valuenow', String(instant.getTime()));
 };
 

@@ -1,5 +1,4 @@
 import { DureeTravaillee } from '@/gestion/contexts/releve-des-heures/domain/duree/DureeTravaillee';
-import { TotalDeDuree } from '@/gestion/contexts/releve-des-heures/domain/duree/TotalDeDuree';
 import { ActiviteDuReleve } from '@/gestion/contexts/releve-des-heures/domain/element/ActiviteDuReleve';
 import { CategorieDActivite } from '@/gestion/contexts/releve-des-heures/domain/element/CategorieDActivite';
 import { CategorieDElement } from '@/gestion/contexts/releve-des-heures/domain/element/CategorieDElement';
@@ -13,10 +12,9 @@ import { CibleDePointage } from '@/gestion/contexts/releve-des-heures/domain/rel
 import { IdentiteOperateur } from '@/gestion/contexts/releve-des-heures/domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '@/gestion/contexts/releve-des-heures/domain/releve/InstantDeReleve';
 import { JourDeReleve } from '@/gestion/contexts/releve-des-heures/domain/releve/JourDeReleve';
-import { IntentionDePointage, PointageDElement } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageDElement';
+import { PointageDElement } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageDElement';
 import { PointageReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageReleveId';
 import { ReleveDesHeures } from '@/gestion/contexts/releve-des-heures/domain/releve/ReleveDesHeures';
-import { SequenceEnConflit } from '@/gestion/contexts/releve-des-heures/domain/releve/SequenceEnConflit';
 import { TypeDePointage } from '@/gestion/contexts/releve-des-heures/domain/releve/TypeDePointage';
 import { JourCalendaire } from '@/gestion/contexts/releve-des-heures/domain/semaine/JourCalendaire';
 import { SemaineISO } from '@/gestion/contexts/releve-des-heures/domain/semaine/SemaineISO';
@@ -28,16 +26,12 @@ export type Heure = readonly [number, number];
 export const instantFixture = (rang: number, [heure, minute]: Heure): InstantDeReleve =>
   new InstantDeReleve(new Date(2026, 8, 14 + rang, heure, minute).toISOString());
 
-export const totalFixture = (valeur: string | false = 'PT0S'): TotalDeDuree =>
-  valeur === false ? TotalDeDuree.incomplet() : TotalDeDuree.complet(new DureeTravaillee(valeur));
+export const totalFixture = (valeur = 'PT0S'): DureeTravaillee => new DureeTravaillee(valeur);
 
 export const activiteFixture = (debut: InstantDeReleve, fin: InstantDeReleve | undefined, id = 'activite-fixture'): ActiviteDuReleve =>
   fin === undefined
     ? { id: new ActiviteReleveId(id), debut, etat: 'EN_COURS' }
     : { id: new ActiviteReleveId(id), debut, etat: 'TERMINEE', fin };
-
-export const intentionFixture = (type: TypeDePointage): IntentionDePointage =>
-  type === 'FIN' ? { type: 'FIN', activiteVisee: new ActiviteReleveId('activite-fixture') } : { type: 'OUVERTURE' };
 
 export interface IntervalleFixture {
   readonly element?: string;
@@ -54,13 +48,12 @@ export interface PointageDElementFixture {
   readonly heure: Heure;
   readonly element?: string;
   readonly poste?: string;
-  readonly intention?: IntentionDePointage;
 }
 
 export interface JourFixture {
   readonly intervalles?: readonly IntervalleFixture[];
   readonly pointagesDElement?: readonly PointageDElementFixture[];
-  readonly operationnelle?: string | false;
+  readonly operationnelle?: string;
   readonly journal?: readonly PointageDElementFixture[];
 }
 
@@ -76,7 +69,6 @@ export const pointageFixture = (rang: number, pointage: PointageDElementFixture,
       new ElementReleveId(pointage.element ?? 'element-1'),
       pointage.poste === undefined ? undefined : new PosteReleveId(pointage.poste),
     ),
-    intention: pointage.intention ?? intentionFixture(pointage.type),
   });
 
 export const jourFixture = (jour: JourCalendaire, rang: number, fiche: JourFixture): JourDeReleve =>
@@ -100,7 +92,7 @@ export const jourFixture = (jour: JourCalendaire, rang: number, fiche: JourFixtu
   });
 
 export interface TotauxFixture {
-  readonly operationnelle?: string | false;
+  readonly operationnelle?: string;
 }
 
 export interface ElementFixture {
@@ -110,8 +102,8 @@ export interface ElementFixture {
   readonly reference?: string;
   readonly description?: string;
   readonly postes?: readonly (readonly [string, string | undefined, string?])[];
-  readonly duree?: string | false;
-  readonly dureeNonConformite?: string | false;
+  readonly duree?: string;
+  readonly dureeNonConformite?: string;
 }
 
 export const elementFixture = (fiche: ElementFixture = {}): ElementDuReleve =>
@@ -133,13 +125,11 @@ export const releveFixture = (
   jours: Readonly<Record<number, JourFixture>>,
   totaux: TotauxFixture = {},
   elements: readonly ElementDuReleve[] = [elementFixture()],
-  conflits: readonly SequenceEnConflit[] = [],
 ): ReleveDesHeures =>
   new ReleveDesHeures(semaine, {
     elements,
     operateur: new IdentiteOperateur('Dupont', 'Jean'),
     operationnelTotal: totalFixture(totaux.operationnelle),
-    conflits,
     jours: semaine.jours().map((jour, rang) => jourFixture(jour, rang, jours[rang] ?? {})),
   });
 

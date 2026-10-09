@@ -1,85 +1,33 @@
 import { components } from '@/app/generated/schema';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { anomaliesDePointageProvider } from '@/gestion/anomalies-de-pointage.provider';
-import { PreparationActe } from '@/gestion/contexts/anomalies-de-pointage/application/PreparationActe';
-import { ActeResolution } from '@/gestion/contexts/anomalies-de-pointage/domain/acte/ActeResolution';
-import {
-  ApplicationActePort,
-  PrevisualisationAnomaliePort,
-} from '@/gestion/contexts/anomalies-de-pointage/domain/acte/AnomaliesActesPorts';
-import { PropositionResolution } from '@/gestion/contexts/anomalies-de-pointage/domain/acte/ResolutionDeLAnomalie';
-import { SaisieActe } from '@/gestion/contexts/anomalies-de-pointage/domain/acte/SaisieActe';
+import { ActiviteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ActiviteAnomalieId';
 import { AnomaliesReadPort } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/AnomaliesReadPort';
-import { AdresseDossier } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
+import { PageAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
 import { ElementAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalie';
 import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalieId';
+import { OperateurAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalie';
 import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
-import { PointageAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PointageAnomalieId';
-import { PosteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/PosteAnomalieId';
-import { OperateurAnomalie, ReferentielAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ReferentielAnomalies';
 import { SuiviAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/SuiviAnomalieId';
+import {
+  RegularisationPort,
+  ResultatDeRegularisation,
+} from '@/gestion/contexts/anomalies-de-pointage/domain/regularisation/RegularisationPort';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 
-const adresseFixture: AdresseDossier = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') };
-const acteFixture: ActeResolution = { kind: 'ANNULATION', pointage: 'fin-17', motif: 'Double appui confirmé' };
-const propositionFixture: PropositionResolution = {
-  adresse: adresseFixture,
-  commande: '80000000-0000-0000-0000-000000000001',
-  acte: acteFixture,
-  empreinteConsequences: 'empreinte-1',
-  version: 7,
-};
-
-const perimetreFixture: components['schemas']['RestSequenceDuDossier'] = {
-  operateurId: 'op-camille',
-  activites: ['travail-8'],
-  pointages: ['debut-8', 'fin-17'],
-  datePremierPointage: '2026-09-14T08:00:00.123456789+02:00',
-  nombrePointages: 2,
-};
-const dossierFixture = (kind: 'EN_CONFLIT' | 'ANCRE_ANNULEE', revision: number): components['schemas']['RestDossierAnomalie'] => ({
-  kind,
-  enConflit: kind === 'EN_CONFLIT',
-  finAutomatique: false,
-  adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
-  revision,
-  evaluation: '2026-10-04T10:00:00Z',
-  ...(kind === 'EN_CONFLIT' ? { sequence: perimetreFixture } : {}),
-  perimetre: perimetreFixture,
-  activites: [],
-  diagnostics: [],
-  choix: [],
-  continuations: [],
-  suivi: {
-    id: 'suivi-camille',
-    element: 'moule-42',
-    nom: 'M-042',
-    categorie: 'MOULE',
-    engageLe: '2026-09-14T06:00:00Z',
-    engagePar: 'gestionnaire',
-    etat: 'EN_ATTENTE',
-    activitesEnCours: [],
-    conflits: [],
-    journal: [],
-  },
-});
-
-describe('Real conflict resolution composition', () => {
+describe('Real anomaly reading composition', () => {
   let server: HttpTestingController;
-  let errors: ErrorHandlerFixture;
 
   beforeEach(() => {
-    errors = new ErrorHandlerFixture();
     TestBed.configureTestingModule({
       providers: [
         ...anomaliesDePointageProvider,
-        PreparationActe,
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: ErrorHandlerPort, useValue: errors },
+        { provide: ErrorHandlerPort, useValue: new ErrorHandlerFixture() },
       ],
     });
     server = TestBed.inject(HttpTestingController);
@@ -87,35 +35,47 @@ describe('Real conflict resolution composition', () => {
 
   afterEach(() => {
     server.verify();
-    vi.useRealTimers();
   });
 
-  it('should use the same-origin API for reading, previewing and confirming through the public ports', async () => {
-    const resultat = await whenUsingThePublicResolutionPorts();
+  it('should list the automatic ends through the public read port on the same-origin API', async () => {
+    const lecture = whenListingTheAutomaticEnds();
+    whenTheAutomaticEndsAnswer();
 
-    expect(resultat.lecture).toEqual({ nature: 'CONFLIT', lignes: [], total: 0, complete: true });
-    expect(resultat.apercu).toEqual({ kind: 'REFUS', code: 'proposition-invalide' });
-    expect(resultat.confirmation).toEqual({ kind: 'ISSUE_INCONNUE' });
+    expect(await lecture).toEqual({ lignes: [], total: 0 });
   });
 
-  it('should read the operator and workstation referential through the public read port on the same-origin API', async () => {
-    const lecture = whenReadingTheReferential();
-    whenTheReferentielAnswers();
+  const whenListingTheAutomaticEnds = (): Promise<PageAnomalies> =>
+    TestBed.inject(AnomaliesReadPort).list({ operateur: '', element: '', page: 1 });
 
-    const referentiel = await lecture;
+  const whenTheAutomaticEndsAnswer = (): void => {
+    server.expectOne('/api/atelier/anomalies?operateur=&element=&page=0&size=5').flush({
+      content: [],
+      currentPage: 0,
+      pageSize: 5,
+      totalElementsCount: 0,
+    } satisfies components['schemas']['PageRestFinAutomatiqueEnListe']);
+  };
 
-    expect(referentiel.operateurs).toEqual([
-      {
-        id: new OperateurAnomalieId('op-camille'),
-        nom: 'Camille Martin',
-        code: '007',
-        postesHabilites: [new PosteAnomalieId('poste-tour')],
-      },
-    ]);
-    expect(referentiel.postes).toEqual([{ id: new PosteAnomalieId('poste-tour'), libelle: 'Tour 1' }]);
+  it('should regularise an automatic end through the public regularisation port on the same-origin API', async () => {
+    const regularisation = whenRegularisingAnAutomaticEnd();
+    whenTheRegularisationIsCreated();
+
+    expect(await regularisation).toEqual({ kind: 'REGULARISEE' });
   });
 
-  it('should read the operators alone through the public read port on the same-origin API, without asking for the workstations', async () => {
+  const whenRegularisingAnAutomaticEnd = (): Promise<ResultatDeRegularisation> =>
+    TestBed.inject(RegularisationPort).regulariser({
+      suivi: new SuiviAnomalieId('suivi-camille'),
+      id: 'saisie-1',
+      activite: new ActiviteAnomalieId('travail-8'),
+      dateDeSurvenue: '2026-09-14T17:00:00-03:00',
+    });
+
+  const whenTheRegularisationIsCreated = (): void => {
+    server.expectOne('/api/atelier/suivis/suivi-camille/regularisations').flush({}, { status: 201, statusText: 'Created' });
+  };
+
+  it('should read the operators through the public read port on the same-origin API', async () => {
     const lecture = whenReadingTheOperators();
     whenTheOperatorsAnswer();
 
@@ -126,14 +86,11 @@ describe('Real conflict resolution composition', () => {
         id: new OperateurAnomalieId('op-camille'),
         nom: 'Camille Martin',
         code: '007',
-        postesHabilites: [new PosteAnomalieId('poste-tour')],
       },
     ]);
   });
 
   const whenReadingTheOperators = (): Promise<readonly OperateurAnomalie[]> => TestBed.inject(AnomaliesReadPort).operateurs();
-
-  const whenReadingTheReferential = (): Promise<ReferentielAnomalies> => TestBed.inject(AnomaliesReadPort).referentiel();
 
   const whenTheOperatorsAnswer = (): void => {
     server.expectOne('/api/operateurs?page=0&size=100').flush({
@@ -151,16 +108,6 @@ describe('Real conflict resolution composition', () => {
       pageSize: 100,
       totalElementsCount: 1,
     } satisfies components['schemas']['PageRestOperateur']);
-  };
-
-  const whenTheReferentielAnswers = (): void => {
-    whenTheOperatorsAnswer();
-    server.expectOne('/api/postes-de-travail?page=0&size=100').flush({
-      content: [{ id: 'poste-tour', libelle: 'Tour 1', nature: 'tournage' }],
-      currentPage: 0,
-      pageSize: 100,
-      totalElementsCount: 1,
-    } satisfies components['schemas']['PageRestPosteDeTravail']);
   };
 
   it('should read the element referential through the public read port on the same-origin API', async () => {
@@ -183,132 +130,5 @@ describe('Real conflict resolution composition', () => {
         pageSize: 100,
         totalElementsCount: 1,
       } satisfies components['schemas']['PageRestElementDeFabrication']);
-  };
-
-  it('should keep a thirty-second confirmation timeout unknown and retry only its original public command', async () => {
-    const { preparation, commande } = await givenAPreparedCancellation();
-
-    const premiereDemande = await whenTheConfirmationTimesOut(preparation);
-    const inconnue = preparation.operation();
-    const verification = preparation.verify();
-    whenReceiptAnswers({ kind: 'NON_ATTESTEE' }, commande);
-    await verification;
-    const nonAttestee = preparation.operation();
-    const reprise = preparation.retryConfirmation();
-    const confirmation = confirmationFixture();
-    confirmation.recu.commande = commande;
-    const deuxiemeDemande = whenTheRetriedConfirmationAnswers(confirmation);
-    await reprise;
-
-    expect(inconnue).toEqual({ kind: 'ISSUE_INCONNUE' });
-    expect(nonAttestee).toEqual({ kind: 'ISSUE_INCONNUE' });
-    expect(premiereDemande).toEqual({
-      commande,
-      adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
-      revision: 7,
-      acte: acteFixture,
-      empreinteConsequences: 'empreinte-1',
-    });
-    expect(deuxiemeDemande).toEqual(premiereDemande);
-    expect(errors.errors).toMatchObject([{ name: 'TimeoutError' }]);
-    expect(preparation.operation()).toMatchObject({ kind: 'APPLIQUE', dossier: { version: 9, enConflit: false } });
-  });
-
-  const givenAPreparedCancellation = async () => {
-    const lecture = TestBed.inject(AnomaliesReadPort).read(adresseFixture);
-    server.expectOne('/api/atelier/suivis/suivi-camille/anomalies/fin-17').flush(dossierFixture('EN_CONFLIT', 7));
-    const dossier = await lecture;
-    if (dossier.kind !== 'DOSSIER') throw new Error('Dossier de préparation fixture absent');
-    const preparation = TestBed.inject(PreparationActe);
-    preparation.choose(SaisieActe.cancel('fin-17').afterChange({ motif: acteFixture.motif }));
-    const demande = preparation.preview(dossier.dossier);
-    const commande = whenPreviewAnswers();
-    await demande;
-    return { preparation, commande };
-  };
-
-  const whenTheConfirmationTimesOut = async (preparation: PreparationActe): Promise<unknown> => {
-    vi.useFakeTimers();
-    const confirmation = preparation.confirm();
-    const request = server.expectOne('/api/atelier/suivis/suivi-camille/confirmations-de-resolution');
-    await vi.advanceTimersByTimeAsync(30_000);
-    await confirmation;
-    vi.useRealTimers();
-    return request.request.body;
-  };
-
-  const whenTheRetriedConfirmationAnswers = (confirmation: components['schemas']['RestConfirmationEnregistree']): unknown => {
-    const request = server.expectOne('/api/atelier/suivis/suivi-camille/confirmations-de-resolution');
-    request.flush(confirmation);
-    return request.request.body;
-  };
-
-  const whenReceiptAnswers = (resultat: components['schemas']['RestConfirmationDeResolution'], commande: string): void => {
-    const request = server.expectOne(`/api/atelier/suivis/suivi-camille/confirmations-de-resolution/${commande}`);
-    expect(request.request.method).toBe('GET');
-    request.flush(resultat);
-  };
-
-  const confirmationFixture = (): components['schemas']['RestConfirmationEnregistree'] => ({
-    kind: 'ENREGISTREE',
-    recu: {
-      commande: propositionFixture.commande,
-      adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
-      acte: acteFixture,
-      revisionDeDepart: 7,
-      revisionEnregistree: 8,
-      enregistreLe: '2026-10-04T10:00:00Z',
-      evenementsTouches: ['fin-17'],
-    },
-    dossier: dossierFixture('ANCRE_ANNULEE', 9),
-  });
-
-  const whenPreviewAnswers = (): string => {
-    const request = server.expectOne('/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus');
-    const body = request.request.body as components['schemas']['RestDemandeDApercu'];
-    expect(request.request.method).toBe('POST');
-    expect(body).toEqual({ revision: 7, acte: acteFixture, commande: body.commande });
-    expect(body.commande).toMatch(/^[0-9a-f-]{36}$/);
-    request.flush({
-      commande: body.commande,
-      adresse: { suivi: 'suivi-camille', pointage: 'fin-17' },
-      revision: 7,
-      evaluation: '2026-10-04T10:00:00Z',
-      empreinteConsequences: 'empreinte-1',
-      acte: acteFixture,
-      avant: dossierFixture('EN_CONFLIT', 7),
-      apres: dossierFixture('ANCRE_ANNULEE', 8),
-    } satisfies components['schemas']['RestApercuDeResolution']);
-    return body.commande;
-  };
-
-  const whenUsingThePublicResolutionPorts = async () => {
-    const adresse = { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('fin-17') };
-    const lecture = TestBed.inject(AnomaliesReadPort).list({ nature: 'CONFLIT', operateur: '', element: '', page: 1 });
-    server
-      .expectOne('/api/atelier/anomalies?nature=CONFLIT&operateur=&element=&page=0&size=5')
-      .flush({ lignes: [], total: 0, complete: true, page: 0, size: 5 });
-    const resultatLecture = await lecture;
-    const apercu = TestBed.inject(PrevisualisationAnomaliePort).preview(adresse, 1, {
-      kind: 'ANNULATION',
-      pointage: 'fin-17',
-      motif: 'Double appui',
-    });
-    server
-      .expectOne('/api/atelier/suivis/suivi-camille/anomalies/fin-17/apercus')
-      .flush(
-        { type: 'urn:glm:erreur:atelier:proposition-invalide', message: 'Proposition invalide' },
-        { status: 400, statusText: 'Invalid' },
-      );
-    const resultatApercu = await apercu;
-    const confirmation = TestBed.inject(ApplicationActePort).apply({
-      adresse,
-      version: 1,
-      commande: 'commande-1',
-      acte: acteFixture,
-      empreinteConsequences: 'empreinte-1',
-    });
-    server.expectOne('/api/atelier/suivis/suivi-camille/confirmations-de-resolution').flush({ kind: 'NON_ATTESTEE' });
-    return { lecture: resultatLecture, apercu: resultatApercu, confirmation: await confirmation };
   };
 });

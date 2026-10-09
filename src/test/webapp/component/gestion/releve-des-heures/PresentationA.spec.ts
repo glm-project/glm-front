@@ -20,7 +20,7 @@ const ROUTES = [
   ['couts', '/couts-de-revient/element-1', 'cout-total'],
 ] as const;
 
-const totalFixture = (valeur: string): { complete: true; valeur: string } => ({ complete: true, valeur });
+const totalFixture = (valeur: string): { valeur: string } => ({ valeur });
 const instantFixture = (day: number, hour: number): string => new Date(2026, 8, day, hour).toISOString();
 
 const givenRepresentativeReadings = (): void => {
@@ -42,9 +42,7 @@ const givenRepresentativeReadings = (): void => {
       jours: requiredFixture(synthese.jours, 'jours de synthèse').map(value => ({
         ...value,
         pointages:
-          value.jour === jour
-            ? [{ id: 'debut-auto', type: 'DEBUT', intention: 'OUVERTURE', dateDeSurvenue: instantFixture(18, 8), element: 'element-1' }]
-            : [],
+          value.jour === jour ? [{ id: 'debut-auto', type: 'DEBUT', dateDeSurvenue: instantFixture(18, 8), element: 'element-1' }] : [],
         dureeOperationnelle: totalFixture(value.jour === jour ? 'PT13H' : 'PT0S'),
       })),
     },

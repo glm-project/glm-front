@@ -64,7 +64,15 @@ describe('Pointage screen in a browser', () => {
 
   it('should mark a nonconforming tile in yellow with ink text', () => {
     givenThePointageScreen();
-    givenAnOngoingActivity('of-1', 'tour');
+    whenHoldingTileTarget('of-1', 'secondary-target');
+    whenChoosingWorkstation('tour');
+
+    thenTheNonConformityMarkerIsYellowWithInkText('of-1');
+  });
+
+  it('should mark in yellow a tile whose work is turned into non conformity', () => {
+    givenThePointageScreen();
+    givenTheTileAtWork('of-1');
     whenHoldingTileTarget('of-1', 'secondary-target');
 
     thenTheNonConformityMarkerIsYellowWithInkText('of-1');
@@ -84,9 +92,9 @@ describe('Pointage screen in a browser', () => {
     cy.get(dataSelector('validate')).click();
     cy.get(dataSelector('pointage'));
   };
-  const givenAnOngoingActivity = (id: string, workstation: string): void => {
+  const givenTheTileAtWork = (id: string): void => {
     whenHoldingTileTarget(id, 'primary-target');
-    whenChoosingWorkstation(workstation);
+    whenChoosingWorkstation('tour');
     cy.get(dataSelector(`tile-${id}`)).should('contain.text', 'ARRÊTER');
   };
   const givenTheTilePosition = (id: string): Cypress.Chainable<GridPositionFixture> =>

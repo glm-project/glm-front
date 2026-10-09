@@ -1,12 +1,13 @@
+import { BornesDeLaFin } from '../../../domain/regularisation/CadreDeLaFin';
 import { instantDeplace } from './DeplacementDeLaPoignee';
-import { BornesDePoignee, DemandeDeDeplacement } from './PoigneeDeFrise';
+import { DemandeDeDeplacement } from './PoigneeDeFrise';
 
 const instantAt = (heure: string, secondes = 0, fraction = 0): string => {
   const [heures = 0, minutes = 0] = heure.split(':').map(Number);
   return new Date(2026, 8, 14, heures, minutes, secondes, fraction).toISOString();
 };
 
-const BORNES: BornesDePoignee = { min: instantAt('08:00'), max: instantAt('13:00') };
+const BORNES: BornesDeLaFin = { min: instantAt('08:00'), max: instantAt('13:00') };
 
 describe('Move of the handle of the proposed instant', () => {
   it.each<{ cas: string; demande: DemandeDeDeplacement; courant: string; expected: string }>([
@@ -51,7 +52,7 @@ describe('Move of the handle of the proposed instant', () => {
     expect(instantDeplace(demande, courant, BORNES)).toBe(expected);
   });
 
-  it.each<{ cas: string; demande: DemandeDeDeplacement; courant: string; bornes: BornesDePoignee; expected: string }>([
+  it.each<{ cas: string; demande: DemandeDeDeplacement; courant: string; bornes: BornesDeLaFin; expected: string }>([
     {
       cas: 'the first whole minute after a lower bound that carries seconds',
       demande: { kind: 'BORNE', borne: 'MIN' },
@@ -66,13 +67,6 @@ describe('Move of the handle of the proposed instant', () => {
       bornes: { min: '2026-09-14T11:00:00.000000500Z', max: instantAt('13:00') },
       expected: '2026-09-14T08:01:00-03:00',
     },
-    {
-      cas: 'the whole minute before an upper bound that carries seconds and a fraction',
-      demande: { kind: 'BORNE', borne: 'MAX' },
-      courant: instantAt('10:00'),
-      bornes: { min: instantAt('08:00'), max: instantAt('13:00', 45, 123) },
-      expected: '2026-09-14T13:00:00-03:00',
-    },
   ])('should go to $cas', ({ demande, courant, bornes, expected }) => {
     expect(instantDeplace(demande, courant, bornes)).toBe(expected);
   });
@@ -86,7 +80,7 @@ describe('Move of the handle of the proposed instant', () => {
   });
 
   it('should keep the handle where it stands when the bounds leave no whole minute', () => {
-    const bornes = { min: instantAt('12:59', 30), max: instantAt('12:59', 50) };
+    const bornes = { min: instantAt('13:00'), max: instantAt('12:59') };
 
     expect(instantDeplace({ kind: 'DE', minutes: 1 }, instantAt('12:59', 40), bornes)).toBe('2026-09-14T12:59:40-03:00');
   });

@@ -1,11 +1,17 @@
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
-import { AtelierExchangePort, PublicationAcceptee } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
+import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 
 const scheduleOnTheRealClock = globalThis.setTimeout.bind(globalThis);
 
-const emptyReferentiel = (): ReferentielDuPupitre => ({ operateurs: [], suivis: [], categories: [] });
+const emptyReferentiel = (): ReferentielDuPupitre => ({
+  operateurs: [],
+  suivis: [],
+  categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
+});
 
 export class AtelierExchangeFixture extends AtelierExchangePort {
   private readonly suspended: (() => void)[] = [];
@@ -17,8 +23,8 @@ export class AtelierExchangeFixture extends AtelierExchangePort {
     return this.answer(() => structuredClone(this.reference));
   }
 
-  override send(): Promise<Result<PublicationAcceptee, RefusDePublication>> {
-    return this.answer(() => ok({ conflits: [] }));
+  override send(): Promise<Result<void, RefusDePublication>> {
+    return this.answer(() => ok(undefined));
   }
 
   override reread(): Promise<void> {

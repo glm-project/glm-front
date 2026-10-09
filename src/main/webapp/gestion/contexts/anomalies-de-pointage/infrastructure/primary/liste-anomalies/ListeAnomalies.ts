@@ -1,13 +1,11 @@
-import { InstantLongDayPipe } from '@/app/shared/date-format/infrastructure/primary/InstantPipes';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Component, computed, inject, linkedSignal, resource } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
-import { FiltreAnomalies, NatureAnomalie, PAGE_SIZE_ANOMALIES } from '../../../domain/dossier/DossierAnomalie';
+import { FiltreAnomalies, PAGE_SIZE_ANOMALIES } from '../../../domain/dossier/DossierAnomalie';
 import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
 import { filtreAnomaliesDemande } from '../../../domain/dossier/FiltreAnomaliesDemande';
-import { readNatureAnomalieDemandee } from '../../../domain/dossier/NatureAnomalieDemandee';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { readPageAnomaliesDemandee } from '../../../domain/dossier/PageAnomaliesDemandee';
 import { etatDeLecture } from '../EtatDeLecture';
@@ -20,7 +18,7 @@ import { PARAMETRE_PLUS_AUCUNE_ANOMALIE } from './PlusAucuneAnomalie';
 
 @Component({
   selector: 'glm-liste-anomalies',
-  imports: [RouterLink, InstantLongDayPipe, SelecteurOperateurAnomalie, SelecteurElementAnomalie],
+  imports: [RouterLink, SelecteurOperateurAnomalie, SelecteurElementAnomalie],
   templateUrl: './ListeAnomalies.html',
   styleUrl: './ListeAnomalies.css',
 })
@@ -33,15 +31,13 @@ export class ListeAnomalies {
   private readonly params = toSignal(this.route.queryParamMap, { requireSync: true });
   protected readonly echecNavigation = linkedSignal({ source: this.params, computation: () => false });
   protected readonly pageDemandee = computed(() => readPageAnomaliesDemandee(this.params().get('page')));
-  protected readonly natureDemandee = computed(() => readNatureAnomalieDemandee(this.params().get('nature')));
   protected readonly filtre = computed(() => filtreAnomaliesDemande(this.params()));
   protected readonly plusAucuneAnomalie = computed(() => this.params().get(PARAMETRE_PLUS_AUCUNE_ANOMALIE) === '1');
   protected readonly filtreActif = computed(() => this.filtre().operateur !== '' || this.filtre().element !== '');
   protected readonly libelles = { ...LIBELLES_ANOMALIES, ...LIBELLES_LISTE_ANOMALIES };
   protected readonly operateurDe = operateurPresente;
   protected readonly posteDe = postePresente;
-  protected readonly libellesDeNature = computed(() => LIBELLES_LISTE_ANOMALIES.natures[this.filtre().nature]);
-  private readonly adresseValide = computed(() => this.pageDemandee() !== undefined && this.natureDemandee() !== undefined);
+  private readonly adresseValide = computed(() => this.pageDemandee() !== undefined);
   protected readonly liste = resource({
     params: () => (this.adresseValide() ? this.filtre() : undefined),
     loader: ({ params }) => this.port.list(params),
@@ -74,7 +70,7 @@ export class ListeAnomalies {
     event.preventDefault();
     try {
       const navigue = await this.router.navigate(['/anomalies'], {
-        queryParams: { nature: this.filtre().nature, operateur: this.operateurChoisi(), element: this.elementChoisi(), page: 1 },
+        queryParams: { operateur: this.operateurChoisi(), element: this.elementChoisi(), page: 1 },
       });
       this.echecNavigation.set(!navigue);
     } catch (failure: unknown) {
@@ -89,10 +85,6 @@ export class ListeAnomalies {
 
   protected pageCount(total: number): number {
     return Math.ceil(total / PAGE_SIZE_ANOMALIES);
-  }
-
-  protected ongletParams(nature: NatureAnomalie): FiltreAnomalies {
-    return { ...this.filtre(), nature, page: 1 };
   }
 
   protected pageParams(page: number): FiltreAnomalies {

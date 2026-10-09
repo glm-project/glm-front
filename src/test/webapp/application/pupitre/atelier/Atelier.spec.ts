@@ -1,4 +1,6 @@
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
+import { referentielApiFixture } from '@test/utils/pupitre/ReferentielApiFixture';
 import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { dataSelector } from '../../../utils/DataSelector';
 import { interceptForever } from '../../../utils/Interceptor';
@@ -14,7 +16,6 @@ const operateurFixture = {
   postes: [],
 } as const;
 const elementFixture = {
-  conflits: [],
   id: 'piece-1',
   nom: '204',
   etat: 'EN_ATTENTE',
@@ -28,6 +29,7 @@ const referentielFixture: ReferentielDuPupitre = {
   operateurs: [operateurFixture],
   suivis: [elementFixture, autreElementFixture, troisiemeElementFixture],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const activiteFixture = {
   ouverture: 'activite-fixture-7',
@@ -39,10 +41,11 @@ const activiteFixture = {
 const referentielActifFixture: ReferentielDuPupitre = {
   operateurs: [operateurFixture],
   suivis: [
-    { ...elementFixture, id: 'piece-active-1', nom: '301', etat: 'EN_COURS', activites: [activiteFixture], conflits: [] },
-    { ...elementFixture, id: 'piece-active-2', nom: '302', etat: 'EN_COURS', activites: [activiteFixture], conflits: [] },
+    { ...elementFixture, id: 'piece-active-1', nom: '301', etat: 'EN_COURS', activites: [activiteFixture] },
+    { ...elementFixture, id: 'piece-active-2', nom: '302', etat: 'EN_COURS', activites: [activiteFixture] },
   ],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 const operateurMultiPosteFixture = {
   ...operateurFixture,
@@ -55,6 +58,7 @@ const referentielMultiPosteFixture: ReferentielDuPupitre = {
   operateurs: [operateurMultiPosteFixture],
   suivis: [elementFixture],
   categories: [],
+  dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
 
 interface RequeteMetier {
@@ -102,7 +106,7 @@ describe('Pupitre workshop journey', () => {
     thenThePauseAndItsResumptionWereReplayedInOrder();
   });
 
-  it('should stop every personal activity by its targeted finish', () => {
+  it('should stop every personal activity by its finish', () => {
     givenAnEnrolledPupitre(referentielActifFixture);
     whenDesignatingOperator049();
 
@@ -130,6 +134,17 @@ describe('Pupitre workshop journey', () => {
     whenServerAnswers(refusal);
 
     thenRefusalReconcilesElementAndHeader('piece-1', '204', 'Pointage refusé par le serveur');
+  });
+
+  it('should remove an optimistic pointage without any message when the server ignores it', () => {
+    givenAnEnrolledPupitre(referentielFixture);
+    whenDesignatingOperator049();
+    const refusal = givenStartingElementWillBeIgnored();
+
+    whenStartingElementOptimistically('piece-1');
+    whenServerAnswersOnceTheElementIsOptimisticallyActive(refusal, 'piece-1');
+
+    thenIgnoredPointageLeavesNoTraceOnElementAndHeader('piece-1');
   });
 
   it('should show a pause optimistically while the server response is pending', () => {
@@ -197,8 +212,7 @@ describe('Pupitre workshop journey', () => {
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('deviceAuthorization');
     cy.intercept('POST', '**/protocol/openid-connect/token', { statusCode: 503, body: {} });
     cy.intercept('GET', '/api/pupitre/referentiel', {
-      body: {
-        genereLe: '2026-09-05T08:05:00Z',
+      body: referentielApiFixture({
         operateurs: referentiel.operateurs,
         suivis: referentiel.suivis.map(suivi => ({
           id: suivi.id,
@@ -214,10 +228,9 @@ describe('Pupitre workshop journey', () => {
             echeance: activite.echeance,
             ...(activite.posteId === undefined ? {} : { poste: activite.posteId }),
           })),
-          conflits: [],
         })),
         categories: referentiel.categories,
-      },
+      }),
     }).as('workshop');
     observeWorkshopWrites();
   };
@@ -245,7 +258,6 @@ describe('Pupitre workshop journey', () => {
         engagePar: 'gestionnaire',
         etat: 'EN_ATTENTE',
         activitesEnCours: [],
-        conflits: [],
         journal: [],
       },
     });
@@ -282,13 +294,16 @@ describe('Pupitre workshop journey', () => {
     cy.wait('@pointage');
   };
 
-  const givenStartingElementWillBeRefused = (): ReturnType<typeof interceptForever> => {
+  const givenStartingElementWillBeRefused = (): ReturnType<typeof interceptForever> =>
+    givenStartingElementWillBeAnsweredBy('urn:glm:erreur:atelier:suivi-d-atelier-cloture');
+
+  const givenStartingElementWillBeIgnored = (): ReturnType<typeof interceptForever> =>
+    givenStartingElementWillBeAnsweredBy('urn:glm:erreur:atelier:pointage-ignore');
+
+  const givenStartingElementWillBeAnsweredBy = (urn: string): ReturnType<typeof interceptForever> => {
     pendingResponse = interceptForever(
       { method: 'POST', url: '/api/atelier/suivis/piece-1/pointages' },
-      {
-        statusCode: 409,
-        body: { type: 'urn:glm:erreur:atelier:transition-d-atelier-interdite', message: 'Pointage refusé par le serveur' },
-      },
+      { statusCode: 409, body: { type: urn, message: 'Pointage refusé par le serveur' } },
       'refusedPointage',
     );
     return pendingResponse;
@@ -296,6 +311,14 @@ describe('Pupitre workshop journey', () => {
 
   const whenStartingElementOptimistically = (elementId: string): void => {
     longPressFixture(cy.get(dataSelector(`tile-${elementId}`)).find(dataSelector('primary-target')));
+  };
+
+  const whenServerAnswersOnceTheElementIsOptimisticallyActive = (
+    response: ReturnType<typeof interceptForever>,
+    elementId: string,
+  ): void => {
+    thenElementIsOptimisticallyActive(elementId);
+    whenServerAnswers(response);
   };
 
   const whenServerAnswers = (response: ReturnType<typeof interceptForever>): void => {
@@ -315,7 +338,7 @@ describe('Pupitre workshop journey', () => {
       { method: 'POST', url: '/api/atelier/suivis/piece-active-1/pointages' },
       {
         statusCode: 409,
-        body: { type: 'urn:glm:erreur:atelier:transition-d-atelier-interdite', message: 'Pause refusée par le serveur' },
+        body: { type: 'urn:glm:erreur:atelier:suivi-d-atelier-cloture', message: 'Pause refusée par le serveur' },
       },
       'refusedSuspension',
     );
@@ -387,6 +410,14 @@ describe('Pupitre workshop journey', () => {
       .find(dataSelector('duration'))
       .should('not.exist');
     cy.get(dataSelector('header-message')).should('contain.text', context).and('contain.text', message);
+  };
+
+  const thenIgnoredPointageLeavesNoTraceOnElementAndHeader = (elementId: string): void => {
+    cy.wait('@refusedPointage');
+    cy.get(dataSelector(`tile-${elementId}`))
+      .find(dataSelector('duration'))
+      .should('not.exist');
+    cy.get(dataSelector('header-message')).should('be.empty');
   };
 
   const thenTheOperatorIsOptimisticallyOnPause = (): void => {

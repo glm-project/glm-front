@@ -1,12 +1,12 @@
 import { formatInstantShortWeekdayDayMonth, formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
-import { ActiviteAnomalie, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { ActiviteEchue, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 
 const UNE_MINUTE = 60_000;
 const UNE_HEURE = 3_600_000;
-const TROIS_HEURES = 3 * UNE_HEURE;
 const CINQ_MINUTES = 300_000;
-const LARGEUR_D_UN_REPERE_PX = 44;
 const MARGE_DES_REPERES_PX = 22;
+export const LARGEUR_D_UN_REPERE_PX = 44;
+export const LARGEUR_DE_LA_CLOTURE_PX = 68;
 const POSITION_DU_BORD = 100;
 const ECART_MINIMAL_ENTRE_GRADUATIONS_PX = 64;
 const HEURES_PAR_JOUR = 24;
@@ -35,19 +35,21 @@ const heureEntiereApres = (instant: number): number => {
   return avant === instant ? instant : avant + UNE_HEURE;
 };
 
-export const instantsRecus = (pointages: readonly PointageAnomalie[], activites: readonly ActiviteAnomalie[]): readonly number[] =>
-  [...pointages.map(pointage => pointage.fait.instant), ...activites.flatMap(activite => [activite.periode?.debut, activite.periode?.fin])]
-    .flatMap(instant => (instant === undefined ? [] : [Date.parse(instant)]))
+export const instantsRecus = (pointages: readonly PointageAnomalie[], activite: ActiviteEchue, borneDeFin?: string): readonly number[] =>
+  [
+    ...pointages.map(pointage => pointage.fait.instant),
+    activite.debut,
+    activite.echeance,
+    ...(borneDeFin === undefined ? [] : [borneDeFin]),
+  ]
+    .map(instant => Date.parse(instant))
     .filter(Number.isFinite);
-
-export const finDeLaPortee = (instants: readonly number[]): number => Math.max(...instants) + TROIS_HEURES;
 
 export const echelleDe = (instants: readonly number[], plafondElargi?: number): EchelleFrise => {
   const finNormale = heureEntiereApres(Math.max(...instants) + UNE_HEURE);
   return {
     debut: heureEntiereAvant(Math.min(...instants) - UNE_HEURE),
-    fin:
-      plafondElargi === undefined ? finNormale : Math.max(finNormale, heureEntiereApres(Math.min(finDeLaPortee(instants), plafondElargi))),
+    fin: plafondElargi === undefined ? finNormale : Math.max(finNormale, heureEntiereApres(plafondElargi)),
   };
 };
 
@@ -60,6 +62,9 @@ export const positionTenueAuxBords = (position: number, largeur: number): number
   const marge = (MARGE_DES_REPERES_PX / largeur) * POSITION_DU_BORD;
   return Math.min(Math.max(position, marge), POSITION_DU_BORD - marge);
 };
+
+export const positionDeRepereTenueAuBordDroit = (position: number, largeur: number, largeurDuRepere: number): number =>
+  Math.min(position, POSITION_DU_BORD - (largeurDuRepere / largeur) * POSITION_DU_BORD);
 
 export const instantSousLePointeur = (
   echelle: EchelleFrise,
@@ -116,23 +121,4 @@ export const graduationsDe = (echelle: EchelleFrise, largeur: number): readonly 
   return Array.from({ length: Math.ceil((echelle.fin - echelle.debut) / UNE_HEURE) + 1 }, (_, rang) => graduationHoraire(echelle, rang))
     .filter(graduation => estMultipleDuPas(graduation, debut, pas))
     .reduce<readonly Graduation[]>((gardees, graduation) => ajouteEnEspacant(gardees, graduation, pixelsParHeure), []);
-};
-
-export interface SurUneVoie<Element> {
-  readonly element: Element;
-  readonly voie: number;
-}
-
-export const surVoies = <Element>(
-  elements: readonly Element[],
-  abscisseEnPixelsDe: (element: Element) => number,
-): readonly SurUneVoie<Element>[] => {
-  const derniereParVoie: number[] = [];
-  return elements.map(element => {
-    const abscisse = abscisseEnPixelsDe(element);
-    const libre = derniereParVoie.findIndex(derniere => Math.abs(abscisse - derniere) >= LARGEUR_D_UN_REPERE_PX);
-    const voie = libre === -1 ? derniereParVoie.length : libre;
-    derniereParVoie[voie] = abscisse;
-    return { element, voie };
-  });
 };
