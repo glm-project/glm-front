@@ -26,6 +26,7 @@ export const toDossier = (dossier: components['schemas']['RestDossierAnomalie'])
   const echue = dossier.activite;
   const journal = dossier.pointages.map(toPointage);
   return {
+    designation: dossier.designation,
     operateur: new OperateurAnomalieId(echue.operateurId),
     operateurNom: echue.operateur === undefined ? '' : `${echue.operateur.prenom} ${echue.operateur.nom}`,
     posteLibelle: echue.poste?.libelle ?? '',

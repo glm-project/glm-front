@@ -11,6 +11,7 @@ const pointageFixture = (id: string, type: TypePointage, instant: string): Point
 });
 
 const dossierFixture = (journal: readonly PointageAnomalie[], borneDeFin?: string): DossierAnomalie => ({
+  designation: 'M24-0655',
   operateur: new OperateurAnomalieId('op-camille'),
   operateurNom: 'Camille Martin',
   posteLibelle: 'DMU 50',

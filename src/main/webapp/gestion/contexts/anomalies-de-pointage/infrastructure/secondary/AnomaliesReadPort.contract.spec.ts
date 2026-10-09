@@ -103,6 +103,7 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
       kind: 'DOSSIER',
       dossier: {
         operateur: new OperateurAnomalieId('op-camille'),
+        designation: 'M-042',
         operateurNom: 'Camille Martin',
         posteLibelle: 'DMU 50',
         posteId: 'poste-dmu',

@@ -108,6 +108,7 @@ class RouteFixture {
 }
 
 const dossierFinAutomatiqueFixture = ({ sansPoste = false } = {}): DossierAnomalie => ({
+  designation: 'M24-0655',
   operateur: new OperateurAnomalieId('op-camille'),
   operateurNom: 'Camille Martin',
   posteLibelle: sansPoste ? '' : 'DMU 50',
@@ -219,6 +220,12 @@ describe('Anomaly dossier page', () => {
     await whenRendering();
 
     thenHeadingContains('Camille Martin · DMU 50 · lundi 14 septembre à 08:00');
+  });
+
+  it('should name the manufacturing order being regularised in the header', async () => {
+    await whenRendering();
+
+    thenTextContains('anomalie-element', 'M24-0655');
   });
 
   it('should present unresolved references in the header without any identity', async () => {

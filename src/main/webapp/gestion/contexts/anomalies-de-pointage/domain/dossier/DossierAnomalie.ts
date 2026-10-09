@@ -45,6 +45,7 @@ export interface LigneFinAutomatique {
 }
 
 export interface DossierAnomalie {
+  readonly designation: string;
   readonly operateur: OperateurAnomalieId;
   readonly operateurNom: string;
   readonly posteLibelle: string;

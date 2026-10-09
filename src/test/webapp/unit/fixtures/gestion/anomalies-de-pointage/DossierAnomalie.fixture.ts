@@ -47,6 +47,7 @@ export const activiteEchueFixture = (
 });
 
 export const dossierDeFinAutomatiqueFixture = (changement: Partial<DossierAnomalie> = {}): DossierAnomalie => ({
+  designation: 'M24-0655',
   operateur: new OperateurAnomalieId('op-camille'),
   operateurNom: 'Camille Martin',
   posteLibelle: 'DMU 50',

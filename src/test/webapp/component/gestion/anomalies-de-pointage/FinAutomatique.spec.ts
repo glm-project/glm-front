@@ -94,6 +94,7 @@ describe('Resolution view of an automatic end in Gestion', () => {
   });
 
   const thenTheProblemTheFriseAndAWaitingValidationAreDrawn = (): void => {
+    cy.get(dataSelector('anomalie-element')).should('contain.text', 'M24-0655');
     cy.get(dataSelector('anomalie-probleme')).should('be.visible');
     cy.get(dataSelector('anomalie-frise')).should('be.visible');
     thenTheHandleHoldsNoHour();
