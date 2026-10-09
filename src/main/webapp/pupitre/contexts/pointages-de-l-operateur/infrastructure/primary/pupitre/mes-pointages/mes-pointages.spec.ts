@@ -133,7 +133,7 @@ describe('Mes pointages screen', () => {
     thenExplanationsAre(['2 activités en cours : comptées quand vous les arrêterez.']);
   });
 
-  it('should count and flag a clocking ended automatically after 13 hours', async () => {
+  it('should count and flag a clocking ended automatically at its deadline', async () => {
     givenTheCurrentWeek(
       semaineFixture(
         SEMAINE_EN_COURS,
@@ -158,7 +158,7 @@ describe('Mes pointages screen', () => {
     await whenShowingMyPointages();
 
     thenLinesAre([['1236', 'Fraiseuse', '06:00 → 19:00', '13 h 00 fin automatique']]);
-    thenExplanationsAre(['Un pointage n’a pas été arrêté : il s’est terminé tout seul après 13 h. Signalez-le au responsable.']);
+    thenExplanationsAre(['Un pointage n’a pas été arrêté : il s’est terminé tout seul à son échéance. Signalez-le au responsable.']);
     thenClockedDaysAre([['jour-2026-10-08', 'Jeu. 8 oct. · aujourd’hui', '13 h 00 fin automatique']]);
   });
 

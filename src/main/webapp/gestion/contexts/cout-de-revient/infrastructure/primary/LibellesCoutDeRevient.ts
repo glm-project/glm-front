@@ -100,7 +100,7 @@ const compteDAnomalies = (compte: CompteDAnomalies): string => COMPTES_D_ANOMALI
 
 const EXPLICATIONS: Record<AnomalieDePointage, string> = {
   FIN_AUTOMATIQUE:
-    'Aucune fin n’a été pointée : l’activité a été arrêtée automatiquement après 13 h et elle est comptée ainsi. Il faut ajouter le pointage de fin réel.',
+    'Aucune fin n’a été pointée : l’activité a été arrêtée automatiquement à son échéance et elle est comptée ainsi. Il faut ajouter le pointage de fin réel.',
 };
 
 const naturesEnAnomalie = (lignes: readonly LigneDeCout[]): string => {

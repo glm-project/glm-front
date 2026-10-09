@@ -39,7 +39,7 @@ const activitesEnCours = (nombre: number): string =>
 
 const explications = (jourAffiche: JourDePointages): readonly string[] => [
   ...(jourAffiche.aUneFinAutomatique()
-    ? ['Un pointage n’a pas été arrêté : il s’est terminé tout seul après 13 h. Signalez-le au responsable.']
+    ? ['Un pointage n’a pas été arrêté : il s’est terminé tout seul à son échéance. Signalez-le au responsable.']
     : []),
   ...(jourAffiche.activitesEnCours() > 0 ? [activitesEnCours(jourAffiche.activitesEnCours())] : []),
 ];
