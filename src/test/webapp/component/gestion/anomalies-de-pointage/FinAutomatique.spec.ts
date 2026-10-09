@@ -19,13 +19,15 @@ import {
   givenTheRegularisationFailsOnceThenIsCreated,
   givenTheRegularisationIsCreated,
   givenTheRegularisationIsRefusedWith,
-  thenTheEndIsSaidRegularisedAt,
-  thenTheRefusalIsSaid,
   thenTheRegularisationSentIs,
   thenTheRegularisationsSentCarryTheSameIdentifier,
-  whenValidatingTheEnd,
 } from '../../../utils/gestion/anomalies-de-pointage/RegularisationHttp.fixture';
 import { markerOf } from '../../../utils/gestion/anomalies-de-pointage/RepereDeLaFrise';
+import {
+  thenTheEndIsSaidRegularisedAt,
+  thenTheRefusalIsSaid,
+  whenValidatingTheEnd,
+} from '../../../utils/gestion/anomalies-de-pointage/ValidationDeLaFin';
 
 const MARGE_DES_REPERES_PX = 22;
 const HORLOGE_APRES_LA_FIN_AUTOMATIQUE = new Date(2026, 8, 14, 23, 0);

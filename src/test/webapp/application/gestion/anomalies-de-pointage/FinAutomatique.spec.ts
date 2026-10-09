@@ -25,11 +25,13 @@ import { thenTheHandleHolds, thenTheHandleHoldsNoHour } from '../../../utils/ges
 import {
   givenTheRegularisationIsCreated,
   givenTheRegularisationIsRefusedWith,
+  thenTheRegularisationSentIs,
+} from '../../../utils/gestion/anomalies-de-pointage/RegularisationHttp.fixture';
+import {
   thenTheEndIsSaidRegularisedAt,
   thenTheRefusalIsSaid,
-  thenTheRegularisationSentIs,
   whenValidatingTheEnd,
-} from '../../../utils/gestion/anomalies-de-pointage/RegularisationHttp.fixture';
+} from '../../../utils/gestion/anomalies-de-pointage/ValidationDeLaFin';
 
 const urlDossier = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 const HEURE_CLIQUEE = new Date(2026, 8, 14, 17, 0);
