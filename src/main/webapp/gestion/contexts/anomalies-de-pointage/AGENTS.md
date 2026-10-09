@@ -1,509 +1,166 @@
 # Anomalies de pointage
 
-Ce contexte de Gestion possède la décision explicite du gestionnaire et sa saisie. Le calcul des
-activités, des durées et des coûts reste au backend Atelier, selon
-l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md).
+Ce contexte de Gestion porte une seule décision du gestionnaire : placer la fin réelle d'une activité que le
+serveur a arrêtée à son échéance faute de fin pointée. Les pointages incohérents ne sont plus des
+anomalies : le serveur les ignore à la réception et ne les montre pas. Le calcul des activités, des durées
+et des coûts reste au backend, selon l'[ADR 0047](../../../../../../documentation/adr/0047-count-only-finished-activities.md).
 
-## Langage et invariants
+## Langage
 
-- **Anomalie de pointage** : ce que le gestionnaire doit trancher. Deux natures : `CONFLIT`, une séquence
-  en conflit, et `FIN_AUTOMATIQUE`, une activité terminée à son échéance faute de fin réelle. La liste
-  couvre les deux natures (`GET /api/atelier/anomalies?nature=…`, requise) et le dossier aussi. Le coût de revient emploie déjà « anomalie » au sens large ;
-  les contextes restent isolés et ne partagent aucun type. « Séquence en conflit » garde son sens.
-- **Dossier** : projection d'une anomalie de pointage, adressée par suivi et pointage d'ancrage : une
-  séquence en conflit (`EN_CONFLIT`) ou une fin automatique (`FIN_AUTOMATIQUE`, ancrée sur l'ouvrant actif
-  de l'activité échue). Une adresse annulée, remplacée ou résolue reçoit un résultat explicite, jamais une
-  autre séquence. Trois identifiants restent distincts : l'adresse d'une fin automatique est
-  l'événement ouvrant, que l'activité reçue porte en `activites[].ouvrant` (l'`evenement` du serveur) ; l'activité visée par un
-  acte est l'`ActiviteId` d'origine (`activites[].activite`).
-- **Acte** : correction, annulation ou régularisation humaine. Dans la vue complète, aucun acte n'est choisi par défaut ;
-  une vue de résolution prend d'office la saisie de l'unique choix qu'elle affiche (voir « Vue de résolution »).
-  Correction et annulation demandent un motif non vide d'au plus 255 caractères ; la régularisation
-  ne porte aucun motif.
-- **Aperçu** : conséquences fournies par le port sans écriture, avec l'évaluation et les dossiers avant
-  et après. Toute modification de la saisie l'invalide.
-- **Aperçu d'arrière-plan** : aperçu qu'une vue de résolution demande d'elle-même (`PreparationActe.previewInBackground`, état
-  `APERCU_EN_ARRIERE_PLAN`), distinct de la prévisualisation du gestionnaire (`PREVISUALISATION`). Il n'est pas une opération qui
-  occupe la saisie : la poignée et le clic sur la barre restent actifs, le focus ne bouge pas, et seules la confirmation
-  et l'issue inconnue bloquent la saisie. Une réponse périmée est écartée par le jeton `demande`, puis par `afterPreview`.
-- **Proposition confirmable** : adresse, commande, version attendue, acte exact, empreinte des conséquences
-  et identité prospective de l'événement pour une correction ou une régularisation ; une annulation
-  n'en crée aucun. Confirmation et reprise transmettent cette proposition immuable. Elle reste seulement
-  en mémoire dans la page ; un rechargement abandonne la saisie. La saisie conserve les nanosecondes,
-  avec comparaison des instants équivalents indépendamment de leur fuseau.
-- **Journal** : faits d'origine, annulations et remplacements conservés. Une contradiction restante
-  est un résultat accepté, distinct d'un refus métier. Le `journal` du dossier reste complet : le serveur envoie
-  tous les jours et tous les opérateurs de l'élément.
-- **Périmètre reçu** : le champ `perimetre` du dossier envoyé par le serveur, une séquence que le serveur rattache à l'anomalie
-  (pointages, `enConflit`, `operateurId`). Il fait autorité sur l'état de l'anomalie (`enConflit`, `finAutomatique`).
-- **Périmètre du dossier** : Value Object `PerimetreDuDossier` (`domain/dossier/`, champ `perimetre` de `DossierAnomalie`) qui
-  garde les pointages que le serveur rattache à l'anomalie : ceux du périmètre reçu, réunis à ceux de la séquence en conflit
-  quand elle est reçue.
-- **Pointages de l'anomalie** : `perimetre.pointagesDe(dossier)` : ceux du périmètre du dossier, plus ceux que les diagnostics citent
-  (`pointage`, `cible.ouvrant`, `cible.termineePar`), dans l'ordre du journal. Le démarrage annulé d'un `OUVRANT_ANNULE` et
-  les arrêts qui le visent en font partie, bien que le périmètre reçu se réduise alors à l'ancre. Seuls ces pointages se
-  lisent sur la frise, se sélectionnent et bornent la poignée ; le journal complet sert aux libellés, aux références et à la
-  comparaison avant et après.
-- **Opérateur de l'anomalie** : `DossierAnomalie.operateur` (un `OperateurAnomalieId`), lu dans `toDossier` sur `operateurId` de
-  la séquence en conflit ou du périmètre reçu ; la ligne de liste ne le porte pas (le contrat de lecture le vérifie). On traite
-  opérateur par opérateur : on ne regarde pas ce qu'ont fait les autres opérateurs de l'élément.
-- **Hors de l'anomalie** : le complément simple des pointages de l'anomalie : tout pointage du journal qui n'en est pas un, de
-  n'importe quel opérateur et annulé ou non. Un tel pointage ne se corrige ni ne s'annule depuis le dossier.
-- **Autres pointages de l'opérateur** : `perimetre.autresPointagesDeLOperateur(dossier)` : ceux des pointages hors de l'anomalie qui
-  sont de l'opérateur de l'anomalie seulement (`fait.operateur`) et sans les pointages annulés, dans l'ordre du journal. Ce
-  filtre est une partie de « hors de l'anomalie », pas son synonyme : le domaine le possède, car traiter opérateur par opérateur
-  est une règle métier. La phrase de contexte de la frise les compte.
-- **Continuation** : lien explicite vers un pointage actif d'une séquence restante après correction
-  de l'ancrage. Le résultat reste consultable à l'ancienne adresse.
-- **Geste** : le nom d'un pointage d'après le bouton que l'opérateur a pressé au pupitre (DÉMARRER, NC, BON, ARRÊTER) :
-  « Démarrage », « Démarrage en NC », « Passage en NC », « Retour en bon », « Arrêt ». Gestion en possède les libellés et les
-  aligne à la main sur le pupitre, qu'elle n'importe pas. Le formulaire demande « Ce que signale le pointage » : c'est le geste,
-  dont le type et l'intention sont envoyés au serveur ; il n'y a pas de second terme. Ce que fait le gestionnaire (choisir,
-  modifier, déplacer, placer, prévisualiser) n'est pas un geste : c'est une **saisie** (« relue à chaque saisie »). « Action »
-  n'a qu'un sens, l'action directe.
-- **Phrase du problème** : la ligne de l'en-tête qui dit ce qui est en cause (pointage nommé par son geste et son heure, « vise »,
-  l'activité, le fait contradictoire), une par diagnostic ou par activité échue.
-- **Frise** : la représentation, en présentation seule, des pointages de l'anomalie et des activités du dossier sur une échelle de temps ;
-  elle n'invente aucune fin ni aucune heure (la fin proposée est la saisie du gestionnaire, pas une déduction).
-- **Sélection** : le pointage ou l'activité choisi sur la frise, détaillé dans le panneau du même nom ; sélectionner n'est pas
-  choisir un acte.
-- **Poignée** : l'heure proposée d'un fait qui termine une activité, posée sur la frise et déplaçable ; c'est une saisie qui
-  émet un instant, à côté du champ date et heure dans la vue complète, seule saisie de l'heure dans la vue de résolution. En ligne,
-  avant toute heure, elle se tient « sans heure » (« Heure ? ») sur la fin reçue de la barre : elle ne porte alors aucune heure ;
-  une flèche la pose sur cette fin reçue, Origine et Fin aux bornes.
-- **Cadre du fait** : Value Object du domaine (`CadreDuFait`) qui porte le début reçu de chaque activité et l'heure courante,
-  et rend les bornes d'un fait. Ces bornes sont des pré-contrôles de saisie : le refus serveur `date-de-survenue-future` fait
-  autorité, et `INSTANT_AVANT_CIBLE` est une règle de Gestion sans refus serveur connu.
-- **Issue de l'acte** : ce que l'aperçu et le reçu annoncent après l'acte (traitée, conflit levé · fin automatique restante,
-  restant), selon la nature du dossier d'origine : projection du domaine (`IssueDeLActe`).
-- **Fin automatique restante** : une activité `ECHUE` du dossier d'après, ailleurs que l'adresse d'origine ; le reçu y mène par
-  un lien.
-- **Anomalie suivante** : le bouton « Anomalie suivante » du reçu d'une vue de résolution. Sa destination se décide dans l'ordre
-  (`AnomalieSuivante`, `domain/dossier/`, que `RechercheDeLAnomalieSuivante`, `application/`, déroule autour de la lecture) : 1. une
-  fin automatique restante du même dossier (`IssueDeLActe`) ; 2. sinon une autre ligne de la liste, lue au clic par
-  `AnomaliesReadPort.list` avec les filtres de l'adresse (`filtreAnomaliesDemande` : `nature`, `operateur`, `element`, `page`, `nature`
-  par défaut `FIN_AUTOMATIQUE`), l'adresse d'origine exclue (elle peut rester dans la liste), en reculant d'**une seule** page quand la
-  page demandée n'a aucune autre ligne ; 3. sinon la liste, qui dit « Plus aucune anomalie » (paramètre `plusAucune=1`, éphémère : tout
-  changement d'onglet, de filtre ou de page l'abandonne). Une erreur de lecture de la liste ramène à la liste, qui affiche sa propre erreur.
-- **Vue complète** : l'écran du dossier d'anomalie (`DossierAnomaliePage`) avec la frise sélectionnable, le panneau Sélection,
-  « Votre décision » et le formulaire du fait. Elle sert tous les dossiers, conflits compris, et de repli à toute vue de résolution.
-- **Vue de résolution** : écran minimal d'un dossier de fin automatique, un composant par code de choix du serveur
-  (`vues-de-resolution/`, registre `VuesDeResolution.ts`). Elle ne montre ni Sélection, ni carte de choix, ni actions directes, ni
-  formulaire détaillé, ni −5/+5, ni motif. Le gestionnaire place l'heure et valide. Dans une vue de résolution, le motif d'une
-  correction découle du cas : il est fixé par la vue, caché partout (« Voir le détail » compris) et envoyé avec l'acte.
-- **Aiguillage** : la page choisit la vue à l'ouverture d'une adresse et la **fige** jusqu'au changement d'adresse (le dossier du
-  reçu qui remplace le dossier lu ne la fait donc pas basculer). Une vue de résolution s'affiche si et seulement si le dossier
-  est une fin automatique (`finAutomatique`), n'a pas de conflit à expliquer (`conflitAExpliquer`), porte **exactement un** choix,
-  que ce choix vise l'activité dont l'`ouvrant` est le pointage de l'adresse, et que son code a une vue au registre
-  (`choixDeResolution`, `domain/dossier/`). Une régularisation (`REGULARISER_FIN`) exige en plus que la frise se lise en ligne
-  (`seLitEnLigne`, `VuesDeResolution.ts`) : en rangées, elle n'a pas de poignée « Heure ? », et la vue de résolution, sans champ,
-  n'offrirait au clavier aucun accès à l'heure. Sinon la vue complète s'affiche, comme pour une adresse annulée, remplacée ou
-  résolue. Un dossier de fin automatique qui porte aussi un choix de conflit (`RATTACHER_FIN_A_ACTIVITE_REMPLACANTE`,
-  `ANNULER_TRANSITION`) retombe donc sur la vue complète.
-- **Solutions** : dans la vue complète, « Votre décision » en présente trois sortes, dans cet ordre : les propositions du serveur,
-  les actions directes, puis les autres corrections. Une **proposition du serveur** est un choix guidé (`ChoixGuide`, `dossier.choix`),
-  toutes de même rang, aucune présélectionnée (la vue de résolution, elle, prend l'unique choix d'office). « Proposition » ne dit jamais le `PropositionActe` que `SaisieActe` prépare : on dit
-  « saisie d'acte ».
-- **Action directe** : une saisie d'acte de départ, comme un choix guidé, que le gestionnaire choisit puis complète (motif, heure) :
-  pas encore un acte. Elle annule un pointage en cause ou corrige son heure, et le front la propose depuis les diagnostics, sans
-  proposition du serveur (`ActionsDirectes`, `domain/dossier/`) ; elle porte sa `SaisieActe` et le pointage visé, comme un
-  `ChoixGuide` porte la sienne, et son acte se lit de sa saisie (`SaisieActe.acte()`). Elle se distingue de Corriger et Annuler du
-  pointage sélectionné, que le gestionnaire choisit lui-même sur la frise : celles-ci ne viennent d'aucun diagnostic. Ce n'est
-  ni un geste ni une proposition du serveur.
-- **Pointage tardif** : pointage que le serveur désigne, dans un choix `CORRIGER_FIN_TARDIVE` ou `CORRIGER_TRANSITION_TARDIVE`,
-  comme posé après l'échéance ; le front le lit, il ne le déduit pas.
+- **Fin automatique** : activité arrêtée à son échéance faute de fin pointée. C'est l'unique anomalie de
+  pointage : la liste n'a ni nature, ni onglet. Le coût de revient emploie « anomalie » au même sens, sans
+  type partagé : les contextes restent isolés.
+- **Clé** : opérateur, suivi (l'OF) et poste. Une clé porte au plus une activité en cours.
+- **Liste** : les fins automatiques non régularisées (`GET /api/atelier/anomalies`, `RestPage<RestFinAutomatiqueEnListe>`).
+  Une `LigneFinAutomatique` porte l'adresse du dossier, la désignation de l'élément, l'opérateur, le poste, le début
+  et l'échéance, tels que reçus.
+- **Adresse** : suivi et pointage ouvrant de l'activité échue (`AdresseDossier`), soit `/anomalies/:suivi?pointage=…`.
+- **Dossier** (`DossierAnomalie`) : ce que le serveur rend pour une adresse, 200 pour une fin automatique non
+  régularisée, 404 sinon. Il porte l'activité échue (`ActiviteEchue` : identifiant, ouvrant, catégorie, début,
+  échéance), les pointages de sa clé (`journal`), `borneDeFin` s'il y en a une, la désignation de l'élément, et
+  l'opérateur et le poste nommés. Deux identifiants restent distincts : l'adresse désigne le pointage ouvrant, la
+  régularisation désigne l'activité (`ActiviteAnomalieId`).
+- **Borne de fin** (`borneDeFin`) : le plus tôt du début suivant sur la clé et de la clôture du suivi ; absente
+  quand rien ne borne la fin. Elle est reçue, jamais calculée par le front.
+- **Régulariser la fin** : l'unique vue du dossier (`ResolutionDeFin`). Aucun autre acte n'existe : ni
+  correction, ni annulation, ni aperçu, ni confirmation, ni reçu.
+- **Poignée** : l'heure de fin que le gestionnaire place sur la frise ; une saisie qui émet un instant.
+- **Cadre de la fin** (`CadreDeLaFin`) : Value Object qui rend les bornes de la poignée (voir « Poignée »).
+- **Frise** : représentation, en présentation seule, de l'activité échue, du pointage qui l'ouvre, de la borne
+  de fin et de la poignée sur une échelle de temps. Elle n'invente aucune fin ni aucune heure.
+- **Saisie de régularisation** (`SaisieDeRegularisation`) : activité, heure et identifiant de la commande à envoyer.
+- **Anomalie suivante** : bouton qui mène à une autre fin automatique de la liste après une régularisation.
+- **Geste** : nom d'un pointage d'après le bouton du pupitre : « Démarrage », « Démarrage en NC », « Arrêt ».
+  Gestion en possède les libellés et les aligne à la main sur le pupitre, qu'elle n'importe pas. « Action »
+  n'a plus de sens ici.
 
-## Responsabilités
+## Responsabilités et invariants
 
-Gestion expose la liste sous `/anomalies` et un dossier sous `/anomalies/:suivi?pointage=…`. L'ancienne
-route `/conflits` n'existe plus et ne redirige pas.
+### Liste
 
-La liste offre deux onglets accessibles, « Fins automatiques » à gauche puis « Conflits », et garde la nature dans
-l'URL (`/anomalies?nature=CONFLIT|FIN_AUTOMATIQUE`, [ADR 0038](../../../../../../documentation/adr/0038-hold-view-state-in-the-url.md)).
-Sans `nature`, l'onglet Fins automatiques, le premier ; une valeur inconnue (nature, page) est une adresse refusée, sans aucune requête : ni la liste, ni les opérateurs, ni
-les éléments ne sont lus, et les deux filtres, désactivés, gardent la valeur de l'URL (« Opérateur actuel conservé »). Changer d'onglet
-conserve les filtres et revient à `page=1` ; la pagination est propre à chaque onglet. Une ligne
-`LigneConflit` ou `LigneFinAutomatique` est traduite à la frontière HTTP, qui rejette la lecture dont une
-ligne ne porte pas la nature demandée. Une fin automatique affiche l'élément, l'opérateur, le poste, son début
-et l'échéance reçus ; le front ne calcule ni échéance ni durée. Son lien ouvre `/anomalies/{suivi}?pointage=…`
-sur l'ouvrant actif (`adresse.pointage`) ; la ligne ne porte pas l'activité visée, que seul le dossier expose.
-Le filtre « Opérateur » de la liste est le `SelecteurOperateurAnomalie` (entrée « Tous les opérateurs » par
-`avecTous`), alimenté par `operateurs()` que la liste lit à chaque ouverture, sans cache.
-L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « Opérateur non résolu (référence actuelle) » celui que
-les opérateurs ne contiennent pas. Le choix reste un brouillon jusqu'à « Filtrer », comme « Élément ». Des opérateurs indisponibles
-affichent « Liste des opérateurs indisponible » et « Réessayer », désactivent le filtre sans toucher à la liste, et le
-champ ne prétend pas que la valeur de l'URL est « non résolue » : il dit « Opérateur actuel conservé ».
-Le filtre « Élément » est le `SelecteurElementAnomalie` (même `SelecteurRecherchable` que l'opérateur, entrée « Tous les
-éléments »). Il choisit un élément par sa désignation, « nom · référence » (`ElementAnomalie { id, nom, reference? }`, par
-ordre alphabétique du nom ; recherche sans accents sur le nom et la référence). Le port de lecture expose
-`elements()`, lu en entier par `GET /api/elements-de-fabrication` (`collectAllPages`, page demandée vérifiée, aucune
-collection tronquée ni identité dupliquée, sur toute période : la liste cherche un élément quelle que soit sa date de
-création). `elements()` est distinct de `referentiel()` : le dossier, qui n'a pas besoin des éléments, ne paie pas leur
-lecture complète, et la liste les charge à part des opérateurs, si bien que l'échec ou la lenteur de l'un ne retient pas
-l'autre. L'URL garde l'identifiant ; le champ ne l'affiche jamais et nomme « Élément non résolu (référence actuelle) » celui que
-les éléments ne contiennent pas. Le choix reste un brouillon jusqu'à « Filtrer » ; des éléments indisponibles affichent
-« Liste des éléments indisponible » et leur propre « Réessayer », désactivent ce seul filtre, qui dit « Élément actuel
-conservé » au lieu de « non résolu ».
-Le `SelecteurRecherchable` ne dit « ne correspond à cette recherche » que si quelque chose est saisi : une liste vide sans
-recherche dit « Aucun opérateur disponible » (« Aucun élément disponible »).
-Chaque libellé de liste, chargement compris, est propre à sa nature. Le dossier ouvert depuis la liste en garde l'adresse (`nature`, filtres, `page`) et « Retour aux anomalies »
-ramène à l'onglet, aux filtres et à la page d'origine.
+La liste vit sous `/anomalies`, gardée par `reservedToGestionnaire` ([authentification](../../../../../../documentation/authentication.md)).
+Son état est dans l'adresse ([ADR 0038](../../../../../../documentation/adr/0038-hold-view-state-in-the-url.md)) :
+`operateur`, `element` et `page`. Un `nature` d'un ancien lien est ignoré. Une page invalide n'émet aucune requête, pas
+même celles des opérateurs et des éléments, et désactive les filtres. Chaque ligne ouvre son dossier en gardant
+les paramètres de la liste ; « Retour aux anomalies » ramène aux mêmes filtres et à la même page.
 
-Le domaine possède les identités, la saisie et la confirmation ; l'application protège les appels
-asynchrones et les doubles soumissions. Le primaire rend les faits et leur cible, conserve les filtres
-dans l'URL et utilise les surfaces de Gestion. Trois ports séparent lecture, aperçu et application.
-La composition normale de Gestion relie ces trois ports au même adapter HTTP et à `ApiClient`.
-Le serveur fournit états, intervalles, durées ISO, diagnostics, choix et continuations. Le primaire
-possède leurs libellés. Il nomme l'opérateur (« Prénom Nom ») et le poste (libellé) reçus avec la liste, l'en-tête, le
-panneau Sélection, l'historique d'adresse obsolète et les continuations, sans jamais en afficher l'identifiant : une fiche non
-résolue s'affiche « Opérateur non résolu » ou « Poste non résolu », un pointage sans poste « Sans poste ». Le modèle
-garde `posteId` pour distinguer ces deux cas ; le fait garde les identifiants de l'opérateur et du poste, qu'il envoie
-au serveur, et le nom ou le libellé sont portés à côté (`operateurNom`, `posteLibelle` du pointage, vides sans fiche).
-Les détails de traçabilité du pointage sélectionné et les journaux avant/après de l'aperçu partagent un seul gabarit : la ligne
-d'en-tête est « Prénom Nom · instant » (jamais l'identifiant du pointage), et les activités visée ou créée se désignent
-par le libellé de l'activité du dossier, sinon par le pointage qui l'a créée dans le même journal (« Geste · instant »),
-sinon « Activité non résolue », jamais par leur identifiant. L'historique d'adresse obsolète et l'option de cible
-du formulaire suivent la même règle (`labelForActivite`).
-Un autre pointage (remplacé, pointage de l'acte en aperçu) se désigne par une seule règle, `referencePointage` :
-« instant · Geste » depuis le journal disponible. Quand il manque, la phrase porte le déterminant (« Remplace un
-pointage non résolu »), jamais l'identifiant.
-La décision (`ActionsDirectes.depuis(dossier)`, `domain/dossier/`) propose, depuis les diagnostics d'un conflit à expliquer
-(`conflitAExpliquer`), des actions sur les seuls pointages en cause, chacune avec sa `SaisieActe` (`SaisieActe.cancel`,
-`SaisieActe.correct` avec le fait reçu) : annuler le pointage en cause pour toute raison ; en plus, annuler le terminant
-(`cible.termineePar`) pour `CIBLE_DEJA_TERMINEE`, et corriger l'heure du pointage en cause pour `GESTE_AVANT_OUVERTURE`.
-`OUVRANT_ANNULE` n'offre que l'annulation du pointage en cause : l'ouvrant est déjà annulé. L'ordre est celui des diagnostics
-reçus, le pointage en cause avant son terminant, et un même acte (`SaisieActe.acte()`) sur un même pointage n'apparaît qu'une fois. Une
-action que le serveur propose déjà (même acte, même pointage, lu dans `dossier.choix[].saisie.proposition`) n'est pas
-répétée, et un pointage absent du journal ou déjà annulé n'en reçoit aucune. Le primaire nomme chaque action par le geste et
-l'heure du pointage visé (`libelleDeLAction` : « Annuler l'arrêt de 17:00 », « Corriger l'heure de l'arrêt de 07:00 », article
-élidé et geste qualifié comme les phrases) ; l'heure porte ses secondes quand un autre pointage du journal tombe dans la même
-minute. Choisir une action directe se comporte comme choisir une proposition du serveur (`aria-pressed`, `data-acte`, focus sur la saisie d'acte, champ heure
-ouvert pour une correction ; une action n'a qu'une identité, l'acte et le pointage) ; elle est désactivée pendant une opération, et
-la section est absente sans action. Sous les actions, « Autres corrections » (repli, `anomalie-detail`) rappelle que Corriger
-et Annuler du pointage sélectionné sont dans le panneau Sélection et garde « Ajouter un pointage manquant » (la régularisation,
-`anomalie-regulariser`).
-Une phrase du problème suit sa propre règle : le pointage en cause nommé par son geste et son heure (« L'arrêt de 17:00 »,
-« Le passage en NC régularisé de 18:00 » ; « Un pointage non résolu » quand le journal ne le tient pas), « vise », l'activité
-visée (« le travail », « la non-conformité », « l'activité » quand le dossier ne la tient pas ou sans période, accordée en
-genre), puis le fait contradictoire et son heure (HH:MM) quand le dossier le porte (terminant, ouvrant ou début reçu de
-l'activité). Chaque modèle couvre l'absence de ces champs facultatifs : un pointage cité mais absent du journal compte
-comme absent ; pour une transition de même catégorie, une activité sans période prend la catégorie du geste (« un travail
-déjà en bon »). Une fin automatique se lit dans le dossier, sans déduction : un choix `CORRIGER_FIN_TARDIVE` ou
-`CORRIGER_TRANSITION_TARDIVE` visant l'activité échue désigne, par son pointage, le pointage tardif ; sinon un choix
-`REGULARISER_FIN` visant cette activité dit qu'elle n'a jamais été arrêtée (`finARegulariser`, `domain/dossier/FinsARegulariser.ts`) ;
-sans l'un ni l'autre, la phrase dit seulement qu'elle a été terminée automatiquement, sans rien affirmer de ses pointages. Le front ne déduit jamais qu'un pointage est tardif : `pointagesTardifs` (`domain/dossier/PointagesTardifs.ts`) le lit dans ces choix, et le pointage
-désigné est marqué « pointé après l'échéance » sur la frise (badge « ! », `data-tardif`, nom accessible) et dans le panneau Sélection.
-Sous le titre « Pointages et activités », une phrase (`anomalie-frise-contexte`, `ContexteDuSuivi.ts`, modèles dans
-`LIBELLES_ANOMALIES.frise.contexte`) résume ce que l'opérateur de l'anomalie a pointé d'autre sur l'élément : « Hors de cette
-anomalie, Camille Martin compte sur cet élément 1 pointage plus tôt ce jour-là (dès 06:00), 1 pendant cette période et 21 les jours
-précédents, depuis le jeudi 10 septembre. » Elle compte les autres pointages de l'opérateur (`perimetre.autresPointagesDeLOperateur(dossier)`) en quatre groupes, selon la période de
-l'anomalie (premier et dernier instant des pointages de l'anomalie et des activités, pas l'échelle : la phrase ne bouge ni quand la
-poignée élargit l'échelle ni quand un aperçu s'affiche) : plus tôt le jour local du début (« dès HH:MM », le premier), pendant la
-période, plus tard le jour local de la fin (« jusqu'à HH:MM », le dernier), et les autres jours (« les jours précédents, depuis le … »,
-« les jours suivants, jusqu'au … », ou « les autres jours » quand ils sont avant et après). « ce jour-là » vaut quand la période tient
-dans un jour local ; sur deux jours, le jour est nommé (« plus tôt le lundi 14 septembre »), avec l'année quand elle diffère de celle
-d'aujourd'hui. Le premier groupe porte le nom (« 1 pointage », « 2 pointages »). Aucune phrase sans autre pointage de l'opérateur. Le
-nom est celui de la séquence, sinon celui du référentiel ou des pointages du journal ; sans nom, « l'opérateur ». Le jour local et
-les heures sont de la présentation : le domaine ne lit pas le fuseau.
-À droite de ce titre, un lien `anomalie-frise-journee` (`JourneeDeLOperateur.ts`, libellé `LIBELLES_ANOMALIES.voirLaJournee`) dit « Voir la
-journée de Camille Martin » (« de l'opérateur » sans nom résolu) et mène à `['/operateurs', operateur, 'heures']` avec le seul paramètre
-`jour` (`AAAA-MM-JJ`) : le relevé des heures possède cette adresse et ouvre la semaine ISO qui contient ce jour, ce jour ouvert. Ce
-contexte ne calcule aucune semaine et n'importe rien du relevé. Le jour est le jour local (`jourLocalDe`, présentation) du pointage qui
-pose problème : le plus ancien pointage tardif du dossier (`pointagesTardifs`), sinon le plus ancien pointage en cause (celui de la
-sélection initiale), sinon le début de la période de l'anomalie (`PeriodeDeLAnomalie.ts`, partagée avec la phrase de contexte) ; sans
-période, pas de lien. Un pointage dont l'instant est illisible n'est jamais retenu : le niveau suivant prend la relève.
-Les pointages de l'anomalie et les activités du dossier se lisent sur une frise (`glm-frise-dossier`, `frise-dossier/`), pleine largeur sous
-l'en-tête ; elle remplace la chronologie en liste et la section « Activités concernées ». Échelle et positions sont de la
-présentation, en fonctions pures (`EchelleFrise.ts`, `DispositionFrise.ts`) : du premier au dernier instant reçu (débuts, fins,
-pointages de l'anomalie, lus en un seul endroit par `pointagesDeLaFrise`, lisibles et en ordre chronologique) avec une heure de marge arrondie à l'heure locale. La frise tient dans la largeur de son hôte, sans défilement : `FriseDossier` mesure
-son hôte par un `ResizeObserver` créé dans `afterNextRender` (largeur de référence de 1 214 px avant la première mesure, largeur nulle
-ignorée) et `dispositionDeFrise` reçoit cette `largeur`. Les graduations suivent la largeur : le pas est le plus petit de 1, 2, 3, 4, 6, 12 h
-puis 1, 2, 3, 7 jours qui laisse au moins 64 px par pas ; on garde les traits horaires dont l'heure locale est un multiple du pas
-(minuit d'un jour multiple du pas, compté depuis le début de l'échelle, pour un pas en jours) à au moins 64 px du trait gardé
-précédent, un trait de minuit passant avant le précédent ; le jour s'affiche à chaque minuit gradué, et minuit n'est pas toujours
-gradué. Les bords de l'échelle ne portent pas forcément de trait. Repères et poignée restent à 22 px au moins des bords (leur heure et
-leur nom restent exacts). Une rangée par activité, dans l'ordre de leur début,
-sous la rangée des pointages, titrée « Pointages » (`anomalie-frise-pointages-intitule`, une ligne de 20 px au-dessus des
-repères, sans interaction, que la rangée de placement ne recouvre pas ; absente sans pointage). La barre d'une activité finit selon l'état reçu : `TERMINEE` à sa fin, `ECHUE` par l'embout
-hachuré `warn` de Gestion (`--gestion-hachure-fin-automatique`) à sa fin automatique, `EN_COURS` et `A_RESOUDRE` (hachurée) ouvertes jusqu'au bord, `ANNULEE` et `REMPLACEE` atténuées
-(fin pleine si une fin est reçue) ; le front ne déduit aucune fin d'un pointage. Une activité sans période garde sa rangée
-et son libellé, sans barre. Un repère par pointage (symbole du geste, un par geste : ▶ Démarrage, ▷ Démarrage en NC, ◆ Passage en NC, ◇ Retour en bon,
-■ Arrêt ; heure HH:MM, barré s'il est annulé, badge « R »
-s'il est régularisé, `danger` s'il est en cause d'un diagnostic) ; des repères à moins de 44 px l'un de l'autre, mesurés sur leur position dessinée (à la largeur mesurée, après le recul aux bords), descendent d'une
-voie entière, la hauteur d'une cible de 44 px, tant que le précédent est trop proche ; une flèche pointillée `danger`, décorative, va du repère en cause au début de l'activité que son diagnostic
-vise. Repères et barres sont des boutons (`aria-pressed`, nom : heure avec secondes et geste, ou catégorie, période et état) dans
-l'ordre du temps ; les tests lisent leurs attributs (`data-pointage`, `data-activite`, `data-etat`, `data-fin`, `data-en-cause`,
-`data-annule`, `data-deplace`), jamais leurs classes ; leur position horizontale se prouve en Cypress, sur la géométrie
-rendue des graduations, lue sur deux traits et extrapolée aux bords (`AbscisseSurLaFrise.ts`), jamais sur le style inline.
-La frise se lit **en ligne** (`seLitEnLigne`, `FriseEnLigne.ts`) quand le dossier n'est pas un conflit à expliquer (`conflitAExpliquer`),
-que la frise lit au moins un pointage et que chacun, non annulé, est soit l'ouvrant d'une activité du dossier qui a une période (`activite.ouvrant`),
-soit le terminant au bout de sa barre : son fait vise l'activité (`activiteVisee`), qui a une fin reçue, à cet instant exactement
-(`InstantPointage`). C'est la fin automatique jamais arrêtée et son reçu ; un conflit, un pointage tardif (posé après l'échéance, donc
-ailleurs qu'au bout de la barre échue) ou un pointage hors de ces deux cas gardent la frise en rangées décrite ici. En ligne,
-`dispositionEnLigne` n'a ni intitulé « Pointages » ni rangée de repères : chaque activité a sa rangée dès sous l'axe, le repère
-ouvrant se pose sur le début de sa barre (aligné à gauche, `data-ancrage="GAUCHE"`), le repère terminant sur son bout (aligné à droite,
-`DROITE` ; quand la barre est plus étroite que deux cibles, 88 px, aligné à gauche sur le bout, hors de la barre). Les repères restent
-des boutons distincts de la barre, avec tout ce qui les définit, et l'ordre de tabulation reste celui du temps ; `data-en-ligne` sur
-`anomalie-frise-plan` sert au dessin seul (la barre réserve la place de ses repères). En ligne, la poignée est le bout de la barre qu'elle termine : elle se
-tient sur la rangée de l'activité qu'elle vise (`activiteVisee`), à la hauteur de sa barre, sans rangée propre ; la barre finit à l'instant
-qu'elle tient (`instantTenuSur`), prend `data-fin="PROPOSEE"` et son nom dit « heure proposée HH:MM » (offset de l'heure répétée
-gardé), sans aucune durée calculée (ADR 0047). Poignée avant la fin reçue, la portion retirée se dessine jusqu'à elle (`anomalie-frise-retrait`,
-hachure `warn`, bordure pointillée, `aria-hidden`) ; après, la barre s'allonge, sans portion retirée. Pour une activité échue visée, sa fin
-automatique reste tracée tant que la poignée existe (`anomalie-frise-fin-recue`, trait pointillé `warn`, `aria-hidden`, titré « Fin
-automatique HH:MM ») ; pour une autre, aucun trait. Corriger un passage ouvrant pose la poignée au bout de la barre précédente, le repère du
-passage gardant son heure barrée au début de la suivante. En ligne, ni poignée ni placement n'ont de rangée propre : un fait dont l'activité visée n'est pas dans le dossier n'y a ni poignée
-ni rangée de placement (le champ date et heure reste l'accès). Quand un aperçu est disponible et qu'une poignée vise une activité, la barre
-visée dit l'état et le temps que l'aperçu reçoit pour elle (`etatRecuPourLaBarre`, `FriseEnLigne.ts`) si `apercu.apres` contient cette
-activité et que `activitesModifiees` n'en retient aucune autre : texte et nom de la barre portent l'état et le temps de l'après (« Terminée · 9 h » ;
-`LIBELLES_ANOMALIES.etats`, `tempsActivite`, jamais calculé par le front), le nom garde « heure proposée », et la barre porte
-`data-modifiee` si l'activité change ; il n'y a alors pas de groupe « Après cet acte » (`apres` indéfini), donc plus de repère « posé par
-cet acte » : la section d'aperçu garde l'issue, les conséquences et la comparaison des journaux. Sans cela (annulation, correction d'un
-ouvrant, activité absente de l'après, autre activité modifiée, aucune poignée qui vise une activité), le groupe « Après cet acte » reste celui
-des rangées, inchangé. Déplacer la poignée retire l'aperçu, donc l'état reçu de la barre.
-Une saisie de correction ou de régularisation dont le fait est un passage ou un arrêt (`intention` `TRANSITION` ou `FIN`),
-avec une borne basse (`CadreDuFait.bornes`) et un instant valide, pose une poignée sur la frise (`poigneeDeLaProposition`,
-`PoigneeDeFrise.ts`), sur sa propre rangée sous les repères (en ligne, sur la rangée de la barre qu'elle termine) : c'est une saisie qui émet un instant, avec le champ date et
-heure de la vue complète. Elle prend sa place dans l'ordre de tabulation des repères et des barres, à l'heure où elle se tient. Le fait sans heure (`REGULARISER_FIN` avant saisie) n'en a pas en rangées, et une poignée « sans heure » en ligne (plus bas) : le front
-n'invente aucune heure et l'aperçu reste indisponible tant qu'elle manque. Pendant cette saisie (fait terminant une activité avec une borne basse, instant vide ou illisible,
-`placementDuDossier`), un clic sur la rangée des pointages (`anomalie-frise-placement`, décorative, `aria-hidden`, sous les repères
-qui gardent leur sélection) place l'heure : la frise émet un `PlacementDemande` (instant sous le clic arrondi à 5 minutes), que la page
-résout comme un déplacement (`placer`, `instantDeplace` : horloge relue à l'action, bornes du `CadreDuFait`, un clic hors bornes se
-ramène à la plus proche), puis `change({ fait: { instant } })` ; la poignée prend la relève et la rangée disparaît. L'échelle s'élargit
-comme pour la poignée, jusqu'à la même portée, pour que le clic et la poignée partagent la même. En ligne, la rangée de placement est
-celle de la barre visée (`surLaBarreDe`), sans rangée propre, et trois gestes placent l'heure. **Poignée sans heure** : si la barre visée a
-une fin reçue, une poignée « Heure ? » se tient sur ce bout, bordure pointillée, marquée `data-sans-heure` : un `slider` dans
-l'ordre de tabulation, sans `aria-valuenow`, que `aria-valuetext` dit « Aucune heure posée » ; c'est le même élément `POIGNEE` (clé `poignee`, même `@case`) que la
-poignée, si bien que le nœud, donc la capture du pointeur, survit au premier mouvement qui donne une heure au fait. Appuyer puis glisser
-émet un `PlacementDemande` au premier mouvement (instant sous le pointeur, arrondi à 5 minutes), puis des déplacements `VERS` une fois
-l'heure posée ; un appui relâché sans mouvement n'émet rien. Au clavier, la frise émet la demande sans la résoudre : une flèche (avec
-ou sans Maj) un `PlacementDemande` `VERS` la fin reçue qu'elle tient, Origine et Fin un `BORNE`, que la page résout avec l'horloge lue à
-l'action (`instantDeplace`, qui ramène aussi un `VERS` à la minute entière), puis la poignée, gardant le focus, se déplace comme toute poignée ; elle est
-désactivée avec `placement.desactivee`. Sans fin reçue, pas de poignée sans heure. **Clic sur la barre** : un clic au pointeur (`MouseEvent.detail > 0`) sur la barre visée,
-ou sur sa rangée hors des repères, place l'heure comme ci-dessus. C'est l'**exception documentée à la sélection** : pendant le placement,
-l'activation de cette barre au clavier (Entrée, Espace : `detail === 0`) la sélectionne toujours, comme à l'ouverture
-(`selectionInitiale`), et un clic au pointeur la sélectionne quand le placement est désactivé (pendant une opération), sans rien placer ; les autres barres et les repères gardent leur sélection au clic. Une aide visible (`anomalie-frise-aide`) dit de
-tirer le bout de la barre ou de cliquer dessus pour placer l'heure du fait, ou de la saisir, sans nommer « la fin » : elle vaut pour un arrêt
-comme pour un passage. Au clavier, la poignée, « Heure ? » comprise, place l'heure ; dans la vue complète, le champ en est un second
-accès, et dans la vue de résolution, qui n'a pas de champ, la poignée et le clic sur la barre sont les seuls. Elle est inactive
-pendant une opération. La frise a un **mode lecture seule** (entrée `lectureSeule`, faux par défaut) : les repères et les barres y sont des images (`role="img"`, `div`),
-sans `aria-pressed`, hors de l'ordre de tabulation, et ne demandent jamais de sélection ; ils gardent leur nom, leur symbole, leur heure et leurs
-badges. Ils laissent passer le pointeur (`pointer-events: none`) : pendant le placement, un clic au pointeur sur la barre visée tombe sur la rangée
-de placement qui la couvre et place l'heure ; ailleurs il ne fait rien. La poignée garde son pointeur et son clavier.
-La poignée est un `slider` : le pointeur la
-capture (`touch-action: none`) et la déplace par pas de 5 minutes (le décalage de la prise est gardé), les flèches de 1 minute
-(Maj : 15), Origine et Fin vont aux bornes, `aria-valuetext` porte l'heure (avec son offset quand l'heure est répétée au
-changement d'heure d'automne). La frise ne décide pas de l'instant : elle émet une demande (`DemandeDeDeplacement` : `DE`
-minutes, `VERS` instant, `BORNE`) avec la poignée lue, que la page résout (`instantDeplace`, `DeplacementDeLaPoignee.ts`) après
-avoir lu l'heure à l'action : en minutes entières, entre la borne basse du `CadreDuFait` et cette heure, comparées à la
-nanoseconde (`InstantPointage.firstWholeMinute` et `lastWholeMinute`), puis transmet par
-`change({ fait: { instant } })`, secondes à zéro : la
-fraction et l'aperçu disparaissent comme pour une saisie dans le champ, qui affiche la nouvelle valeur. « −5 min » et « +5 min »
-de « Votre décision » font la même demande et se désactivent à une borne. La poignée et ses boutons sont désactivés tant
-qu'une opération est en cours (l'aperçu d'arrière-plan d'une vue de résolution n'en est pas une). La frise émet aussi `poigneeRelachee` quand le pointeur qui tenait la poignée la relâche ou est annulé
-(jamais pour une poignée désactivée ni un appui qui ne l'a pas saisie) : la vue de résolution y lance l'aperçu. Poignée active, l'échelle va jusqu'à trois heures après le dernier instant reçu (`finDeLaPortee`),
-sans dépasser l'heure courante des bornes (jamais en deçà de l'échelle normale) ; elle ne s'élargit jamais pour couvrir une heure
-saisie. La borne haute de la poignée et de la rangée de placement est la plus proche de l'heure courante et de cette portée : au-delà,
-l'heure se saisit au champ de la vue complète. Une heure saisie hors des bornes du fait (`INSTANT_AVANT_CIBLE`, `INSTANT_FUTUR`) ou hors de la portée garde
-sa poignée, tenue à la borne la plus proche sur l'échelle (`aria-valuenow`), avec l'heure saisie pour texte ; le champ dit
-pourquoi, et le premier déplacement ramène l'heure dans les bornes. L'heure d'origine du
-pointage corrigé reste barrée sur son repère tant que la poignée s'en éloigne.
-Quand un aperçu est disponible, la frise reçoit `apercu` (`avant` et `apres`) et dessine, sauf pour la barre qui dit l'état reçu (en ligne, plus haut), sous ses rangées actuelles, un groupe
-« Après cet acte » (`anomalie-frise-apres`) sur la même échelle, qui couvre aussi les pointages de l'anomalie et les activités de
-l'après : une rangée de repères (`anomalie-apres-pointage`) puis une barre par activité (`anomalie-apercu-activite-apres`), selon la
-grammaire des rangées actuelles (fins reçues seulement, rien n'est inventé). Ces éléments sont des images (`role="img"`),
-sans tabulation ni sélection ; le nom d'une barre porte la catégorie, la période, l'état et le temps reçus. La comparaison est
-de la présentation (`ComparaisonDApercu.ts`) : une activité dont l'état, le début, la fin ou la durée reçus changent entre
-`avant` et `apres`, ou que l'avant ne portait pas, est mise en évidence (`data-modifiee`, mot « modifiée » dans son nom) ; le
-pointage que le journal d'après tient et que celui d'avant ne tenait pas (journaux complets, pour qu'un pointage déjà connu mais
-entré dans l'anomalie par l'acte ne passe pas pour posé), fait corrigé ou créé par l'acte, est le fait de l'acte (`data-fait-de-l-acte`, « posé par
-cet acte »). Un pointage annulé par l'acte est barré. Une poignée active reste affichée avec l'aperçu ; la déplacer retire
-l'aperçu, donc ces rangées. La section d'aperçu garde l'acte, la phrase d'issue, l'enregistrement, les conséquences textuelles
-reçues (seulement s'il y en a) et la comparaison repliée de tous les pointages.
-La sélection est un pointage ou une activité (`SelectionDuDossier`). Le panneau « Sélection », sous la frise et à gauche de « Votre décision »,
-porte le pointage choisi : geste, instant avec ses secondes, opérateur, poste, régularisation, annulation (motif, auteur,
-instant), remplacement, traçabilité (activités visée et créée, enregistrement) et les boutons Corriger et Annuler, absents d'un
-pointage annulé, désactivés pendant une opération. Pour une activité il dit sa catégorie, son état et son
-temps reçus (`tempsActivite`), son début et sa fin reçus (« Fin ») ; l'état d'une activité échue se dit « Fin automatique », jamais « Échue » ; il n'a ni Corriger
-ni Annuler. La sélection dérive du dossier par `linkedSignal` (pas d'`effect`, ADR 0043) : à chaque nouveau dossier (autre
-adresse, relecture, reçu), elle revient à la sélection initiale (`selectionInitiale`) : le plus ancien pointage en cause d'un
-diagnostic parmi les pointages de l'anomalie, sinon la première activité échue d'une fin automatique, sinon rien et le panneau invite à
-choisir. Une sélection absente du dossier courant, ou hors des pointages de l'anomalie, ne s'affiche jamais : un pointage
-du journal hors de l'anomalie ne se corrige ni ne s'annule depuis ce dossier (« Ajouter un pointage manquant » reste). Sélectionner ne choisit aucun acte : la saisie d'acte,
-l'aperçu et le choix guidé restent inchangés. L'historique d'adresse obsolète garde sa liste, sans sélection.
-Un pointage se nomme par le geste de l'opérateur, jamais par le couple Type et Intention (`libelleDuGeste`,
-`LIBELLES_ANOMALIES.gestes`) : `DEBUT·OUVERTURE` « Démarrage », `NON_CONFORMITE·OUVERTURE` « Démarrage en NC »,
-`NON_CONFORMITE·TRANSITION` « Passage en NC », `DEBUT·TRANSITION` « Retour en bon », `FIN·FIN` « Arrêt ». Un pointage
-régularisé garde son libellé et sa mention « Régularisation ». Un fait hors de la table (type ou intention vides, ou
-incompatibles : un fait vierge, ou un pointage reçu que le serveur ne produit pas) retombe sur « Type · Intention » des champs
-remplis, rien quand les deux sont vides. Les catégories d'activité (« Travail », « Non-conformité ») gardent leurs mots.
-Le formulaire du fait dit d'abord « Ce que signale le pointage » (`anomalie-signal`) : un `<select>` natif des cinq gestes
-ci-dessus, dans l'ordre Démarrage, Démarrage en NC, Passage en NC, Retour en bon, Arrêt, tel que le domaine les liste
-(`COMBINAISONS_VALIDES`, `domain/acte/` : le domaine possède les combinaisons valides, `SaisieActe` en tire sa compatibilité et
-le primaire ne fait que les nommer, `GESTES_PROPOSES`). Il remplace les groupes Type et Intention : choisir un geste change le
-type et l'intention en une seule saisie (`change({ fait: { type, intention } })`), si bien que la saisie ne peut plus former de
-type et d'intention incompatibles ; `INTENTION_INCOMPATIBLE` reste une règle du domaine, que l'écran ne produit plus, et elle ne
-concerne qu'un couple complet : un geste à moitié choisi (type sans intention, intention sans type) ne demande que ce qui manque. Un fait sans type ni intention (régularisation à
-partir de rien) montre une option vide « Choisissez ce que signale le pointage », sélectionnée et non choisissable, et une seule
-erreur lisible (`erreursALire` : « Choisissez ce que signale le pointage. », jamais le type puis l'intention). « Activité qu'il
-termine » (`anomalie-cible`, `SaisieActe.cibleApplicable()`) ne s'affiche que pour un passage ou un arrêt, et tant qu'une cible est posée : un démarrage qui garde
-sa cible laisse `CIBLE_INTERDITE` que le gestionnaire doit pouvoir effacer, et le champ disparaît une fois la cible effacée.
-Le gestionnaire choisit l'opérateur et le poste d'un fait par leur nom, jamais en tapant un identifiant. Le formulaire les replie en
-une ligne « Camille Martin · Fraiseuse 1 » (`anomalie-identite`, mêmes règles que l'aperçu : « Opérateur non résolu »,
-« Sans poste ») avec « Modifier » (`aria-expanded`, texte visible « Modifier », nom accessible « Modifier l'opérateur et le poste »),
-qui déplie ou replie les champs ci-dessous ; la ligne et son bouton sont le motif de divulgation, donc ils n'existent que pour
-ouvrir ou fermer les champs. Une nouvelle saisie d'acte repart repliée (`identiteDeployee`, un `linkedSignal` sur
-`propositionsFaites`, que « Modifier » seul écrit, ADR 0043). Les champs sont dépliés d'office quand le référentiel charge ou
-est en panne (`identiteForcee`), et pour un fait sans opérateur (`SaisieActe.operateurManque()`, régularisation à partir de rien) :
-dans ces cas la ligne est masquée, les champs disant déjà « Opérateur actuel conservé » ou « Choisissez l'opérateur ». Une fois
-l'opérateur choisi pour un fait sans opérateur, la ligne et son bouton apparaissent au-dessus des champs, qui restent dépliés. Le port de lecture
-expose `referentiel()` (`ReferentielAnomalies` : `OperateurAnomalie { id, nom, code?, postesHabilites }` et
-`PosteAnomalie { id, libelle }`, types propres au contexte), lu en entier par `GET /api/operateurs` et
-`GET /api/postes-de-travail` (`collectAllPages`, page demandée vérifiée, aucune collection tronquée ni identité dupliquée).
-`operateurs()` en est la première moitié, lue seule : la liste, qui n'emploie pas les postes, ne paie pas leur lecture et
-ne tombe pas avec eux ; seul le dossier lit le référentiel entier.
-`nom` est « Prénom Nom » ; `code` est le code pupitre facultatif (`RestOperateur.identifiant`), pas un UUID. Les identités
-du référentiel suivent `ElementAnomalieId` (`OperateurAnomalieId`, `PosteAnomalieId`) ; `FaitPropose` et `SaisieFait`
-gardent des `string`, que le serveur reçoit tels quels, et le primaire emballe l'identité à la frontière. Le dossier lit
-le référentiel à chaque ouverture, sans cache. L'opérateur se choisit
-dans `SelecteurOperateurAnomalie` (le `SearchPicker` de Gestion : recherche sans accents sur le nom, le prénom et le code,
-options « Prénom Nom · code »), le bouton disant « Choisissez l'opérateur » tant que la saisie est vide ; le poste est un
-`<select>` natif qui commence par « Sans poste », puis les postes habilités de l'opérateur choisi, puis les autres. Une
-valeur que le référentiel ne contient pas reste sélectionnée comme « … non résolu (référence actuelle) », sans identifiant.
-Si le référentiel échoue, le formulaire affiche « Liste des opérateurs et des postes indisponible » avec « Réessayer », garde
-la saisie courante et désactive les deux champs, qui disent « Opérateur actuel conservé » et « Poste actuel conservé » : un
-référentiel qu'on n'a pas lu ne rend aucune valeur « non résolue ». L'aperçu de l'acte nomme l'opérateur et le poste depuis le
-référentiel, puis depuis le journal, sinon « non résolu » (« actuel conservé » tant que le référentiel n'est pas lu).
-Une lecture de référentiel, d'opérateurs ou d'éléments que « Réessayer » relit ne démonte pas sa zone (`etatDeLecture` :
-seule la première lecture remplace le champ par « Chargement… ») : le bouton reste, `aria-busy`, et garde le focus.
-Un refus d'acte se traduit par code (`urn:glm:erreur:atelier:<code>`, [API](../../../../../../documentation/api.md)) :
-le port rend `{ kind: 'REFUS', code }` pour les quatorze codes connus (`CODES_REFUS_ACTE`) et ne transmet jamais le
-message du serveur, qui contient des identifiants ; le primaire rend `LIBELLES_ANOMALIES.refus[code]`, un libellé du
-contexte sans identifiant. Un code inconnu reste une défaillance technique (« L'opération a échoué. Votre saisie est
-conservée. »), jamais un refus au message brut.
-Le domaine garde chaque instant reçu en texte ISO ; le primaire l'affiche en heure locale par les formats
-et les pipes de `app/shared/date-format` : jour long (« jeudi 1 octobre à 09:41 »), année ajoutée quand elle diffère
-de celle de la page, secondes réservées à l'instant d'un fait pointé (« à 09:41:22 »), heure en gras puis jour long dans
-le panneau Sélection. La page lit `now` une fois et la passe aux pipes ; l'attribut `datetime` n'a jamais plus de trois
-décimales.
-Le gestionnaire choisit la date et l'heure du fait avec `glm-date-time-field`, le `datepicker` et le `timepicker` de
-Material en français (adapter et locale fournis par `provideGestionDateAdapter()` sur la page du dossier, chargée à la demande). Le champ
-est lié par valeur, sans formulaire : seule une saisie du gestionnaire émet un instant (`2026-10-01T09:41:22-03:00`, offset
-local, sans fraction de seconde, composé par `app/shared/date-format`), si bien qu'un instant reçu qu'il ne touche pas
-garde ses nanosecondes. Modifier la date ou l'heure d'un instant reçu abandonne sa fraction de seconde. Une date ou une
-heure absente, mal saisie ou impossible laisse le champ en l'état et transmet `instant: ''` : le domaine répond
-`INSTANT_INVALIDE` (« Renseignez la date et l'heure du fait. »). Le domaine valide et ordonne les instants ; il ne lit
-jamais le fuseau ambiant. Au changement d'heure, une heure que l'horloge saute (printemps) est refusée avec son message
-propre, une heure répétée (automne) prend sa première occurrence, même le jour du changement. Le fait reste dans les
-bornes de `CadreDuFait` (Value Object du domaine, qui porte le début reçu de chaque activité du dossier et l'heure
-courante, comparés par `InstantPointage.compareTo`) : `INSTANT_AVANT_CIBLE` s'il précède le début de l'activité visée (l'égalité
-est permise ; pas de borne basse sans activité visée, absente du dossier ou sans période), `INSTANT_FUTUR` s'il dépasse
-l'heure courante. L'échéance n'est pas une borne. `command()` et `errors()` de `SaisieActe` reçoivent le cadre ; `matches()`
-compare sans bornes et sans heure. `CadreDuFait.bornes(fait)` rend `{ min?, max }`, que la frise lira sans les recalculer.
-Le domaine ne lit jamais l'horloge. Il y a deux horloges : `now`, lue une fois à la construction de la page, ne sert qu'à
-l'affichage des dates ; `maintenant`, qui sert aux bornes, est relue à chaque action (choisir, modifier, déplacer, placer) et par
-`PreparationActe.preview` au moment d'appeler le port, jamais figée pour toute la page ; `preview` refuse un fait hors bornes sans appeler le port. Chaque nouvelle saisie d'acte
-(un choix, même identique, ou « Ajouter un pointage manquant ») recrée le champ : une saisie partielle ne lui survit pas.
-Une activité en cours reste sans temps définitif ; une activité terminée ou échue sans durée rejette
-l'acquisition. `enConflit` concerne le périmètre reçu, qui fait autorité, et ne se déduit pas du statut de l'ancrage.
+Les filtres sont des brouillons jusqu'à « Filtrer », qui inscrit les choix dans l'adresse avec `page=1`.
+`SelecteurOperateurAnomalie` et `SelecteurElementAnomalie` habillent `SelecteurRecherchable` (recherche sans accents,
+entrée « Tous… »). L'adresse garde l'identifiant ; le champ ne l'affiche jamais et nomme « … non résolu (référence
+actuelle) » une valeur que le référentiel ne contient pas. Opérateurs et éléments sont lus entiers (`collectAllPages`,
+toutes les pages, aucune collection tronquée) à chaque ouverture de la liste, séparément : la panne de l'un
+désactive son seul filtre (« … actuel conservé », « Réessayer » qui reste affiché et garde le focus) sans toucher à
+l'autre filtre ni à la liste. La première lecture seule remplace le filtre par « Chargement… ».
 
-Un dossier de fin automatique n'a pas de `sequence` : il se lit depuis le périmètre reçu, comme le reçu de l'acte. Le périmètre du dossier
-est traduit dans toutes les lectures (dossier, aperçu `avant` et `apres`, reçu) depuis les pointages du périmètre reçu, réunis à
-`sequence.pointages` quand la séquence est reçue ; un périmètre reçu absent rejette l'acquisition. Le
-modèle porte `etat` (l'état d'adresse reçu) et `finAutomatique`. L'issue d'un acte est la projection
-`IssueDeLActe.depuis` (`domain/dossier/`), que l'aperçu et le reçu appellent : « traitée » signifie ni `enConflit` ni
-`finAutomatique`, quel que soit l'état d'adresse (une adresse `ANCRE_ANNULEE` peut rester en fin automatique lorsque
-l'ouvrant corrigé est encore échu). Elle dépend de la nature du dossier d'origine, celui affiché avant l'acte : un
-conflit (`etat` autre que `FIN_AUTOMATIQUE` et `enConflit`) a trois issues, `TRAITEE`,
-`CONFLIT_LEVE_FIN_AUTOMATIQUE_RESTANTE` et `CONFLIT_RESTANT` ; une fin automatique (tout autre dossier) en a deux,
-`TRAITEE` et `ANOMALIE_RESTANTE`, et ne se présente jamais comme un conflit. Elle rend aussi l'adresse de chaque fin
-automatique restante, une par activité `ECHUE` du dossier d'après quand celui-ci porte `finAutomatique` (sans quoi aucune, comme
-l'issue n'en annonce aucune), sauf celle dont l'adresse est l'adresse d'origine (le lien mènerait à la page
-affichée) : `{ suivi, pointage: activite.ouvrant }`, l'`ouvrant` étant l'`evenement` reçu de l'activité. L'aperçu lit son origine dans `apercu.avant` et dit la phrase sans lien ; le
-reçu la dit avec un lien `anomalie-fin-automatique-restante` par fin restante vers `/anomalies/{suivi}?pointage={ouvrant}`,
-qui garde `nature`, `operateur`, `element` et `page`. L'origine est le dossier `avant` de l'aperçu confirmé :
-`PreparationActe` la garde avec la confirmation en attente et la livre avec le résultat `APPLIQUE` (`origine`), si bien que
-confirmation, reprise et vérifications du reçu, même concurrentes, annoncent la même issue ; la page ne la relit pas du
-dossier qu'elle remplace. Les phrases vivent dans `LIBELLES_ANOMALIES.issue`. L'en-tête du dossier dit le problème en une phrase
-(`anomalie-probleme`, `phrasesDuProbleme` du primaire, modèles dans `LIBELLES_ANOMALIES.problemes`) : une par
-diagnostic d'un conflit à expliquer (`conflitAExpliquer`, soit `enConflit` ; sans diagnostic reçu, l'explication de
-la ligne), une par activité échue d'une fin automatique. Les deux lectures diffèrent à dessein : la nature du dossier
-(`IssueDeLActe`) classe l'adresse d'origine pour annoncer l'issue, tandis que les phrases disent tout ce que le périmètre reçu
-porte encore ; une fin automatique dont le périmètre reçu reste `enConflit` dit donc aussi le conflit, sans devenir un dossier
-de conflit. Elle disparaît dès que le périmètre reçu ne porte plus le problème, y
-compris après le reçu d'une fin automatique ou d'un conflit résolu.
-Le dossier montre l'activité échue sur la frise, sélectionnée à l'ouverture, avec son début, sa fin automatique et sa
-durée reçus dans le panneau Sélection, et la clôture dans l'en-tête, sans les calculer ; il ne se présente jamais comme
-un conflit. Trois choix guidés s'ajoutent, distingués par leur `code` et lus d'après le `fait` reçu :
-`REGULARISER_FIN` prérempli sans heure, que le gestionnaire saisit (aucune heure n'est inventée) ;
-`CORRIGER_FIN_TARDIVE` et `CORRIGER_TRANSITION_TARDIVE` reprenant l'heure du pointage tardif, le motif
-restant à saisir dans la vue complète (une vue de résolution le fixe). Les trois choix ont une vue de résolution. Un fait reçu incohérent avec son code rejette l'acquisition. Aperçu, confirmation, reçu,
-reprise et obsolescence restent ceux de toute saisie.
+Le sous-titre dit ce que la liste contient : « Activités arrêtées par la fin automatique : ouvrez un dossier pour
+placer la fin réelle. » `?plusAucune=1`, écrit par « Anomalie suivante », affiche « Plus aucune anomalie » au-dessus
+de la liste ; tout changement de filtre ou de page l'abandonne.
 
-Le reçu fournit le dossier canonique courant depuis le périmètre reçu, même à une ancre annulée. Une lecture
-ordinaire utilise `sequence` et conserve le résultat d'adresse obsolète. La vérification canonique
-fonctionne indépendamment de cette lecture. `NON_ATTESTE` et les erreurs techniques gardent l'issue
-inconnue : toute nouvelle décision reste bloquée. La reprise explicite réutilise la même commande et
-la même proposition ; seul un résultat canonique attesté conclut l'écriture.
-Après obsolescence, la saisie reste disponible et l'aperçu est retiré. La page réacquiert le dossier ;
-une acquisition échouée laisse la confirmation indisponible. Dans la vue complète, le gestionnaire demande ensuite un nouvel
-aperçu avant toute confirmation ; la vue de résolution relance elle-même l'aperçu après une réacquisition réussie. Une adresse
-devenue obsolète conserve son résultat explicite.
+### Dossier
 
-## Vue de résolution
+La page lit l'adresse, le dossier et les opérateurs (pour nommer l'opérateur quand le dossier ne le porte pas).
+**Un dossier introuvable ramène à la liste**, sans écran intermédiaire ni avis : 404 `suivi-d-atelier-introuvable`
+ou `fin-automatique-introuvable` (activité régularisée entre-temps, pointage qui n'est pas une fin automatique,
+suivi disparu), ou adresse sans pointage. La navigation garde les filtres et la page, remplace l'entrée d'historique
+(`replaceUrl`, sinon « Précédent » reviendrait au dossier qui redirigerait de nouveau), se fait dans le chargeur de
+la lecture (pas d'`effect`, [ADR 0043](../../../../../../documentation/adr/0043-forbid-angular-effects-everywhere.md))
+et n'a lieu que si la lecture n'est pas abandonnée (page quittée, adresse changée). Une panne technique n'est pas
+un 404 : elle garde l'écran d'erreur avec « Réessayer ». Une adresse dont l'identifiant n'est pas un UUID reste
+sur cet écran d'erreur.
 
-La page affiche la vue de résolution que `aiguiller` (`vues-de-resolution/VuesDeResolution.ts`) retourne pour un dossier, par
-`NgComponentOutlet`, avec le dossier, l'unique choix, `now`, les paramètres de retour, le référentiel et la lecture du dossier
-(`LectureDuDossier` : `relire`, qui lit l'adresse sans repasser par l'état de chargement, et `remplacerPar`, qui installe le
-dossier d'un reçu). On étend le registre sans retoucher la page. Les trois vues (`ResolutionRegulariserFin`,
-`ResolutionCorrigerFinTardive`, `ResolutionCorrigerTransitionTardive`) habillent le composant commun `ResolutionDeFin`
-(`vues-de-resolution/resolution-de-fin/`, logique et gabarit) de leur `VarianteDeResolution` : libellés du bouton, motif fixé et ligne
-sur l'activité ouverte. La vue n'a pas de champ date et heure : la poignée, au pointeur comme au clavier, et le clic sur la barre
-sont les seuls accès à l'heure.
+L'en-tête de « Régulariser la fin » dit l'élément (désignation), l'opérateur · poste · début, puis la phrase du
+problème : « Le travail démarré à 08:00 n'a jamais été arrêté : fin automatique à 18:00. » (« La non-conformité
+démarrée… » en NC). Aucun identifiant n'est jamais affiché : « Opérateur non résolu », « Poste non résolu »,
+« Sans poste ». Le domaine garde chaque instant en texte ISO ; le primaire l'affiche en heure locale par
+`app/shared/date-format`. La page lit `now` une fois pour l'affichage ; `maintenant`, qui sert aux bornes, est relue
+à chaque action.
 
-| Code                          | Vue                                   | Poignée au départ         | Bouton                         | Motif envoyé (caché)                                            |
-| ----------------------------- | ------------------------------------- | ------------------------- | ------------------------------ | --------------------------------------------------------------- |
-| `REGULARISER_FIN`             | `ResolutionRegulariserFin`            | « Heure ? », sans heure   | « Valider la fin à HH:MM »     | aucun                                                           |
-| `CORRIGER_FIN_TARDIVE`        | `ResolutionCorrigerFinTardive`        | l'heure reçue du pointage | « Valider la fin à HH:MM »     | « Arrêt pointé après l'échéance : heure vérifiée en gestion »   |
-| `CORRIGER_TRANSITION_TARDIVE` | `ResolutionCorrigerTransitionTardive` | l'heure reçue du pointage | « Valider le passage à HH:MM » | « Passage pointé après l'échéance : heure vérifiée en gestion » |
+Un lien « Voir la journée de … » mène au relevé des heures de l'opérateur, `/operateurs/{id}/heures?jour=AAAA-MM-JJ`,
+au jour local du début de l'activité échue. Ce contexte ne calcule aucune semaine et n'importe rien du relevé.
 
-Pour la transition, une ligne de plus (`anomalie-resolution-activite-ouverte`) dit ce que l'heure ouvre : « La non-conformité
-commencera à cette heure. » (passage en NC) ou « Le travail reprendra à cette heure. » (retour en bon).
+### Poignée
 
-À l'ouverture, la vue prend la saisie du choix (`choose(choix.saisie)`) : c'est l'exception assumée à « aucun acte n'est choisi par
-défaut ». Elle montre, dans l'ordre : l'en-tête et la phrase du problème ; la ligne « 1 autre fin automatique sur cet élément »
-(accordée au pluriel) qui fait lien vers l'adresse de la première autre activité échue (`activite.ouvrant`), avec les
-paramètres de liste conservés comme les liens de fin restante ; la frise en lecture seule (repères et barres en images, clic au
-pointeur sur la barre qui place l'heure, poignée qui se glisse et se pilote au clavier, « Heure ? » comprise, chemin du clavier et
-des lecteurs d'écran, aide « Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle ») ; le statut d'opération du
-socle (refus sous la frise, issue inconnue avec « Vérifier » et « Reprendre », puis le reçu) ; l'erreur d'une borne locale
-(`CadreDuFait`), qu'une heure reçue hors bornes peut seule produire puisque la poignée s'y tient ; l'aperçu en une ligne, par exemple « Travail 13 h →
-9 h · anomalie traitée » ou « … · 1 fin automatique restante » (`resumeDeLApercu`), dont « Voir le détail » déplie les conséquences et la
-comparaison des journaux sans aucun motif ; le bouton « Valider la fin à HH:MM » ; le lien discret « Autre correction… ». On ne
-pré-remplit jamais d'heure pour `REGULARISER_FIN`, et le motif n'existe pas pour une régularisation ; une correction pose aussitôt son
-motif fixé (`change({ motif })`) et son heure reçue, et lance son aperçu dès l'ouverture, puisqu'une heure existe. « Voir la journée de … » reste
-sur la frise. Une fois le reçu affiché, la poignée, « Valider » et « Autre correction… » disparaissent.
+La poignée se place en tirant le bout de la barre, en cliquant sur la frise (arrondi à 5 minutes) ou au clavier
+(flèches : 1 minute, Maj : 15, Origine et Fin : aux bornes). Avant toute heure elle se tient « sans heure »
+(« Heure ? ») sur la fin automatique : aucune heure n'est inventée, « Valider la fin » est inactif. Ses bornes
+viennent de `CadreDeLaFin.depuis(dossier, maintenant)` :
 
-L'aperçu part tout seul (`ApercuAutomatique`, fourni par la vue, minuterie en primaire) : à la **libération** de la poignée, **400 ms**
-après la dernière touche sur la poignée, ou après un clic sur la barre (même délai) ; « Réessayer
-l'aperçu » le relance aussitôt après une erreur réseau (`ERREUR`). Aucune requête ne part tant que les pré-contrôles locaux
-échouent. La minuterie est annulée au changement d'adresse, à la destruction de la vue et au clic sur « Valider ». Après `CONCURRENCE`
-(à l'aperçu comme à la confirmation), la vue relit le dossier (`relire`) et relance l'aperçu une fois par lancement ; si la relecture
-échoue, la page affiche sa lecture en erreur avec « Réessayer ». « Valider » n'est actif que si l'aperçu est reçu, à jour et sans refus.
+- **minimum** : la première minute entière strictement après le début de l'activité ; le serveur refuse une
+  fin qui n'est pas postérieure au début ;
+- **maximum** : `min(maintenant, borneDeFin)`, soit le plus tôt de l'heure courante et de ce qui borne la fin.
+  Elle peut dépasser l'échéance.
 
-« Autre correction… » passe à la vue complète, avec un lien « Revenir à la vue simple », sans garder cet état dans l'URL. Le
-passage vide la saisie : la vue complète redémarre sans acte choisi ni motif. Une confirmation en ligne (« Passer à la vue
-complète » / « Rester ici ») n'est demandée que si une heure a été **saisie** (`SaisieActe.heureDifferenteDe` le choix de départ : une heure posée en régularisation,
-ou, en correction, un instant différent de l'instant reçu, comparé comme instant et non comme texte). Le
-lien est désactivé pendant la confirmation et l'issue inconnue. Revenir à la vue simple rouvre une vue neuve, aiguillée de nouveau sur
-le dossier courant (`aiguiller`), jamais sur le choix figé à l'ouverture : le lien n'est offert que si ce dossier a encore une vue de
-résolution, donc il disparaît dès qu'un autre acte a été enregistré depuis la vue complète.
+Les bornes sont des pré-contrôles : le serveur reste l'autorité (`fin-avant-debut`, `fin-apres-borne`,
+`date-de-survenue-future`). Les instants se comparent comme instants (`InstantPointage`, nanosecondes
+comprises), jamais comme chaînes. Quand le minimum dépasse le maximum, la poignée ne bouge pas.
 
-La composition utilise uniquement `HttpAnomalies`, y compris dans les parcours Cypress. Les réponses
-réseau des tests sont des données REST typées interceptées ; elles ne calculent aucune règle métier
-et n'interprètent aucun acte. La route `anomalies` est réservée au gestionnaire par un garde `canMatch` de Gestion
-(`reservedToGestionnaire`, voir [`authentication.md`](../../../../../../documentation/authentication.md)) : une
-personne sans le rôle est renvoyée vers `/` avant tout chargement du contexte. Les droits d'application restent
-`GESTIONNAIRE`.
+### Frise
 
-Les tests passent par la saisie et la résolution publiques, les contrats des ports, le DOM Cypress
-et les routes réelles. Leur liste et les garanties HTTP sont dans les [garanties de résolution](SCENARIOS.md).
+La frise (`glm-frise-dossier`) dessine, du plus tôt au plus tard :
+
+- la barre de l'activité échue, `accent` pour le travail et `nc` pour la non-conformité, finie à l'échéance par
+  l'embout hachuré `warn` de Gestion ; avec une poignée, elle finit à l'heure proposée, la portion retirée se
+  dessine jusqu'à l'échéance et la fin automatique reste tracée (« Fin automatique HH:MM ») ;
+- le repère du pointage qui ouvre l'activité ;
+- la **borne tracée** : le repère du `DEBUT` ou de la `NON_CONFORMITE` du journal dont l'instant égale
+  `borneDeFin` (`demarrageDeLaBorne`, comparaison à la nanoseconde ; une `FIN` n'en est jamais un), sinon un
+  repère « Clôture » ;
+- la poignée.
+
+Les autres pointages de la clé ne sont pas tracés. L'échelle va d'une heure avant le premier instant dessiné à
+une heure après le dernier, par heures entières, et s'étend jusqu'à la borne de la poignée. Elle tient dans la
+largeur de l'hôte, sans défilement (`ResizeObserver` créé dans `afterNextRender`) : les graduations s'espacent selon
+la largeur, jamais à moins de 64 px, et repères et poignée restent à 22 px des bords. Le repère de la borne est serré
+contre le bord droit pour rester entier ; son heure reste exacte dans son texte. Barres et repères sont des images
+(`role="img"`) ; la poignée est un `slider` dans l'ordre de tabulation. Les tests lisent les attributs `data-*`,
+jamais les classes ; la position horizontale se prouve en Cypress sur la géométrie rendue des graduations
+(`AbscisseSurLaFrise.ts`).
+
+### Validation
+
+« Valider la fin à HH:MM » envoie `POST /api/atelier/suivis/{id}/regularisations` avec `{ id, activite, dateDeSurvenue }`
+par `RegularisationPort` (`HttpRegularisation`). L'opérateur, le poste et le type se déduisent de l'activité côté
+serveur. 201 et 200 (renvoi du même identifiant) sont des succès.
+
+**L'identifiant est lié au contenu de la saisie** : `SaisieDeRegularisation.pour` garde l'identifiant tant que
+l'activité et l'instant (comparé comme instant, quelle que soit l'écriture) sont les mêmes, après un échec
+technique comme après un refus, et en prend un neuf dès que l'heure change. Sans cela, une première requête
+réussie dont la réponse s'est perdue ferait afficher la nouvelle heure alors que le journal garde la première ;
+avec lui, le serveur répond honnêtement `activite-deja-regularisee`. `RegularisationDeLaFin` n'envoie rien sans
+heure lisible, pendant un envoi ni après le succès.
+
+**Refus traduits** : le port rend `{ kind: 'REFUS', code }` pour les codes de `CODES_REFUS_REGULARISATION`
+(`activite-visee-introuvable`, `activite-deja-regularisee`, `activite-non-echue`, `date-de-survenue-future`,
+`fin-avant-debut`, `fin-apres-borne`, `operateur-non-habilite`, `operateur-introuvable`,
+`poste-de-travail-introuvable`) et ne transmet jamais le message du serveur, qui contient des identifiants ; le
+primaire affiche le libellé du code sous le bouton ([API](../../../../../../documentation/api.md)).
+`activite-non-echue` couvre deux cas : l'échéance n'est pas atteinte, ou un pointage ou la clôture a déjà terminé
+l'activité. **`saisie-concurrente` relit le dossier** : la page le recharge, rebâtit la vue et dit « Le dossier a
+changé pendant la saisie : il a été relu. Placez de nouveau la fin. » Tout autre échec est signalé une fois par
+`ErrorHandlerPort`, rejeté, et affiche « La fin n'a pas pu être enregistrée. Votre saisie est conservée : réessayez. »
+
+### Après la régularisation
+
+La vue affiche **« Fin régularisée à HH:MM »** et **« Anomalie suivante »**; la poignée et « Valider » disparaissent.
+`RechercheDeLAnomalieSuivante` lit la liste avec les filtres de l'adresse de retour et mène, dans l'ordre : à la
+première ligne autre que l'adresse d'origine de la page demandée, puis de la page précédente (une seule) ; sinon
+à la liste, `page` retirée et `plusAucune=1` ; si la lecture de la liste échoue, à la liste d'origine, qui affiche
+sa propre erreur. « Première ligne restante » coïncide avec « la ligne suivante » pour une liste traitée de haut en bas.
+
+### Composition
+
+`AnomaliesReadPort` (liste, dossier, opérateurs, éléments) et `RegularisationPort` sont liés à `HttpAnomalies` et
+`HttpRegularisation` par `anomaliesDePointageProvider`, y compris dans les parcours Cypress, où les réponses
+réseau sont des données REST typées interceptées qui ne calculent aucune règle. Un code d'erreur inconnu est une
+défaillance technique, jamais un refus au message brut. Le domaine ne lit jamais l'horloge ni le fuseau.
+
+## Vérification
+
+Les tests passent par les ports et les composants publics ; leur catalogue est dans [`SCENARIOS.md`](SCENARIOS.md).
+Les règles de test sont dans [`documentation/testing.md`](../../../../../../documentation/testing.md).
+
+## Ce qui a disparu
+
+Le contexte a perdu les conflits, la vue complète, les actions directes, la correction, l'annulation, l'aperçu,
+la confirmation, le reçu et la proposition signée avec le chantier #254 : le serveur ignore désormais les
+pointages incohérents au lieu d'en faire des anomalies. Ne rien rouvrir de cela sans nouvelle décision.
