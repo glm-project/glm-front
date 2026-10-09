@@ -2,7 +2,6 @@ import { TestBed } from '@angular/core/testing';
 import { AnomaliesReadPort } from '../domain/dossier/AnomaliesReadPort';
 import { DestinationSuivante } from '../domain/dossier/AnomalieSuivante';
 import { AdresseDossier, FiltreAnomalies, LigneFinAutomatique, PageAnomalies } from '../domain/dossier/DossierAnomalie';
-import { ElementAnomalieId } from '../domain/dossier/ElementAnomalieId';
 import { PointageAnomalieId } from '../domain/dossier/PointageAnomalieId';
 import { SuiviAnomalieId } from '../domain/dossier/SuiviAnomalieId';
 import { RechercheDeLAnomalieSuivante } from './RechercheDeLAnomalieSuivante';
@@ -87,7 +86,6 @@ describe('Search of the next anomaly', () => {
 
   const uneLigne = (suivi: string, pointage: string): LigneFinAutomatique => ({
     adresse: uneAdresse(suivi, pointage),
-    element: new ElementAnomalieId('element-1'),
     designation: 'Pièce',
     operateur: 'Luc',
     poste: 'Scie',

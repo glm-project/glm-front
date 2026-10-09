@@ -1,5 +1,4 @@
 import { ActiviteAnomalieId } from './ActiviteAnomalieId';
-import { ElementAnomalieId } from './ElementAnomalieId';
 import { OperateurAnomalieId } from './OperateurAnomalieId';
 import { PointageAnomalieId } from './PointageAnomalieId';
 import { SuiviAnomalieId } from './SuiviAnomalieId';
@@ -35,7 +34,6 @@ export interface ActiviteEchue {
 
 export interface LigneFinAutomatique {
   readonly adresse: AdresseDossier;
-  readonly element: ElementAnomalieId;
   readonly designation: string;
   readonly operateur: string;
   readonly poste: string;

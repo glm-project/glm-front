@@ -129,7 +129,6 @@ class RouterFixture {
 
 const finAutomatiqueFixture = (): LigneFinAutomatique => ({
   adresse: { suivi: new SuiviAnomalieId('suivi-camille'), pointage: new PointageAnomalieId('debut-camille') },
-  element: new ElementAnomalieId('of-m24-0655'),
   designation: 'OF M24-0655',
   operateur: 'Camille Martin',
   poste: 'Fraiseuse 1',

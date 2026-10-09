@@ -17,7 +17,6 @@ import {
   PageAnomalies,
 } from '../../../domain/dossier/DossierAnomalie';
 import { ElementAnomalie } from '../../../domain/dossier/ElementAnomalie';
-import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
 import { OperateurAnomalie } from '../../../domain/dossier/OperateurAnomalie';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
@@ -529,7 +528,6 @@ describe('Anomaly dossier page', () => {
 
   const uneLigne = (suivi: string, pointage: string): LigneFinAutomatique => ({
     adresse: { suivi: new SuiviAnomalieId(suivi), pointage: new PointageAnomalieId(pointage) },
-    element: new ElementAnomalieId('element-1'),
     designation: 'M24-0655',
     operateur: 'Camille Martin',
     poste: 'DMU 50',

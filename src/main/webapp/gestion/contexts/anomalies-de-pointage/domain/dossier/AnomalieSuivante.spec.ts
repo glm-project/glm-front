@@ -1,6 +1,5 @@
 import { adresseDeLaDestination, dansLaPage, pageAvant } from './AnomalieSuivante';
 import { AdresseDossier, FiltreAnomalies, LigneFinAutomatique, PageAnomalies } from './DossierAnomalie';
-import { ElementAnomalieId } from './ElementAnomalieId';
 import { PointageAnomalieId } from './PointageAnomalieId';
 import { SuiviAnomalieId } from './SuiviAnomalieId';
 
@@ -72,7 +71,6 @@ describe('Next anomaly', () => {
 
   const uneLigne = (suivi: string, pointage: string): LigneFinAutomatique => ({
     adresse: uneAdresse(suivi, pointage),
-    element: new ElementAnomalieId('element-1'),
     designation: 'Pièce',
     operateur: 'Luc',
     poste: 'Scie',
