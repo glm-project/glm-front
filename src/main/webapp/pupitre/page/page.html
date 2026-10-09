@@ -2,6 +2,7 @@
   <glm-pupitre-header
     heading="glmfront"
     [connected]="etatHorsLigne.connected()"
+    [logo]="etatHorsLigne.referentiel()?.logo?.image"
     [operateur]="designation.operateur()"
     [enPause]="designation.commandesGlobales().enPause()"
     [message]="messageAtelier()"

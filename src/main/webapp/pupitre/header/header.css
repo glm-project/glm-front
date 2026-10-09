@@ -9,10 +9,22 @@
 }
 
 .heading-target {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   max-width: 100%;
   text-align: start;
   touch-action: manipulation;
+}
+
+.logo-entreprise {
+  display: block;
+  flex-shrink: 0;
+  width: auto;
+  height: 2rem;
+  max-width: 8rem;
+  object-fit: contain;
+  border-radius: 6px;
 }
 
 .connectivity-indicator {

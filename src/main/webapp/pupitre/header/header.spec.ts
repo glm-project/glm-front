@@ -38,6 +38,24 @@ describe('Pupitre header', () => {
     thenItShowsTheHeading('glmfront');
   });
 
+  it('should show the logo of the company beside the heading, in the zone held for the reset', async () => {
+    givenAConnectedPupitre();
+    givenTheLogo('data:image/png;base64,iVBORw0K');
+
+    await whenRenderingTheHeader();
+
+    thenTheHeadingShowsTheLogo('data:image/png;base64,iVBORw0K');
+    thenItShowsTheHeading('glmfront');
+  });
+
+  it('should show no logo for a company without one', async () => {
+    givenAConnectedPupitre();
+
+    await whenRenderingTheHeader();
+
+    thenTheHeadingShowsNoLogo();
+  });
+
   it('should sign that the pupitre is disconnected', async () => {
     givenADisconnectedPupitre();
 
@@ -155,6 +173,24 @@ describe('Pupitre header', () => {
 
   const givenAConnectedPupitre = (): void => {
     fixture.componentRef.setInput('connected', true);
+  };
+
+  const givenTheLogo = (image: string): void => {
+    fixture.componentRef.setInput('logo', image);
+  };
+
+  const thenTheHeadingShowsTheLogo = (image: string): void => {
+    const header = fixture.nativeElement as HTMLElement;
+
+    const logo = header.querySelector(dataSelector('header-logo'));
+    expect(logo?.getAttribute('src')).toBe(image);
+    expect(logo?.closest('button')).toBe(header.querySelector(dataSelector('header-heading')));
+  };
+
+  const thenTheHeadingShowsNoLogo = (): void => {
+    const header = fixture.nativeElement as HTMLElement;
+
+    expect(header.querySelector(dataSelector('header-logo'))).toBeNull();
   };
 
   const givenADisconnectedPupitre = (): void => {
