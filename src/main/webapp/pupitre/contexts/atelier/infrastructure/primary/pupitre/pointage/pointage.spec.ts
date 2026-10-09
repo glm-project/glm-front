@@ -475,7 +475,7 @@ describe('Pointage screen', () => {
     Array.from(root().querySelectorAll(dataSelector('pointage-zone-titre')), heading => heading.textContent.trim());
   const thenThePersonalPointageViewIsRendered = (): void => {
     expect(zoneHeadings()).toEqual(['MOULE', 'OF']);
-    expect(requiredElement(root().querySelector(dataSelector('tile-of-204')), 'NC tile').textContent).toContain('BON');
+    expect(requiredElement(root().querySelector(dataSelector('tile-of-204')), 'NC tile').textContent).toContain('FIN NC');
     expect(requiredElement(root().querySelector(dataSelector('tile-moule-1015')), 'active tile').textContent).toContain('depuis 2 h 14');
     expect(requiredElement(root().querySelector(dataSelector('tile-of-generated')), 'inactive tile').textContent).toContain('DÉMARRER');
   };

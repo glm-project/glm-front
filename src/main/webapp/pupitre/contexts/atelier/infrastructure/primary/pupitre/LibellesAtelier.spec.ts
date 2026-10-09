@@ -32,7 +32,7 @@ describe('LibellesAtelier', () => {
     });
 
     expect(LIBELLES_POINTAGE.actionSecondaire(conformingElement)).toBe('NC');
-    expect(LIBELLES_POINTAGE.actionSecondaire(nonConformingElement)).toBe('BON');
+    expect(LIBELLES_POINTAGE.actionSecondaire(nonConformingElement)).toBe('FIN NC');
   });
 
   it('should format header operator code and pause label', () => {
