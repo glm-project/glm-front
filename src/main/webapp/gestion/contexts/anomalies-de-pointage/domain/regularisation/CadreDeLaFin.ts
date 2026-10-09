@@ -9,16 +9,15 @@ export interface BornesDeLaFin {
 export class CadreDeLaFin {
   private constructor(
     private readonly debut: InstantPointage,
-    private readonly plafond: string,
+    private readonly plafond: number,
   ) {}
 
   static depuis(dossier: Pick<DossierAnomalie, 'activite' | 'borneDeFin'>, maintenant: string): CadreDeLaFin {
-    const borne = dossier.borneDeFin;
-    const plafond = borne !== undefined && new InstantPointage(borne).compareTo(new InstantPointage(maintenant)) < 0 ? borne : maintenant;
-    return new CadreDeLaFin(new InstantPointage(dossier.activite.debut), plafond);
+    const instants = [maintenant, ...(dossier.borneDeFin === undefined ? [] : [dossier.borneDeFin])];
+    return new CadreDeLaFin(new InstantPointage(dossier.activite.debut), Math.min(...instants.map(instant => Date.parse(instant))));
   }
 
   bornes(): BornesDeLaFin {
-    return { min: new Date(this.debut.firstWholeMinuteAfter()).toISOString(), max: this.plafond };
+    return { min: new Date(this.debut.firstWholeMinuteAfter()).toISOString(), max: new Date(this.plafond).toISOString() };
   }
 }

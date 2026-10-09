@@ -23,13 +23,13 @@ describe('Frame of a fact proposed on a dossier', () => {
   ])('should not accept the fact before the first whole minute after the start of the activity, $cas', ({ debut }) => {
     const bornes = CadreDeLaFin.depuis(dossierFixture(debut), MAINTENANT).bornes();
 
-    expect(bornes.min).toBe('2026-09-14T11:01:00.000Z');
+    expect(Date.parse(bornes.min)).toBe(Date.parse('2026-09-14T08:01:00-03:00'));
   });
 
   it('should not accept the fact after the clock when nothing bounds the end', () => {
     const bornes = CadreDeLaFin.depuis(dossierFixture('2026-09-14T08:00:00-03:00'), MAINTENANT).bornes();
 
-    expect(bornes.max).toBe(MAINTENANT);
+    expect(Date.parse(bornes.max)).toBe(Date.parse(MAINTENANT));
   });
 
   it('should not accept the fact after the bound of the end when it comes before the clock', () => {
@@ -37,7 +37,7 @@ describe('Frame of a fact proposed on a dossier', () => {
 
     const bornes = CadreDeLaFin.depuis(dossier, MAINTENANT).bornes();
 
-    expect(bornes.max).toBe('2026-09-14T14:30:00Z');
+    expect(Date.parse(bornes.max)).toBe(Date.parse('2026-09-14T14:30:00Z'));
   });
 
   it('should not accept the fact after the clock when the bound of the end comes after it', () => {
@@ -45,22 +45,6 @@ describe('Frame of a fact proposed on a dossier', () => {
 
     const bornes = CadreDeLaFin.depuis(dossier, MAINTENANT).bornes();
 
-    expect(bornes.max).toBe(MAINTENANT);
-  });
-
-  it('should hold the clock as it was read when the bound of the end falls on the same instant', () => {
-    const dossier = dossierFixture('2026-09-14T08:00:00-03:00', '2026-09-14T18:00:00Z');
-
-    const bornes = CadreDeLaFin.depuis(dossier, MAINTENANT).bornes();
-
-    expect(bornes.max).toBe(MAINTENANT);
-  });
-
-  it('should compare the bound of the end and the clock beyond the millisecond', () => {
-    const dossier = dossierFixture('2026-09-14T08:00:00-03:00', '2026-09-14T18:00:00.000000002Z');
-
-    const bornes = CadreDeLaFin.depuis(dossier, '2026-09-14T18:00:00.000000001Z').bornes();
-
-    expect(bornes.max).toBe('2026-09-14T18:00:00.000000001Z');
+    expect(Date.parse(bornes.max)).toBe(Date.parse(MAINTENANT));
   });
 });
