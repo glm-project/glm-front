@@ -29,7 +29,7 @@ Les trois référentiels permettent une recherche sans accents et sur toutes les
 
 Le rapport de coût lit la désignation via l’endpoint existant de l’élément. Après rebase sur `origin/main` (`388c1e5`, Angular 22), il conserve le sélecteur d’élément et les états indépendants de chargement, d’erreur et de nouvelle tentative de sa collection. L’identité sélectionnée utilise `element.numero()` : référence d’entreprise lorsqu’elle existe, sinon nom interne. Le nom interne et la description restent sous le sélecteur. L’identité doit correspondre au rapport. Les montants restent ceux du serveur.
 
-Les liens de supervision conservent l’opérateur, la semaine ISO et le jour de la fin automatique ou du début d’activité conflictuel. Les conflits sans activité ouvrent le relevé de la personne sans inventer de date. Aucun nouveau mécanisme de résolution des pointages.
+Les liens de supervision conservent l’opérateur, la semaine ISO et le jour de la fin automatique. Bandeau et conflits retirés (ADR 0054). Aucun nouveau mécanisme de résolution des pointages.
 
 Les états automatiques sont courts dans la semaine et explicites dans le détail et la vérification. Les libellés longs restent lisibles. Les états de chargement, d’erreur, d’absence et de refus sont conservés.
 
@@ -37,7 +37,7 @@ La recherche des trois référentiels partage le contrôle `gestion-recherche` d
 
 La supervision conserve ses couloirs. Lorsqu’un couloir est vide, il devient compact ; le couloir occupé peut alors présenter trois colonnes sur grand écran. Les noms liés gardent un espacement explicite entre nom et prénom et peuvent revenir à la ligne.
 
-Le bandeau d’un conflit contenant des activités datées est statique ; chaque activité porte son propre lien vers sa date réelle. Le conflit sans activité garde le lien général vers la personne. Dans « À vérifier », l’action « Voir les pointages » reste explicitement bleue et soulignée.
+Dans « À vérifier », l’action « Voir les pointages » reste explicitement bleue et soulignée.
 
 ## Comparaison avec le système établi
 
