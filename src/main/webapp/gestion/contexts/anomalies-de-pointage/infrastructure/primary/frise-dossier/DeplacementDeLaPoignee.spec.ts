@@ -1,12 +1,13 @@
+import { BornesDeLaFin } from '../../../domain/regularisation/CadreDeLaFin';
 import { instantDeplace } from './DeplacementDeLaPoignee';
-import { BornesDePoignee, DemandeDeDeplacement } from './PoigneeDeFrise';
+import { DemandeDeDeplacement } from './PoigneeDeFrise';
 
 const instantAt = (heure: string, secondes = 0, fraction = 0): string => {
   const [heures = 0, minutes = 0] = heure.split(':').map(Number);
   return new Date(2026, 8, 14, heures, minutes, secondes, fraction).toISOString();
 };
 
-const BORNES: BornesDePoignee = { min: instantAt('08:00'), max: instantAt('13:00') };
+const BORNES: BornesDeLaFin = { min: instantAt('08:00'), max: instantAt('13:00') };
 
 describe('Move of the handle of the proposed instant', () => {
   it.each<{ cas: string; demande: DemandeDeDeplacement; courant: string; expected: string }>([
@@ -51,7 +52,7 @@ describe('Move of the handle of the proposed instant', () => {
     expect(instantDeplace(demande, courant, BORNES)).toBe(expected);
   });
 
-  it.each<{ cas: string; demande: DemandeDeDeplacement; courant: string; bornes: BornesDePoignee; expected: string }>([
+  it.each<{ cas: string; demande: DemandeDeDeplacement; courant: string; bornes: BornesDeLaFin; expected: string }>([
     {
       cas: 'the first whole minute after a lower bound that carries seconds',
       demande: { kind: 'BORNE', borne: 'MIN' },

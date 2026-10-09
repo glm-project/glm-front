@@ -94,7 +94,7 @@ export interface RetraitDeFrise {
   readonly haut: number;
 }
 
-export interface FinRecueDeFrise {
+export interface FinAutomatiqueDeFrise {
   readonly gauche: number;
   readonly haut: number;
   readonly texte: string;
@@ -107,5 +107,5 @@ export interface DispositionFrise {
   readonly elements: readonly ElementFrise[];
   readonly rangeeDePlacement: RangeeDePlacement | undefined;
   readonly retrait: RetraitDeFrise | undefined;
-  readonly finRecue: FinRecueDeFrise | undefined;
+  readonly finAutomatique: FinAutomatiqueDeFrise | undefined;
 }

@@ -1066,7 +1066,7 @@ describe('Frise of a dossier', () => {
   };
 
   const automaticEnds = (): HTMLElement[] => [
-    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-frise-fin-recue')),
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-frise-fin-automatique')),
   ];
 
   const thenTheAutomaticEndsDrawnAre = (expected: readonly string[]): void => {

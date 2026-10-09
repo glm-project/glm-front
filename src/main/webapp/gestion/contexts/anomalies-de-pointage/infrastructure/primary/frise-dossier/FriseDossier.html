@@ -30,16 +30,16 @@
       [style.width.%]="retrait.largeur"
       [style.top.px]="retrait.haut"
     ></div>
-    } @if (disposition().finRecue; as finRecue) {
+    } @if (disposition().finAutomatique; as finAutomatique) {
     <div
       class="pointer-events-none absolute h-touch w-0"
       aria-hidden="true"
-      data-selector="anomalie-frise-fin-recue"
-      [style.left.%]="finRecue.gauche"
-      [style.top.px]="finRecue.haut"
+      data-selector="anomalie-frise-fin-automatique"
+      [style.left.%]="finAutomatique.gauche"
+      [style.top.px]="finAutomatique.haut"
     >
       <span class="absolute top-0 right-1 bg-surface px-1 text-(length:--text-label) leading-5 whitespace-nowrap text-ink"
-        >{{ finRecue.texte }}</span
+        >{{ finAutomatique.texte }}</span
       >
     </div>
     } @for (element of disposition().elements; track element.cle) { @switch (element.kind) { @case ('BARRE') {

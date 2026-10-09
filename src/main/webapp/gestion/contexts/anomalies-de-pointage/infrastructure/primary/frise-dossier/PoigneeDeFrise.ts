@@ -1,12 +1,7 @@
 import { formatInstantTimeUnambiguous } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { CadreDuFait } from '../../../domain/regularisation/CadreDuFait';
-import { InstantPointage } from '../../../domain/regularisation/InstantPointage';
-
-export interface BornesDePoignee {
-  readonly min: string;
-  readonly max: string;
-}
+import { InstantPointage } from '../../../domain/dossier/InstantPointage';
+import { BornesDeLaFin, CadreDeLaFin } from '../../../domain/regularisation/CadreDeLaFin';
 
 export type DemandeDeDeplacement =
   | { readonly kind: 'DE'; readonly minutes: number }
@@ -14,7 +9,7 @@ export type DemandeDeDeplacement =
   | { readonly kind: 'VERS'; readonly instant: number };
 
 export interface PlacementDeLInstant {
-  readonly bornes: BornesDePoignee;
+  readonly bornes: BornesDeLaFin;
 }
 
 export interface PlacementDemande {
@@ -23,13 +18,13 @@ export interface PlacementDemande {
 
 export interface PoigneeDeFrise {
   readonly instant: string;
-  readonly bornes: BornesDePoignee;
+  readonly bornes: BornesDeLaFin;
 }
 
-type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'activite' | 'borneDeFin'>;
+type DossierDeLaFrise = Pick<DossierAnomalie, 'activite' | 'borneDeFin'>;
 
-export const bornesDuFait = (dossier: DossierDeLaFrise, maintenant: string): BornesDePoignee =>
-  CadreDuFait.depuis(dossier, maintenant).bornes();
+export const bornesDuFait = (dossier: DossierDeLaFrise, maintenant: string): BornesDeLaFin =>
+  CadreDeLaFin.depuis(dossier, maintenant).bornes();
 
 export const texteDeLHeure = (instant: string): string => formatInstantTimeUnambiguous(new Date(instant));
 

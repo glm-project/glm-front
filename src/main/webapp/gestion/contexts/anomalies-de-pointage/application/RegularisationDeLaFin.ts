@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { ActiviteAnomalieId } from '../domain/dossier/ActiviteAnomalieId';
 import { AdresseDossier } from '../domain/dossier/DossierAnomalie';
-import { InstantPointage } from '../domain/regularisation/InstantPointage';
+import { InstantPointage } from '../domain/dossier/InstantPointage';
 import { CodeRefusRegularisation, RegularisationPort } from '../domain/regularisation/RegularisationPort';
 
 export type EtatDeRegularisation =

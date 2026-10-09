@@ -1,5 +1,5 @@
-import { InstantPointage } from '../regularisation/InstantPointage';
 import { DossierAnomalie, PointageAnomalie } from './DossierAnomalie';
+import { InstantPointage } from './InstantPointage';
 
 const ouvreUneActivite = (pointage: PointageAnomalie): boolean => pointage.fait.type !== 'FIN';
 

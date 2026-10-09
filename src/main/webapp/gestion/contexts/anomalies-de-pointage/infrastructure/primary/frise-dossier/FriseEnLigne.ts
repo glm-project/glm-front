@@ -4,7 +4,7 @@ import {
   BarreFrise,
   DispositionFrise,
   EntreesDeFrise,
-  FinRecueDeFrise,
+  FinAutomatiqueDeFrise,
   PositionDePoignee,
   RangeeDePlacement,
   RepereFrise,
@@ -45,7 +45,7 @@ const retraitDe = (
   return largeur > 0 ? { gauche, largeur, haut: barre.haut } : undefined;
 };
 
-const finRecueTraceeDe = (activite: ActiviteEchue, barre: BarreFrise, echelle: EchelleFrise): FinRecueDeFrise => ({
+const finAutomatiqueTraceeDe = (activite: ActiviteEchue, barre: BarreFrise, echelle: EchelleFrise): FinAutomatiqueDeFrise => ({
   gauche: positionSur(echelle, Date.parse(activite.echeance)),
   haut: barre.haut,
   texte: `${LIBELLES_ANOMALIES.frise.finAutomatique} ${texteDeLHeure(activite.echeance)}`,
@@ -88,7 +88,7 @@ export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise =>
     graduations: graduationsDe(echelle, largeur),
     elements,
     retrait: poignee === undefined ? undefined : retraitDe(activite, barre, poignee, echelle),
-    finRecue: poignee === undefined ? undefined : finRecueTraceeDe(activite, barre, echelle),
+    finAutomatique: poignee === undefined ? undefined : finAutomatiqueTraceeDe(activite, barre, echelle),
     rangeeDePlacement: rangeeDePlacementSur(placement, barre),
   };
 };

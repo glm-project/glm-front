@@ -121,12 +121,12 @@ export const positionDeLaPoignee = (poignee: PoigneeDeFrise, echelle: EchelleFri
 
 export const positionDeLaPoigneeSansHeure = (
   placement: PlacementDeLInstant,
-  finRecue: string,
+  echeance: string,
   echelle: EchelleFrise,
   haut: number,
   largeur: number,
 ): PositionSansHeure => ({
-  ...emplacementDeLaPoignee(finRecue, placement, LIBELLES_ANOMALIES.frise.heureInconnue, echelle, haut, largeur),
+  ...emplacementDeLaPoignee(echeance, placement, LIBELLES_ANOMALIES.frise.heureInconnue, echelle, haut, largeur),
   heure: 'SANS_HEURE',
 });
 

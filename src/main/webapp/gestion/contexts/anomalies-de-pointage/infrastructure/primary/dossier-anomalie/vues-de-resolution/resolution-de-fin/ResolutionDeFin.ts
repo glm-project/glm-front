@@ -5,8 +5,8 @@ import { RegularisationDeLaFin } from '../../../../../application/Regularisation
 import { adresseDeLaDestination, DestinationSuivante } from '../../../../../domain/dossier/AnomalieSuivante';
 import { AdresseDossier, DossierAnomalie } from '../../../../../domain/dossier/DossierAnomalie';
 import { filtreAnomaliesDemande } from '../../../../../domain/dossier/FiltreAnomaliesDemande';
+import { InstantPointage } from '../../../../../domain/dossier/InstantPointage';
 import { OperateurAnomalie } from '../../../../../domain/dossier/OperateurAnomalie';
-import { InstantPointage } from '../../../../../domain/regularisation/InstantPointage';
 import { EnTeteDuDossier } from '../../../en-tete-du-dossier/EnTeteDuDossier';
 import { instantDeplace } from '../../../frise-dossier/DeplacementDeLaPoignee';
 import {
