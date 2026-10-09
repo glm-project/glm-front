@@ -17,25 +17,18 @@ Une activité en cours est entièrement exclue du calcul, y compris du diviseur 
 Le rapport signale les anomalies de fin automatique reçues du back et peut préciser cette exclusion.
 Quand une activité se termine, son entrée dans le diviseur peut réduire le coût d'une autre activité
 déjà terminée lors de la lecture suivante. Le front affiche ce recalcul sans effectuer sa propre somme.
-Chaque transition travail/NC rend l'activité précédente valorisable et ouvre une nouvelle activité.
-Après remplacement de la fin automatique par une fin réelle recevable, le rapport retire l'alerte
-active par recalcul. La fin automatique et l'anomalie sont dérivées par le back ; seuls les pointages
-et corrections sont conservés dans l'historique.
+Après régularisation de la fin automatique par une fin réelle, le rapport retire l'alerte active par
+recalcul. La fin automatique et l'anomalie sont dérivées par le back ; seuls les pointages sont conservés
+dans l'historique.
 
-Les anomalies réelles sont signalées dans ce rapport ; leur correction relève des commandes back.
-Le traitement des anomalies de pointage, séquences en conflit et fins automatiques, se fait dans le contexte
-[anomalies-de-pointage](../anomalies-de-pointage/AGENTS.md). Ce contexte reste lecteur et ne partage aucun type avec lui.
+La seule anomalie du rapport est la **fin automatique** : une activité arrêtée à son échéance faute de fin
+pointée. Elle est signalée dans ce rapport ; sa régularisation se fait dans le contexte
+[anomalies-de-pointage](../anomalies-de-pointage/AGENTS.md). Ce contexte reste lecteur et ne partage aucun
+type avec lui.
 
-Une correction peut faire redevenir une activité en cours : elle sort alors du coût et du diviseur
-humain au recalcul du back, et son anomalie disparaît. Le rapport restitue ce nouvel état.
-
-**Pointage à résoudre** : pointage dont des pointages contradictoires empêchent de connaître la fin, au sens
-de l'ADR 0047. Le back expose sa fin au plus tard, ses pointages contradictoires et la complétude des totaux,
-y compris lorsqu'il empêche de partager le temps d'un opérateur sur un autre élément (« partage inconnu »).
-Le rapport le signale sur le pointage, affiche « — » pour sa durée et ses montants et « Incomplet » pour chaque
-total concerné ; il ne remplace pas une valeur à résoudre par zéro et ne choisit pas une interprétation des
-pointages. Le gestionnaire corrige les pointages, puis le back recalcule le rapport. Le mot « séquence » du
-back n'apparaît jamais à l'écran.
+Les pointages que le serveur ignore à la réception ne produisent aucune anomalie et n'apparaissent pas dans
+le rapport. Toute activité reçue a une fin certaine : une activité en cours est exclue, et le serveur ne
+renvoie plus de total incomplet.
 
 ## Langage
 
@@ -73,15 +66,13 @@ pour laquelle ils sont affichés séparément.
 - **CategorieDElementChiffre** : Value Object du code de la catégorie de produit (`MOULE`, `OF`…), non vide.
   Le code est son propre libellé.
 - **LigneDeCout** : Value Object d'une ligne — sa nature éventuelle, son temps passé, son coût et ses pointages.
-  `estSansPoste()` distingue la ligne sans nature ; `anomalies()` compte ses pointages par anomalie, dans un ordre
-  fixe (fin automatique, à résoudre, partage inconnu).
+  `estSansPoste()` distingue la ligne sans nature ; `anomalies()` compte ses pointages par anomalie.
 - **PointageDeCout** : Value Object d'un pointage de la ligne — opérateur et poste cités, catégorie, période,
   durée, coût horaire et taux figés, coût et parts, tels que le serveur les a calculés, avec ses anomalies
-  (`FIN_AUTOMATIQUE`, `A_RESOUDRE`, `PARTAGE_INCONNU`), sa fin au plus tard et ses pointages contradictoires.
-  `detailleSonPartage()` dit si ses parts expliquent quelque chose (plusieurs parts, ou une part partagée ou
-  au partage inconnu).
+  (`FIN_AUTOMATIQUE` seule). `detailleSonPartage()` dit si ses parts expliquent quelque chose (plusieurs
+  parts, ou une part partagée).
 - **PartDePointage** : Value Object d'une part — début, fin, durée, diviseur éventuel, main d'œuvre déjà
-  répartie au centime, activités parallèles et bloquantes. Un diviseur reçu doit être un entier au moins égal
+  répartie au centime et activités parallèles. Un diviseur reçu doit être un entier au moins égal
   à un.
 - **OperateurCite**, **PosteCite**, **ElementCite**, **ActiviteCitee** : identités citées par le détail, avec
   les noms que le serveur a relus ; un nom absent laisse l'identité seule.
@@ -89,16 +80,12 @@ pour laquelle ils sont affichés séparément.
 - **TempsPasse** : Value Object du temps, séparé en bon travail et non-conformité, avec son total.
   `porteUneNonConformite()` répond à « y a-t-il eu une reprise ».
 - **DureePassee** : Value Object d'une durée ISO-8601, exprimée en heures et minutes.
-- **PeriodeDeTravail** : Value Object du début et de la fin certaine éventuelle. Une fin absente ne reçoit
-  jamais l’instant d’évaluation comme remplacement.
+- **PeriodeDeTravail** : Value Object du début et de la fin, toutes deux certaines. Un pointage reçu sans fin
+  rejette la lecture ; aucune fin ne reçoit l’instant d’évaluation comme remplacement.
 - **InstantDeTravail** : Value Object d'un instant reçu du back, refusé s'il n'est pas un instant absolu.
 - **Cout** : Value Object du coût, séparé en machine et main d'œuvre, avec son total.
 - **Montant** : Value Object d'une valeur certaine en euros, finie et jamais négative.
-- **TotalDeTemps** et **TotalDeMontant** : complets avec une valeur certaine, zéro compris, ou incomplets
-  sans valeur. Chaque catégorie garde sa propre complétude ; les snapshots sont des unions immuables.
 - **ActivitesEnCoursExclues** : nombre reçu d’activités exclues du temps, du coût et du diviseur.
-- **PointageEnConflit** : un pointage contradictoire — son type (début, reprise en non-conformité, fin) et son
-  instant.
 - **ElementDisponible** : projection immuable associant l’identité nom/catégorie à son identifiant opaque pour le choix.
 - **CoutDeRevientPort** : port secondaire de lecture du rapport et des identités disponibles.
 
@@ -106,8 +93,7 @@ pour laquelle ils sont affichés séparément.
 
 - **Le front n'additionne ni durée ni montant.** Le temps total et le coût total sont lus du serveur et
   affichés tels quels ; les lignes ne sont jamais sommées. Les montants sont déjà arrondis par le serveur.
-  Un total incomplet n’expose aucun chiffre dans les cellules, les indicateurs ou leurs textes accessibles.
-  Une catégorie indépendante reste chiffrée. Resommer côté client
+  Resommer côté client
   donnerait à l'écran un second avis sur ce qu'une fabrication a coûté, et en ferait un avis faux dès le
   premier arrondi.
 - **Les lignes ne sont jamais réordonnées.** Le serveur promet les natures dans l'ordre et la ligne sans
@@ -141,11 +127,12 @@ pour laquelle ils sont affichés séparément.
 ## Règles locales
 
 - Les anomalies restent repérables avant de déplier une ligne : un bandeau en haut de page les résume, et la
-  nature porte une pastille par type d'anomalie avec son nombre. Dépliée, chaque anomalie est montrée sur son
-  pointage avec une explication en clair. Aucun calcul de treize heures n’est exécuté par ce lecteur.
+  nature porte une pastille avec le nombre de fins automatiques. Dépliée, chaque anomalie est montrée sur son
+  pointage avec une explication en clair. Ce lecteur ne calcule aucune échéance : la durée maximale d'une
+  activité est une règle du serveur.
 - Aucun lien ne promet un écran de résolution dans ce périmètre ; il viendra avec cet écran.
-- Un total incomplet sans valeur est normal ; un total annoncé complet sans valeur rejette la lecture,
-  signalée une seule fois par l’adapter.
+- Une réponse incohérente (valeur absente, fin de pointage manquante) rejette la lecture, signalée une seule
+  fois par l’adapter.
 
 - Pour l'acquisition des données de la vue, appliquer la
   [règle de composition des lectures](../../../../../../documentation/architecture.md#acquire-a-view-through-one-read-port-by-default).

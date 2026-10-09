@@ -11,32 +11,37 @@ la comptabilisation des rapports de l'indication conservée au pupitre.
 fenêtre opérateur selon les règles existantes ci-dessous. Elle aide l'opérateur à lire son activité ;
 elle ne constitue pas une durée comptabilisée dans les rapports.
 
-Selon la règle de fin automatique, chaque transition travail/NC ouvre une activité distincte
-avec une nouvelle échéance de 13 h. Le serveur remplace une fin automatique par un `FIN` survenu au plus tard
-à l'échéance même s'il est reçu après. Un `FIN` survenu après l'échéance conserve la borne automatique
-jusqu'à correction explicite du gestionnaire. Le pupitre calcule aussi l'expiration localement,
-y compris hors ligne, sans créer de `FIN`. L'activité expirée cesse d'être active et ne peut plus être
-mise en pause ; un nouveau début reste possible. Le gel de la durée indicative ne gèle pas cet état.
+**Clé d'activité** : opérateur et poste, au sein d'un suivi. Une clé porte au plus une activité en cours.
+Le pupitre n'envoie que trois pointages (`DEBUT`, `NON_CONFORMITE`, `FIN`), sans intention ni cible : une
+`FIN` ferme l'activité de sa clé, et une ouverture sur une clé déjà occupée est ignorée par le serveur
+(`DEJA_EN_COURS`). La projection locale suit la même règle : une ouverture sur une clé occupée est sans effet.
 
-**Activité visée** : activité identifiée par son pointage ouvrant original, identité stable conservée après correction. Le référentiel et les gestes de fin
-ou de changement de catégorie portent cette cible. Rejeu et nouvelle tentative conservent la cible
-initiale, y compris après rafraîchissement du référentiel. Une contradiction avec une activité déjà
-remplacée relève d'une séquence en conflit ; le geste ne s'applique jamais à sa remplaçante.
+**Geste composé** : un appui qui change la catégorie d'un travail envoie deux pointages à la même heure, la
+`FIN` d'abord, avec le poste de chaque activité. NC pendant un travail envoie une `FIN` puis une
+`NON_CONFORMITE` par activité en travail ; « FIN NC » (cible secondaire d'une tuile en non-conformité,
+ancien « BON ») envoie une `FIN` puis un `DEBUT` par activité en non-conformité. Le pupitre ne relance pas :
+il ferme l'activité par une `FIN` explicite avant d'en ouvrir une autre.
 
-**Intention d'activité** : une ouverture crée une activité, y compris en NC et lors d'une reprise
-après pause ; une transition cible précisément l'activité dont elle ouvre la suivante ; une fin
-termine une activité précisément ciblée. Le contrat distingue ces intentions même lorsqu'elles
-partagent le type `DEBUT`
-ou `NON_CONFORMITE`. Une cible déjà remplacée ne transforme jamais la transition en ouverture
-implicite. Une transition visant une cible seulement échue conserve cette cible et ouvre l'activité
-suivante à l'heure du geste, sans prolonger l'activité échue.
+**Durée maximale** : durée d'une activité sans fin pointée, lue du référentiel (`dureeMaximaleDActivite`,
+ISO-8601, par exemple `PT13H`) et gardée en millisecondes. Le pupitre ne connaît aucune valeur en dur : une
+valeur absente, illisible ou nulle rejette la lecture du référentiel, qui garde le précédent. L'échéance des
+activités connues du serveur est celle que le référentiel donne ; celle d'une activité ouverte localement
+est l'heure du geste plus la durée maximale. Limite connue : le serveur fige la durée à la réception de
+l'ouverture, non à l'heure du geste, et ne garde aucun historique du réglage.
 
-**Séquence en conflit** : contradiction entre pointages conservés par le back et à résoudre par le
-gestionnaire selon l'ADR 0047. Le résultat de publication distingue cette conservation d'un refus
-d'enregistrement. Le pupitre restitue le conflit connu sans réaffecter de cible ni choisir la correction.
-Le diagnostic reste durable si le rafraîchissement échoue. Sur toute séquence en conflit, il ne déduit aucune activité courante et ne permet qu'une nouvelle
-ouverture. Aucune fin ni transition ne cible une activité en conflit : `PAUSE` et `TOUT ARRÊTER`
-n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une reprise.
+**Activité échue** : activité dont l'échéance est atteinte. Elle cesse d'être active et ne peut plus être
+mise en pause, mais le serveur la compte comme terminée : une ouverture dont l'heure atteint l'échéance
+(`>=`) libère la clé et remplace l'activité échue, localement comme au serveur. Le pupitre calcule cette
+expiration y compris hors ligne, sans créer de `FIN`. Le gel de la durée indicative ne gèle pas cet état.
+
+**Pointage ignoré** : pointage que le serveur juge incompatible avec l'état de sa clé et refuse en 409
+`pointage-ignore`. Le pupitre retire son effet local et se recale sur le référentiel de la synchronisation
+suivante, par le mécanisme existant ; le refus reste au journal local (ADR 0049).
+
+**Refus affiché** : seul le refus `suivi-d-atelier-cloture` est montré à l'opérateur
+(`MotifDeRefus.isShownToTheOperator()`). Tout autre refus, y compris un code que l'adaptateur ne reconnaît
+pas, reste au journal local sans affichage. Un lot qui mêle un refus silencieux et une clôture expose la
+clôture.
 
 ## Langage
 
@@ -78,17 +83,17 @@ n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une repri
 - La fenêtre opérateur expose la vue de pointage; elle sélectionne les activités de l'opérateur désigné, distingue leur catégorie, expose le numéro de chaque élément avec son repli, regroupe et trie les éléments, puis calcule leur durée à partir de l'instant figé à son ouverture.
 - Toutes les durées d'une vue de pointage partagent l'instant d'ouverture de la fenêtre. Une activité apparue après cet instant est immédiatement visible avec une durée nulle; aucun geste ne rééchantillonne les autres durées.
 - Une tuile représente toujours un élément et agrège toutes les activités que l'opérateur désigné y a ouvertes sur différents postes. Elle est en non-conformité dès qu'une de ces activités l'est, sa durée part de la plus ancienne activité encore ouverte et ses actions visent tout l'agrégat.
-- La cible principale d'une tuile active termine toutes ses activités personnelles. Sa cible secondaire remet en travail les seules activités en non-conformité dès qu'il en existe une; sinon elle place en non-conformité toutes les activités en travail. Une action n'émet jamais une transition déjà atteinte.
-- L'adaptateur primaire annonce la cible tactile pressée et, lorsque le domaine le demande, le poste choisi. La fenêtre opérateur traduit cette intention en types de pointage et en lot de gestes; le composant ne construit pas d'événement d'atelier.
+- La cible principale d'une tuile active termine toutes ses activités personnelles. Sa cible secondaire (« FIN NC » dès qu'une activité est en non-conformité, sinon « NC ») compose une `FIN` puis une ouverture pour chaque activité concernée (voir « Geste composé ») : elle remet en travail les seules activités en non-conformité dès qu'il en existe une; sinon elle place en non-conformité toutes les activités en travail.
+- L'adaptateur primaire annonce la cible tactile pressée et, lorsque le domaine le demande, le poste choisi. La fenêtre opérateur traduit cette intention en pointages demandés (`PointageDemande` : type et poste) puis en lot de gestes; le composant ne construit pas d'événement d'atelier.
 - Lorsqu'une ouverture exige de choisir parmi plusieurs postes habilités, la fenêtre opérateur retourne explicitement ce besoin. La pop-up ne conserve qu'une attente éphémère, et le domaine revalide la fenêtre et le poste au choix final; fermer ou laisser expirer cette attente ne produit aucun geste.
 - Un pointage sans choix de poste reçoit son identifiant et son heure à la déclaration de son intention, soit à l'échéance de l'appui maintenu sur sa cible. Avec une pop-up multiposte, ils naissent au choix final du poste; ouvrir puis abandonner la pop-up ne crée aucune identité de geste.
 - Une fenêtre ouverte réconcilie chaque nouvelle version du journal de son entreprise sans changer l'opérateur désigné ni son instant d'observation. La projection optimiste disparaît ainsi dès qu'un geste de cette fenêtre est refusé.
-- La fenêtre expose au plus le dernier refus d'un geste né pendant son ouverture, accompagné du numéro de l'élément concerné. Une nouvelle intention tactile l'efface; les refus issus du rejeu de fenêtres antérieures restent silencieux.
+- La fenêtre expose au plus le dernier refus affichable d'un geste né pendant son ouverture, accompagné du numéro de l'élément concerné : seul le refus de clôture l'est. Une nouvelle intention tactile l'efface; les refus issus du rejeu de fenêtres antérieures restent silencieux.
 - Le pupitre accepte durablement les gestes avant de les confirmer et les publie ensuite.
 - `RetardDePublication.of(journal, instant)` répond `undefined` ou `{ gestes, depuis }` : `gestes` est le nombre total de gestes en attente et `depuis` l'ancienneté du plus ancien. Le signal `retardDePublication` d'`EtatHorsLigneDuPupitre` n'avance que lorsque `updateClock()` pousse l'instant courant : l'écran de désignation le fait à son affichage puis chaque minute, et cesse à sa destruction. Il affiche le retard dans un bandeau d'état au-dessus de l'identifiant, sans bloquer la saisie.
 - Toute modification du journal du pupitre est atomique pour une entreprise; les journaux de deux entreprises restent indépendants.
 - Un geste conserve l'opérateur, l'identifiant et l'heure fixés à son initiation.
-- « Tout arrêter » forme un unique lot local atomique et ordonné de fins ciblées avec l'invalidation durable de la reprise. Un échec d'acceptation locale n'en conserve aucune partie ; après acceptation, le rejeu FIFO poursuit les gestes suivants malgré un refus métier connu.
+- « Tout arrêter » forme un unique lot local atomique et ordonné de fins, une par activité personnelle, avec l'invalidation durable de la reprise. Un échec d'acceptation locale n'en conserve aucune partie ; après acceptation, le rejeu FIFO poursuit les gestes suivants malgré un refus métier connu.
 - PAUSE forme de même un unique lot atomique de fins : une fin par activité personnelle connue, sur son poste, portant sa suspension. La suspension ne quitte jamais le pupitre. Une pause ne ferme que ce que le référentiel du pupitre connaît; une activité ouverte ailleurs depuis le dernier rafraîchissement court pendant la pause.
 - `PauseEnCours` est le seul propriétaire de la fin d'une pause et de ce qu'elle rouvre. La pause d'un opérateur est celle de sa dernière suspension; elle prend fin à REPRENDRE, à tout autre geste de cet opérateur ajouté au journal de ce pupitre, quel que soit son sort à la publication, et dès que le référentiel projeté montre une activité de l'opérateur autre qu'une activité dont la suspension a été refusée. Une pause n'expire jamais ; seules les activités interprétables non expirées font obstacle à sa reprise. L'oubli des gestes acceptés à l'activation du référentiel ne change pas son résultat : il garde le dernier geste de chaque opérateur et les gestes de sa dernière pause, que `DernierePause` désigne pour les deux règles.
 - REPRENDRE rouvre, sur le même poste et par le pointage retenu, chaque activité suspendue dont la suspension n'a pas été refusée, dont l'élément est encore au référentiel projeté, dont le poste est encore habilité et qui n'est pas déjà ouverte au même élément et au même poste — un `NON_CONFORMITE` sur une activité en cours la basculerait en non-conformité. La reprise n'a lieu que sur le pupitre qui a pris la pause.
@@ -100,9 +105,9 @@ n'émettent aucun `FIN` pour elle, et `PAUSE` ne la mémorise pas pour une repri
 - Un même identifiant inconnu ne pousse qu'une fois : le référentiel qui vient d'être lu ne le connaîtra pas davantage. Une désignation réussie libère cette retenue.
 
 - `CommandesGlobales` offre PAUSE lorsqu'une activité personnelle interprétable non expirée reste connue, REPRENDRE lorsqu'une pause locale reste à rouvrir, TOUT ARRÊTER toujours. Le chrome montre l'identité désignée et l'éventuelle pause locale.
-- Les commandes reçoivent explicitement leur instant d'évaluation. À l'échéance serveur inclusive, une activité devient non actionnable ; la durée indicative garde l'instant d'ouverture de la fenêtre. `ActiviteExpirationSchedulerPort` possède un timer distinct de l'inactivité et réévalue sans fermer la désignation ni créer de FIN.
-- TOUT ARRÊTER accepte N FIN ciblés et l'invalidation durable des pauses de cet opérateur dans une seule mutation, même pour N=0. Un échec n'avance ni journal ni fenêtre. Les pending et les refus sont conservés ; les gestes acceptés suivent la règle d'oubli du journal.
-- Le format atelier neuf possède sa clé versionnée par entreprise. L'adapter retire seulement les anciens documents `atelier:` via le port technique commun, sans les lire ni les migrer. Credentials et enrôlement gardent leurs documents.
+- Les commandes reçoivent explicitement leur instant d'évaluation. À l'échéance inclusive reçue du référentiel, une activité devient non actionnable ; la durée indicative garde l'instant d'ouverture de la fenêtre. `ActiviteExpirationSchedulerPort` possède un timer distinct de l'inactivité et réévalue sans fermer la désignation ni créer de FIN.
+- TOUT ARRÊTER accepte N FIN et l'invalidation durable des pauses de cet opérateur dans une seule mutation, même pour N=0. Un échec n'avance ni journal ni fenêtre. Les pending et les refus sont conservés ; les gestes acceptés suivent la règle d'oubli du journal.
+- Le format atelier courant possède sa clé versionnée par entreprise, `atelier-activites-v2:<entreprise>`. L'adapter retire les documents des préfixes obsolètes (`atelier:` et `atelier-activites-v1:`) via le port technique commun, sans les lire ni les migrer : la version change quand le format stocké ou une règle projetée change, pour réinitialiser les pupitres au déploiement, et leurs gestes en attente sont perdus. Credentials et enrôlement gardent leurs documents.
 
 ## Règles locales
 
@@ -118,7 +123,7 @@ Pendant l'acceptation durable d'une action, l'adaptateur primaire désactive les
 
 Un échec d'acceptation locale affiche dans le chrome « Action non enregistrée — recommencez ». Ce message technique persiste jusqu'à la prochaine acceptation durable réussie ou la fermeture de la fenêtre; il ne se confond ni avec un refus métier ni avec l'état réseau.
 
-Le chrome accompagne un refus métier du numéro de l'élément pour un pointage de tuile et du libellé `PAUSE`, `REPRENDRE` ou `TOUT ARRÊTER` pour un geste issu d'une commande globale. Il montre le message du serveur et seulement le dernier refus du lot.
+Le chrome accompagne le refus de clôture du numéro de l'élément pour un pointage de tuile et du libellé `PAUSE`, `REPRENDRE` ou `TOUT ARRÊTER` pour un geste issu d'une commande globale. Il montre le message du serveur et seulement le dernier refus affichable du lot.
 
 Tant que l'appareil n'est pas enrôlé et que son premier référentiel complet n'est pas actif, la composition rend l'écran d'enrôlement sous le chrome permanent, jamais un pavé ni un pointage. La bascule lit l'état projeté par le contexte [enrôlement](../enrolement/AGENTS.md), pas la seule présence du référentiel. Ce contexte n'expose son état de chargement que par l'adaptateur primaire `TypeScriptChargementDeLAtelier`, et le comptage des gestes en attente comme l'effacement des journaux que par `TypeScriptEffacementDesJournaux`, tous deux appelés depuis un adaptateur secondaire d'`enrolement`.
 
