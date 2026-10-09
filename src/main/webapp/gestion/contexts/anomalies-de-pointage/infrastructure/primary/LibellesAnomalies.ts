@@ -83,7 +83,7 @@ export const LIBELLES_ANOMALIES = {
   gestes: GESTES,
   types: { DEBUT: 'Travail', NON_CONFORMITE: 'Non-conformité' },
   titre: 'Anomalies de pointage',
-  sousTitre: 'Comprendre les faits, choisir une correction et vérifier ses conséquences avant de l’enregistrer.',
+  sousTitre: 'Activités arrêtées par la fin automatique : ouvrez un dossier pour placer la fin réelle.',
   element: 'Élément',
   operateur: 'Opérateur',
   sansPoste: 'Sans poste',

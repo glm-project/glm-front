@@ -172,6 +172,21 @@ describe('Anomalies list', () => {
     expect(headingText()).toBe('Anomalies de pointage');
   });
 
+  it('should say what the list holds without describing a journey that no longer exists', async () => {
+    await whenTheListIsRendered();
+
+    expect(textOf('anomalies-sous-titre')).toBe('Activités arrêtées par la fin automatique : ouvrez un dossier pour placer la fin réelle.');
+  });
+
+  it('should ignore the nature held by the address of an old link', async () => {
+    givenAnAddress({ nature: 'CONFLIT', operateur: 'op-camille', page: '2' });
+
+    await whenTheListIsRendered();
+
+    expect(portFixture.demandes).toEqual([{ operateur: 'op-camille', element: '', page: 2 }]);
+    expect(present('anomalies-adresse-invalide')).toBe(false);
+  });
+
   it('should explain that the complete global list has no automatic end', async () => {
     givenAnAddress({});
     await whenTheListIsRendered();
@@ -180,7 +195,7 @@ describe('Anomalies list', () => {
     expect(present('anomalies-table')).toBe(false);
   });
 
-  it('should distinguish no matching conflicts from an empty global list', async () => {
+  it('should distinguish no automatic end matching the filters from an empty global list', async () => {
     givenAnAddress({ operateur: 'op-camille', element: 'moule-42', page: '2' });
 
     await whenTheListIsRendered();
