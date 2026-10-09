@@ -427,6 +427,16 @@ describe('HTTP supervision beyond the shared contract', () => {
     expect(harnessFixture.errors.errors).toEqual([failure]);
   });
 
+  it('should reject an activity without its deadline and report it once', async () => {
+    const reading = harnessFixture.port.read();
+
+    whenActivityWithoutDeadlineArrives();
+    const failure = await reading.catch((error: unknown) => error);
+
+    expect(failure).toEqual(new Error('activite.echeance manque dans la réponse du serveur'));
+    expect(harnessFixture.errors.errors).toEqual([failure]);
+  });
+
   it.each([
     '2026-09-13T10:00:00',
     '2026-09-13T08:00:00.Z',
@@ -477,6 +487,15 @@ describe('HTTP supervision beyond the shared contract', () => {
     const activites = automaticEndFixture.response.activites.map(activite => {
       const incomplete = { ...activite };
       delete incomplete.finRetenue;
+      return incomplete;
+    });
+    harnessFixture.http.expectOne('/api/atelier/supervision').flush({ ...automaticEndFixture.response, activites });
+  };
+
+  const whenActivityWithoutDeadlineArrives = (): void => {
+    const activites = automaticEndFixture.response.activites.map(activite => {
+      const incomplete = { ...activite };
+      delete (incomplete as { echeance?: string }).echeance;
       return incomplete;
     });
     harnessFixture.http.expectOne('/api/atelier/supervision').flush({ ...automaticEndFixture.response, activites });

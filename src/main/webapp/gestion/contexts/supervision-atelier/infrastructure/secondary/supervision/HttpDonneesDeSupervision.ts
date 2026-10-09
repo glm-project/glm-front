@@ -50,7 +50,7 @@ const toDescription = (activite: RestActivite): DescriptionActivite => ({
   objet: toElement(activite.element),
   categorie: new CategorieActivite(activite.categorie),
   debut: new Instant(activite.debut),
-  echeance: new Instant(activite.echeance),
+  echeance: new Instant(required(activite.echeance, 'activite.echeance')),
   ...(activite.poste === undefined ? {} : { poste: toPoste(activite.poste) }),
 });
 
