@@ -265,12 +265,12 @@ describe('Anomaly dossier page', () => {
       thenTheHandleHoldsAt(new Date(2026, 8, 14, 21, 0));
     });
 
-    it('should place the end at the start of the activity when Home is pressed on the hourless handle', async () => {
+    it('should place the end one minute after the start of the activity when Home is pressed on the hourless handle', async () => {
       await whenRendering();
 
       await whenPressingOnTheHandle('Home');
 
-      thenTheHandleHoldsAt(new Date(2026, 8, 14, 8, 0));
+      thenTheHandleHoldsAt(new Date(2026, 8, 14, 8, 1));
     });
 
     it('should place the end at the whole minute of the clock read at the key when End is pressed on the hourless handle', async () => {
@@ -281,6 +281,19 @@ describe('Anomaly dossier page', () => {
       await whenPressingOnTheHandle('End');
 
       thenTheHandleHoldsAt(new Date(2026, 8, 14, 22, 12));
+    });
+
+    it('should hold the end at the bound of the end of the dossier when End is pressed long after it', async () => {
+      read.result = {
+        kind: 'DOSSIER',
+        dossier: { ...dossierFinAutomatiqueFixture(), borneDeFin: instantLocalFixture(new Date(2026, 8, 14, 22, 30)) },
+      };
+      whenTheClockIs(new Date(2026, 8, 16, 10, 0));
+      await whenRendering();
+
+      await whenPressingOnTheHandle('End');
+
+      thenTheHandleHoldsAt(new Date(2026, 8, 14, 22, 30));
     });
 
     it('should move the placed handle by the minute with the arrow keys', async () => {

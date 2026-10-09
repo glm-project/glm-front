@@ -3,7 +3,6 @@ import { ActiviteEchue, PointageAnomalie } from '../../../domain/dossier/Dossier
 
 const UNE_MINUTE = 60_000;
 const UNE_HEURE = 3_600_000;
-const TROIS_HEURES = 3 * UNE_HEURE;
 const CINQ_MINUTES = 300_000;
 const MARGE_DES_REPERES_PX = 22;
 const POSITION_DU_BORD = 100;
@@ -39,14 +38,11 @@ export const instantsRecus = (pointages: readonly PointageAnomalie[], activite: 
     .map(instant => Date.parse(instant))
     .filter(Number.isFinite);
 
-export const finDeLaPortee = (instants: readonly number[]): number => Math.max(...instants) + TROIS_HEURES;
-
 export const echelleDe = (instants: readonly number[], plafondElargi?: number): EchelleFrise => {
   const finNormale = heureEntiereApres(Math.max(...instants) + UNE_HEURE);
   return {
     debut: heureEntiereAvant(Math.min(...instants) - UNE_HEURE),
-    fin:
-      plafondElargi === undefined ? finNormale : Math.max(finNormale, heureEntiereApres(Math.min(finDeLaPortee(instants), plafondElargi))),
+    fin: plafondElargi === undefined ? finNormale : Math.max(finNormale, heureEntiereApres(plafondElargi)),
   };
 };
 

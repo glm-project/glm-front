@@ -2,8 +2,6 @@ import { formatInstantTimeUnambiguous } from '@/app/shared/date-format/infrastru
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { CadreDuFait } from '../../../domain/regularisation/CadreDuFait';
 import { InstantPointage } from '../../../domain/regularisation/InstantPointage';
-import { finDeLaPortee, instantsRecus } from './EchelleFrise';
-import { pointagesDeLaFrise } from './PointagesDeLaFrise';
 
 export interface BornesDePoignee {
   readonly min: string;
@@ -28,17 +26,10 @@ export interface PoigneeDeFrise {
   readonly bornes: BornesDePoignee;
 }
 
-type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'activite'>;
+type DossierDeLaFrise = Pick<DossierAnomalie, 'journal' | 'activite' | 'borneDeFin'>;
 
-const plafondDansLaPortee = (dossier: DossierDeLaFrise, bornes: BornesDePoignee): string => {
-  const portee = finDeLaPortee([Date.parse(bornes.min), ...instantsRecus(pointagesDeLaFrise(dossier), dossier.activite)]);
-  return Date.parse(bornes.max) <= portee ? bornes.max : new Date(portee).toISOString();
-};
-
-export const bornesDuFait = (dossier: DossierDeLaFrise, maintenant: string): BornesDePoignee => {
-  const { min, max } = CadreDuFait.depuis(dossier.activite, maintenant).bornes();
-  return { min, max: plafondDansLaPortee(dossier, { min, max }) };
-};
+export const bornesDuFait = (dossier: DossierDeLaFrise, maintenant: string): BornesDePoignee =>
+  CadreDuFait.depuis(dossier, maintenant).bornes();
 
 export const texteDeLHeure = (instant: string): string => formatInstantTimeUnambiguous(new Date(instant));
 

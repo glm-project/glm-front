@@ -1,4 +1,5 @@
-import { ActiviteEchue } from '../dossier/DossierAnomalie';
+import { DossierAnomalie } from '../dossier/DossierAnomalie';
+import { InstantPointage } from './InstantPointage';
 
 export interface BornesDuFait {
   readonly min: string;
@@ -7,15 +8,17 @@ export interface BornesDuFait {
 
 export class CadreDuFait {
   private constructor(
-    private readonly debut: string,
-    private readonly maintenant: string,
+    private readonly debut: InstantPointage,
+    private readonly plafond: string,
   ) {}
 
-  static depuis(activite: ActiviteEchue, maintenant: string): CadreDuFait {
-    return new CadreDuFait(activite.debut, maintenant);
+  static depuis(dossier: Pick<DossierAnomalie, 'activite' | 'borneDeFin'>, maintenant: string): CadreDuFait {
+    const borne = dossier.borneDeFin;
+    const plafond = borne !== undefined && new InstantPointage(borne).compareTo(new InstantPointage(maintenant)) < 0 ? borne : maintenant;
+    return new CadreDuFait(new InstantPointage(dossier.activite.debut), plafond);
   }
 
   bornes(): BornesDuFait {
-    return { min: this.debut, max: this.maintenant };
+    return { min: new Date(this.debut.firstWholeMinuteAfter()).toISOString(), max: this.plafond };
   }
 }

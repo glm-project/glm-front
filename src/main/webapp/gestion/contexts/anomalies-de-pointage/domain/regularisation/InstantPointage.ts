@@ -22,6 +22,11 @@ export class InstantPointage {
     return new InstantPointage(new Date(minute).toISOString()).compareTo(this) < 0 ? minute + UNE_MINUTE : minute;
   }
 
+  firstWholeMinuteAfter(): number {
+    const minute = this.firstWholeMinute();
+    return new InstantPointage(new Date(minute).toISOString()).compareTo(this) > 0 ? minute : minute + UNE_MINUTE;
+  }
+
   lastWholeMinute(): number {
     return Math.floor(Date.parse(this.value) / UNE_MINUTE) * UNE_MINUTE;
   }

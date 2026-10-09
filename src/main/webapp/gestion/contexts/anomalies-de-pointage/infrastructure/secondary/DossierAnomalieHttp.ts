@@ -32,5 +32,6 @@ export const toDossier = (dossier: components['schemas']['RestDossierAnomalie'])
     ...(echue.posteId === undefined ? {} : { posteId: echue.posteId }),
     journal,
     activite: toActiviteEchue(echue),
+    ...(dossier.borneDeFin === undefined ? {} : { borneDeFin: dossier.borneDeFin }),
   };
 };

@@ -51,6 +51,7 @@ export interface DossierAnomalie {
   readonly posteId?: string;
   readonly journal: readonly PointageAnomalie[];
   readonly activite: ActiviteEchue;
+  readonly borneDeFin?: string;
 }
 
 export type LectureDossier = { readonly kind: 'DOSSIER'; readonly dossier: DossierAnomalie } | { readonly kind: 'INTROUVABLE' };

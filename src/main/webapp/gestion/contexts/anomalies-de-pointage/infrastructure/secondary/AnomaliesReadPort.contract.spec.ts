@@ -106,6 +106,7 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
         operateurNom: 'Camille Martin',
         posteLibelle: 'DMU 50',
         posteId: 'poste-dmu',
+        borneDeFin: '2026-09-14T23:00:00Z',
         journal: [
           {
             id: new PointageAnomalieId('debut-8'),
@@ -122,6 +123,16 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
         },
       },
     });
+  });
+
+  it('should keep no bound of the end when nothing bounds it', async () => {
+    const lecture = port.read(adresse);
+    const sansBorne = dossierFixture();
+    delete sansBorne.borneDeFin;
+    whenDossierAnswers(sansBorne);
+    const dossier = dossierFromReading(await lecture);
+
+    expect(dossier).not.toHaveProperty('borneDeFin');
   });
 
   it('should present neither name nor workstation identity when the references cannot be resolved', async () => {

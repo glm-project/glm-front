@@ -59,7 +59,7 @@ const dossierDeLaFinAutomatique = (): VueDeFrise => vueDe(activiteFixture('a-1',
 
 const poigneeFixture = (heure: string, surcharge: Partial<PoigneeDeFrise> = {}): PoigneeDeFrise => ({
   instant: instantAt(heure),
-  bornes: { min: instantAt('08:00'), max: instantLocalFixture(new Date(2026, 9, 5, 10, 0)) },
+  bornes: { min: instantAt('08:00'), max: instantAt('15:00') },
   ...surcharge,
 });
 
@@ -68,8 +68,7 @@ const placementFixture = (surcharge: Partial<PlacementDeLInstant> = {}): Placeme
   ...surcharge,
 });
 
-const placementDeLaFixture = (): PlacementDeLInstant =>
-  placementFixture({ bornes: { min: instantAt('08:00'), max: instantLocalFixture(new Date(2026, 9, 5, 10, 0)) } });
+const placementDeLaFixture = (): PlacementDeLInstant => placementFixture({ bornes: { min: instantAt('08:00'), max: instantAt('15:00') } });
 
 const PLAN_WIDTH = 1000;
 
@@ -336,12 +335,8 @@ describe('Frise of a dossier', () => {
     thenNoPlacementRowIsDrawn();
   });
 
-  it('should extend the scale to three hours after the last received instant while an instant waits to be placed', async () => {
-    await whenRenderingTheFrise(
-      dossierDeLaFinAutomatique(),
-      undefined,
-      placementFixture({ bornes: { min: instantAt('08:00'), max: instantLocalFixture(new Date(2026, 9, 5, 10, 0)) } }),
-    );
+  it('should extend the scale to the hour that follows the bound of the handle while an instant waits to be placed', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), undefined, placementDeLaFixture());
 
     thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
   });
@@ -352,7 +347,7 @@ describe('Frise of a dossier', () => {
     thenTheHandleIsASlider();
   });
 
-  it('should extend the scale to three hours after the last received instant while a handle is active', async () => {
+  it('should extend the scale to the hour that follows the bound of the handle while a handle is active', async () => {
     await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
 
     thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
@@ -1055,7 +1050,7 @@ describe('Frise of a dossier', () => {
       const dossier = vueEntreInstants(new Date(Date.UTC(2026, 9, 24, 21, 0)), new Date(Date.UTC(2026, 9, 24, 22, 30)));
       const bornes = {
         min: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString(),
-        max: new Date(Date.UTC(2026, 9, 25, 12, 0)).toISOString(),
+        max: new Date(Date.UTC(2026, 9, 25, 1, 30)).toISOString(),
       };
 
       await whenRenderingTheFrise(
