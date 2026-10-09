@@ -47,6 +47,7 @@ const REGULARISATION = {
   validerLaFin: (heure: string) => `Valider la fin à ${heure}`,
   validerLaFinSansHeure: 'Valider la fin',
   regularisee: (heure: string) => `Fin régularisée à ${heure}`,
+  anomalieSuivante: 'Anomalie suivante',
   echec: 'La fin n’a pas pu être enregistrée. Votre saisie est conservée : réessayez.',
   dossierRelu: 'Le dossier a changé pendant la saisie : il a été relu. Placez de nouveau la fin.',
   refus: REFUS_DE_REGULARISATION,

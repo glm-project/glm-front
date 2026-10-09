@@ -1,19 +1,32 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, ParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, ParamMap, provideRouter, Router } from '@angular/router';
 import { ResizeObserverFixture } from '@test/unit/fixtures/gestion/anomalies-de-pointage/ResizeObserverFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { instantLocalFixture } from '@test/utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 import { BehaviorSubject } from 'rxjs';
 import { ActiviteAnomalieId } from '../../../domain/dossier/ActiviteAnomalieId';
 import { AnomaliesReadPort } from '../../../domain/dossier/AnomaliesReadPort';
-import { AdresseDossier, DossierAnomalie, LectureDossier, PageAnomalies } from '../../../domain/dossier/DossierAnomalie';
+import {
+  AdresseDossier,
+  DossierAnomalie,
+  FiltreAnomalies,
+  LectureDossier,
+  LigneFinAutomatique,
+  PageAnomalies,
+} from '../../../domain/dossier/DossierAnomalie';
 import { ElementAnomalie } from '../../../domain/dossier/ElementAnomalie';
+import { ElementAnomalieId } from '../../../domain/dossier/ElementAnomalieId';
 import { OperateurAnomalie } from '../../../domain/dossier/OperateurAnomalie';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
+import { SuiviAnomalieId } from '../../../domain/dossier/SuiviAnomalieId';
 import { CommandeDeRegularisation, RegularisationPort, ResultatDeRegularisation } from '../../../domain/regularisation/RegularisationPort';
 import { DossierAnomaliePage } from './DossierAnomaliePage';
+
+@Component({ template: '' })
+class DestinationFixture {}
 
 const INSTANT_DEBUT = instantLocalFixture(new Date(2026, 8, 14, 8, 0));
 const INSTANT_ECHEANCE = instantLocalFixture(new Date(2026, 8, 14, 21, 0));
@@ -60,8 +73,18 @@ class DossierReadFixture extends AnomaliesReadPort {
     });
   }
 
-  list(): Promise<PageAnomalies> {
-    return Promise.resolve({ lignes: [], total: 0 });
+  pages: Record<number, PageAnomalies> = {};
+  listFailure: Error | undefined;
+  readonly listees: FiltreAnomalies[] = [];
+
+  list(filtre: FiltreAnomalies): Promise<PageAnomalies> {
+    this.listees.push(filtre);
+    const failure = this.listFailure;
+    const page = this.pages[filtre.page] ?? { lignes: [], total: 0 };
+    return roundTripFixture(() => {
+      if (failure !== undefined) throw failure;
+      return page;
+    });
   }
 }
 
@@ -121,6 +144,10 @@ describe('Anomaly dossier page', () => {
     regularisation = new RegularisationFixture();
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([
+          { path: 'anomalies', component: DestinationFixture },
+          { path: 'anomalies/:suivi', component: DestinationFixture },
+        ]),
         { provide: ActivatedRoute, useValue: route },
         { provide: AnomaliesReadPort, useValue: read },
         { provide: RegularisationPort, useValue: regularisation },
@@ -344,6 +371,53 @@ describe('Anomaly dossier page', () => {
       thenTheHandleHoldsNoHour();
     });
 
+    it('should offer the next anomaly once the end is regularised', async () => {
+      await whenRendering();
+
+      await whenRegularisingTheEnd();
+
+      thenTextContains('anomalie-resolution-suivante', 'Anomalie suivante');
+    });
+
+    it('should not offer the next anomaly while the end is not regularised', async () => {
+      await whenRendering();
+
+      thenAbsent('anomalie-resolution-suivante');
+    });
+
+    it('should lead to the first other row of the page of the list the manager came from', async () => {
+      givenTheManagerCameFromTheListFiltered({ operateur: 'op-camille', page: '2' });
+      givenTheList(2, [uneLigne('suivi-camille', 'fin-17'), uneLigne('suivi-alex', 'debut-alex')]);
+      await whenRendering();
+      await whenRegularisingTheEnd();
+
+      await whenAskingForTheNextAnomaly();
+
+      thenTheManagerIsLedTo('/anomalies/suivi-alex?operateur=op-camille&page=2&pointage=debut-alex');
+    });
+
+    it('should lead back to the list saying that no anomaly is left when the list holds no other row', async () => {
+      givenTheManagerCameFromTheListFiltered({ operateur: 'op-camille', page: '1' });
+      givenTheList(1, [uneLigne('suivi-camille', 'fin-17')]);
+      await whenRendering();
+      await whenRegularisingTheEnd();
+
+      await whenAskingForTheNextAnomaly();
+
+      thenTheManagerIsLedTo('/anomalies?operateur=op-camille&plusAucune=1');
+    });
+
+    it('should lead back to the list the manager came from when the list cannot be read', async () => {
+      givenTheManagerCameFromTheListFiltered({ operateur: 'op-camille', page: '2' });
+      read.listFailure = new Error('Liste indisponible');
+      await whenRendering();
+      await whenRegularisingTheEnd();
+
+      await whenAskingForTheNextAnomaly();
+
+      thenTheManagerIsLedTo('/anomalies?operateur=op-camille&page=2');
+    });
+
     it('should say the failure when the regularisation could not be sent', async () => {
       givenTheRegularisationAnswers(new Error('Réseau coupé'));
       await whenRendering();
@@ -430,6 +504,40 @@ describe('Anomaly dossier page', () => {
   const thenTheHandleHoldsNoHour = (): void => {
     expect(element('anomalie-poignee').hasAttribute('data-sans-heure')).toBe(true);
     expect(element('anomalie-poignee').hasAttribute('aria-valuenow')).toBe(false);
+  };
+
+  const givenTheManagerCameFromTheListFiltered = (filtre: Record<string, string>): void => {
+    route.queryParamMap.next(convertToParamMap({ pointage: 'fin-17', ...filtre }));
+  };
+
+  const givenTheList = (page: number, lignes: readonly LigneFinAutomatique[]): void => {
+    read.pages[page] = { lignes, total: lignes.length };
+  };
+
+  const uneLigne = (suivi: string, pointage: string): LigneFinAutomatique => ({
+    adresse: { suivi: new SuiviAnomalieId(suivi), pointage: new PointageAnomalieId(pointage) },
+    element: new ElementAnomalieId('element-1'),
+    designation: 'M24-0655',
+    operateur: 'Camille Martin',
+    poste: 'DMU 50',
+    debut: INSTANT_DEBUT,
+    echeance: INSTANT_ECHEANCE,
+  });
+
+  const whenRegularisingTheEnd = async (): Promise<void> => {
+    await whenPressingOnTheHandle('ArrowLeft');
+    await whenValidating();
+  };
+
+  const whenAskingForTheNextAnomaly = async (): Promise<void> => {
+    element('anomalie-resolution-suivante').click();
+    await fixture.whenStable();
+    await roundTripFixture(() => undefined);
+    await fixture.whenStable();
+  };
+
+  const thenTheManagerIsLedTo = (url: string): void => {
+    expect(TestBed.inject(Router).url).toBe(url);
   };
 
   const givenTheRegularisationAnswers = (...reponses: (ResultatDeRegularisation | Error)[]): void => {

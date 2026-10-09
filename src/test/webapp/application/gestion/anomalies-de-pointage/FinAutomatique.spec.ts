@@ -1,3 +1,4 @@
+import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
 import { requiredFixture } from '../../../utils/RequiredFixture';
 import { abscisseDeLHeure } from '../../../utils/gestion/anomalies-de-pointage/AbscisseSurLaFrise';
@@ -8,6 +9,12 @@ import {
   ouvrantFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
+import {
+  finAutomatiqueLigneFixture,
+  givenTheElementsFinsAutomatiques,
+  givenTheReferentielFinsAutomatiques,
+  pageFinsAutomatiquesFixture,
+} from '../../../utils/gestion/anomalies-de-pointage/FinsAutomatiquesHttp.fixture';
 import { instantLocalWithOffsetFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 import {
   givenTheHoursOfTheOperator,
@@ -26,6 +33,92 @@ import {
 
 const urlDossier = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 const HEURE_CLIQUEE = new Date(2026, 8, 14, 17, 0);
+
+const autreSuiviFixture = '71000000-0000-0000-0000-000000000020';
+const autreOuvrantFixture = '71000000-0000-0000-0000-000000000021';
+
+const autreDossierFixture = (): components['schemas']['RestDossierAnomalie'] => {
+  const dossier = dossierFinAutomatiqueFixture();
+  return {
+    ...dossier,
+    adresse: { suivi: autreSuiviFixture, pointage: autreOuvrantFixture },
+    activite: { ...dossier.activite, evenement: autreOuvrantFixture },
+    pointages: dossier.pointages.map(pointage => ({ ...pointage, id: autreOuvrantFixture })),
+  };
+};
+
+const autreLigneFixture = (): components['schemas']['RestFinAutomatiqueEnListe'] => ({
+  ...finAutomatiqueLigneFixture,
+  adresse: { suivi: autreSuiviFixture, pointage: autreOuvrantFixture },
+});
+
+const whenClickingTheBarAt = (instant: Date): void => {
+  const heures = instant.getHours() + instant.getMinutes() / 60;
+  cy.get(dataSelector('anomalie-frise-placement')).then(elements => {
+    const { left } = requiredFixture(elements[0], 'rangée de placement').getBoundingClientRect();
+    abscisseDeLHeure(heures).then(clientX => {
+      cy.get(dataSelector('anomalie-frise-placement')).click(clientX - left, 20);
+    });
+  });
+};
+
+describe('Regularisation of the automatic ends of the list in Gestion', () => {
+  beforeEach(() => {
+    cy.viewport(1280, 900);
+    cy.clock(new Date(2026, 8, 14, 23, 0).getTime(), ['Date']);
+    givenTheReferentielFinsAutomatiques();
+    givenTheElementsFinsAutomatiques();
+    cy.intercept('GET', urlDossier, { body: dossierFinAutomatiqueFixture() });
+    cy.intercept('GET', `/api/atelier/suivis/${autreSuiviFixture}/anomalies/${autreOuvrantFixture}`, { body: autreDossierFixture() });
+    givenTheRegularisationIsCreated();
+  });
+
+  it('should lead from the regularised end to the next automatic end of the list', () => {
+    givenTheList([finAutomatiqueLigneFixture, autreLigneFixture()]);
+
+    whenRegularisingTheFirstEndOfTheList();
+    whenAskingForTheNextAnomaly();
+
+    thenTheNextAutomaticEndIsOpened();
+  });
+
+  it('should lead back to the list saying that no anomaly is left when the regularised end was the last', () => {
+    givenTheList([finAutomatiqueLigneFixture]);
+
+    whenRegularisingTheFirstEndOfTheList();
+    whenAskingForTheNextAnomaly();
+
+    thenTheListSaysThatNoAnomalyIsLeft();
+  });
+
+  const givenTheList = (lignes: components['schemas']['RestFinAutomatiqueEnListe'][]): void => {
+    cy.intercept('GET', '/api/atelier/anomalies*', { body: pageFinsAutomatiquesFixture(lignes) });
+  };
+
+  const whenRegularisingTheFirstEndOfTheList = (): void => {
+    cy.visit('/anomalies');
+    cy.get(dataSelector('fin-automatique-ouvrir')).first().click();
+    whenClickingTheBarAt(HEURE_CLIQUEE);
+    whenValidatingTheEnd();
+    thenTheEndIsSaidRegularisedAt('17:00');
+  };
+
+  const whenAskingForTheNextAnomaly = (): void => {
+    cy.get(dataSelector('anomalie-resolution-suivante')).click();
+  };
+
+  const thenTheNextAutomaticEndIsOpened = (): void => {
+    cy.location('pathname').should('equal', `/anomalies/${autreSuiviFixture}`);
+    cy.location('search').should('contain', `pointage=${autreOuvrantFixture}`);
+    cy.get(dataSelector('anomalie-resolution')).should('be.visible');
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
+  };
+
+  const thenTheListSaysThatNoAnomalyIsLeft = (): void => {
+    cy.location('pathname').should('equal', '/anomalies');
+    cy.get(dataSelector('anomalies-plus-aucune')).should('contain.text', 'Plus aucune anomalie');
+  };
+});
 
 describe('Automatic end of an activity in Gestion', () => {
   beforeEach(() => {
@@ -80,16 +173,6 @@ describe('Automatic end of an activity in Gestion', () => {
 
   const whenOpeningTheAutomaticEnd = (): void => {
     cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
-  };
-
-  const whenClickingTheBarAt = (instant: Date): void => {
-    const heures = instant.getHours() + instant.getMinutes() / 60;
-    cy.get(dataSelector('anomalie-frise-placement')).then(elements => {
-      const { left } = requiredFixture(elements[0], 'rangée de placement').getBoundingClientRect();
-      abscisseDeLHeure(heures).then(clientX => {
-        cy.get(dataSelector('anomalie-frise-placement')).click(clientX - left, 20);
-      });
-    });
   };
 
   const thenTheHandleHoldsTheClickedHour = (): void => {

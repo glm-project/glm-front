@@ -13,6 +13,16 @@
   <p class="mt-4 text-body font-semibold" role="status" data-selector="anomalie-resolution-regularisee">
     {{ libelles.regularisee(heure) }}
   </p>
+  <button
+    type="button"
+    class="bouton bouton-principal mt-4"
+    data-selector="anomalie-resolution-suivante"
+    [attr.aria-busy]="rechercheEnCours()"
+    [disabled]="rechercheEnCours()"
+    (click)="passerALaSuivante()"
+  >
+    {{ libelles.anomalieSuivante }}
+  </button>
   } @else { @if (message(); as message) {
   <p class="mt-4 text-body-sm text-danger" role="alert" data-selector="anomalie-resolution-refus">{{ message }}</p>
   }
