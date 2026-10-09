@@ -31,16 +31,18 @@ describe('FichierDeLogo', () => {
   it.each([
     ['a PNG of 50 × 50 pixels', pngFixture(50, 50)],
     ['a JPEG of 50 × 50 pixels', jpegFixture(50, 50)],
-    ['a logo of 20 Ko exactly', alourdiFixture(pngFixture(50, 50), 20 * 1024)],
+    ['a wide PNG of 256 × 100 pixels', pngFixture(256, 100)],
+    ['a JPEG of 256 × 256 pixels', jpegFixture(256, 256)],
+    ['a logo of 50 Ko exactly', alourdiFixture(pngFixture(50, 50), 50 * 1024)],
   ])('should accept %s', (_cas, octets) => {
     expect(new FichierDeLogo(octets).refus()).toBeUndefined();
   });
 
   it.each([
-    ['heavier than 20 Ko', alourdiFixture(pngFixture(50, 50), 20 * 1024 + 1), 'Le logo pèse 21 Ko, au plus 20 Ko.'],
+    ['heavier than 50 Ko', alourdiFixture(pngFixture(50, 50), 50 * 1024 + 1), 'Le logo pèse 51 Ko, au plus 50 Ko.'],
     ['not a PNG nor a JPEG', texteFixture(), 'Le logo doit être une image PNG ou JPEG.'],
-    ['wider than 50 pixels', pngFixture(120, 50), 'Le logo doit mesurer 50 × 50 pixels (reçu : 120 × 50).'],
-    ['taller than 50 pixels', jpegFixture(50, 80), 'Le logo doit mesurer 50 × 50 pixels (reçu : 50 × 80).'],
+    ['wider than 256 pixels', pngFixture(257, 100), 'Le logo doit tenir dans 256 × 256 pixels (reçu : 257 × 100).'],
+    ['taller than 256 pixels', jpegFixture(100, 257), 'Le logo doit tenir dans 256 × 256 pixels (reçu : 100 × 257).'],
   ])('should refuse a file %s, saying why', (_cas, octets, refus) => {
     expect(new FichierDeLogo(octets).refus()).toBe(refus);
   });

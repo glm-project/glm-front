@@ -6,7 +6,7 @@ Ce contexte appartient exclusivement à `gestion`. Il porte les réglages que l'
 
 **Paramétrage** : les réglages de l'entreprise, lus en un appel (`GET /api/parametrage`).
 
-**Logo de l'entreprise** : une image PNG ou JPEG de 50 × 50 pixels exactement, de 20 Ko au plus, affichée à la place du logo GLM en en-tête de la supervision, du pupitre et des PDF. Sa **version** est l'empreinte de son contenu, donnée par le serveur ; l'image se lit à l'adresse de sa version, que le navigateur garde en cache.
+**Logo de l'entreprise** : une image PNG ou JPEG qui tient dans 256 × 256 pixels, en longueur ou en carré, de 50 Ko au plus, affichée à la place du logo GLM en en-tête de la supervision, du pupitre et des PDF. Chaque en-tête l'ajuste à sa case sans la déformer. Sa **version** est l'empreinte de son contenu, donnée par le serveur ; l'image se lit à l'adresse de sa version, que le navigateur garde en cache.
 
 **Durée max d'une activité** : le temps au bout duquel une activité que personne n'a terminée s'arrête seule et devient une anomalie de pointage. Elle se saisit en heures entières, de 1 à 24, et vaut 13 h tant que l'entreprise ne l'a pas fixée. Une nouvelle durée ne vaut que pour les activités commencées après son enregistrement : le serveur fige la durée au début de chaque activité.
 

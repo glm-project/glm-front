@@ -29,12 +29,22 @@ export const pngFixture = (largeur: number, hauteur: number): Uint8Array =>
     0,
   ]);
 
+const pngDecodableFixture = ({ largeur, hauteur }: { largeur: number; hauteur: number }): ArrayBuffer => {
+  const toile = document.createElement('canvas');
+  toile.width = largeur;
+  toile.height = hauteur;
+  toile.getContext('2d')?.fillRect(0, 0, largeur, hauteur);
+  return Uint8Array.from(atob(toile.toDataURL('image/png').split(',')[1] ?? ''), caractere => caractere.charCodeAt(0)).buffer;
+};
+
 export class ParametrageApiFixture {
   duree = 'PT13H';
   logo: string | undefined;
   readonly durees: string[] = [];
   depots = 0;
   retraits = 0;
+
+  constructor(private readonly dimensionsDuLogo = { largeur: 50, hauteur: 50 }) {}
 
   install(): void {
     cy.intercept('GET', '/api/parametrage', request => {
@@ -58,8 +68,10 @@ export class ParametrageApiFixture {
       this.logo = undefined;
       request.reply({ statusCode: 204 });
     }).as('logoRetrait');
-    cy.intercept('GET', '/api/parametrage/logo/*', request => {
-      request.reply({ statusCode: 200, headers: { 'content-type': 'image/png' }, body: Cypress.Buffer.from(pngFixture(50, 50)) });
+    cy.intercept('GET', '/api/parametrage/logo/*', {
+      statusCode: 200,
+      headers: { 'content-type': 'image/png' },
+      body: pngDecodableFixture(this.dimensionsDuLogo),
     }).as('logoImage');
   }
 }

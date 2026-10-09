@@ -160,9 +160,9 @@ describe('Parametres page', () => {
   it('should refuse an image of the wrong size without sending it, saying what it measures', async () => {
     await whenOpening();
 
-    await whenChoosing(pngFixture(120, 80));
+    await whenChoosing(pngFixture(300, 80));
 
-    expect(text('logo-refus')).toBe('Le logo doit mesurer 50 × 50 pixels (reçu : 120 × 80).');
+    expect(text('logo-refus')).toBe('Le logo doit tenir dans 256 × 256 pixels (reçu : 300 × 80).');
     expect(port.depots).toEqual([]);
   });
 
@@ -293,7 +293,7 @@ describe('Parametres page', () => {
   const thenTheLogoIsShownAtRealSize = (adresse: string): void => {
     const apercu = requiredFixture(document.querySelector<HTMLImageElement>(dataSelector('logo-apercu')), 'logo-apercu');
     expect(apercu.getAttribute('src')).toBe(adresse);
-    expect(apercu.width).toBe(50);
+    expect(apercu.hasAttribute('width')).toBe(false);
   };
   const givenTheLogo = (): void => {
     port.logo = LOGO_FIXTURE;
