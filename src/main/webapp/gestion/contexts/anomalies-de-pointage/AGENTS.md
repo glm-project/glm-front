@@ -30,9 +30,8 @@ et des coûts reste au backend, selon l'[ADR 0047](../../../../../../documentati
   de fin et de la poignée sur une échelle de temps. Elle n'invente aucune fin ni aucune heure.
 - **Saisie de régularisation** (`SaisieDeRegularisation`) : activité, heure et identifiant de la commande à envoyer.
 - **Anomalie suivante** : bouton qui mène à une autre fin automatique de la liste après une régularisation.
-- **Geste** : nom d'un pointage d'après le bouton du pupitre : « Démarrage », « Démarrage en NC », « Arrêt ».
-  Gestion en possède les libellés et les aligne à la main sur le pupitre, qu'elle n'importe pas. « Action »
-  n'a plus de sens ici.
+- **Geste** : le libellé, côté gestionnaire, d'un type de pointage : « Démarrage » (`DEBUT`), « Démarrage en NC »
+  (`NON_CONFORMITE`), « Arrêt » (`FIN`) (`LibellesAnomalies.ts`). « Action » n'a plus de sens ici.
 
 ## Responsabilités et invariants
 
@@ -157,7 +156,4 @@ Les règles de test sont dans [`documentation/testing.md`](../../../../../../doc
 
 ## Ce qui a disparu
 
-Le contexte a perdu les conflits, la vue complète, les actions directes, la correction, l'annulation, l'aperçu,
-la confirmation, le reçu et la proposition signée : le serveur ignore désormais les pointages incohérents au lieu
-d'en faire des anomalies ([ADR 0054](../../../../../../documentation/adr/0054-ignore-incoherent-pointages-at-reception.md)).
-Ne rien rouvrir de cela sans nouvelle décision.
+Les conflits et leurs résolutions : voir l'[ADR 0054](../../../../../../documentation/adr/0054-ignore-incoherent-pointages-at-reception.md).

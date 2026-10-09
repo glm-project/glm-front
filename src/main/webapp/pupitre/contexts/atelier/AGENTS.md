@@ -11,16 +11,17 @@ la comptabilisation des rapports de l'indication conservée au pupitre.
 fenêtre opérateur selon les règles existantes ci-dessous. Elle aide l'opérateur à lire son activité ;
 elle ne constitue pas une durée comptabilisée dans les rapports.
 
+## Langage
+
 **Clé d'activité** : opérateur et poste, au sein d'un suivi. Une clé porte au plus une activité en cours.
 Le pupitre n'envoie que trois pointages (`DEBUT`, `NON_CONFORMITE`, `FIN`), sans intention ni cible : une
 `FIN` ferme l'activité de sa clé, et une ouverture sur une clé déjà occupée est ignorée par le serveur
-(`DEJA_EN_COURS`). La projection locale suit la même règle : une ouverture sur une clé occupée est sans effet. La règle
+(`DEJA_EN_COURS`). La projection locale applique `FIN` et ouverture comme le serveur : une ouverture sur une clé occupée est sans effet. Elle ne juge pas `ANTERIEUR` (un geste plus ancien que le dernier accepté de la clé, ni une `FIN` à l'heure du début ou avant lui) : l'écart dure jusqu'au recalage sur le référentiel de la synchronisation suivante, qui le corrige sans message. La règle
 de réception est posée par l'[ADR 0054](../../../../../../documentation/adr/0054-ignore-incoherent-pointages-at-reception.md).
 
 **Geste composé** : un appui qui change la catégorie d'un travail envoie deux pointages à la même heure, la
 `FIN` d'abord, avec le poste de chaque activité. NC pendant un travail envoie une `FIN` puis une
-`NON_CONFORMITE` par activité en travail ; « FIN NC » (cible secondaire d'une tuile en non-conformité,
-ancien « BON ») envoie une `FIN` puis un `DEBUT` par activité en non-conformité. Le pupitre ne relance pas :
+`NON_CONFORMITE` par activité en travail ; « FIN NC » (cible secondaire d'une tuile en non-conformité) envoie une `FIN` puis un `DEBUT` par activité en non-conformité. Le pupitre ne relance pas :
 il ferme l'activité par une `FIN` explicite avant d'en ouvrir une autre ([ADR 0054](../../../../../../documentation/adr/0054-ignore-incoherent-pointages-at-reception.md)).
 
 **Durée maximale** : durée d'une activité sans fin pointée, lue du référentiel (`dureeMaximaleDActivite`,
@@ -43,8 +44,6 @@ suivante, par le mécanisme existant ; le refus reste au journal local (ADR 0049
 (`MotifDeRefus.isShownToTheOperator()`). Tout autre refus, y compris un code que l'adaptateur ne reconnaît
 pas, reste au journal local sans affichage. Un lot qui mêle un refus silencieux et une clôture expose la
 clôture.
-
-## Langage
 
 **Identifiant** : code de 1 à 6 chiffres saisi au pupitre pour retrouver localement un opérateur du référentiel d'atelier ; le pavé ignore un septième chiffre. Il ne constitue ni un secret ni une preuve d'identité; éviter mot de passe et code PIN. Sa définition est locale au pupitre et ne crée aucun contrat métier avec `gestion`.
 
