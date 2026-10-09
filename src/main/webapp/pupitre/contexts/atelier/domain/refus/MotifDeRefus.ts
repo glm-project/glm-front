@@ -10,28 +10,23 @@ export const CODES_DE_REFUS_D_ATELIER = [
 
 export type CodeDeRefusDAtelier = (typeof CODES_DE_REFUS_D_ATELIER)[number];
 
-const ERREURS_DE_L_ATELIER = 'urn:glm:erreur:atelier:';
-
-export const codeDeRefusDepuisUrn = (urn: string): CodeDeRefusDAtelier | undefined =>
-  CODES_DE_REFUS_D_ATELIER.find(code => ERREURS_DE_L_ATELIER + code === urn);
-
 export class MotifDeRefus {
-  private constructor(private readonly code: CodeDeRefusDAtelier | undefined) {}
+  private constructor(private readonly motif: CodeDeRefusDAtelier | undefined) {}
 
   static none(): MotifDeRefus {
     return new MotifDeRefus(undefined);
-  }
-
-  static fromUrn(urn: string): MotifDeRefus {
-    return new MotifDeRefus(codeDeRefusDepuisUrn(urn));
   }
 
   static from(code: CodeDeRefusDAtelier | undefined): MotifDeRefus {
     return new MotifDeRefus(code);
   }
 
+  code(): CodeDeRefusDAtelier | undefined {
+    return this.motif;
+  }
+
   is(code: CodeDeRefusDAtelier): boolean {
-    return this.code === code;
+    return this.motif === code;
   }
 
   isShownToTheOperator(): boolean {

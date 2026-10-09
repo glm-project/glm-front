@@ -56,8 +56,9 @@ const travailALaFraiseuseFixture: ActiviteDuPupitre = {
   posteId: 'fraiseuse',
 };
 
-const POINTAGE_IGNORE = 'urn:glm:erreur:atelier:pointage-ignore';
-const SUIVI_CLOTURE = 'urn:glm:erreur:atelier:suivi-d-atelier-cloture';
+const POINTAGE_IGNORE = 'pointage-ignore';
+const SUIVI_CLOTURE = 'suivi-d-atelier-cloture';
+type MotifFixture = typeof POINTAGE_IGNORE | typeof SUIVI_CLOTURE;
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
@@ -629,7 +630,7 @@ describe('FenetreOperateur', () => {
     thenNoRefusalIsVisible();
   });
 
-  it.each([
+  it.each<[string, readonly MotifFixture[]]>([
     ['ignored then closed', [POINTAGE_IGNORE, SUIVI_CLOTURE]],
     ['closed then ignored', [SUIVI_CLOTURE, POINTAGE_IGNORE]],
   ])('should expose the closed element refusal of a lot whose other pointage was %s', (_order, codes) => {
@@ -1133,11 +1134,12 @@ describe('FenetreOperateur', () => {
       refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." },
     })),
   });
-  const messageOf = (code: string): { code: string; message: string } => ({
-    code,
-    message: code === POINTAGE_IGNORE ? 'Le pointage est ignoré.' : "L'élément a été clôturé.",
+  const messageOf = (motif: MotifFixture): { code: string; message: string; motif: MotifFixture } => ({
+    code: 'code-de-diagnostic',
+    motif,
+    message: motif === POINTAGE_IGNORE ? 'Le pointage est ignoré.' : "L'élément a été clôturé.",
   });
-  const givenTheGesturesWereRefusedWith = (gestures: readonly GesteDePointage[], codes: readonly string[]): JournalDuPupitre => ({
+  const givenTheGesturesWereRefusedWith = (gestures: readonly GesteDePointage[], codes: readonly MotifFixture[]): JournalDuPupitre => ({
     ...structuredClone(vueFixture),
     evenements: gestures.map((geste, index) => ({
       geste,

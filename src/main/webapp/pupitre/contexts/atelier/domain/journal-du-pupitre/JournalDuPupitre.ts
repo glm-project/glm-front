@@ -1,4 +1,5 @@
-import { MotifDeRefus } from '../refus/MotifDeRefus';
+import { CodeDeRefusDAtelier, MotifDeRefus } from '../refus/MotifDeRefus';
+import { RefusDePublication } from '../refus/RefusDePublication';
 
 export type EtatDAtelier = 'EN_ATTENTE' | 'EN_COURS' | 'INTERROMPU';
 export type TypeDePointage = 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
@@ -79,7 +80,7 @@ export interface EvenementAccepte {
 export interface EvenementRefuse {
   readonly geste: GesteDePointage;
   readonly etat: 'REFUSE';
-  readonly refus: { readonly code: string; readonly message: string };
+  readonly refus: { readonly code: string; readonly message: string; readonly motif?: CodeDeRefusDAtelier };
 }
 
 export interface JournalDuPupitre {
@@ -127,7 +128,7 @@ export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre =
 const isShownRefusalAmong =
   (gesteIds: ReadonlySet<string>) =>
   (evenement: EvenementDuJournal): evenement is EvenementRefuse =>
-    evenement.etat === 'REFUSE' && gesteIds.has(evenement.geste.id) && MotifDeRefus.fromUrn(evenement.refus.code).isShownToTheOperator();
+    evenement.etat === 'REFUSE' && gesteIds.has(evenement.geste.id) && MotifDeRefus.from(evenement.refus.motif).isShownToTheOperator();
 
 export class EvenementsDuJournal {
   private readonly evenements: readonly EvenementDuJournal[];
@@ -155,11 +156,14 @@ export class EvenementsDuJournal {
 
 export const acceptPublication = (geste: GesteDePointage): EvenementAccepte => ({ geste, etat: 'ACCEPTE' });
 
-export const refusePublication = (geste: GesteDePointage, refus: EvenementRefuse['refus']): EvenementRefuse => ({
-  geste,
-  etat: 'REFUSE',
-  refus: { code: refus.code, message: refus.message },
-});
+export const refusePublication = (geste: GesteDePointage, refus: RefusDePublication): EvenementRefuse => {
+  const motif = refus.motif.code();
+  return {
+    geste,
+    etat: 'REFUSE',
+    refus: { code: refus.code, message: refus.message, ...(motif === undefined ? {} : { motif }) },
+  };
+};
 
 const suspensionOf = (geste: GesteDePointage, operateurId: string): geste is GesteDePointage & { readonly suspension: Suspension } =>
   geste.operateurId === operateurId && geste.suspension !== undefined;

@@ -220,6 +220,19 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     await thenReplayDecisionIs(refused, code, decision);
   });
 
+  it.each<[string, string | undefined]>([
+    ['urn:glm:erreur:atelier:pointage-ignore', 'pointage-ignore'],
+    ['urn:glm:erreur:atelier:suivi-d-atelier-cloture', 'suivi-d-atelier-cloture'],
+    ['urn:glm:erreur:atelier:evenement-anterieur-a-l-engagement', undefined],
+    ['urn:glm:erreur:autre:pointage-ignore', undefined],
+  ])('should translate the refusal %s into the reason %s', async (code, motif) => {
+    const refused = whenSending(ouvertureFixture);
+
+    await whenServerRefusesWrite(code, 'cause');
+
+    await thenRefusalReasonIs(refused, motif);
+  });
+
   it('should preserve a transport failure as a retryable failure', async () => {
     const refused = whenSending(ouvertureFixture);
 
@@ -353,6 +366,10 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     const refusal = result.ok ? undefined : result.error;
     expect(decideReplay(refusal)).toBe(decision);
     expect(refusal).toMatchObject({ code, message: 'cause' });
+  };
+  const thenRefusalReasonIs = async (operation: Promise<Result<void, RefusDePublication>>, motif: string | undefined): Promise<void> => {
+    const result = await operation;
+    expect(result.ok ? undefined : result.error.motif.code()).toBe(motif);
   };
   const thenTransportFailureIs = async (operation: Promise<unknown>): Promise<void> => {
     const failure = await operation.catch((reason: unknown) => reason);

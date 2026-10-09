@@ -1,3 +1,5 @@
+import { MotifDeRefus } from '../refus/MotifDeRefus';
+import { RefusDePublication } from '../refus/RefusDePublication';
 import {
   afterLocalCapture,
   EMPTY_JOURNAL_DU_PUPITRE,
@@ -5,6 +7,7 @@ import {
   EvenementsDuJournal,
   GesteDePointage,
   JournalDuPupitre,
+  refusePublication,
   snapshotDuJournal,
 } from './JournalDuPupitre';
 
@@ -20,6 +23,26 @@ const gesteFixture = (id: string): GesteDePointage => ({
 });
 
 describe('JournalDuPupitre', () => {
+  it('should record on a refused event the normalized reason the adapter recognized, beside the diagnostic code and message', () => {
+    const refus = new RefusDePublication('code-de-diagnostic', 'Pointage ignoré', MotifDeRefus.from('pointage-ignore'));
+
+    const evenement = refusePublication(gesteFixture('ignore'), refus);
+
+    expect(evenement).toEqual({
+      geste: gesteFixture('ignore'),
+      etat: 'REFUSE',
+      refus: { code: 'code-de-diagnostic', message: 'Pointage ignoré', motif: 'pointage-ignore' },
+    });
+  });
+
+  it('should record no reason on a refused event whose code the adapter did not recognize', () => {
+    const refus = new RefusDePublication('code-inconnu', 'Refus');
+
+    const evenement = refusePublication(gesteFixture('inconnu'), refus);
+
+    expect(evenement).toEqual({ geste: gesteFixture('inconnu'), etat: 'REFUSE', refus: { code: 'code-inconnu', message: 'Refus' } });
+  });
+
   it('should stop only the designated operator resumption while retaining every prior journal event', () => {
     const suspended = (operateurId: string): GesteDePointage => ({
       nature: 'POINTAGE',

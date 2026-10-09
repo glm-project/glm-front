@@ -221,7 +221,7 @@ describe('Durable pupitre HTTP exchange', () => {
       { method: 'GET', url: '/api/pupitre/referentiel', body: null },
     ]);
     expect(restored.evenements).toEqual([
-      { geste: gestes[0], etat: 'REFUSE', refus: { code: `urn:glm:erreur:atelier:${code}`, message: 'Final refusal' } },
+      { geste: gestes[0], etat: 'REFUSE', refus: { code: `urn:glm:erreur:atelier:${code}`, message: 'Final refusal', motif: code } },
       { geste: gestes[1], etat: 'ACCEPTE' },
     ]);
     expect(restored.referentiel).toEqual(referenceFixture);

@@ -10,7 +10,7 @@ import {
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitreProjection';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
-import { MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
+import { CodeDeRefusDAtelier, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
@@ -459,7 +459,7 @@ describe('PupitreSynchronization', () => {
     await whenSynchronizing();
 
     thenOnlyTheActivityOfTheServerRemains();
-    thenEventRefused('urn:glm:erreur:atelier:pointage-ignore', 'Pointage ignoré');
+    thenEventRefused('urn:glm:erreur:atelier:pointage-ignore', 'Pointage ignoré', 'pointage-ignore');
   });
 
   it('should mark disconnected when unexpected technical failure occurs during exchange', async () => {
@@ -766,8 +766,9 @@ describe('PupitreSynchronization', () => {
     const projected = exposed === undefined ? undefined : projectReferentiel(exposed);
     expect(projected?.suivis[0]?.activites).toEqual([activiteDuServeurFixture]);
   };
-  const thenEventRefused = (code: string, message: string): void => {
-    expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'REFUSE', refus: { code, message } }]);
+  const thenEventRefused = (code: string, message: string, motif?: CodeDeRefusDAtelier): void => {
+    const refus = motif === undefined ? { code, message } : { code, message, motif };
+    expect(exposed?.evenements).toEqual([{ geste: gesteFixture, etat: 'REFUSE', refus }]);
   };
   const thenDisconnectedStatusObserved = (): void => {
     expect(exposed?.connecte).toBe(false);

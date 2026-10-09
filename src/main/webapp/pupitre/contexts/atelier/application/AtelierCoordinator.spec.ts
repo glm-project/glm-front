@@ -13,7 +13,7 @@ import {
   ReferentielDuPupitre,
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
-import { CODES_DE_REFUS_D_ATELIER, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
+import { CodeDeRefusDAtelier, CODES_DE_REFUS_D_ATELIER, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { err, ok, Result } from '@/pupitre/contexts/atelier/domain/synchronisation/Result';
@@ -1679,12 +1679,13 @@ describe('AtelierCoordinator', () => {
   const thenChronologyIs = (events: string[]): void => {
     expect(serveur.chronology).toEqual(events);
   };
-  const thenRefusalIs = async (code: string): Promise<void> => {
+  const thenRefusalIs = async (code: CodeDeRefusDAtelier): Promise<void> => {
     const diagnostics = (await journal.read(Entreprise.of('entreprise-a'))).evenements.filter(event => event.etat === 'REFUSE');
     expect(diagnostics).toHaveLength(1);
     expect(requiredFixture(diagnostics[0], 'diagnostic').refus).toEqual({
       code: `urn:glm:erreur:atelier:${code}`,
       message: 'cause conservee',
+      motif: code,
     });
   };
   const thenDiagnosticsCountIs = async (count: number): Promise<void> => {
