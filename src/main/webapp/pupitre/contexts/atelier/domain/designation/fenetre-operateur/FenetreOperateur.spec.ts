@@ -647,6 +647,14 @@ describe('FenetreOperateur', () => {
     thenLatestRefusalNamesTheElement();
   });
 
+  it('should expose the last shown refusal of a lot when several pointages were refused for the closed element', () => {
+    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+
+    whenReconciling(givenTheGesturesWereRefusedForClosureInOrder(gestures, ['Premier refus.', 'Dernier refus.']));
+
+    expect(fenetre.refusal()?.message).toBe('Dernier refus.');
+  });
+
   it.each<MotifFixture>([POINTAGE_IGNORE, NON_HABILITE])(
     'should never expose the %s refusal, only the closed element refusal is shown',
     motif => {
@@ -1182,6 +1190,17 @@ describe('FenetreOperateur', () => {
     code: 'code-de-diagnostic',
     motif,
     message: motif === SUIVI_CLOTURE ? "L'élément a été clôturé." : 'Refus silencieux.',
+  });
+  const givenTheGesturesWereRefusedForClosureInOrder = (
+    gestures: readonly GesteDePointage[],
+    messages: readonly string[],
+  ): JournalDuPupitre => ({
+    ...structuredClone(vueFixture),
+    evenements: gestures.map((geste, index) => ({
+      geste,
+      etat: 'REFUSE' as const,
+      refus: { code: 'code-de-diagnostic', motif: SUIVI_CLOTURE, message: requiredFixture(messages[index], 'refusal message') },
+    })),
   });
   const givenTheGesturesWereRefusedWithoutReason = (gestures: readonly GesteDePointage[]): JournalDuPupitre => ({
     ...structuredClone(vueFixture),
