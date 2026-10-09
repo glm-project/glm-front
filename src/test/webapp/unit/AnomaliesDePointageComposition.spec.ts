@@ -1,12 +1,18 @@
 import { components } from '@/app/generated/schema';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { anomaliesDePointageProvider } from '@/gestion/anomalies-de-pointage.provider';
+import { ActiviteAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ActiviteAnomalieId';
 import { AnomaliesReadPort } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/AnomaliesReadPort';
 import { PageAnomalies } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/DossierAnomalie';
 import { ElementAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalie';
 import { ElementAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/ElementAnomalieId';
 import { OperateurAnomalie } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalie';
 import { OperateurAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/OperateurAnomalieId';
+import { SuiviAnomalieId } from '@/gestion/contexts/anomalies-de-pointage/domain/dossier/SuiviAnomalieId';
+import {
+  RegularisationPort,
+  ResultatDeRegularisation,
+} from '@/gestion/contexts/anomalies-de-pointage/domain/regularisation/RegularisationPort';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -48,6 +54,25 @@ describe('Real anomaly reading composition', () => {
       pageSize: 5,
       totalElementsCount: 0,
     } satisfies components['schemas']['PageRestFinAutomatiqueEnListe']);
+  };
+
+  it('should regularise an automatic end through the public regularisation port on the same-origin API', async () => {
+    const regularisation = whenRegularisingAnAutomaticEnd();
+    whenTheRegularisationIsCreated();
+
+    expect(await regularisation).toEqual({ kind: 'REGULARISEE' });
+  });
+
+  const whenRegularisingAnAutomaticEnd = (): Promise<ResultatDeRegularisation> =>
+    TestBed.inject(RegularisationPort).regulariser({
+      suivi: new SuiviAnomalieId('suivi-camille'),
+      id: 'saisie-1',
+      activite: new ActiviteAnomalieId('travail-8'),
+      dateDeSurvenue: '2026-09-14T17:00:00-03:00',
+    });
+
+  const whenTheRegularisationIsCreated = (): void => {
+    server.expectOne('/api/atelier/suivis/suivi-camille/regularisations').flush({}, { status: 201, statusText: 'Created' });
   };
 
   it('should read the operators through the public read port on the same-origin API', async () => {

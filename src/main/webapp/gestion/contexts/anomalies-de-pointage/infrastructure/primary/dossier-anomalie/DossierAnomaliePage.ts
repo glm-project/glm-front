@@ -1,4 +1,4 @@
-import { Component, computed, inject, resource } from '@angular/core';
+import { Component, computed, inject, linkedSignal, resource } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { adresseDossier } from '../../../domain/dossier/AdresseDossier';
@@ -36,11 +36,23 @@ export class DossierAnomaliePage {
     return lecture?.kind === 'DOSSIER' ? lecture.dossier : undefined;
   });
 
+  protected readonly resolution = computed(() => {
+    const dossier = this.dossier();
+    const adresse = this.adresse();
+    return dossier === undefined || adresse === undefined ? undefined : { dossier, adresse };
+  });
+  protected readonly dossierRelu = linkedSignal({ source: this.adresse, computation: () => false });
+
   private read(adresse: AdresseDossier | undefined) {
     return adresse === undefined ? Promise.resolve(undefined) : this.port.read(adresse);
   }
 
   protected reload(): void {
+    this.lecture.reload();
+  }
+
+  protected relire(): void {
+    this.dossierRelu.set(true);
     this.lecture.reload();
   }
 }

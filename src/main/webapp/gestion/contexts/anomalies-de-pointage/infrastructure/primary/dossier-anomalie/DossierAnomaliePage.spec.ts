@@ -12,6 +12,7 @@ import { ElementAnomalie } from '../../../domain/dossier/ElementAnomalie';
 import { OperateurAnomalie } from '../../../domain/dossier/OperateurAnomalie';
 import { OperateurAnomalieId } from '../../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
+import { CommandeDeRegularisation, RegularisationPort, ResultatDeRegularisation } from '../../../domain/regularisation/RegularisationPort';
 import { DossierAnomaliePage } from './DossierAnomaliePage';
 
 const INSTANT_DEBUT = instantLocalFixture(new Date(2026, 8, 14, 8, 0));
@@ -64,6 +65,20 @@ class DossierReadFixture extends AnomaliesReadPort {
   }
 }
 
+class RegularisationFixture extends RegularisationPort {
+  readonly commandes: CommandeDeRegularisation[] = [];
+  reponses: (ResultatDeRegularisation | Error)[] = [];
+
+  regulariser(commande: CommandeDeRegularisation): Promise<ResultatDeRegularisation> {
+    this.commandes.push(commande);
+    const reponse = this.reponses.shift() ?? { kind: 'REGULARISEE' };
+    return roundTripFixture(() => {
+      if (reponse instanceof Error) throw reponse;
+      return reponse;
+    });
+  }
+}
+
 class RouteFixture {
   readonly paramMap = new BehaviorSubject<ParamMap>(convertToParamMap({ suivi: 'suivi-camille' }));
   readonly queryParamMap = new BehaviorSubject<ParamMap>(convertToParamMap({ pointage: 'fin-17' }));
@@ -94,6 +109,7 @@ describe('Anomaly dossier page', () => {
   let fixture: ComponentFixture<DossierAnomaliePage>;
   let read: DossierReadFixture;
   let route: RouteFixture;
+  let regularisation: RegularisationFixture;
   let resizeObserver: ResizeObserverFixture;
 
   beforeEach(() => {
@@ -102,10 +118,12 @@ describe('Anomaly dossier page', () => {
     vi.setSystemTime(new Date(2026, 9, 5, 10, 0));
     read = new DossierReadFixture();
     route = new RouteFixture();
+    regularisation = new RegularisationFixture();
     TestBed.configureTestingModule({
       providers: [
         { provide: ActivatedRoute, useValue: route },
         { provide: AnomaliesReadPort, useValue: read },
+        { provide: RegularisationPort, useValue: regularisation },
         { provide: ErrorHandlerPort, useValue: { handleError: () => undefined } },
       ],
     });
@@ -247,14 +265,104 @@ describe('Anomaly dossier page', () => {
       await whenRendering();
 
       thenTheHandleHoldsNoHour();
-      thenTextContains('anomalie-frise-aide', 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.');
+      thenTextContains('anomalie-frise-aide', 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle, puis validez.');
     });
 
-    it('should offer no field for the hour and no validation, the handle being the way to place the end', async () => {
+    it('should offer no field for the hour, the handle being the way to place the end', async () => {
       await whenRendering();
 
       thenNoFieldIsOffered();
+    });
+
+    it('should not offer to validate an end while the handle holds no hour', async () => {
+      await whenRendering();
+
+      thenTheValidationIsUnavailableAs('Valider la fin');
+    });
+
+    it('should offer to validate the end at the hour of the handle once it holds one', async () => {
+      await whenRendering();
+
+      await whenPressingOnTheHandle('ArrowLeft');
+
+      thenTheValidationIsAvailableAs('Valider la fin à 21:00');
+    });
+
+    it('should regularise the activity at the hour of the handle when the end is validated', async () => {
+      await whenRendering();
+      await whenPressingOnTheHandle('ArrowLeft');
+
+      await whenValidating();
+
+      expect(regularisation.commandes).toMatchObject([
+        { suivi: { suivi: 'suivi-camille' }, activite: { activite: 'travail-8' }, dateDeSurvenue: '2026-09-14T21:00:00-03:00' },
+      ]);
+    });
+
+    it('should say at which hour the end was regularised and leave nothing to validate or to place', async () => {
+      await whenRendering();
+      await whenPressingOnTheHandle('ArrowLeft');
+
+      await whenValidating();
+
+      thenTextContains('anomalie-resolution-regularisee', 'Fin régularisée à 21:00');
       thenAbsent('anomalie-resolution-valider');
+      thenAbsent('anomalie-poignee');
+    });
+
+    it.each([
+      { code: 'activite-visee-introuvable', message: 'Cette activité est introuvable dans ce suivi.' },
+      { code: 'activite-deja-regularisee', message: 'Cette fin automatique est déjà régularisée.' },
+      {
+        code: 'activite-non-echue',
+        message:
+          'Cette activité n’est pas une fin automatique : son échéance n’est pas atteinte, ou un pointage ou la clôture l’a déjà terminée.',
+      },
+      { code: 'date-de-survenue-future', message: 'La fin ne peut pas être placée dans le futur.' },
+      { code: 'fin-avant-debut', message: 'La fin doit être postérieure au début de l’activité.' },
+      { code: 'fin-apres-borne', message: 'La fin ne peut pas dépasser le démarrage suivant ni la clôture.' },
+    ] as const)('should say the refusal $code to the manager and let him validate again', async ({ code, message }) => {
+      givenTheRegularisationAnswers({ kind: 'REFUS', code });
+      await whenRendering();
+      await whenPressingOnTheHandle('ArrowLeft');
+
+      await whenValidating();
+
+      thenTextContains('anomalie-resolution-refus', message);
+      thenTheValidationIsAvailableAs('Valider la fin à 21:00');
+    });
+
+    it('should read the dossier again and say it changed when another entry was concurrent', async () => {
+      givenTheRegularisationAnswers({ kind: 'CONCURRENCE' });
+      await whenRendering();
+      await whenPressingOnTheHandle('ArrowLeft');
+
+      await whenValidatingAndWaitingForTheDossierToBeReadAgain();
+
+      thenTheDossierWasReadTwice();
+      thenTextContains('anomalie-dossier-relu', 'Le dossier a changé pendant la saisie : il a été relu. Placez de nouveau la fin.');
+      thenTheHandleHoldsNoHour();
+    });
+
+    it('should say the failure when the regularisation could not be sent', async () => {
+      givenTheRegularisationAnswers(new Error('Réseau coupé'));
+      await whenRendering();
+      await whenPressingOnTheHandle('ArrowLeft');
+
+      await whenValidating();
+
+      thenTextContains('anomalie-resolution-refus', 'La fin n’a pas pu être enregistrée. Votre saisie est conservée : réessayez.');
+    });
+
+    it('should send the same entry again when the manager validates again after a failure', async () => {
+      givenTheRegularisationAnswers(new Error('Réseau coupé'));
+      await whenRendering();
+      await whenPressingOnTheHandle('ArrowLeft');
+      await whenValidating();
+
+      await whenValidating();
+
+      thenTheSameEntryWasSentTwice();
     });
 
     it('should place the end at the automatic end with the first key pressed on the handle', async () => {
@@ -322,6 +430,42 @@ describe('Anomaly dossier page', () => {
   const thenTheHandleHoldsNoHour = (): void => {
     expect(element('anomalie-poignee').hasAttribute('data-sans-heure')).toBe(true);
     expect(element('anomalie-poignee').hasAttribute('aria-valuenow')).toBe(false);
+  };
+
+  const givenTheRegularisationAnswers = (...reponses: (ResultatDeRegularisation | Error)[]): void => {
+    regularisation.reponses = reponses;
+  };
+
+  const whenValidatingAndWaitingForTheDossierToBeReadAgain = async (): Promise<void> => {
+    await whenValidating();
+    await fixture.whenStable();
+  };
+
+  const thenTheDossierWasReadTwice = (): void => {
+    expect(read.demandes).toHaveLength(2);
+  };
+
+  const thenTheSameEntryWasSentTwice = (): void => {
+    const identifiants = regularisation.commandes.map(commande => commande.id);
+    expect(identifiants).toHaveLength(2);
+    expect(identifiants[0]).toBe(identifiants[1]);
+  };
+
+  const whenValidating = async (): Promise<void> => {
+    element('anomalie-resolution-valider').click();
+    await fixture.whenStable();
+    await roundTripFixture(() => undefined);
+    await fixture.whenStable();
+  };
+
+  const thenTheValidationIsAvailableAs = (label: string): void => {
+    const bouton = element('anomalie-resolution-valider') as HTMLButtonElement;
+    expect([bouton.disabled, bouton.textContent.trim()]).toEqual([false, label]);
+  };
+
+  const thenTheValidationIsUnavailableAs = (label: string): void => {
+    const bouton = element('anomalie-resolution-valider') as HTMLButtonElement;
+    expect([bouton.disabled, bouton.textContent.trim()]).toEqual([true, label]);
   };
 
   const thenNoFieldIsOffered = (): void => {

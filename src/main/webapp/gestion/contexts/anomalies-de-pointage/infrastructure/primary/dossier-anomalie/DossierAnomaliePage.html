@@ -3,8 +3,16 @@
   <h1 id="dossier-heading" class="mt-2 text-title">{{ libelles.dossier }}</h1>
   @if (lecture.isLoading()) {
   <p role="status" data-selector="anomalie-chargement">{{ libelles.chargementDossier }}</p>
-  } @if (dossier(); as dossier) {
-  <glm-resolution-de-fin [dossier]="dossier" [now]="now" [operateurs]="operateursConnus()" />
+  } @if (resolution(); as resolution) { @if (dossierRelu()) {
+  <p role="status" class="mt-4 text-body-sm" data-selector="anomalie-dossier-relu">{{ libelles.regularisation.dossierRelu }}</p>
+  }
+  <glm-resolution-de-fin
+    [dossier]="resolution.dossier"
+    [adresse]="resolution.adresse"
+    [now]="now"
+    [operateurs]="operateursConnus()"
+    (relectureDemandee)="relire()"
+  />
   } @if (adresse() === undefined) {
   <p role="alert" data-selector="anomalie-adresse-invalide">{{ libelles.adresseInvalide }}</p>
   } @if (lecture.error()) {

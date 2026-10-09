@@ -1,4 +1,5 @@
 import { TypePointage } from '../../domain/dossier/DossierAnomalie';
+import { CodeRefusRegularisation } from '../../domain/regularisation/RegularisationPort';
 
 export interface ActiviteDansUnePhrase {
   readonly defini: string;
@@ -32,7 +33,27 @@ const PROBLEMES = {
   },
 } as const;
 
+const REFUS_DE_REGULARISATION = {
+  'activite-visee-introuvable': 'Cette activité est introuvable dans ce suivi.',
+  'activite-deja-regularisee': 'Cette fin automatique est déjà régularisée.',
+  'activite-non-echue':
+    'Cette activité n’est pas une fin automatique : son échéance n’est pas atteinte, ou un pointage ou la clôture l’a déjà terminée.',
+  'date-de-survenue-future': 'La fin ne peut pas être placée dans le futur.',
+  'fin-avant-debut': 'La fin doit être postérieure au début de l’activité.',
+  'fin-apres-borne': 'La fin ne peut pas dépasser le démarrage suivant ni la clôture.',
+} as const satisfies Readonly<Record<CodeRefusRegularisation, string>>;
+
+const REGULARISATION = {
+  validerLaFin: (heure: string) => `Valider la fin à ${heure}`,
+  validerLaFinSansHeure: 'Valider la fin',
+  regularisee: (heure: string) => `Fin régularisée à ${heure}`,
+  echec: 'La fin n’a pas pu être enregistrée. Votre saisie est conservée : réessayez.',
+  dossierRelu: 'Le dossier a changé pendant la saisie : il a été relu. Placez de nouveau la fin.',
+  refus: REFUS_DE_REGULARISATION,
+} as const;
+
 export const LIBELLES_ANOMALIES = {
+  regularisation: REGULARISATION,
   choisirOperateur: 'Choisissez l’opérateur',
   tousLesOperateurs: 'Tous les opérateurs',
   rechercherOperateur: 'Rechercher un opérateur',
@@ -73,7 +94,7 @@ export const LIBELLES_ANOMALIES = {
     poignee: 'Heure proposée du fait',
     heureInconnue: 'Heure ?',
     aucuneHeure: 'Aucune heure posée',
-    placerLaFinReelle: 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.',
+    placerLaFinReelle: 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle, puis validez.',
     symboles: SYMBOLES_DES_GESTES,
   },
   problemes: PROBLEMES,

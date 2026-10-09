@@ -27,7 +27,7 @@ describe('Section of the frise', () => {
   it('should tell how to place the real end while an instant waits to be placed', async () => {
     await whenRendering({ placement: PLACEMENT });
 
-    expect(text('anomalie-frise-aide')).toBe('Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.');
+    expect(text('anomalie-frise-aide')).toBe('Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle, puis validez.');
   });
 
   it('should tell nothing about the placement while no hour is to be placed', async () => {

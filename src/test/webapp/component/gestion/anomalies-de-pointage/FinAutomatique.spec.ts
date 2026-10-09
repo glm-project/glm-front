@@ -9,14 +9,26 @@ import {
   ouvrantFinAutomatiqueFixture,
   suiviFinAutomatiqueFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
+import { instantLocalFixture, instantLocalWithOffsetFixture } from '../../../utils/gestion/anomalies-de-pointage/InstantLocal.fixture';
 import {
   thenTheHandleHolds,
   thenTheHandleHoldsNoHour,
   whenPlacingTheHourWithTheHandleAt,
 } from '../../../utils/gestion/anomalies-de-pointage/PoigneeDeLaFrise';
+import {
+  givenTheRegularisationFailsOnceThenIsCreated,
+  givenTheRegularisationIsCreated,
+  givenTheRegularisationIsRefusedWith,
+  thenTheEndIsSaidRegularisedAt,
+  thenTheRefusalIsSaid,
+  thenTheRegularisationSentIs,
+  thenTheRegularisationsSentCarryTheSameIdentifier,
+  whenValidatingTheEnd,
+} from '../../../utils/gestion/anomalies-de-pointage/RegularisationHttp.fixture';
 import { markerOf } from '../../../utils/gestion/anomalies-de-pointage/RepereDeLaFrise';
 
 const MARGE_DES_REPERES_PX = 22;
+const HORLOGE_APRES_LA_FIN_AUTOMATIQUE = new Date(2026, 8, 14, 23, 0);
 const POINT_DE_PRISE_PX = 10;
 
 const whenOpeningTheFriseAt = (width: number): void => {
@@ -70,22 +82,22 @@ describe('Resolution view of an automatic end in Gestion', () => {
   const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 
   beforeEach(() => {
-    cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
+    cy.clock(HORLOGE_APRES_LA_FIN_AUTOMATIQUE.getTime(), ['Date']);
     givenTheReferentielFinAutomatique();
     cy.intercept('GET', suiviUrl, { body: dossierFinAutomatiqueFixture() });
   });
 
-  it('should show the problem and the frise with its hourless handle, and no validation', () => {
+  it('should show the problem and the frise with its hourless handle, and a validation that waits for the hour', () => {
     whenOpeningTheResolutionView();
 
-    thenOnlyTheResolutionViewIsDrawn();
+    thenTheProblemTheFriseAndAWaitingValidationAreDrawn();
   });
 
-  const thenOnlyTheResolutionViewIsDrawn = (): void => {
+  const thenTheProblemTheFriseAndAWaitingValidationAreDrawn = (): void => {
     cy.get(dataSelector('anomalie-probleme')).should('be.visible');
     cy.get(dataSelector('anomalie-frise')).should('be.visible');
     thenTheHandleHoldsNoHour();
-    cy.get(dataSelector('anomalie-resolution-valider')).should('not.exist');
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled').and('have.text', ' Valider la fin ');
   };
 });
 
@@ -112,7 +124,7 @@ describe('End placement on the frise in Gestion', () => {
   const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 
   beforeEach(() => {
-    cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
+    cy.clock(HORLOGE_APRES_LA_FIN_AUTOMATIQUE.getTime(), ['Date']);
     givenTheReferentielFinAutomatique();
     cy.intercept('GET', suiviUrl, { body: dossierFinAutomatiqueFixture() });
   });
@@ -123,18 +135,18 @@ describe('End placement on the frise in Gestion', () => {
     thenNoHourIsInventedAndTheEndCanBePlaced();
   });
 
-  it('should place the handle and the hour at the time clicked on the bar, rounded to five minutes', () => {
+  it('should place the handle and the hour at the time clicked on the bar', () => {
     whenOpeningTheAutomaticEndRegularisation();
-    whenClickingTheRowOfTheBarAt(17 + 2 / 60);
+    whenClickingTheRowOfTheBarAt(17);
 
     thenTheEndIsPlacedAt(new Date(2026, 8, 14, 17, 0));
   });
 
-  it('should bring a click before the start of the activity back to its start', () => {
+  it('should bring a click before the start of the activity back to the minute after its start', () => {
     whenOpeningTheAutomaticEndRegularisation();
     whenClickingTheRowOfTheBarAt(7.5);
 
-    thenTheEndIsPlacedAt(new Date(2026, 8, 14, 8, 0));
+    thenTheEndIsPlacedAt(new Date(2026, 8, 14, 8, 1));
   });
 
   it('should place the hour at the first move of the handle of the received end dragged without being released', () => {
@@ -203,10 +215,10 @@ describe('End placement on the frise in Gestion', () => {
     cy.get(dataSelector('anomalie-poignee'))
       .invoke('text')
       .should('match', /^\s*Heure \?\s*$/);
-    cy.get(dataSelector('anomalie-resolution-valider')).should('not.exist');
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.disabled');
     cy.get(dataSelector('anomalie-frise-aide'))
       .should('be.visible')
-      .and('contain.text', 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.');
+      .and('contain.text', 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle, puis validez.');
   };
 
   const thenTheEndIsPlacedAt = (instant: Date): void => {
@@ -229,11 +241,63 @@ describe('End placement on the frise in Gestion', () => {
   };
 });
 
+describe('Regularisation of an automatic end in Gestion', () => {
+  const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
+  const HEURE_PLACEE = new Date(2026, 8, 14, 17, 0);
+
+  beforeEach(() => {
+    cy.clock(HORLOGE_APRES_LA_FIN_AUTOMATIQUE.getTime(), ['Date']);
+    givenTheReferentielFinAutomatique();
+    cy.intercept('GET', suiviUrl, { body: dossierFinAutomatiqueFixture() });
+  });
+
+  it('should send the activity and the hour of the handle with an identifier, then say the end is regularised', () => {
+    givenTheRegularisationIsCreated();
+
+    whenValidatingTheEndPlacedAt(HEURE_PLACEE);
+
+    thenTheRegularisationSentIs(activiteFinAutomatiqueFixture, instantLocalWithOffsetFixture(HEURE_PLACEE));
+    thenTheEndIsSaidRegularisedAt('17:00');
+  });
+
+  it('should say why the server refused the end and let the manager validate again', () => {
+    givenTheRegularisationIsRefusedWith(409, 'fin-apres-borne');
+
+    whenValidatingTheEndPlacedAt(HEURE_PLACEE);
+
+    thenTheRefusalIsSaidAndTheValidationIsAvailableAgain('La fin ne peut pas dépasser le démarrage suivant ni la clôture.');
+  });
+
+  it('should send the same identifier again when the manager validates after a server failure', () => {
+    givenTheRegularisationFailsOnceThenIsCreated();
+
+    whenValidatingTheEndPlacedAtTwice(HEURE_PLACEE);
+
+    thenTheRegularisationsSentCarryTheSameIdentifier();
+  });
+
+  const whenValidatingTheEndPlacedAt = (instant: Date): void => {
+    whenOpeningTheResolutionView();
+    whenPlacingTheHourWithTheHandleAt(instant);
+    whenValidatingTheEnd();
+  };
+
+  const whenValidatingTheEndPlacedAtTwice = (instant: Date): void => {
+    whenValidatingTheEndPlacedAt(instant);
+    whenValidatingTheEnd();
+  };
+
+  const thenTheRefusalIsSaidAndTheValidationIsAvailableAgain = (message: string): void => {
+    thenTheRefusalIsSaid(message);
+    cy.get(dataSelector('anomalie-resolution-valider')).should('be.enabled');
+  };
+});
+
 describe('Automatic end on the frise in Gestion', () => {
   const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 
   beforeEach(() => {
-    cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
+    cy.clock(HORLOGE_APRES_LA_FIN_AUTOMATIQUE.getTime(), ['Date']);
     givenTheReferentielFinAutomatique();
     cy.intercept('GET', suiviUrl, { body: dossierFinAutomatiqueFixture() });
   });
@@ -360,11 +424,87 @@ describe('Automatic end on the frise in Gestion', () => {
   };
 });
 
+describe('Bound of the end on the frise in Gestion', () => {
+  const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
+  const borne = new Date(2026, 8, 14, 23, 0);
+  const demarrageSuivantFixture = '71000000-0000-0000-0000-00000000000b';
+
+  beforeEach(() => {
+    cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
+    givenTheReferentielFinAutomatique();
+  });
+
+  it('should draw the closure where the end is bounded when no start follows, and hold the handle there', () => {
+    givenTheDossierBoundedBy(borne);
+
+    whenOpeningTheResolutionView();
+    whenPressingEndOnTheHourlessHandle();
+
+    thenTheClosureStandsAt(23);
+    thenTheHandleHolds(borne);
+  });
+
+  it('should draw the next start where the end is bounded, instead of a closure', () => {
+    givenTheDossierBoundedByANextStartAt(borne);
+
+    whenOpeningTheResolutionView();
+
+    thenTheNextStartStandsAt(23);
+    thenNoClosureIsDrawn();
+  });
+
+  const givenTheDossierBoundedBy = (instant: Date): void => {
+    cy.intercept('GET', suiviUrl, { body: { ...dossierFinAutomatiqueFixture(), borneDeFin: instantLocalFixture(instant) } });
+  };
+
+  const givenTheDossierBoundedByANextStartAt = (instant: Date): void => {
+    const dossier = dossierFinAutomatiqueFixture();
+    const suivant = {
+      ...requiredFixture(dossier.pointages[0], 'opening pointage'),
+      id: demarrageSuivantFixture,
+      dateDeSurvenue: instantLocalFixture(instant),
+    };
+    cy.intercept('GET', suiviUrl, {
+      body: { ...dossier, pointages: [...dossier.pointages, suivant], borneDeFin: instantLocalFixture(instant) },
+    });
+  };
+
+  const whenPressingEndOnTheHourlessHandle = (): void => {
+    cy.get(dataSelector('anomalie-poignee')).should('have.attr', 'data-sans-heure');
+    whenPressingEndOnTheHandle();
+  };
+
+  const thenTheClosureStandsAt = (hour: number): void => {
+    abscisseDeLHeure(hour).then(abscisse => {
+      cy.get(dataSelector('anomalie-cloture'))
+        .should('be.visible')
+        .and('contain.text', 'Clôture')
+        .and(cloture => {
+          expect(requiredFixture(cloture[0], 'closure marker').getBoundingClientRect().left).to.be.closeTo(abscisse, 1);
+        });
+    });
+  };
+
+  const thenNoClosureIsDrawn = (): void => {
+    cy.get(dataSelector('anomalie-cloture')).should('not.exist');
+  };
+
+  const thenTheNextStartStandsAt = (hour: number): void => {
+    abscisseDeLHeure(hour).then(abscisse => {
+      markerOf(demarrageSuivantFixture)
+        .should('be.visible')
+        .and(repere => {
+          expect(requiredFixture(repere[0], 'next start marker').getBoundingClientRect().left).to.be.closeTo(abscisse, 1);
+        });
+    });
+  };
+});
+
 describe('Geometry of the frise in Gestion', () => {
   const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
 
   beforeEach(() => {
-    cy.clock(new Date(2026, 8, 15, 10, 0).getTime(), ['Date']);
+    cy.clock(HORLOGE_APRES_LA_FIN_AUTOMATIQUE.getTime(), ['Date']);
     givenTheReferentielFinAutomatique();
     cy.intercept('GET', suiviUrl, { body: dossierFinAutomatiqueFixture() });
   });

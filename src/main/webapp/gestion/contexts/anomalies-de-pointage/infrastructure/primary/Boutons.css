@@ -18,3 +18,15 @@
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
 }
+.bouton-principal {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.bouton-principal:hover {
+  background: color-mix(in srgb, var(--color-accent) 90%, var(--color-ink));
+}
+.bouton:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
