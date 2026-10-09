@@ -137,7 +137,7 @@ describe('Pupitre synchronization over stalled HTTP', () => {
     { stage: 'send' as const, geste: finishFixture, body: finishBodyFixture },
     { stage: 'reread' as const, geste: finishFixture, body: finishBodyFixture },
   ])(
-    'should retain $geste.intention after a stalled $stage, release the session and replay its original body',
+    'should retain $geste.type after a stalled $stage, release the session and replay its original body',
     async ({ stage, geste, body }) => {
       await givenPendingWork(geste);
       const first = whenSynchronizing();

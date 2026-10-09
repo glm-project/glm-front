@@ -42,9 +42,7 @@ const givenRepresentativeReadings = (): void => {
       jours: requiredFixture(synthese.jours, 'jours de synthèse').map(value => ({
         ...value,
         pointages:
-          value.jour === jour
-            ? [{ id: 'debut-auto', type: 'DEBUT', intention: 'OUVERTURE', dateDeSurvenue: instantFixture(18, 8), element: 'element-1' }]
-            : [],
+          value.jour === jour ? [{ id: 'debut-auto', type: 'DEBUT', dateDeSurvenue: instantFixture(18, 8), element: 'element-1' }] : [],
         dureeOperationnelle: totalFixture(value.jour === jour ? 'PT13H' : 'PT0S'),
       })),
     },

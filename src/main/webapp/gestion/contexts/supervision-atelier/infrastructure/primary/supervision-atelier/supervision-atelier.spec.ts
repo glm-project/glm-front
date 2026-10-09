@@ -497,7 +497,7 @@ describe('Supervision atelier component', () => {
     expect(signal('supervision-anomalie')).toBe('Activité terminée automatiquement · fin 10:00');
   });
 
-  it('should show an automatic end at thirteen elapsed hours without a current activity', async () => {
+  it('should show an automatic end without a current activity', async () => {
     await givenAcquisitionInProgress();
     const activite = activiteFixture(aliceFixture, { id: 'expired', objet: mouleFixture('1015'), debut: veilleFixture(21) });
 

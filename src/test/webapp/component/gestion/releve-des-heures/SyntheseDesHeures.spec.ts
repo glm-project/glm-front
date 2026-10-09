@@ -108,7 +108,7 @@ const semaineAFinAutomatiqueFixture = (debut: number, fin: number): SemaineSemee
           ? {
               ...jour,
               dureeOperationnelle: duree,
-              pointages: [{ id: 'a', type: 'DEBUT', intention: 'OUVERTURE', element: 'element-1', dateDeSurvenue: heure(14, debut) }],
+              pointages: [{ id: 'a', type: 'DEBUT', element: 'element-1', dateDeSurvenue: heure(14, debut) }],
             }
           : jour,
       ),

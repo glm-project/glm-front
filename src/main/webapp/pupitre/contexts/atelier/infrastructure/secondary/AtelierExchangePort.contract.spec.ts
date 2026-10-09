@@ -199,7 +199,7 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     });
   });
 
-  it('should expose every stable business refusal, including codes outside the old allowlist', async () => {
+  it('should return a business refusal whatever its code, with a reason only for the codes it recognizes', async () => {
     const refused = whenSending(ouvertureFixture);
 
     await whenServerRefusesWrite('urn:glm:erreur:atelier:evenement-anterieur-a-l-engagement', 'collision');
