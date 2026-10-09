@@ -57,8 +57,9 @@ const travailALaFraiseuseFixture: ActiviteDuPupitre = {
 };
 
 const POINTAGE_IGNORE = 'pointage-ignore';
+const NON_HABILITE = 'operateur-non-habilite';
 const SUIVI_CLOTURE = 'suivi-d-atelier-cloture';
-type MotifFixture = typeof POINTAGE_IGNORE | typeof SUIVI_CLOTURE;
+type MotifFixture = typeof POINTAGE_IGNORE | typeof NON_HABILITE | typeof SUIVI_CLOTURE;
 const vueFixture: JournalDuPupitre = {
   ...EMPTY_JOURNAL_DU_PUPITRE,
   referentiel: {
@@ -522,7 +523,13 @@ describe('FenetreOperateur', () => {
 
     whenReconciling({
       ...structuredClone(vueFixture),
-      evenements: [{ geste: fin, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
+      evenements: [
+        {
+          geste: fin,
+          etat: 'REFUSE',
+          refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture', message: "L'élément a été clôturé." },
+        },
+      ],
     });
 
     expect(fenetre.refusal()).toEqual({
@@ -541,7 +548,13 @@ describe('FenetreOperateur', () => {
 
     const reconciled = acceptance.applyTo(window).afterReconciling(Entreprise.of('entreprise-a'), {
       ...window.snapshot(),
-      evenements: [{ geste: pointage, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: 'Le pointage est refusé.' } }],
+      evenements: [
+        {
+          geste: pointage,
+          etat: 'REFUSE',
+          refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture', message: 'Le pointage est refusé.' },
+        },
+      ],
     });
 
     expect(reconciled.refusal()).toEqual({
@@ -557,7 +570,13 @@ describe('FenetreOperateur', () => {
     );
     const journalWithPreviousRefusal: JournalDuPupitre = {
       ...structuredClone(vueFixture),
-      evenements: [{ geste: previousGesture, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
+      evenements: [
+        {
+          geste: previousGesture,
+          etat: 'REFUSE',
+          refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture', message: "L'élément a été clôturé." },
+        },
+      ],
     };
     fenetre = givenAWindowOpenedOn(journalWithPreviousRefusal, 2);
 
@@ -575,7 +594,13 @@ describe('FenetreOperateur', () => {
 
     fenetre = acceptedAfterNewerIntent.afterReconciling(Entreprise.of('entreprise-a'), {
       ...structuredClone(vueFixture),
-      evenements: [{ geste: refusedGesture, etat: 'REFUSE', refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." } }],
+      evenements: [
+        {
+          geste: refusedGesture,
+          etat: 'REFUSE',
+          refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture', message: "L'élément a été clôturé." },
+        },
+      ],
     });
 
     expect(fenetre.refusal()).toBeUndefined();
@@ -622,10 +647,21 @@ describe('FenetreOperateur', () => {
     thenLatestRefusalNamesTheElement();
   });
 
-  it('should never expose the refusal of an ignored pointage', () => {
+  it.each<MotifFixture>([POINTAGE_IGNORE, NON_HABILITE])(
+    'should never expose the %s refusal, only the closed element refusal is shown',
+    motif => {
+      const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+
+      whenReconciling(givenTheGesturesWereRefusedWith(gestures, [motif, motif]));
+
+      thenNoRefusalIsVisible();
+    },
+  );
+
+  it('should never expose a refusal whose reason the adapter did not recognize', () => {
     const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
 
-    whenReconciling(givenTheGesturesWereRefusedWith(gestures, [POINTAGE_IGNORE, POINTAGE_IGNORE]));
+    whenReconciling(givenTheGesturesWereRefusedWithoutReason(gestures));
 
     thenNoRefusalIsVisible();
   });
@@ -633,10 +669,12 @@ describe('FenetreOperateur', () => {
   it.each<[string, readonly MotifFixture[]]>([
     ['ignored then closed', [POINTAGE_IGNORE, SUIVI_CLOTURE]],
     ['closed then ignored', [SUIVI_CLOTURE, POINTAGE_IGNORE]],
-  ])('should expose the closed element refusal of a lot whose other pointage was %s', (_order, codes) => {
+    ['not authorized then closed', [NON_HABILITE, SUIVI_CLOTURE]],
+    ['closed then not authorized', [SUIVI_CLOTURE, NON_HABILITE]],
+  ])('should expose the closed element refusal of a lot whose other pointage was %s', (_order, motifs) => {
     const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
 
-    whenReconciling(givenTheGesturesWereRefusedWith(gestures, codes));
+    whenReconciling(givenTheGesturesWereRefusedWith(gestures, motifs));
 
     thenLatestRefusalNamesTheElement();
   });
@@ -688,7 +726,13 @@ describe('FenetreOperateur', () => {
     const reconciled = {
       ...structuredClone(vueFixture),
       evenements: gestures.map((geste, index) =>
-        index === 0 ? acceptedFixture(geste) : { geste, etat: 'REFUSE' as const, refus: { code: 'suivi-cloture', message: 'Clôturé.' } },
+        index === 0
+          ? acceptedFixture(geste)
+          : {
+              geste,
+              etat: 'REFUSE' as const,
+              refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture' as const, message: 'Clôturé.' },
+            },
       ),
     };
 
@@ -1131,13 +1175,21 @@ describe('FenetreOperateur', () => {
     evenements: gestures.map(geste => ({
       geste,
       etat: 'REFUSE',
-      refus: { code: 'suivi-cloture', message: "L'élément a été clôturé." },
+      refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture', message: "L'élément a été clôturé." },
     })),
   });
   const messageOf = (motif: MotifFixture): { code: string; message: string; motif: MotifFixture } => ({
     code: 'code-de-diagnostic',
     motif,
-    message: motif === POINTAGE_IGNORE ? 'Le pointage est ignoré.' : "L'élément a été clôturé.",
+    message: motif === SUIVI_CLOTURE ? "L'élément a été clôturé." : 'Refus silencieux.',
+  });
+  const givenTheGesturesWereRefusedWithoutReason = (gestures: readonly GesteDePointage[]): JournalDuPupitre => ({
+    ...structuredClone(vueFixture),
+    evenements: gestures.map(geste => ({
+      geste,
+      etat: 'REFUSE' as const,
+      refus: { code: 'code-inconnu', message: 'Refus sans motif connu.' },
+    })),
   });
   const givenTheGesturesWereRefusedWith = (gestures: readonly GesteDePointage[], codes: readonly MotifFixture[]): JournalDuPupitre => ({
     ...structuredClone(vueFixture),

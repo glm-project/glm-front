@@ -30,6 +30,6 @@ export class MotifDeRefus {
   }
 
   isShownToTheOperator(): boolean {
-    return !this.is('pointage-ignore');
+    return this.is('suivi-d-atelier-cloture');
   }
 }
