@@ -1,7 +1,7 @@
 import { formatInstantTimeUnambiguous } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
-import { CadreDuFait } from '../../../domain/acte/CadreDuFait';
-import { InstantPointage } from '../../../domain/acte/InstantPointage';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { CadreDuFait } from '../../../domain/regularisation/CadreDuFait';
+import { InstantPointage } from '../../../domain/regularisation/InstantPointage';
 import { finDeLaPortee, instantsRecus } from './EchelleFrise';
 import { pointagesDeLaFrise } from './PointagesDeLaFrise';
 

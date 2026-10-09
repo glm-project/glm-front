@@ -1,5 +1,5 @@
 import { toOffsetIsoString } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
-import { InstantPointage } from '../../../domain/acte/InstantPointage';
+import { InstantPointage } from '../../../domain/regularisation/InstantPointage';
 import { BornesDePoignee, DemandeDeDeplacement } from './PoigneeDeFrise';
 
 const UNE_MINUTE = 60_000;
