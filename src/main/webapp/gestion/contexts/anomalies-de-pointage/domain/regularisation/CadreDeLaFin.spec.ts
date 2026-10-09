@@ -26,6 +26,17 @@ describe('Frame of a fact proposed on a dossier', () => {
     expect(Date.parse(bornes.min)).toBe(Date.parse('2026-09-14T08:01:00-03:00'));
   });
 
+  it.each([
+    { cas: 'the clock', maintenant: '2026-09-14T15:00:45.123-03:00', borneDeFin: undefined },
+    { cas: 'the bound of the end', maintenant: MAINTENANT, borneDeFin: '2026-09-14T14:30:45.123456789Z' },
+  ])('should give an upper bound on a whole minute when $cas carries seconds and a fraction', ({ maintenant, borneDeFin }) => {
+    const dossier = dossierFixture('2026-09-14T08:00:00-03:00', borneDeFin);
+
+    const bornes = CadreDeLaFin.depuis(dossier, maintenant).bornes();
+
+    expect(bornes.max).toBe(borneDeFin === undefined ? '2026-09-14T18:00:00.000Z' : '2026-09-14T14:30:00.000Z');
+  });
+
   it('should not accept the fact after the clock when nothing bounds the end', () => {
     const bornes = CadreDeLaFin.depuis(dossierFixture('2026-09-14T08:00:00-03:00'), MAINTENANT).bornes();
 

@@ -20,7 +20,7 @@ const cibleDe = (demande: DemandeDeDeplacement, courant: string, plancher: numbe
 
 export const instantDeplace = (demande: DemandeDeDeplacement, courant: string, bornes: BornesDeLaFin): string => {
   const plancher = new InstantPointage(bornes.min).firstWholeMinute();
-  const plafond = new InstantPointage(bornes.max).lastWholeMinute();
+  const plafond = Date.parse(bornes.max);
   if (plancher > plafond) return toOffsetIsoString(new Date(courant));
   const cible = cibleDe(demande, courant, plancher, plafond);
   return toOffsetIsoString(new Date(Math.min(Math.max(cible, plancher), plafond)));

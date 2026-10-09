@@ -14,7 +14,10 @@ export class CadreDeLaFin {
 
   static depuis(dossier: Pick<DossierAnomalie, 'activite' | 'borneDeFin'>, maintenant: string): CadreDeLaFin {
     const instants = [maintenant, ...(dossier.borneDeFin === undefined ? [] : [dossier.borneDeFin])];
-    return new CadreDeLaFin(new InstantPointage(dossier.activite.debut), Math.min(...instants.map(instant => Date.parse(instant))));
+    return new CadreDeLaFin(
+      new InstantPointage(dossier.activite.debut),
+      Math.min(...instants.map(instant => new InstantPointage(instant).lastWholeMinute())),
+    );
   }
 
   bornes(): BornesDeLaFin {

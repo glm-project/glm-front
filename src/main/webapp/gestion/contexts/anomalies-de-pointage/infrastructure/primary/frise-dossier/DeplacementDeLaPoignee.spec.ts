@@ -67,13 +67,6 @@ describe('Move of the handle of the proposed instant', () => {
       bornes: { min: '2026-09-14T11:00:00.000000500Z', max: instantAt('13:00') },
       expected: '2026-09-14T08:01:00-03:00',
     },
-    {
-      cas: 'the whole minute before an upper bound that carries seconds and a fraction',
-      demande: { kind: 'BORNE', borne: 'MAX' },
-      courant: instantAt('10:00'),
-      bornes: { min: instantAt('08:00'), max: instantAt('13:00', 45, 123) },
-      expected: '2026-09-14T13:00:00-03:00',
-    },
   ])('should go to $cas', ({ demande, courant, bornes, expected }) => {
     expect(instantDeplace(demande, courant, bornes)).toBe(expected);
   });
@@ -87,7 +80,7 @@ describe('Move of the handle of the proposed instant', () => {
   });
 
   it('should keep the handle where it stands when the bounds leave no whole minute', () => {
-    const bornes = { min: instantAt('12:59', 30), max: instantAt('12:59', 50) };
+    const bornes = { min: instantAt('13:00'), max: instantAt('12:59') };
 
     expect(instantDeplace({ kind: 'DE', minutes: 1 }, instantAt('12:59', 40), bornes)).toBe('2026-09-14T12:59:40-03:00');
   });
