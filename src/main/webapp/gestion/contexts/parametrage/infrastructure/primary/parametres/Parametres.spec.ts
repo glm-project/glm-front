@@ -293,7 +293,7 @@ describe('Parametres page', () => {
   const thenTheLogoIsShownAtRealSize = (adresse: string): void => {
     const apercu = requiredFixture(document.querySelector<HTMLImageElement>(dataSelector('logo-apercu')), 'logo-apercu');
     expect(apercu.getAttribute('src')).toBe(adresse);
-    expect(apercu.width).toBe(50);
+    expect(apercu.hasAttribute('width')).toBe(false);
   };
   const givenTheLogo = (): void => {
     port.logo = LOGO_FIXTURE;

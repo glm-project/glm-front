@@ -55,6 +55,20 @@ describe('Company settings in gestion', () => {
     thenTheHeaderShowsTheCompanyLogo();
   });
 
+  it('should fit a wide logo in the header, without deforming it', () => {
+    givenSettingsWithAWideLogo();
+    whenVisitingSettings();
+
+    thenTheHeaderLogoMeasures(81.92, 32);
+  });
+
+  it('should preview a wide logo at its real size', () => {
+    givenSettingsWithAWideLogo();
+    whenVisitingSettings();
+
+    thenThePreviewMeasures(256, 100);
+  });
+
   it('should send a consultant who opens the settings to the supervision, without the settings access', () => {
     givenSettings();
     whenVisitingSettingsAsAConsultant();
@@ -63,16 +77,18 @@ describe('Company settings in gestion', () => {
   });
 });
 
-const givenSettings = (): ParametrageApiFixture => {
-  const api = new ParametrageApiFixture();
+const givenSettings = (api = new ParametrageApiFixture()): ParametrageApiFixture => {
   api.install();
   return api;
 };
 
-const givenSettingsWithALogo = (): ParametrageApiFixture => {
-  const api = givenSettings();
-  api.logo = 'aaaaaaaaaaaaaaaa';
+const givenSettingsWithALogo = (api = new ParametrageApiFixture()): ParametrageApiFixture => {
+  givenSettings(api).logo = 'aaaaaaaaaaaaaaaa';
   return api;
+};
+
+const givenSettingsWithAWideLogo = (): void => {
+  givenSettingsWithALogo(new ParametrageApiFixture({ largeur: 256, hauteur: 100 }));
 };
 
 const whenRemovingTheLogo = (): void => {
@@ -155,6 +171,24 @@ const thenTheHeaderShowsTheCompanyLogo = (): void => {
     .should('be.visible')
     .and('have.attr', 'src')
     .and('match', /^data:image\/png;base64,/);
+};
+
+const thenTheHeaderLogoMeasures = (largeur: number, hauteur: number): void => {
+  cy.get(dataSelector('gestion-header'))
+    .find(dataSelector('logo-de-l-entreprise'))
+    .should(image => {
+      const cadre = image.get(0).getBoundingClientRect();
+      expect(cadre.width).to.be.closeTo(largeur, 0.5);
+      expect(cadre.height).to.be.closeTo(hauteur, 0.5);
+    });
+};
+
+const thenThePreviewMeasures = (largeur: number, hauteur: number): void => {
+  cy.get(dataSelector('logo-apercu')).should(image => {
+    const cadre = image.get(0).getBoundingClientRect();
+    expect(cadre.width).to.equal(largeur);
+    expect(cadre.height).to.equal(hauteur);
+  });
 };
 
 const thenTheConsultantIsOnTheSupervisionWithoutTheSettingsAccess = (): void => {

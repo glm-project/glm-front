@@ -29,6 +29,11 @@
   flex-shrink: 0;
 }
 
+.logo-entreprise {
+  height: 2rem;
+  flex-shrink: 0;
+}
+
 .marque-texte {
   display: flex;
   align-items: baseline;

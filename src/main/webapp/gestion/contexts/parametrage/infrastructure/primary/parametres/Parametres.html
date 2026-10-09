@@ -56,7 +56,7 @@
         <figure class="apercu">
           <div class="case-logo">
             @if (image(); as image) {
-            <img [src]="image.adresse" [alt]="libelles.logoAlternative" width="50" height="50" data-selector="logo-apercu" />
+            <img [src]="image.adresse" [alt]="libelles.logoAlternative" data-selector="logo-apercu" />
             } @else {
             <glm-marque-glm data-selector="logo-glm" />
             }
