@@ -33,9 +33,15 @@ const scieFixture = new PosteDeTravail(new PosteDeTravailId('scie-1'), {
   coutHoraire: undefined,
 });
 
-const tournageFixture = new NatureGeree(new NatureDeTravailId('nature-tournage'), new NatureDeTravail('tournage'), 1);
-const sciageFixture = new NatureGeree(new NatureDeTravailId('nature-sciage'), new NatureDeTravail('sciage'), 1);
-const peintureFixture = new NatureGeree(new NatureDeTravailId('nature-peinture'), new NatureDeTravail('peinture'), 0);
+const tournageFixture = new NatureGeree(new NatureDeTravailId('nature-tournage'), new NatureDeTravail('tournage'), {
+  utilisee: true,
+  postes: 1,
+});
+const sciageFixture = new NatureGeree(new NatureDeTravailId('nature-sciage'), new NatureDeTravail('sciage'), { utilisee: true, postes: 1 });
+const peintureFixture = new NatureGeree(new NatureDeTravailId('nature-peinture'), new NatureDeTravail('peinture'), {
+  utilisee: false,
+  postes: 0,
+});
 
 describe('PostesDeTravail page', () => {
   let fixture: ComponentFixture<PostesDeTravail>;
@@ -314,6 +320,17 @@ describe('PostesDeTravail page', () => {
       expect(text('postes-selection-title')).toBe('Décolletage');
     });
 
+    it('should show every poste again once the chosen nature is removed', async () => {
+      givenWorkstationsAndNatures();
+      await whenOpening();
+      await whenChoosingNature('peinture');
+
+      await whenRemovingChosenNature();
+
+      expect(texts('nature-filter-label')).toEqual(['sciage', 'tournage']);
+      thenAddressIs('/');
+    });
+
     it('should invite to declare natures when none exists', async () => {
       givenWorkstations();
 
@@ -351,6 +368,11 @@ describe('PostesDeTravail page', () => {
     champ.value = libelle;
     champ.dispatchEvent(new Event('input'));
     await whenClicking('nature-save');
+    await whenViewSettles();
+  };
+  const whenRemovingChosenNature = async (): Promise<void> => {
+    await whenClicking('nature-delete');
+    await whenClicking('nature-delete-confirm');
     await whenViewSettles();
   };
   const whenRenamingChosenNature = async (libelle: string): Promise<void> => {

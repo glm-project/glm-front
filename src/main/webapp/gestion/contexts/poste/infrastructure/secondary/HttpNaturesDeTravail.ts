@@ -11,8 +11,11 @@ import { NatureDeTravail } from '../../domain/NatureDeTravail';
 import { NatureDeTravailId } from '../../domain/NatureDeTravailId';
 import { NatureGeree } from '../../domain/NatureGeree';
 import { NatureIntrouvable } from '../../domain/NatureIntrouvable';
+import { NaturePointee } from '../../domain/NaturePointee';
 import { NaturesDeTravailPort } from '../../domain/NaturesDeTravailPort';
+import { NatureUtilisee } from '../../domain/NatureUtilisee';
 import { RefusRenommageNature } from '../../domain/RefusRenommageNature';
+import { RefusSuppressionNature } from '../../domain/RefusSuppressionNature';
 
 const URN = 'urn:glm:erreur:nature-de-travail:';
 
@@ -23,6 +26,19 @@ const refusRenommage = (urn: string | undefined): RefusRenommageNature | undefin
   switch (urn) {
     case `${URN}nature-deja-existante`:
       return new NatureDejaExistante();
+    case `${URN}nature-introuvable`:
+      return new NatureIntrouvable();
+    default:
+      return undefined;
+  }
+};
+
+const refusSuppression = (urn: string | undefined): RefusSuppressionNature | undefined => {
+  switch (urn) {
+    case `${URN}nature-utilisee`:
+      return new NatureUtilisee();
+    case `${URN}nature-pointee`:
+      return new NaturePointee();
     case `${URN}nature-introuvable`:
       return new NatureIntrouvable();
     default:
@@ -58,6 +74,10 @@ export class HttpNaturesDeTravail extends NaturesDeTravailPort {
     );
   }
 
+  override supprimer(id: NatureDeTravailId): Promise<Result<void, RefusSuppressionNature>> {
+    return this.execute(this.api.delete('/api/natures-de-travail/{id}', { pathParams: { id: id.value } }), refusSuppression);
+  }
+
   private async execute<Refus>(
     operation: Promise<unknown>,
     translate: (urn: string | undefined) => Refus | undefined,
@@ -78,7 +98,11 @@ export class HttpNaturesDeTravail extends NaturesDeTravailPort {
     const response = await this.api.read('/api/natures-de-travail', { queryParams: { page, size: taille } });
     return buildPageFrom(
       response,
-      nature => new NatureGeree(new NatureDeTravailId(nature.id), new NatureDeTravail(nature.libelle), nature.postes),
+      nature =>
+        new NatureGeree(new NatureDeTravailId(nature.id), new NatureDeTravail(nature.libelle), {
+          utilisee: nature.utilisee,
+          postes: nature.postes,
+        }),
       { page, taille },
     );
   }

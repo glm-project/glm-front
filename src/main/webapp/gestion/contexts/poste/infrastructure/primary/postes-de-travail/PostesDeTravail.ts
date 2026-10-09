@@ -97,6 +97,11 @@ export class PostesDeTravail implements OnInit {
     });
   }
 
+  protected apresSuppression(): void {
+    this.choisir(undefined);
+    this.reload();
+  }
+
   protected rechercher(value: string): void {
     this.recherche.set(value);
     this.etat.update(etat => ({ ...etat, page: 0 }));

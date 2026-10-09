@@ -11,7 +11,9 @@ import { NatureDeTravail } from '../../domain/NatureDeTravail';
 import { NatureDeTravailId } from '../../domain/NatureDeTravailId';
 import { NatureGeree } from '../../domain/NatureGeree';
 import { NatureIntrouvable } from '../../domain/NatureIntrouvable';
+import { NaturePointee } from '../../domain/NaturePointee';
 import { NaturesDeTravailPort } from '../../domain/NaturesDeTravailPort';
+import { NatureUtilisee } from '../../domain/NatureUtilisee';
 import { HttpNaturesDeTravail } from './HttpNaturesDeTravail';
 
 const ROUTE = '/api/natures-de-travail';
@@ -43,6 +45,21 @@ class NaturesHttpBackendFixture implements HttpBackend {
     return new HttpResponse({ status: 201, body: nature });
   }
 
+  private supprimer(id: string): HttpResponse<unknown> | HttpErrorResponse {
+    const nature = this.natures.find(candidate => candidate.id === id);
+    if (nature === undefined) {
+      return new HttpErrorResponse({ status: 404, statusText: 'Not Found', error: { type: `${URN}nature-introuvable` } });
+    }
+    if (nature.postes > 0) {
+      return new HttpErrorResponse({ status: 409, statusText: 'Conflict', error: { type: `${URN}nature-utilisee` } });
+    }
+    if (nature.utilisee) {
+      return new HttpErrorResponse({ status: 409, statusText: 'Conflict', error: { type: `${URN}nature-pointee` } });
+    }
+    this.natures = this.natures.filter(candidate => candidate !== nature);
+    return new HttpResponse({ status: 204 });
+  }
+
   private renommer(id: string, body: { libelle: string }): HttpResponse<unknown> | HttpErrorResponse {
     const nature = this.natures.find(candidate => candidate.id === id);
     if (nature === undefined) {
@@ -65,6 +82,9 @@ class NaturesHttpBackendFixture implements HttpBackend {
     }
     if (request.method === 'POST') {
       return this.enregistrer(request.body as { libelle: string });
+    }
+    if (request.method === 'DELETE') {
+      return this.supprimer(decodeURIComponent(url.pathname.substring(`${ROUTE}/`.length)));
     }
     if (request.method === 'PUT') {
       return this.renommer(decodeURIComponent(url.pathname.substring(`${ROUTE}/`.length)), request.body as { libelle: string });
@@ -89,6 +109,7 @@ const cleFixture = (libelle: string): string => libelle.normalize('NFD').replace
 interface NaturesHarness {
   readonly port: NaturesDeTravailPort;
   declare(natures: readonly NatureFixture[]): void;
+  pointer(natures: readonly NatureFixture[]): void;
 }
 
 const createHttpHarness = (): NaturesHarness => {
@@ -108,6 +129,7 @@ const createHttpHarness = (): NaturesHarness => {
     declare: natures => {
       backend.natures = [...natures];
     },
+    pointer: () => undefined,
   };
 };
 
@@ -118,11 +140,17 @@ const createFixtureHarness = (): NaturesHarness => {
     declare: natures => {
       fixture.liste = natures.map(geree);
     },
+    pointer: natures => {
+      fixture.pointees = natures.map(nature => nature.id);
+    },
   };
 };
 
 const geree = (nature: NatureFixture): NatureGeree =>
-  new NatureGeree(new NatureDeTravailId(nature.id), new NatureDeTravail(nature.libelle), nature.postes);
+  new NatureGeree(new NatureDeTravailId(nature.id), new NatureDeTravail(nature.libelle), {
+    utilisee: nature.utilisee,
+    postes: nature.postes,
+  });
 
 const libellesEtPostes = (natures: readonly NatureGeree[]): [string, number][] =>
   natures.map(nature => [nature.libelle.value, nature.postes]);
@@ -196,6 +224,40 @@ describe.each(adapters)('NaturesDeTravailPort contract, honoured by %s', (_adapt
     expect(resultat).toEqual({ ok: false, error: new NatureIntrouvable() });
   });
 
+  it('should remove a nature that nothing uses', async () => {
+    harness.declare([tournageFixture, dessinFixture]);
+
+    const resultat = await harness.port.supprimer(new NatureDeTravailId(dessinFixture.id));
+
+    expect(resultat).toEqual({ ok: true, value: undefined });
+    expect(libellesEtPostes(await harness.port.natures())).toEqual([['Tournage', 2]]);
+  });
+
+  it('should refuse to remove a nature that a poste carries', async () => {
+    harness.declare([tournageFixture]);
+
+    const resultat = await harness.port.supprimer(new NatureDeTravailId(tournageFixture.id));
+
+    expect(resultat).toEqual({ ok: false, error: new NatureUtilisee() });
+  });
+
+  it('should refuse for good to remove a nature under which time was clocked', async () => {
+    harness.declare([peintureFixture]);
+    harness.pointer([peintureFixture]);
+
+    const resultat = await harness.port.supprimer(new NatureDeTravailId(peintureFixture.id));
+
+    expect(resultat).toEqual({ ok: false, error: new NaturePointee() });
+  });
+
+  it('should refuse to remove a nature that no longer exists', async () => {
+    harness.declare([]);
+
+    const resultat = await harness.port.supprimer(new NatureDeTravailId('nature-disparue'));
+
+    expect(resultat).toEqual({ ok: false, error: new NatureIntrouvable() });
+  });
+
   it('should refuse a nature whose name already exists, whatever its case and accents', async () => {
     harness.declare([tournageFixture]);
 
@@ -241,6 +303,13 @@ describe('Beyond the contract: HttpNaturesDeTravail', () => {
     const result = port
       .renommer(new NatureDeTravailId('nature-1'), new NatureDeTravail('Rectification'))
       .catch((failure: unknown) => failure);
+    await whenServerAnswers(409, { type: `${URN}inconnu` }, `${ROUTE}/nature-1`);
+
+    expect(await result).toBeInstanceOf(HttpErrorResponse);
+  });
+
+  it('should keep an unknown refusal of a removal as a technical failure', async () => {
+    const result = port.supprimer(new NatureDeTravailId('nature-1')).catch((failure: unknown) => failure);
     await whenServerAnswers(409, { type: `${URN}inconnu` }, `${ROUTE}/nature-1`);
 
     expect(await result).toBeInstanceOf(HttpErrorResponse);

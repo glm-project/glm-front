@@ -1,3 +1,4 @@
+import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Result } from '@/app/shared/result/domain/Result';
 import { TextField } from '@/gestion/shared/design-system/infrastructure/primary/text-field/TextField';
@@ -18,7 +19,8 @@ interface Renommage {
 @Component({
   selector: 'glm-en-tete-des-postes',
   templateUrl: './EnTeteDesPostes.html',
-  imports: [MatButtonModule, TextField],
+  styleUrl: './EnTeteDesPostes.css',
+  imports: [Icon, MatButtonModule, TextField],
 })
 export class EnTeteDesPostes {
   private readonly port = inject(NaturesDeTravailPort);
@@ -30,6 +32,7 @@ export class EnTeteDesPostes {
   readonly natures = input.required<readonly NatureGeree[]>();
   readonly total = input.required<number>();
   readonly modifiee = output();
+  readonly supprimee = output();
 
   protected readonly renommage = signal<Renommage | undefined>(undefined);
   protected readonly soumis = signal(false);
@@ -38,6 +41,9 @@ export class EnTeteDesPostes {
   protected readonly proche = signal<NatureGeree | undefined>(undefined);
   protected readonly message = signal<string | undefined>(undefined);
   protected readonly refus = signal<string | undefined>(undefined);
+  protected readonly confirmation = signal(false);
+  protected readonly suppression = signal(false);
+  protected readonly erreurSuppression = signal(false);
 
   protected readonly compte = computed(() => {
     const postes = this.nature()?.postes ?? this.total();
@@ -68,6 +74,44 @@ export class EnTeteDesPostes {
     afterNextRender(() => this.host.nativeElement.querySelector<HTMLInputElement>('#nature-nouveau-libelle')?.select(), {
       injector: this.injector,
     });
+  }
+
+  protected demanderSuppression(): void {
+    this.confirmation.set(true);
+    this.message.set(undefined);
+    this.refus.set(undefined);
+    this.erreurSuppression.set(false);
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLButtonElement>('[data-selector="nature-delete-cancel"]')?.focus(), {
+      injector: this.injector,
+    });
+  }
+
+  protected annulerSuppression(): void {
+    this.confirmation.set(false);
+  }
+
+  protected supprimer(nature: NatureGeree): void {
+    this.errors.observe(this.remove(nature));
+  }
+
+  private async remove(nature: NatureGeree): Promise<void> {
+    this.suppression.set(true);
+    this.erreurSuppression.set(false);
+    try {
+      const resultat = await this.port.supprimer(nature.id);
+      this.confirmation.set(false);
+      if (resultat.ok) {
+        this.supprimee.emit();
+      } else {
+        this.refus.set(resultat.error.message);
+        this.modifiee.emit();
+      }
+    } catch (failure) {
+      this.erreurSuppression.set(true);
+      this.errors.handleError(failure);
+    } finally {
+      this.suppression.set(false);
+    }
   }
 
   protected fermerRenommage(event?: Event): void {

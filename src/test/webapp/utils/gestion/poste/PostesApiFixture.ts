@@ -74,6 +74,11 @@ export class PostesApiFixture {
       this.postes = this.postes.map(poste => (poste.natureId === id ? { ...poste, nature: libelle } : poste));
       request.reply({ statusCode: 200, body: { id, libelle, utilisee: true, postes: 0 } });
     }).as('natureRename');
+    cy.intercept('DELETE', '/api/natures-de-travail/*', request => {
+      const id = request.url.split('/').slice(-1)[0];
+      this.natures = this.natures.filter(nature => nature.id !== id);
+      request.reply({ statusCode: 204 });
+    }).as('natureDelete');
   }
 
   private installCreation(): void {

@@ -13,7 +13,10 @@ import { NatureGeree } from '../../../domain/NatureGeree';
 import { NaturesDeTravailPort } from '../../../domain/NaturesDeTravailPort';
 import { ColonneDesNatures } from './ColonneDesNatures';
 
-const soudageFixture = new NatureGeree(new NatureDeTravailId('nature-soudage'), new NatureDeTravail('Soudage'), 2);
+const soudageFixture = new NatureGeree(new NatureDeTravailId('nature-soudage'), new NatureDeTravail('Soudage'), {
+  utilisee: true,
+  postes: 2,
+});
 
 describe('ColonneDesNatures', () => {
   let fixture: ComponentFixture<ColonneDesNatures>;
@@ -170,7 +173,10 @@ describe('ColonneDesNatures', () => {
     await fixture.whenStable();
   };
   const givenServerRefusesTheName = (): void => {
-    port.liste = [...port.liste, new NatureGeree(new NatureDeTravailId('nature-cachee'), new NatureDeTravail('Rectification'), 0)];
+    port.liste = [
+      ...port.liste,
+      new NatureGeree(new NatureDeTravailId('nature-cachee'), new NatureDeTravail('Rectification'), { utilisee: false, postes: 0 }),
+    ];
   };
   const whenSaving = async (libelle: string): Promise<void> => {
     await whenClicking('nature-new');

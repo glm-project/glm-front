@@ -27,11 +27,13 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 - **FormulairePosteDeTravail** : modèle riche d'interaction pour la création et la modification, validant les entrées brutes, produisant la commande adéquate et effaçant l'erreur de doublon dès que le libellé est modifié.
 - **PostesPort** : port secondaire exposant la consultation paginée via `RequetePostes`, la collecte des natures uniques de l'atelier, la création (`CommandeCreationPoste`), la modification (`CommandeModificationPoste`) et la suppression protégée par un `Result<T, Refus>`.
 - **NatureDeTravailId** : Value Object de l'identifiant d'une nature du référentiel des natures de travail.
-- **NatureGeree** : une nature telle que la page la présente : identifiant, libellé et nombre de postes qui la portent
-  (champ `postes` de l'API). `porte(poste)` reconnaît ses postes à leur libellé de nature, unique dans l'entreprise.
+- **NatureGeree** : une nature telle que la page la présente : identifiant, libellé, nombre de postes qui la portent
+  (champ `postes` de l'API) et usage (`utilisee`). `supprimable` tant que rien ne s'en sert : une nature sans poste
+  reste utilisée si du temps a été pointé sous elle, d'où une corbeille pilotée par `utilisee` et non par `postes`. `porte(poste)` reconnaît ses postes à leur libellé de nature, unique dans l'entreprise.
 - **NaturesDeTravailPort** : port secondaire du référentiel des natures (`/api/natures-de-travail`) : lecture
-  entière, enregistrement et renommage. Refus : `NatureDejaExistante` (409 `nature-deja-existante`) et, au
-  renommage, `NatureIntrouvable` (404 `nature-introuvable`).
+  entière, enregistrement, renommage et suppression. Refus : `NatureDejaExistante` (409 `nature-deja-existante`),
+  `NatureIntrouvable` (404 `nature-introuvable`), et à la suppression `NatureUtilisee` (409 `nature-utilisee`, un
+  poste la porte) ou `NaturePointee` (409 `nature-pointee`, définitif).
 - **FormulaireNature** : modèle de la saisie d'une nature. `decider` refuse un nom vide, trop long ou déjà porté
   par une autre nature (casse, accents et espaces ignorés), signale une nature **ressemblante** tant que la
   ressemblance n'est pas acceptée, et rend sinon le libellé prêt à enregistrer.
@@ -68,7 +70,9 @@ ouvre la saisie sur place : « Enregistrer » (jamais « Déclarer »), puis « 
 alerte de ressemblance ; Échap ou Annuler referme sans écrire. Une nature enregistrée relit la page.
 « Renommer la nature », dans l'en-tête du tableau d'une nature choisie, part du nom actuel et rappelle que le
 nouveau nom s'affichera partout, rapports déjà produits compris ; la nature peut reprendre son propre nom avec
-d'autres majuscules ou accents. Une nature disparue entre-temps est signalée et la page relue. Une panne de lecture des natures vaut une panne
+d'autres majuscules ou accents. Une nature disparue entre-temps est signalée et la page relue. La corbeille, à
+côté, n'apparaît que sur une nature supprimable ; la suppression se confirme dans l'en-tête, puis la page revient
+à « Toutes ». Un refus s'affiche sous l'en-tête et la page est relue. Une panne de lecture des natures vaut une panne
 de lecture de la page.
 
 ## Recherche du référentiel

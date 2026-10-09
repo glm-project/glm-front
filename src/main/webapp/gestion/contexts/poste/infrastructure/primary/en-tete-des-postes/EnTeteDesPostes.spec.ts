@@ -12,20 +12,33 @@ import { NatureDeTravailId } from '../../../domain/NatureDeTravailId';
 import { NatureGeree } from '../../../domain/NatureGeree';
 import { NaturesDeTravailPort } from '../../../domain/NaturesDeTravailPort';
 import { RefusRenommageNature } from '../../../domain/RefusRenommageNature';
+import { RefusSuppressionNature } from '../../../domain/RefusSuppressionNature';
 import { EnTeteDesPostes } from './EnTeteDesPostes';
 
-const soudureFixture = new NatureGeree(new NatureDeTravailId('nature-soudure'), new NatureDeTravail('Soudure'), 2);
-const tournageFixture = new NatureGeree(new NatureDeTravailId('nature-tournage'), new NatureDeTravail('Tournage'), 1);
+const soudureFixture = new NatureGeree(new NatureDeTravailId('nature-soudure'), new NatureDeTravail('Soudure'), {
+  utilisee: true,
+  postes: 2,
+});
+const peintureFixture = new NatureGeree(new NatureDeTravailId('nature-peinture'), new NatureDeTravail('Peinture'), {
+  utilisee: false,
+  postes: 0,
+});
+const tournageFixture = new NatureGeree(new NatureDeTravailId('nature-tournage'), new NatureDeTravail('Tournage'), {
+  utilisee: true,
+  postes: 1,
+});
 
 describe('EnTeteDesPostes', () => {
   let fixture: ComponentFixture<EnTeteDesPostes>;
   let port: NaturesDeTravailFixture;
   let modifications: number;
+  let suppressions: number;
 
   beforeEach(() => {
     port = new NaturesDeTravailFixture();
-    port.liste = [soudureFixture, tournageFixture];
+    port.liste = [soudureFixture, tournageFixture, peintureFixture];
     modifications = 0;
+    suppressions = 0;
     TestBed.configureTestingModule({
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
@@ -147,6 +160,71 @@ describe('EnTeteDesPostes', () => {
     expect(text('nature-rename-save')).toBe('Enregistrement…');
   });
 
+  it('should not offer to remove a nature that is used', async () => {
+    await whenShowing(soudureFixture);
+
+    expect(isShown('nature-delete')).toBe(false);
+  });
+
+  it('should ask to confirm the removal of an unused nature, focusing the safe choice', async () => {
+    await whenShowing(peintureFixture);
+
+    await whenClicking('nature-delete');
+
+    expect(text('nature-delete-confirmation')).toContain('Supprimer « Peinture » ?');
+    expect(focusedSelector()).toBe('nature-delete-cancel');
+  });
+
+  it('should remove the nature once confirmed', async () => {
+    await whenShowing(peintureFixture);
+
+    await whenRemoving();
+
+    expect(port.suppressions).toEqual([peintureFixture.id]);
+    expect(suppressions).toBe(1);
+  });
+
+  it('should keep the nature when the removal is cancelled', async () => {
+    await whenShowing(peintureFixture);
+    await whenClicking('nature-delete');
+
+    await whenClicking('nature-delete-cancel');
+
+    expect(port.suppressions).toEqual([]);
+    expect(isShown('nature-delete')).toBe(true);
+  });
+
+  it('should explain a refused removal and ask for a fresh read', async () => {
+    givenAPosteNowCarriesIt();
+    await whenShowing(peintureFixture);
+
+    await whenRemoving();
+
+    expect(text('nature-rename-refusal')).toBe(
+      'Un poste porte cette nature : choisissez-en une autre pour ses postes avant de la supprimer.',
+    );
+    expect(modifications).toBe(1);
+    expect(suppressions).toBe(0);
+  });
+
+  it('should report a technical failure of the removal', async () => {
+    givenWritingFails();
+    await whenShowing(peintureFixture);
+
+    await whenRemoving();
+
+    expect(text('nature-delete-technical-error')).toContain('La suppression a échoué');
+  });
+
+  it('should show the removal in progress', async () => {
+    givenRemovalIsPending();
+    await whenShowing(peintureFixture);
+
+    await whenRemoving();
+
+    expect(text('nature-delete-confirm')).toBe('Suppression…');
+  });
+
   it('should close the renaming with Escape without writing', async () => {
     await whenShowing(soudureFixture);
     await whenClicking('nature-rename');
@@ -166,8 +244,20 @@ describe('EnTeteDesPostes', () => {
     expect(isShown('nature-rename-form')).toBe(false);
   });
 
+  const givenAPosteNowCarriesIt = (): void => {
+    port.liste = port.liste.map(nature =>
+      nature === peintureFixture ? new NatureGeree(nature.id, nature.libelle, { utilisee: true, postes: 1 }) : nature,
+    );
+  };
+  const givenRemovalIsPending = (): void => {
+    port.suppressionDifferee = new DeferredFixture<Result<void, RefusSuppressionNature>>().promise;
+  };
+  const focusedSelector = (): string | null => document.activeElement?.getAttribute('data-selector') ?? null;
   const givenAnotherNatureTookTheName = (libelle: string): void => {
-    port.liste = [...port.liste, new NatureGeree(new NatureDeTravailId('nature-cachee'), new NatureDeTravail(libelle), 0)];
+    port.liste = [
+      ...port.liste,
+      new NatureGeree(new NatureDeTravailId('nature-cachee'), new NatureDeTravail(libelle), { utilisee: false, postes: 0 }),
+    ];
   };
   const givenTheNatureDisappeared = (): void => {
     port.liste = [tournageFixture];
@@ -181,10 +271,15 @@ describe('EnTeteDesPostes', () => {
   const whenShowing = async (nature: NatureGeree | undefined): Promise<void> => {
     fixture = TestBed.createComponent(EnTeteDesPostes);
     fixture.componentRef.setInput('nature', nature);
-    fixture.componentRef.setInput('natures', [soudureFixture, tournageFixture]);
+    fixture.componentRef.setInput('natures', [soudureFixture, tournageFixture, peintureFixture]);
     fixture.componentRef.setInput('total', 3);
     fixture.componentInstance.modifiee.subscribe(() => (modifications += 1));
+    fixture.componentInstance.supprimee.subscribe(() => (suppressions += 1));
     await fixture.whenStable();
+  };
+  const whenRemoving = async (): Promise<void> => {
+    await whenClicking('nature-delete');
+    await whenClicking('nature-delete-confirm');
   };
   const whenRenaming = async (libelle: string): Promise<void> => {
     await whenClicking('nature-rename');

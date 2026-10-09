@@ -4,7 +4,10 @@ import { NatureDeTravail } from './NatureDeTravail';
 import { NatureDeTravailId } from './NatureDeTravailId';
 import { NatureGeree } from './NatureGeree';
 
-const soudageFixture = new NatureGeree(new NatureDeTravailId('nature-soudage'), new NatureDeTravail('Soudage'), 2);
+const soudageFixture = new NatureGeree(new NatureDeTravailId('nature-soudage'), new NatureDeTravail('Soudage'), {
+  utilisee: true,
+  postes: 2,
+});
 const naturesFixture = [soudageFixture];
 
 describe('FormulaireNature', () => {

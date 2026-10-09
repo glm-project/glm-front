@@ -35,7 +35,13 @@
     />
 
     <section class="gestion-carte postes-tableau" [attr.aria-busy]="etat().chargement" aria-labelledby="postes-selection-title">
-      <glm-en-tete-des-postes [nature]="natureChoisie()" [natures]="etat().natures" [total]="etat().postes.length" (modifiee)="reload()" />
+      <glm-en-tete-des-postes
+        [nature]="natureChoisie()"
+        [natures]="etat().natures"
+        [total]="etat().postes.length"
+        (modifiee)="reload()"
+        (supprimee)="apresSuppression()"
+      />
       @if (etat().chargement) {
       <p role="status" class="py-16 text-center text-body text-ink-muted" data-selector="postes-loading">
         Chargement des postes de travail…

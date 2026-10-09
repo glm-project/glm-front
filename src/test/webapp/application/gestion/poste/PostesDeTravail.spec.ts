@@ -97,6 +97,16 @@ describe('Workstation settings in gestion', () => {
     thenChosenNatureIs('polissage');
   });
 
+  it('should remove a nature that no workstation carries', () => {
+    givenReferential(1);
+    whenVisitingSettings();
+    whenSavingNature('Rectification');
+    whenFilteringByNature('Rectification');
+    whenRemovingChosenNature();
+
+    thenNatureIsNotListed('Rectification');
+  });
+
   it('should reach workstation settings from the gestion menu', () => {
     givenAnEmptyWorkshop();
     whenOpeningFromTheMenu();
@@ -225,4 +235,13 @@ const thenNatureSavingIsAnnounced = (libelle: string): void => {
 };
 const thenChosenNatureIs = (libelle: string): void => {
   cy.get(dataSelector('postes-selection-title')).invoke('text').invoke('trim').should('eq', libelle);
+};
+const whenRemovingChosenNature = (): void => {
+  cy.get(dataSelector('nature-delete')).click();
+  cy.get(dataSelector('nature-delete-confirm')).click();
+  cy.wait('@natureDelete');
+};
+const thenNatureIsNotListed = (libelle: string): void => {
+  cy.get(dataSelector('natures-list')).should('not.contain.text', libelle);
+  cy.location('search').should('eq', '');
 };
