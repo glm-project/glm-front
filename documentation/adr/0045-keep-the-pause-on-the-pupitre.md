@@ -67,7 +67,8 @@ without reading or migrating them. Device enrolment and credentials retain their
 
 ### Negative
 
-- Correcting a wrong pause time takes one correction per activity, a finish and a start, instead of one.
+- A wrong pause time cannot be corrected: the correction acts left with [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md),
+  and the manager only regularises an automatic finish.
 - A pause closes only what this pupitre's reference knows: an activity opened on another pupitre since the last
   refresh keeps running through the pause. TOUT ARRÊTER clears the local resumption memory.
 - A pause is resumed only on the pupitre that took it; the operator restarts their tiles elsewhere.

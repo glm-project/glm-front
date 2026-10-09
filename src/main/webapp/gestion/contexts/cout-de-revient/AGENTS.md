@@ -130,7 +130,7 @@ pour laquelle ils sont affichés séparément.
   nature porte une pastille avec le nombre de fins automatiques. Dépliée, chaque anomalie est montrée sur son
   pointage avec une explication en clair. Ce lecteur ne calcule aucune échéance : la durée maximale d'une
   activité est une règle du serveur.
-- Aucun lien ne promet un écran de résolution dans ce périmètre ; il viendra avec cet écran.
+- Aucun lien ne mène d'ici à la régularisation d'une fin automatique : elle se fait depuis la liste du contexte anomalies-de-pointage.
 - Une réponse incohérente (valeur absente, fin de pointage manquante) rejette la lecture, signalée une seule
   fois par l’adapter.
 
