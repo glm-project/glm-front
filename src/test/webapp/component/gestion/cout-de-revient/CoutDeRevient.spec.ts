@@ -176,6 +176,7 @@ describe('Cost of manufacture in gestion', () => {
     cy.get(dataSelector('cout-total')).should('contain.text', '845,00');
     cy.get(dataSelector('cout-pointage-anomalie')).should('have.text', 'Fin automatique');
     cy.get(dataSelector('cout-pointage-explication')).should('contain.text', 'arrêtée automatiquement à son échéance');
+    cy.get(dataSelector('cout-pointage-explication')).should('contain.text', 'régulariser la fin automatique');
   };
 
   const thenCurrentActivityExclusionIsVisible = (): void => {

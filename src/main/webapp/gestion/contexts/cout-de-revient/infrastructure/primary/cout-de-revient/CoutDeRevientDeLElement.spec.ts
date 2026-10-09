@@ -193,6 +193,7 @@ describe('Cout de revient component', () => {
     expect(textes('cout-pointage-anomalie')).toEqual(['Fin automatique']);
     expect(texte('cout-pointage-total')).toBe('260,00 €');
     expect(texte('cout-pointage-explication')).toContain('arrêtée automatiquement à son échéance');
+    expect(texte('cout-pointage-explication')).toContain('régulariser la fin automatique');
   });
 
   it.each([
