@@ -62,13 +62,15 @@ poste ; elle porte au plus une activité en cours. Une `FIN` ferme l'activité d
 3. sur une clé sans activité en cours, `DEBUT` et `NON_CONFORMITE` sont acceptés et `FIN` est ignorée (`APRES_ECHEANCE` si
    la dernière activité est échue et sans fin, sinon `AUCUNE_ACTIVITE`) ; sur une clé occupée, `FIN` est acceptée et une
    ouverture est ignorée (`DEJA_EN_COURS`).
+4. la clôture du suivi ne termine l'activité que pour un geste qui lui est postérieur : une `FIN` pointée avant la
+   clôture et reçue après reste acceptée, à son heure.
 
 Un `DEBUT` ou une `NON_CONFORMITE` sur un suivi clôturé reste refusé en 409 `suivi-d-atelier-cloture`. Un pointage ignoré
 est écrit dans une table d'audit que personne ne lit à l'écran et répond 409 `pointage-ignore` ; le renvoi d'un
 identifiant déjà accepté répond 200.
 
 **Gestes composés du pupitre.** Un appui qui change la catégorie d'une activité envoie deux pointages à la même heure,
-la `FIN` d'abord : NC pendant un travail envoie `FIN` puis `NON_CONFORMITE`, « FIN NC » (ancien « BON ») `FIN` puis
+la `FIN` d'abord : NC pendant un travail envoie `FIN` puis `NON_CONFORMITE`, « FIN NC » `FIN` puis
 `DEBUT`. PAUSE envoie une `FIN` par activité, REPRENDRE une ouverture par activité suspendue, TOUT ARRÊTER ne change pas.
 
 **Le pupitre suit la même règle, sans la décider.** La projection locale applique `FIN` et ouverture comme le serveur, y
@@ -94,8 +96,7 @@ l'échéance, et les totaux sont toujours complets.
 
 ### Positive
 
-- Un seul cas pour le gestionnaire, une seule vue, une seule liste. Le chantier retire environ 28 400 lignes du front et en
-  ajoute 4 600, tests compris.
+- Un seul cas pour le gestionnaire, une seule vue, une seule liste.
 - Aucun état intermédiaire « à résoudre » : tout total reçu est un chiffre.
 - Le pupitre n'a plus à connaître une activité visée, une intention ni un conflit ; la règle locale tient en deux phrases
   (une `FIN` ferme la clé, une ouverture sur une clé occupée ne fait rien).

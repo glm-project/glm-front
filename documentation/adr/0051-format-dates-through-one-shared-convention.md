@@ -5,7 +5,7 @@
 `Accepted`
 
 - `Complements 0037: only the formats a production file calls exist in the shared module.`
-- `Amended on 2026-10-08 (lot B2a of #254): the Material date adapter, the date and time field and the skipped-hour refusal of a typed time are removed, with the only screen that used them. What still holds: the shared module, the instant / calendar day signatures, toOffsetIsoString and the lint that closes the other doors. A date or time picker added later is fed by this module again, and a new record decides its adapter.`
+- `Amended by [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md) on 2026-10-08: the Material date adapter, the date and time field and the skipped-hour refusal of a typed time are removed, with the only screen that used them. What still holds: the shared module, the instant / calendar day signatures, toOffsetIsoString and the lint that closes the other doors. A date or time picker added later is fed by this module again, and a new record decides its adapter.`
 
 ## Context
 
@@ -56,31 +56,10 @@ instant typed in a field as `2026-10-01T09:41:22-03:00`, local offset, no fracti
 orders it, and never reads the ambient zone. The year is written only when it differs from the current one:
 `formatInstantLongDay(instant, now)` receives `now`, so a spec fixes it.
 
-**Removed on 2026-10-08, see Status. Gestion's Material adapter followed the convention.** `gestion/shared/design-system` provides
-`provideGestionDateAdapter()`, which installs a `GestionDateAdapter` extending `NativeDateAdapter`:
-
-- `parse` accepts `JJ/MM/AAAA` only and refuses an impossible day (31/02) instead of rolling it over;
-- `parseTime` accepts `HH:MM` and `HH:MM:SS`;
-- `setTime` sets the hour on a fixed reference day (1 January 2000) instead of the target's day, and `parseTime`
-  goes through it: Material's timepicker applies the typed hour to the day of its previous value or to today, so
-  on the day of the change of hour a native `setTime` would already have shifted 02:30 to 03:30 before the field
-  could read it. The field composes the hour it was given with the day of the datepicker, and only then does
-  the clock decide;
-- the week starts on Monday, whatever the browser;
-- `MAT_DATE_LOCALE` is `fr-FR`, and `dateInput`, `timeInput` and `timeOptionLabel` are read from the options in
-  `DateFormats.ts`, so the field and the read-only screens write a date the same way.
-
-The provider is registered on the lazy component that renders the field, not on a route and not in `main.ts`
-([ADR 0039](0039-load-gestion-screens-on-demand.md)): `app.route.ts` is part of the initial bundle, so even a
-`providers` entry on a route would pull Material's datepicker into it. Material's overlays open from the field's
-view container and inherit the component's providers. The other screens do not pay for the adapter. Pupitre loads no
-Material ([ADR 0011](0011-give-each-front-its-own-header.md)) and never sees the adapter.
-
-**Daylight saving time (the refusal below went with the field, the first-occurrence behaviour of `Date` remains).** A typed local time that the clock skips (02:30 on the last Sunday of March in Paris)
-is refused with its own message, « Cette heure n'existe pas ce jour-là, à cause du changement d'heure. »,
-rather than silently shifted to 03:30. A time that happens twice (02:30 on the last Sunday of October) takes
-its first occurrence, the one `Date` builds. `DateFormats.spec.ts` proves both by setting `process.env.TZ` to
-Europe/Paris around the cases; every other spec runs in America/Sao_Paulo.
+**Removed on 2026-10-08, see Status.** Gestion had a Material date adapter (`provideGestionDateAdapter()`), a date and
+time field and a refusal of a typed time that the clock skips. They went with the only screen that used them. The
+shared module, the instant and calendar-day signatures, `toOffsetIsoString` and the lint below are what remain. A
+date or time picker added later is fed by this module again, and a new record decides its adapter.
 
 **Lint closes the other doors.** `eslint.config.mjs` refuses, through `no-restricted-syntax`,
 `new Intl.DateTimeFormat(...)`, `Intl.DateTimeFormat(...)`, `toLocaleDateString`, `toLocaleTimeString` and
@@ -104,8 +83,6 @@ a number when the rule landed; numbers are written with `Intl.NumberFormat`, whi
 - The locale, the hour cycle and each format change in one file, and the unit spec of that file states what
   each one writes.
 - An instant and a calendar day cannot be confused: the type of the argument says which one the format takes.
-- A typed date is read as the manager wrote it, an impossible one is refused, and the same file feeds the
-  field and the screens that display it.
 - A new `Intl.DateTimeFormat`, `toLocale*String`, `DatePipe`, `formatDate` or `date` pipe fails lint before
   review.
 
@@ -119,6 +96,3 @@ a number when the rule landed; numbers are written with `Intl.NumberFormat`, whi
   does not prove that a number is not formatted as a date.
 - The rule refuses `toLocaleString` on numbers too; the replacement, `Intl.NumberFormat`, is a longer
   statement.
-- The skipped-hour refusal means a manager in Paris cannot type 02:30 on that Sunday, which is the intended
-  behaviour and a visible one. A zone that shifts by thirty minutes, or a calendar other than the Gregorian,
-  would reopen the question.
