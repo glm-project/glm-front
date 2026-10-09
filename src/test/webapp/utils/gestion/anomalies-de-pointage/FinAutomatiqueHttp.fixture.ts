@@ -39,6 +39,8 @@ const activiteEchueFixture = (sansPoste: boolean): components['schemas']['RestAc
 
 export const dossierFinAutomatiqueFixture = (sansPoste = false): components['schemas']['RestDossierAnomalie'] => ({
   adresse: { suivi: suiviFinAutomatiqueFixture, pointage: ouvrantFinAutomatiqueFixture },
+  elementId: elementFinAutomatiqueFixture,
+  designation: 'M24-0655',
   revision: 0,
   evaluation: '2026-09-14T22:00:00Z',
   activite: activiteEchueFixture(sansPoste),

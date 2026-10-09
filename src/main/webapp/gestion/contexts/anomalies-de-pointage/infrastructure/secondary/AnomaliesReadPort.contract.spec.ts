@@ -50,6 +50,8 @@ const ouvertureFixture: components['schemas']['RestEvenementDAtelier'] = {
 
 const dossierFixture = (): components['schemas']['RestDossierAnomalie'] => ({
   adresse: { suivi: 'suivi-camille', pointage: 'debut-8' },
+  elementId: 'moule-42',
+  designation: 'M-042',
   revision: 8,
   evaluation: '2026-09-14T22:00:00Z',
   borneDeFin: '2026-09-14T23:00:00Z',
