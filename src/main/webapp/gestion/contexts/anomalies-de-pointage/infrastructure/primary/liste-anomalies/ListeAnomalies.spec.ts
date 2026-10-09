@@ -357,7 +357,7 @@ describe('Anomalies list', () => {
   it('should keep the list usable when the operators are unavailable', async () => {
     givenAnAddress({ operateur: 'op-camille' });
     givenTheOperatorsAreUnavailable();
-    givenAConflict();
+    givenAnAutomaticEnd();
 
     await whenTheListIsRendered();
 
@@ -574,7 +574,7 @@ describe('Anomalies list', () => {
   it('should keep the list usable and the element held by the address when the elements are unavailable', async () => {
     givenAnAddress({ element: 'moule-42' });
     portFixture.elementsFailure = new Error('Éléments indisponibles');
-    givenAConflict();
+    givenAnAutomaticEnd();
     await whenTheListIsRendered();
 
     await whenFiltering();
@@ -652,7 +652,7 @@ describe('Anomalies list', () => {
     releaseOperateurs = portFixture.holdOperateurs();
   };
 
-  const givenAConflict = (): void => {
+  const givenAnAutomaticEnd = (): void => {
     portFixture.page = { lignes: [finAutomatiqueFixture()], total: 1 };
   };
 
@@ -816,7 +816,7 @@ describe('Anomalies list', () => {
     expect(button('anomalies-filtre-operateur').disabled).toBe(true);
   });
 
-  it('should distinguish a page emptied by resolutions from a list with no remaining conflicts', async () => {
+  it('should distinguish a page emptied by resolutions from a list with no remaining automatic end', async () => {
     givenAnAddress({ page: '3' });
     portFixture.page = { lignes: [], total: 6 };
 
