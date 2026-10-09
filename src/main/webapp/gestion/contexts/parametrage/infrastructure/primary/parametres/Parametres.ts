@@ -37,6 +37,11 @@ export class Parametres implements OnInit {
   protected readonly refusLogo = signal<string | undefined>(undefined);
   protected readonly logoEnregistre = signal(false);
   protected readonly erreurDepot = signal(false);
+  protected readonly logo = signal<VersionDuLogo | undefined>(undefined);
+  protected readonly confirmationDuRetrait = signal(false);
+  protected readonly retrait = signal(false);
+  protected readonly logoRetire = signal(false);
+  protected readonly erreurRetrait = signal(false);
   protected readonly erreur = computed(() => this.formulaire().erreur());
   protected readonly exemple = computed(() => {
     const duree = this.formulaire().produireDuree();
@@ -67,9 +72,39 @@ export class Parametres implements OnInit {
     this.errors.observe(this.deposer(choisi));
   }
 
+  protected demanderLeRetrait(): void {
+    this.confirmationDuRetrait.set(true);
+    this.logoRetire.set(false);
+    this.erreurRetrait.set(false);
+  }
+
+  protected annulerLeRetrait(): void {
+    this.confirmationDuRetrait.set(false);
+  }
+
+  protected confirmerLeRetrait(): void {
+    this.errors.observe(this.retirer());
+  }
+
+  private async retirer(): Promise<void> {
+    this.retrait.set(true);
+    try {
+      await this.port.retirerLogo();
+      this.confirmationDuRetrait.set(false);
+      await this.afficherLogo(undefined);
+      this.logoRetire.set(true);
+    } catch (failure) {
+      this.erreurRetrait.set(true);
+      this.errors.handleError(failure);
+    } finally {
+      this.retrait.set(false);
+    }
+  }
+
   private async deposer(choisi: Blob): Promise<void> {
     this.refusLogo.set(undefined);
     this.logoEnregistre.set(false);
+    this.logoRetire.set(false);
     this.erreurDepot.set(false);
     const fichier = new FichierDeLogo(new Uint8Array(await choisi.arrayBuffer()));
     const refus = fichier.refus();
@@ -109,6 +144,7 @@ export class Parametres implements OnInit {
   }
 
   private async afficherLogo(version: VersionDuLogo | undefined): Promise<void> {
+    this.logo.set(version);
     this.image.set(undefined);
     this.imageIndisponible.set(false);
     if (version === undefined) return;

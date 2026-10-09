@@ -10,5 +10,6 @@ export abstract class ParametragePort {
   abstract parametrage(): Promise<Parametrage>;
   abstract fixerDureeMaxDActivite(duree: DureeMaxDActivite): Promise<void>;
   abstract imageDuLogo(version: VersionDuLogo): Promise<ImageDuLogo>;
+  abstract retirerLogo(): Promise<void>;
   abstract deposerLogo(fichier: FichierDeLogo): Promise<Result<VersionDuLogo, LogoRefuse>>;
 }

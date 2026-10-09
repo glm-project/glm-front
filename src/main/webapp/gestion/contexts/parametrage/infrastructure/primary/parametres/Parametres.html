@@ -90,11 +90,33 @@
         <button mat-stroked-button type="button" [disabled]="depot()" (click)="selecteur.click()" data-selector="logo-choisir">
           {{ depot() ? libelles.depotEnCours : libelles.choisirLogo }}
         </button>
-        @if (logoEnregistre()) {
+        @if (logo() !== undefined) { @if (confirmationDuRetrait()) {
+        <button
+          mat-flat-button
+          type="button"
+          class="confirmation-destructive"
+          [disabled]="retrait()"
+          (click)="confirmerLeRetrait()"
+          data-selector="logo-retrait-confirmer"
+        >
+          {{ retrait() ? libelles.retraitEnCours : libelles.confirmerRetrait }}
+        </button>
+        <button mat-button type="button" [disabled]="retrait()" (click)="annulerLeRetrait()" data-selector="logo-retrait-annuler">
+          {{ libelles.annulerRetrait }}
+        </button>
+        } @else {
+        <button mat-button type="button" class="retrait" (click)="demanderLeRetrait()" data-selector="logo-retirer">
+          {{ libelles.retirer }}
+        </button>
+        } } @if (logoEnregistre()) {
         <span role="status" class="text-body-sm text-ok" data-selector="logo-enregistre">{{ libelles.logoEnregistre }}</span>
+        } @if (logoRetire()) {
+        <span role="status" class="text-body-sm text-ok" data-selector="logo-retire">{{ libelles.logoRetire }}</span>
         }
       </div>
-      @if (erreurDepot()) {
+      @if (erreurRetrait()) {
+      <p role="alert" class="text-body-sm text-danger" data-selector="logo-erreur-retrait">{{ libelles.erreurRetrait }}</p>
+      } @if (erreurDepot()) {
       <p role="alert" class="text-body-sm text-danger" data-selector="logo-erreur-technique">{{ libelles.erreurDepot }}</p>
       }
     </section>

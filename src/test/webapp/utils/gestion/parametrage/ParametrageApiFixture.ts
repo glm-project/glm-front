@@ -34,6 +34,7 @@ export class ParametrageApiFixture {
   logo: string | undefined;
   readonly durees: string[] = [];
   depots = 0;
+  retraits = 0;
 
   install(): void {
     cy.intercept('GET', '/api/parametrage', request => {
@@ -52,6 +53,11 @@ export class ParametrageApiFixture {
       this.logo = VERSION_DEPOSEE;
       request.reply({ version: VERSION_DEPOSEE });
     }).as('logoDepot');
+    cy.intercept('DELETE', '/api/parametrage/logo', request => {
+      this.retraits += 1;
+      this.logo = undefined;
+      request.reply({ statusCode: 204 });
+    }).as('logoRetrait');
     cy.intercept('GET', '/api/parametrage/logo/*', request => {
       request.reply({ statusCode: 200, headers: { 'content-type': 'image/png' }, body: Cypress.Buffer.from(pngFixture(50, 50)) });
     }).as('logoImage');

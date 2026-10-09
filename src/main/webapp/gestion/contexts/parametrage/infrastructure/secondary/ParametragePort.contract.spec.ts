@@ -45,6 +45,11 @@ const createHttpHarness = (): ParametrageHarness => {
   let logo = false;
   let refus: string | undefined;
   const answerDepot = (request: TestRequest): void => {
+    if (request.request.method === 'DELETE') {
+      logo = false;
+      request.flush(null, { status: 204, statusText: 'No Content' });
+      return;
+    }
     if (refus === undefined) {
       logo = true;
       request.flush({ version: VERSION });
@@ -157,6 +162,18 @@ describe.each(adapters)('ParametragePort contract, honoured by %s', (_adapter, c
 
     expect(await depot).toEqual({ ok: true, value: new VersionDuLogo(VERSION) });
     expect((await lecture).logo).toEqual(new VersionDuLogo(VERSION));
+  });
+
+  it('should leave the company without a logo once it is removed', async () => {
+    harness.donnerLeLogo();
+    const retrait = harness.port.retirerLogo();
+    await harness.settle();
+    await retrait;
+
+    const lecture = harness.port.parametrage();
+    await harness.settle();
+
+    expect((await lecture).logo).toBeUndefined();
   });
 
   it('should hand back the reason a logo was refused', async () => {

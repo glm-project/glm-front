@@ -40,6 +40,14 @@ describe('Company settings in gestion', () => {
     thenTheLogoIsRefusedWithoutBeingSent(api, 'Le logo doit mesurer 50 × 50 pixels (reçu : 120 × 80).');
   });
 
+  it('should remove the logo after a confirmation and show the GLM logo again', () => {
+    const api = givenSettingsWithALogo();
+    whenVisitingSettings();
+    whenRemovingTheLogo();
+
+    thenTheGlmLogoIsBack(api);
+  });
+
   it('should send a consultant who opens the settings to the supervision, without the settings access', () => {
     givenSettings();
     whenVisitingSettingsAsAConsultant();
@@ -52,6 +60,18 @@ const givenSettings = (): ParametrageApiFixture => {
   const api = new ParametrageApiFixture();
   api.install();
   return api;
+};
+
+const givenSettingsWithALogo = (): ParametrageApiFixture => {
+  const api = givenSettings();
+  api.logo = 'aaaaaaaaaaaaaaaa';
+  return api;
+};
+
+const whenRemovingTheLogo = (): void => {
+  cy.get(dataSelector('logo-retirer')).click();
+  cy.get(dataSelector('logo-retrait-confirmer')).click();
+  cy.wait('@logoRetrait');
 };
 
 const whenOpeningFromTheHeader = (): void => {
@@ -113,6 +133,13 @@ const thenTheLogoIsShown = (api: ParametrageApiFixture): void => {
 const thenTheLogoIsRefusedWithoutBeingSent = (api: ParametrageApiFixture, refus: string): void => {
   cy.get(dataSelector('logo-refus')).should('have.text', refus);
   cy.wrap(api).its('depots').should('eq', 0);
+};
+
+const thenTheGlmLogoIsBack = (api: ParametrageApiFixture): void => {
+  cy.get(dataSelector('logo-retire')).should('have.text', 'Logo retiré. Les en-têtes affichent le logo GLM.');
+  cy.get(dataSelector('logo-glm')).should('be.visible');
+  cy.get(dataSelector('logo-retirer')).should('not.exist');
+  cy.wrap(api).its('retraits').should('eq', 1);
 };
 
 const thenTheConsultantIsOnTheSupervisionWithoutTheSettingsAccess = (): void => {

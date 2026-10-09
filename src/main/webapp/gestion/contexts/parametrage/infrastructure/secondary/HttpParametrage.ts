@@ -72,4 +72,8 @@ export class HttpParametrage extends ParametragePort {
       return err(new LogoRefuse(refus.message));
     }
   }
+
+  override async retirerLogo(): Promise<void> {
+    await this.api.delete('/api/parametrage/logo', {});
+  }
 }

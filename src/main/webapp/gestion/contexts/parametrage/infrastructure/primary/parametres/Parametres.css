@@ -61,3 +61,12 @@
   border: 1px solid var(--color-danger);
   border-radius: var(--radius-control);
 }
+
+.retrait {
+  color: var(--color-danger);
+}
+
+.confirmation-destructive {
+  --mat-button-filled-container-color: var(--color-danger);
+  --mat-button-filled-label-text-color: var(--color-on-accent);
+}

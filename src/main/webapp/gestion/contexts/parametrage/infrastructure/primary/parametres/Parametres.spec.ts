@@ -203,6 +203,63 @@ describe('Parametres page', () => {
     expect(ouverture).toHaveBeenCalledTimes(1);
   });
 
+  it('should not offer to remove a logo the company does not have', async () => {
+    await whenOpening();
+
+    thenTheRemovalIsNotOffered();
+  });
+
+  it('should ask to confirm the removal within the card, without removing yet', async () => {
+    givenTheLogo();
+    await whenOpening();
+
+    await whenClicking('logo-retirer');
+
+    expect(text('logo-retrait-confirmer')).toBe('Confirmer le retrait');
+    expect(port.retraits).toBe(0);
+  });
+
+  it('should keep the logo when the removal is cancelled', async () => {
+    givenTheLogo();
+    await whenOpening();
+    await whenClicking('logo-retirer');
+
+    await whenClicking('logo-retrait-annuler');
+
+    expect(text('logo-retirer')).toBe('Retirer le logo');
+    expect(port.retraits).toBe(0);
+  });
+
+  it('should go back to the GLM logo once the removal is confirmed', async () => {
+    givenTheLogo();
+    await whenOpening();
+    await whenClicking('logo-retirer');
+
+    await whenClicking('logo-retrait-confirmer');
+
+    thenTheGlmLogoIsShown();
+    expect(text('logo-retire')).toBe('Logo retiré. Les en-têtes affichent le logo GLM.');
+    thenTheRemovalIsNotOffered();
+  });
+
+  it('should say the logo was not removed after a technical failure, and report it', async () => {
+    givenTheLogo();
+    givenTheRemovalFails();
+    await whenOpening();
+    await whenClicking('logo-retirer');
+
+    await whenClicking('logo-retrait-confirmer');
+
+    expect(text('logo-erreur-retrait')).toBe('Le logo n’a pas pu être retiré. Vérifiez la connexion puis réessayez.');
+    expect(errors.errors).toEqual([new Error('panne')]);
+  });
+
+  const thenTheRemovalIsNotOffered = (): void => {
+    expect(document.querySelector(dataSelector('logo-retirer'))).toBeNull();
+  };
+  const givenTheRemovalFails = (): void => {
+    port.retraitFailure = new Error('panne');
+  };
   const givenTheServerRefusesLogos = (message: string): void => {
     port.refusDuServeur = message;
   };

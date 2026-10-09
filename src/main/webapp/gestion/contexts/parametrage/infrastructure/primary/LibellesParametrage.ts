@@ -32,4 +32,10 @@ export const LIBELLES_PARAMETRES = {
   logoEnregistre: 'Logo enregistré.',
   refusServeur: (message: string): string => `Le logo a été refusé : ${message}`,
   erreurDepot: 'Le logo n’a pas pu être envoyé. Vérifiez la connexion puis réessayez.',
+  retirer: 'Retirer le logo',
+  confirmerRetrait: 'Confirmer le retrait',
+  annulerRetrait: 'Annuler',
+  retraitEnCours: 'Retrait…',
+  logoRetire: 'Logo retiré. Les en-têtes affichent le logo GLM.',
+  erreurRetrait: 'Le logo n’a pas pu être retiré. Vérifiez la connexion puis réessayez.',
 } as const;

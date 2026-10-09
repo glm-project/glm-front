@@ -19,6 +19,8 @@ export class ParametrageFixture extends ParametragePort {
   refusDuServeur: string | undefined;
   depotFailure: Error | undefined;
   versionDeposee = new VersionDuLogo('fedcba9876543210');
+  retraits = 0;
+  retraitFailure: Error | undefined;
 
   override parametrage(): Promise<Parametrage> {
     if (this.lectureFailure !== undefined) return Promise.reject(this.lectureFailure);
@@ -46,5 +48,11 @@ export class ParametrageFixture extends ParametragePort {
     for (const octet of fichier.octets) binaire += String.fromCodePoint(octet);
     this.logo = { version: this.versionDeposee, image: new ImageDuLogo(`data:image/png;base64,${btoa(binaire)}`) };
     return ok(this.versionDeposee);
+  }
+
+  override async retirerLogo(): Promise<void> {
+    this.retraits += 1;
+    if (this.retraitFailure !== undefined) return Promise.reject(this.retraitFailure);
+    this.logo = undefined;
   }
 }
