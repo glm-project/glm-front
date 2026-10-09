@@ -107,6 +107,15 @@ describe('Workstation settings in gestion', () => {
     thenNatureIsNotListed('Rectification');
   });
 
+  it('should create a workstation of the chosen nature', () => {
+    const api = givenReferential(3);
+    whenVisitingSettings();
+    whenFilteringByNature('ponçage');
+    whenCreatingWorkstationOfChosenNature('Polisseuse');
+
+    thenWorkstationWasCreatedWithNature(api, 'ponçage');
+  });
+
   it('should reach workstation settings from the gestion menu', () => {
     givenAnEmptyWorkshop();
     whenOpeningFromTheMenu();
@@ -244,4 +253,12 @@ const whenRemovingChosenNature = (): void => {
 const thenNatureIsNotListed = (libelle: string): void => {
   cy.get(dataSelector('natures-list')).should('not.contain.text', libelle);
   cy.location('search').should('eq', '');
+};
+const whenCreatingWorkstationOfChosenNature = (libelle: string): void => {
+  cy.get(dataSelector('nature-new-poste')).click();
+  cy.get(dataSelector('poste-libelle')).type(libelle);
+  whenSaving('posteCreate');
+};
+const thenWorkstationWasCreatedWithNature = (api: PostesApiFixture, nature: string): void => {
+  cy.wrap(api.writes).its(0).its('nature').should('eq', nature);
 };

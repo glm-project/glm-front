@@ -33,12 +33,14 @@ describe('EnTeteDesPostes', () => {
   let port: NaturesDeTravailFixture;
   let modifications: number;
   let suppressions: number;
+  let demandesDePoste: NatureGeree[];
 
   beforeEach(() => {
     port = new NaturesDeTravailFixture();
     port.liste = [soudureFixture, tournageFixture, peintureFixture];
     modifications = 0;
     suppressions = 0;
+    demandesDePoste = [];
     TestBed.configureTestingModule({
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
@@ -160,6 +162,15 @@ describe('EnTeteDesPostes', () => {
     expect(text('nature-rename-save')).toBe('Enregistrement…');
   });
 
+  it('should ask for a new poste of the chosen nature', async () => {
+    await whenShowing(soudureFixture);
+
+    await whenClicking('nature-new-poste');
+
+    expect(demandesDePoste).toEqual([soudureFixture]);
+    expect(text('nature-new-poste')).toContain('Poste de Soudure');
+  });
+
   it('should not offer to remove a nature that is used', async () => {
     await whenShowing(soudureFixture);
 
@@ -275,6 +286,7 @@ describe('EnTeteDesPostes', () => {
     fixture.componentRef.setInput('total', 3);
     fixture.componentInstance.modifiee.subscribe(() => (modifications += 1));
     fixture.componentInstance.supprimee.subscribe(() => (suppressions += 1));
+    fixture.componentInstance.nouveauPoste.subscribe(nature => demandesDePoste.push(nature));
     await fixture.whenStable();
   };
   const whenRemoving = async (): Promise<void> => {

@@ -33,6 +33,7 @@ export class EnTeteDesPostes {
   readonly total = input.required<number>();
   readonly modifiee = output();
   readonly supprimee = output();
+  readonly nouveauPoste = output<NatureGeree>();
 
   protected readonly renommage = signal<Renommage | undefined>(undefined);
   protected readonly soumis = signal(false);

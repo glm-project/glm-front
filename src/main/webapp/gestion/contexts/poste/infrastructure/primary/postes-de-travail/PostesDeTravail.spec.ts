@@ -331,6 +331,16 @@ describe('PostesDeTravail page', () => {
       thenAddressIs('/');
     });
 
+    it('should open the poste form with the chosen nature already filled in', async () => {
+      givenWorkstationsAndNatures();
+      await whenOpening();
+      await whenChoosingNature('tournage');
+
+      await whenClicking('nature-new-poste');
+
+      expect(natureField()).toBe('tournage');
+    });
+
     it('should invite to declare natures when none exists', async () => {
       givenWorkstations();
 
@@ -370,6 +380,7 @@ describe('PostesDeTravail page', () => {
     await whenClicking('nature-save');
     await whenViewSettles();
   };
+  const natureField = (): string => requiredFixture(document.querySelector<HTMLInputElement>('#poste-nature'), 'poste-nature').value;
   const whenRemovingChosenNature = async (): Promise<void> => {
     await whenClicking('nature-delete');
     await whenClicking('nature-delete-confirm');

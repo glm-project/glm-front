@@ -57,6 +57,10 @@
     </span>
     } @else {
     <span class="ml-auto flex flex-wrap gap-2">
+      <button mat-button type="button" (click)="nouveauPoste.emit(choisie)" data-selector="nature-new-poste">
+        <glm-icon name="plus" />
+        Poste de {{ choisie.libelle.value }}
+      </button>
       <button mat-stroked-button type="button" (click)="ouvrirRenommage(choisie)" data-selector="nature-rename">Renommer la nature</button>
       @if (choisie.supprimable) {
       <button

@@ -68,7 +68,8 @@ gardée dans l'adresse (`?nature=<id>`) ; une adresse qui nomme une nature dispa
 tableau d'une nature choisie n'affiche plus la colonne Nature. « + Nouvelle nature », en bas de la colonne,
 ouvre la saisie sur place : « Enregistrer » (jamais « Déclarer »), puis « Enregistrer quand même » après une
 alerte de ressemblance ; Échap ou Annuler referme sans écrire. Une nature enregistrée relit la page.
-« Renommer la nature », dans l'en-tête du tableau d'une nature choisie, part du nom actuel et rappelle que le
+« + Poste de <nature> », dans l'en-tête du tableau d'une nature choisie, ouvre le formulaire du poste avec
+cette nature déjà saisie. « Renommer la nature », à côté, part du nom actuel et rappelle que le
 nouveau nom s'affichera partout, rapports déjà produits compris ; la nature peut reprendre son propre nom avec
 d'autres majuscules ou accents. Une nature disparue entre-temps est signalée et la page relue. La corbeille, à
 côté, n'apparaît que sur une nature supprimable ; la suppression se confirme dans l'en-tête, puis la page revient
