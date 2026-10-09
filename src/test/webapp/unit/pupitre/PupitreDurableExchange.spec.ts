@@ -30,7 +30,7 @@ import { requiredFixture } from '@test/utils/RequiredFixture';
 import { IDBFactory } from 'fake-indexeddb';
 
 const entrepriseFixture = Entreprise.of('entreprise-a');
-const transitionFixture: GesteDePointage = {
+const nonConformiteFixture: GesteDePointage = {
   nature: 'POINTAGE',
   id: '4e12c8ad-cf5e-4fb5-b526-372dfc21a001',
   dateDeSurvenue: '2026-09-05T12:00:00Z',
@@ -38,6 +38,15 @@ const transitionFixture: GesteDePointage = {
   suiviId: 'piece',
   posteId: 'tour',
   type: 'NON_CONFORMITE',
+};
+const finALaMemeHeureFixture: GesteDePointage = {
+  nature: 'POINTAGE',
+  id: '9b0d6a42-7c1e-4f55-a0d3-5a1c2e8f3003',
+  dateDeSurvenue: '2026-09-05T12:00:00Z',
+  operateurId: 'jean',
+  suiviId: 'piece',
+  posteId: 'tour',
+  type: 'FIN',
 };
 const finFixture: GesteDePointage = {
   nature: 'POINTAGE',
@@ -48,12 +57,19 @@ const finFixture: GesteDePointage = {
   posteId: 'tour',
   type: 'FIN',
 };
-const transitionBodyFixture = {
+const nonConformiteBodyFixture = {
   id: '4e12c8ad-cf5e-4fb5-b526-372dfc21a001',
   dateDeSurvenue: '2026-09-05T12:00:00Z',
   operateur: 'jean',
   poste: 'tour',
   type: 'NON_CONFORMITE',
+};
+const finALaMemeHeureBodyFixture = {
+  id: '9b0d6a42-7c1e-4f55-a0d3-5a1c2e8f3003',
+  dateDeSurvenue: '2026-09-05T12:00:00Z',
+  operateur: 'jean',
+  poste: 'tour',
+  type: 'FIN',
 };
 const finBodyFixture = {
   id: '1f7e0c56-4059-4b3f-8972-0b4e3f17a002',
@@ -151,8 +167,13 @@ describe('Durable pupitre HTTP exchange', () => {
   });
 
   it.each([
-    { order: 'transition then finish', gestes: [transitionFixture, finFixture], bodies: [transitionBodyFixture, finBodyFixture] },
-    { order: 'finish then transition', gestes: [finFixture, transitionFixture], bodies: [finBodyFixture, transitionBodyFixture] },
+    { order: 'non conformity then finish', gestes: [nonConformiteFixture, finFixture], bodies: [nonConformiteBodyFixture, finBodyFixture] },
+    { order: 'finish then non conformity', gestes: [finFixture, nonConformiteFixture], bodies: [finBodyFixture, nonConformiteBodyFixture] },
+    {
+      order: 'finish then non conformity at the same time',
+      gestes: [finALaMemeHeureFixture, nonConformiteFixture],
+      bodies: [finALaMemeHeureBodyFixture, nonConformiteBodyFixture],
+    },
   ])('should retain FIFO and the targeted body through one concurrent retry in $order', async ({ gestes, bodies }) => {
     await givenPersistedGestures(gestes);
 
@@ -173,15 +194,15 @@ describe('Durable pupitre HTTP exchange', () => {
 
   it.each([
     {
-      order: 'transition then finish',
-      gestes: [transitionFixture, finFixture],
-      bodies: [transitionBodyFixture, finBodyFixture],
+      order: 'non conformity then finish',
+      gestes: [nonConformiteFixture, finFixture],
+      bodies: [nonConformiteBodyFixture, finBodyFixture],
       code: 'activite-visee-incoherente',
     },
     {
-      order: 'finish then transition',
-      gestes: [finFixture, transitionFixture],
-      bodies: [finBodyFixture, transitionBodyFixture],
+      order: 'finish then non conformity',
+      gestes: [finFixture, nonConformiteFixture],
+      bodies: [finBodyFixture, nonConformiteBodyFixture],
       code: 'saisie-concurrente',
     },
   ])('should retain the final $code refusal and continue FIFO in $order without another retry', async ({ gestes, bodies, code }) => {
