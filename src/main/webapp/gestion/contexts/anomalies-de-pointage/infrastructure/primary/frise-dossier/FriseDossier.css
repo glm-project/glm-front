@@ -29,8 +29,8 @@
   line-height: 1.1;
 }
 .cloture {
-  width: auto;
-  padding: 0 0.5rem;
+  width: 4.25rem;
+  padding: 0;
 }
 .repere[data-non-conformite='true'] {
   border-color: var(--color-ink);

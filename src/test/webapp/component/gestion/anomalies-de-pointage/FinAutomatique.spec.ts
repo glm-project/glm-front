@@ -456,6 +456,31 @@ describe('Bound of the end on the frise in Gestion', () => {
     thenNoClosureIsDrawn();
   });
 
+  [1280, 390].forEach(width => {
+    it(`should keep the closure whole inside the frise when the bound falls days after the end at ${width} pixels`, () => {
+      givenTheDossierBoundedBy(new Date(2026, 8, 17, 8, 0));
+
+      whenOpeningTheResolutionViewAt(width);
+
+      thenTheClosureIsWholeInsideTheFrise();
+    });
+  });
+
+  const whenOpeningTheResolutionViewAt = (width: number): void => {
+    cy.viewport(width, 900);
+    cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
+    cy.get(dataSelector('anomalie-cloture')).should('be.visible');
+  };
+
+  const thenTheClosureIsWholeInsideTheFrise = (): void => {
+    cy.get(dataSelector('anomalie-frise-plan')).then(plan => {
+      const { right } = requiredFixture(plan[0], 'plan de la frise').getBoundingClientRect();
+      cy.get(dataSelector('anomalie-cloture')).should(cloture => {
+        expect(requiredFixture(cloture[0], 'closure marker').getBoundingClientRect().right).to.be.at.most(right + 0.5);
+      });
+    });
+  };
+
   const givenTheDossierBoundedBy = (instant: Date): void => {
     cy.intercept('GET', suiviUrl, { body: { ...dossierFinAutomatiqueFixture(), borneDeFin: instantLocalFixture(instant) } });
   };

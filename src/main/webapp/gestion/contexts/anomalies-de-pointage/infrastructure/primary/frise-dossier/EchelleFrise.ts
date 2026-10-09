@@ -5,6 +5,8 @@ const UNE_MINUTE = 60_000;
 const UNE_HEURE = 3_600_000;
 const CINQ_MINUTES = 300_000;
 const MARGE_DES_REPERES_PX = 22;
+export const LARGEUR_D_UN_REPERE_PX = 44;
+export const LARGEUR_DE_LA_CLOTURE_PX = 68;
 const POSITION_DU_BORD = 100;
 const ECART_MINIMAL_ENTRE_GRADUATIONS_PX = 64;
 const HEURES_PAR_JOUR = 24;
@@ -60,6 +62,9 @@ export const positionTenueAuxBords = (position: number, largeur: number): number
   const marge = (MARGE_DES_REPERES_PX / largeur) * POSITION_DU_BORD;
   return Math.min(Math.max(position, marge), POSITION_DU_BORD - marge);
 };
+
+export const positionDeRepereTenueAuBordDroit = (position: number, largeur: number, largeurDuRepere: number): number =>
+  Math.min(position, POSITION_DU_BORD - (largeurDuRepere / largeur) * POSITION_DU_BORD);
 
 export const instantSousLePointeur = (
   echelle: EchelleFrise,

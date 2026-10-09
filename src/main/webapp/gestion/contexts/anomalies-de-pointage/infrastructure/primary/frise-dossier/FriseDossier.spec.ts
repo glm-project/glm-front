@@ -61,6 +61,12 @@ const avecLaBorne = (vue: VueDeFrise, heure: string, ...pointages: readonly Poin
   borneDeFin: instantAt(heure),
 });
 
+const avecLaBorneLe = (vue: VueDeFrise, jour: number, heure: string, ...pointages: readonly PointageAnomalie[]): VueDeFrise => ({
+  ...vue,
+  journal: [...vue.journal, ...pointages],
+  borneDeFin: instantAt(heure, jour),
+});
+
 const dossierDeLaFinAutomatique = (): VueDeFrise => vueDe(activiteFixture('a-1', '08:00', '12:00'));
 
 const poigneeFixture = (heure: string, surcharge: Partial<PoigneeDeFrise> = {}): PoigneeDeFrise => ({
@@ -573,6 +579,23 @@ describe('Frise of a dossier', () => {
         '20:00',
         '21:00',
       ]);
+    });
+
+    it('should keep the closure marker whole inside the frise when the bound falls days after the end', async () => {
+      await whenRenderingTheFrise(avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00'));
+
+      await whenTheFriseIsMeasured(1000);
+
+      thenTheClosureLeavesRoomForItsWidthAtTheRightEdge();
+    });
+
+    it('should keep the marker of the next start whole inside the frise when the bound falls days after the end', async () => {
+      const suivant = pointageA('debut-suivant', 'DEMARRAGE', instantAt('08:00', 17));
+      await whenRenderingTheFrise(avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00', suivant));
+
+      await whenTheFriseIsMeasured(1000);
+
+      thenTheMarkerLeavesRoomForItsWidthAtTheRightEdge('debut-suivant');
     });
 
     it('should let the pointer through the closure marker to the placement row under it', async () => {
@@ -1111,6 +1134,14 @@ describe('Frise of a dossier', () => {
   const thenTheClosureReads = (expected: string): void => {
     const lines = [...requiredFixture(closure(), 'closure marker').children].map(line => line.textContent.trim());
     expect(lines.join(' ')).toBe(expected);
+  };
+
+  const thenTheClosureLeavesRoomForItsWidthAtTheRightEdge = (): void => {
+    expect(Number.parseFloat(requiredFixture(closure(), 'closure marker').style.left)).toBeLessThanOrEqual(93.2);
+  };
+
+  const thenTheMarkerLeavesRoomForItsWidthAtTheRightEdge = (pointage: string): void => {
+    expect(Number.parseFloat(marker(pointage).style.left)).toBeLessThanOrEqual(95.6);
   };
 
   const thenNoClosureIsDrawn = (): void => {

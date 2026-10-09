@@ -10,7 +10,14 @@ import {
   RepereFrise,
   RetraitDeFrise,
 } from './DispositionFrise';
-import { EchelleFrise, graduationsDe, positionSur } from './EchelleFrise';
+import {
+  EchelleFrise,
+  graduationsDe,
+  LARGEUR_D_UN_REPERE_PX,
+  LARGEUR_DE_LA_CLOTURE_PX,
+  positionDeRepereTenueAuBordDroit,
+  positionSur,
+} from './EchelleFrise';
 import {
   barreDe,
   clotureDe,
@@ -65,6 +72,9 @@ const positionsDePoignee = (
 const rangeeDePlacementSur = (placement: PlacementDeLInstant | undefined, barre: BarreFrise): RangeeDePlacement | undefined =>
   placement === undefined ? undefined : { haut: barre.haut, hauteur: HAUTEUR_D_UN_ELEMENT_PX };
 
+const gaucheDuRepere = (echelle: EchelleFrise, instant: string, largeur: number, largeurDuRepere: number): number =>
+  positionDeRepereTenueAuBordDroit(positionSur(echelle, Date.parse(instant)), largeur, largeurDuRepere);
+
 export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise => {
   const { vue, maintenant: now, poignee, placement, largeur } = entrees;
   const { pointages, echelle } = lectureDeLaFrise(entrees);
@@ -74,11 +84,12 @@ export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise =>
   const barre = poignee === undefined ? barreRecue : barreJusquALaPoignee(barreRecue, poignee, echelle);
   const reperes = pointages.map((pointage): RepereFrise => ({
     ...repereDe(pointage),
-    gauche: positionSur(echelle, Date.parse(pointage.fait.instant)),
+    gauche: gaucheDuRepere(echelle, pointage.fait.instant, largeur, LARGEUR_D_UN_REPERE_PX),
     haut,
   }));
   const borne = clotureDeLaFrise(vue);
-  const clotures = borne === undefined ? [] : [{ ...clotureDe(borne), gauche: positionSur(echelle, Date.parse(borne)), haut }];
+  const clotures =
+    borne === undefined ? [] : [{ ...clotureDe(borne), gauche: gaucheDuRepere(echelle, borne, largeur, LARGEUR_DE_LA_CLOTURE_PX), haut }];
   const elements = [barre, ...reperes, ...clotures, ...positionsDePoignee(entrees, activite, barre, echelle, largeur)].sort(
     (gauche, droite) => gauche.instant - droite.instant,
   );
