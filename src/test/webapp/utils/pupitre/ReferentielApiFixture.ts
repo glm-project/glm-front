@@ -1,4 +1,4 @@
-import type { components } from '@/app/generated/schema';
+import { components } from '@/app/generated/schema';
 
 type DeepReadonly<T> = T extends readonly (infer Element)[]
   ? readonly DeepReadonly<Element>[]

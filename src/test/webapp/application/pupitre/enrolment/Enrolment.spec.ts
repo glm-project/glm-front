@@ -1,5 +1,5 @@
 import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
-import { referentielApiFixture } from '@test/unit/fixtures/pupitre/atelier/ReferentielApiFixture';
+import { referentielApiFixture } from '@test/utils/pupitre/ReferentielApiFixture';
 import type { StaticResponse } from 'cypress/types/net-stubbing';
 import { dataSelector } from '../../../utils/DataSelector';
 import {

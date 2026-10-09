@@ -1,6 +1,6 @@
 import { ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
-import { referentielApiFixture } from '@test/unit/fixtures/pupitre/atelier/ReferentielApiFixture';
+import { referentielApiFixture } from '@test/utils/pupitre/ReferentielApiFixture';
 import { dataSelector } from '../../../utils/DataSelector';
 import { longPressFixture } from '../../../utils/LongPressFixture';
 import { clearPupitreStorageFixture, givenEnrolledPupitreFixture } from '../../../utils/PupitreStorageFixture';

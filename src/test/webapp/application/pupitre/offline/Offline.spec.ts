@@ -1,4 +1,4 @@
-import { referentielApiFixture } from '@test/unit/fixtures/pupitre/atelier/ReferentielApiFixture';
+import { referentielApiFixture } from '@test/utils/pupitre/ReferentielApiFixture';
 import { dataSelector } from '../../../utils/DataSelector';
 import { clearPupitreStorageFixture, givenDurablePupitreFixture, pupitreTokenFixture } from '../../../utils/PupitreStorageFixture';
 

@@ -15,8 +15,8 @@ import { BrowserLocksFixture } from '@test/unit/fixtures/BrowserLocksFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { JournauxDuPupitreFixture } from '@test/unit/fixtures/pupitre/atelier/JournauxDuPupitreFixture';
-import { referentielApiFixture } from '@test/unit/fixtures/pupitre/atelier/ReferentielApiFixture';
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
+import { referentielApiFixture } from '@test/utils/pupitre/ReferentielApiFixture';
 
 const entrepriseFixture = Entreprise.of('entreprise-a');
 const gesteFixture: GesteDePointage = {
