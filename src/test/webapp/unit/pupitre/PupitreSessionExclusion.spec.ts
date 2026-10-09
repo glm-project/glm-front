@@ -136,6 +136,10 @@ class AtelierExchangeFixture extends AtelierExchangePort {
     return barrier;
   }
 
+  override imageDuLogo(): Promise<string> {
+    return Promise.reject(new Error('aucun logo'));
+  }
+
   override async send(): Promise<Result<void, RefusDePublication>> {
     this.tokenDuringReplay = this.authentication().currentToken();
     const barrier = this.nextSend;

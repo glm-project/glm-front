@@ -1,5 +1,6 @@
 import { CodeDeRefusDAtelier, MotifDeRefus } from '../refus/MotifDeRefus';
 import { RefusDePublication } from '../refus/RefusDePublication';
+import { LogoDuPupitre } from './LogoDuPupitre';
 
 export type EtatDAtelier = 'EN_ATTENTE' | 'EN_COURS' | 'INTERROMPU';
 export type TypeDePointage = 'DEBUT' | 'NON_CONFORMITE' | 'FIN';
@@ -36,6 +37,7 @@ export interface ReferentielDuPupitre {
   readonly suivis: readonly SuiviDuPupitre[];
   readonly categories: readonly string[];
   readonly dureeMaximaleDActiviteEnMs: number;
+  readonly logo?: LogoDuPupitre;
 }
 
 export interface IdentiteDuGeste {
@@ -121,6 +123,7 @@ export const snapshotDuJournal = (journal: JournalDuPupitre): JournalDuPupitre =
           })),
           categories: [...journal.referentiel.categories],
           dureeMaximaleDActiviteEnMs: journal.referentiel.dureeMaximaleDActiviteEnMs,
+          ...(journal.referentiel.logo === undefined ? {} : { logo: { ...journal.referentiel.logo } }),
         },
       }),
 });

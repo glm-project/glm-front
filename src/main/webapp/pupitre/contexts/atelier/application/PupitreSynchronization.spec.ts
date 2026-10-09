@@ -10,6 +10,7 @@ import {
 } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitreProjection';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { LogoDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/LogoDuPupitre';
 import { CodeDeRefusDAtelier, MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { RefusDePublication } from '@/pupitre/contexts/atelier/domain/refus/RefusDePublication';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
@@ -29,6 +30,10 @@ const referenceFixture: ReferentielDuPupitre = {
   categories: [],
   dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs,
 };
+const VERSION_DU_LOGO = '0123456789abcdef';
+const AUTRE_VERSION_DU_LOGO = 'fedcba9876543210';
+const IMAGE_DU_LOGO = 'data:image/png;base64,iVBORw0K';
+const AUTRE_IMAGE_DU_LOGO = 'data:image/jpeg;base64,/9j/4A';
 const suiviSansActiviteFixture = {
   id: 'piece',
   nom: 'OF-1',
@@ -58,6 +63,8 @@ class ServerFixture extends AtelierExchangePort {
   readonly received: GesteDePointage[] = [];
   readonly rereadGestes: GesteDePointage[] = [];
   referentielCalls = 0;
+  readonly imagesDuLogo = new Map<string, string>();
+  readonly logosTelecharges: string[] = [];
   private readonly heldReferences: ReferentielExchangeFixture[] = [];
   onReferentiel: (() => Promise<ReferentielDuPupitre> | ReferentielDuPupitre) | undefined;
   onSend:
@@ -75,6 +82,14 @@ class ServerFixture extends AtelierExchangePort {
       return this.onReferentiel();
     }
     return referenceFixture;
+  }
+
+  override async imageDuLogo(version: string): Promise<string> {
+    await roundTrip();
+    this.logosTelecharges.push(version);
+    const image = this.imagesDuLogo.get(version);
+    if (image === undefined) throw new Error('logo indisponible');
+    return image;
   }
 
   holdNextReferentiel(): ReferentielExchangeFixture {
@@ -364,6 +379,58 @@ describe('PupitreSynchronization', () => {
     await whenSynchronizing();
 
     await thenCompanyReferentialWasNotOverwritten('entreprise-a');
+  });
+
+  it('should download a first logo of the company and keep it with the referential', async () => {
+    givenAnAuthorizedSession();
+    givenTheServerGivesTheLogo(VERSION_DU_LOGO, IMAGE_DU_LOGO);
+
+    await whenSynchronizing();
+
+    await thenTheStoredLogoIs({ version: VERSION_DU_LOGO, image: IMAGE_DU_LOGO });
+    thenTheLogosDownloadedAre(VERSION_DU_LOGO);
+  });
+
+  it('should not download the logo again while its version is unchanged', async () => {
+    await givenAStoredLogo({ version: VERSION_DU_LOGO, image: IMAGE_DU_LOGO });
+    givenAnAuthorizedSession();
+    givenTheServerGivesTheLogo(VERSION_DU_LOGO);
+
+    await whenSynchronizing();
+
+    await thenTheStoredLogoIs({ version: VERSION_DU_LOGO, image: IMAGE_DU_LOGO });
+    thenTheLogosDownloadedAre();
+  });
+
+  it('should download the logo of a new version', async () => {
+    await givenAStoredLogo({ version: VERSION_DU_LOGO, image: IMAGE_DU_LOGO });
+    givenAnAuthorizedSession();
+    givenTheServerGivesTheLogo(AUTRE_VERSION_DU_LOGO, AUTRE_IMAGE_DU_LOGO);
+
+    await whenSynchronizing();
+
+    await thenTheStoredLogoIs({ version: AUTRE_VERSION_DU_LOGO, image: AUTRE_IMAGE_DU_LOGO });
+    thenTheLogosDownloadedAre(AUTRE_VERSION_DU_LOGO);
+  });
+
+  it('should forget the logo the gestionnaire removed', async () => {
+    await givenAStoredLogo({ version: VERSION_DU_LOGO, image: IMAGE_DU_LOGO });
+    givenAnAuthorizedSession();
+
+    await whenSynchronizing();
+
+    await thenTheStoredLogoIs(undefined);
+  });
+
+  it('should keep the previous logo and the new referential when the image of a new version cannot be read', async () => {
+    await givenAStoredLogo({ version: VERSION_DU_LOGO, image: IMAGE_DU_LOGO });
+    givenAnAuthorizedSession();
+    givenTheServerGivesTheLogo(AUTRE_VERSION_DU_LOGO);
+
+    await whenSynchronizing();
+
+    await thenTheStoredLogoIs({ version: VERSION_DU_LOGO, image: IMAGE_DU_LOGO });
+    expect(errorHandler.errors).toEqual([new Error('logo indisponible')]);
   });
 
   it('should retain existing state and log an error when referential refresh fails', async () => {
@@ -706,6 +773,19 @@ describe('PupitreSynchronization', () => {
     };
   };
 
+  const givenTheServerGivesTheLogo = (version: string, image?: string): void => {
+    server.onReferentiel = () => ({ ...referenceFixture, logo: { version } });
+    if (image !== undefined) server.imagesDuLogo.set(version, image);
+  };
+  const givenAStoredLogo = async (logo: LogoDuPupitre): Promise<void> => {
+    await journal.saveReferentiel(Entreprise.of('entreprise-a'), { ...referenceFixture, logo });
+  };
+  const thenTheStoredLogoIs = async (logo: LogoDuPupitre | undefined): Promise<void> => {
+    expect((await journal.read(Entreprise.of('entreprise-a'))).referentiel?.logo).toEqual(logo);
+  };
+  const thenTheLogosDownloadedAre = (...versions: string[]): void => {
+    expect(server.logosTelecharges).toEqual(versions);
+  };
   const whenSynchronizing = (): Promise<void> =>
     synchronisation.synchronize((_entreprise, state) => {
       exposed = state;

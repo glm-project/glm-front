@@ -31,6 +31,8 @@ activités connues du serveur est celle que le référentiel donne ; celle d'une
 est l'heure du geste plus la durée maximale. Limite connue : le serveur fige la durée à la réception de
 l'ouverture, non à l'heure du geste, et ne garde aucun historique du réglage.
 
+**Logo de l'entreprise** : image que le gestionnaire dépose, gardée avec le référentiel du journal (`LogoDuPupitre` : `version` et image en ligne `data:`), donc disponible hors ligne et propre à l'entreprise. Le référentiel ne donne que la version ; `suiteDuLogo` décide de la garder ou de télécharger son image (`GET /api/parametrage/logo/{version}`), seulement quand la version change. Sans version reçue, le logo est oublié. Une image illisible garde le logo précédent, sans bloquer le référentiel : la version restée ancienne fait réessayer à la synchronisation suivante.
+
 **Activité échue** : activité dont l'échéance est atteinte. Elle cesse d'être active et ne peut plus être
 mise en pause, mais le serveur la compte comme terminée : une ouverture dont l'heure atteint l'échéance
 (`>=`) libère la clé et remplace l'activité échue, localement comme au serveur. Le pupitre calcule cette
