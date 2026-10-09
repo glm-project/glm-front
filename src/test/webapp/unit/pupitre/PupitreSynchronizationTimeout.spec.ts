@@ -27,7 +27,7 @@ const gesteFixture: GesteDePointage = {
   suiviId: 'piece',
   type: 'DEBUT',
 };
-const targetedFinishFixture: GesteDePointage = {
+const finishFixture: GesteDePointage = {
   nature: 'POINTAGE',
   id: '34f2039a-722a-43fc-ad88-4ecb928b5e99',
   dateDeSurvenue: '2026-09-05T17:00:00Z',
@@ -134,8 +134,8 @@ describe('Pupitre synchronization over stalled HTTP', () => {
   it.each([
     { stage: 'send' as const, geste: gesteFixture, body: openingBodyFixture },
     { stage: 'reread' as const, geste: gesteFixture, body: openingBodyFixture },
-    { stage: 'send' as const, geste: targetedFinishFixture, body: finishBodyFixture },
-    { stage: 'reread' as const, geste: targetedFinishFixture, body: finishBodyFixture },
+    { stage: 'send' as const, geste: finishFixture, body: finishBodyFixture },
+    { stage: 'reread' as const, geste: finishFixture, body: finishBodyFixture },
   ])(
     'should retain $geste.intention after a stalled $stage, release the session and replay its original body',
     async ({ stage, geste, body }) => {

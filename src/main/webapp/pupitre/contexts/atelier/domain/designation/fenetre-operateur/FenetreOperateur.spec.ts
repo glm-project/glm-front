@@ -356,7 +356,7 @@ describe('FenetreOperateur', () => {
     thenOpeningSharesBusinessTime(firstGestures);
   });
 
-  it('should capture a first targeted finish', () => {
+  it('should capture a first finish', () => {
     const fin = whenDeciding('moule-1015', 'PRINCIPALE');
 
     const gestes = captureGestures(fin);

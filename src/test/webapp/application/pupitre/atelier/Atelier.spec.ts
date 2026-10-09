@@ -106,7 +106,7 @@ describe('Pupitre workshop journey', () => {
     thenThePauseAndItsResumptionWereReplayedInOrder();
   });
 
-  it('should stop every personal activity by its targeted finish', () => {
+  it('should stop every personal activity by its finish', () => {
     givenAnEnrolledPupitre(referentielActifFixture);
     whenDesignatingOperator049();
 

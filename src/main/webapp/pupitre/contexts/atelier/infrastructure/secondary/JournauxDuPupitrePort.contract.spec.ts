@@ -354,31 +354,28 @@ describe('IndexedDbJournauxDuPupitre fresh activity journal', () => {
         },
       ],
     },
-  ])(
-    'should atomically retain $count targeted finishes and clear resumption across a journal adapter restart',
-    async ({ count, activites }) => {
-      const before = await givenAStoredPause(activites);
-      const window = windowOf(before);
-      const stop = window.prepareAcceptance(
-        new IntentionGlobaleInitiee('TOUT_ARRETER', {
-          id: 'arret',
-          dateDeSurvenue: '2026-09-05T12:00:00Z',
-        }).prepare(window),
-      );
+  ])('should atomically retain $count finishes and clear resumption across a journal adapter restart', async ({ count, activites }) => {
+    const before = await givenAStoredPause(activites);
+    const window = windowOf(before);
+    const stop = window.prepareAcceptance(
+      new IntentionGlobaleInitiee('TOUT_ARRETER', {
+        id: 'arret',
+        dateDeSurvenue: '2026-09-05T12:00:00Z',
+      }).prepare(window),
+    );
 
-      await whenAppendingStop(stop);
+    await whenAppendingStop(stop);
 
-      const after = await whenRestartingJournal();
-      const restoredWindow = windowOf(after);
-      expect(stop.gestes).toHaveLength(count);
-      expect(stop.gestes.map(geste => geste.type)).toEqual(Array<string>(count).fill('FIN'));
-      expect(after.evenements.slice(0, before.evenements.length)).toEqual(before.evenements);
-      expect(after.evenements.slice(before.evenements.length)).toEqual(stop.gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' })));
-      expect(after.pausesArretees).toEqual(['pause-de-midi']);
-      expect(restoredWindow.commandesGlobales().permet('REPRENDRE')).toBe(false);
-      expect(restoredWindow.commandesGlobales().permet('PAUSE')).toBe(false);
-    },
-  );
+    const after = await whenRestartingJournal();
+    const restoredWindow = windowOf(after);
+    expect(stop.gestes).toHaveLength(count);
+    expect(stop.gestes.map(geste => geste.type)).toEqual(Array<string>(count).fill('FIN'));
+    expect(after.evenements.slice(0, before.evenements.length)).toEqual(before.evenements);
+    expect(after.evenements.slice(before.evenements.length)).toEqual(stop.gestes.map(geste => ({ geste, etat: 'EN_ATTENTE' })));
+    expect(after.pausesArretees).toEqual(['pause-de-midi']);
+    expect(restoredWindow.commandesGlobales().permet('REPRENDRE')).toBe(false);
+    expect(restoredWindow.commandesGlobales().permet('PAUSE')).toBe(false);
+  });
 
   it('should preserve the whole pause and pending history when the atomic stop write aborts', async () => {
     const before = await givenAStoredPause([]);

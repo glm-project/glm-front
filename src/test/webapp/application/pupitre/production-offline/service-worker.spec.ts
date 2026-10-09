@@ -117,7 +117,7 @@ describe('Production pupitre offline restart', () => {
     whenRestoringTheBrowserNetwork();
   });
 
-  it('should preserve targeted gestures for two companies through offline restarts and publish only the selected company FIFO', () => {
+  it('should preserve gestures for two companies through offline restarts and publish only the selected company FIFO', () => {
     whenBootingTheProductionPupitre();
     whenReadingOnlinePupitre('initial', 1);
     whenWaitingForServiceWorkerActivation();

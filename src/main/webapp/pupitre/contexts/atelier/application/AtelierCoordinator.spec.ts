@@ -353,7 +353,7 @@ describe('AtelierCoordinator', () => {
     ]);
   });
 
-  it('should append every targeted personal finish as one global stop batch', async () => {
+  it('should append every personal finish as one global stop batch', async () => {
     await givenTwoActiveWorkstations();
 
     await whenStoppingEverything();

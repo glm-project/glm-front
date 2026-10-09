@@ -176,7 +176,7 @@ describe('Durable pupitre HTTP exchange', () => {
       gestes: [finALaMemeHeureFixture, nonConformiteFixture],
       bodies: [finALaMemeHeureBodyFixture, nonConformiteBodyFixture],
     },
-  ])('should retain FIFO and the targeted body through one concurrent retry in $order', async ({ gestes, bodies }) => {
+  ])('should retain FIFO and the original body through one concurrent retry in $order', async ({ gestes, bodies }) => {
     await givenPersistedGestures(gestes);
 
     await whenRestartingAndReplayingWithConcurrency();
