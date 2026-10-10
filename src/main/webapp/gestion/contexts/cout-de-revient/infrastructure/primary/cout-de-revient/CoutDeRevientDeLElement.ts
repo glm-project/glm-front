@@ -22,6 +22,12 @@ export type EtatVueCoutDeRevient =
   | { readonly kind: 'ELEMENT_INTROUVABLE' }
   | { readonly kind: 'SUCCES'; readonly element: ElementChiffreId; readonly rapport: CoutDeRevient };
 
+const BOUTONS_D_EXPORT: readonly { readonly format: FormatDExport; readonly selecteur: string }[] = [
+  { format: 'EXCEL', selecteur: 'cout-export-excel' },
+  { format: 'PDF_SYNTHESE', selecteur: 'cout-export-pdf-synthese' },
+  { format: 'PDF_DETAIL', selecteur: 'cout-export-pdf-detail' },
+];
+
 @Component({
   selector: 'glm-cout-de-revient',
   host: { 'data-selector': 'cout-de-revient-page' },
@@ -31,6 +37,7 @@ export type EtatVueCoutDeRevient =
 })
 export class CoutDeRevientDeLElement {
   protected readonly libelles = LIBELLES_COUT_DE_REVIENT;
+  protected readonly boutonsDExport = BOUTONS_D_EXPORT;
 
   private navigationVersion = 0;
   private readonly router = inject(Router);

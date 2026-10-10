@@ -10,6 +10,12 @@ import {
 
 const RAPPORT = '/couts-de-revient/element-1';
 
+const EXPORTS: readonly (readonly [string, string, string])[] = [
+  ['cout-export-excel', 'cout-de-revient-OF-2026-000001.xlsx', 'xlsx'],
+  ['cout-export-pdf-synthese', 'cout-de-revient-OF-2026-000001-synthese.pdf', 'pdf-synthese'],
+  ['cout-export-pdf-detail', 'cout-de-revient-OF-2026-000001-detail.pdf', 'pdf-detail'],
+];
+
 describe('Cost of manufacture in gestion', () => {
   let api: CoutDeRevientApiFixture;
 
@@ -105,13 +111,15 @@ describe('Cost of manufacture in gestion', () => {
     thenTheDetailToggleHasFocus();
   });
 
-  it('should download the workbook of the report under the name the server gave it', () => {
-    givenReport();
-    whenVisitingTheReport();
-    whenExporting('cout-export-excel');
+  for (const [bouton, nom, contenu] of EXPORTS) {
+    it(`should download the export ${bouton} of the report under the name the server gave it`, () => {
+      givenReport();
+      whenVisitingTheReport();
+      whenExporting(bouton);
 
-    thenTheFileIsDownloaded('cout-de-revient-OF-2026-000001.xlsx', 'xlsx');
-  });
+      thenTheFileIsDownloaded(nom, contenu);
+    });
+  }
 
   it('should show the workbook in preparation until the server sends it', () => {
     givenAPendingExport('/api/couts-de-revient/element-1/export.xlsx');

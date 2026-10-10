@@ -382,12 +382,16 @@ describe.each(adapters)('CoutDeRevientPort contract, honoured by %s', (_adapter,
     expect(rapport).toBeUndefined();
   });
 
-  it('should hand back the exported workbook under the name the server gave it', async () => {
-    harness.seedFichier('EXCEL', 'cout-de-revient-OF-2026-000001.xlsx', 'classeur');
+  it.each([
+    ['EXCEL', 'cout-de-revient-OF-2026-000001.xlsx'],
+    ['PDF_SYNTHESE', 'cout-de-revient-OF-2026-000001-synthese.pdf'],
+    ['PDF_DETAIL', 'cout-de-revient-OF-2026-000001-detail.pdf'],
+  ] as const)('should hand back the %s export under the name the server gave it', async (format, nom) => {
+    harness.seedFichier(format, nom, 'contenu');
 
-    const fichier = await port.exporte(DEMANDE, 'EXCEL');
+    const fichier = await port.exporte(DEMANDE, format);
 
-    await thenTheFileIs(fichier, 'cout-de-revient-OF-2026-000001.xlsx', 'classeur');
+    await thenTheFileIs(fichier, nom, 'contenu');
   });
 
   const givenRapport = (lignes: readonly LigneFixture[]): void => {
@@ -904,12 +908,16 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     expect(errorHandler.errors).toEqual([]);
   });
 
-  it('should ask the server for the workbook of the element', async () => {
-    const result = port.exporte(DEMANDE, 'EXCEL');
+  it.each([
+    ['EXCEL', 'export.xlsx'],
+    ['PDF_SYNTHESE', 'export.pdf?version=synthese'],
+    ['PDF_DETAIL', 'export.pdf?version=detail'],
+  ] as const)('should ask the server for the %s export of the element at %s', async (format, route) => {
+    const result = port.exporte(DEMANDE, format);
 
-    await whenServerSendsTheFile('export.xlsx', 'attachment; filename="cout-de-revient-OF-2026-000001.xlsx"');
+    await whenServerSendsTheFile(route, 'attachment; filename="cout-de-revient-OF-2026-000001"');
 
-    await thenTheFileIs(await result, 'cout-de-revient-OF-2026-000001.xlsx', 'fichier');
+    await thenTheFileIs(await result, 'cout-de-revient-OF-2026-000001', 'fichier');
   });
 
   it('should reject a file the server sent without a name and report it once', async () => {

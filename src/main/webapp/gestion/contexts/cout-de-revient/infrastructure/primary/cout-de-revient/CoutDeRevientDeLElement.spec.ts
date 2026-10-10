@@ -788,15 +788,27 @@ describe('Cout de revient component', () => {
     expect(portFixture.demandes).toHaveLength(2);
   });
 
-  it('should save the workbook of the displayed report under the name the server gave it', async () => {
+  it.each([
+    ['cout-export-excel', 'EXCEL', 'cout-de-revient-OF-2026-000001.xlsx'],
+    ['cout-export-pdf-synthese', 'PDF_SYNTHESE', 'cout-de-revient-OF-2026-000001-synthese.pdf'],
+    ['cout-export-pdf-detail', 'PDF_DETAIL', 'cout-de-revient-OF-2026-000001-detail.pdf'],
+  ] as const)('should save the export %s of the displayed report under the name the server gave it', async (bouton, format, nom) => {
     givenRapport([ligneFixture()]);
-    givenFichier('EXCEL', 'cout-de-revient-OF-2026-000001.xlsx');
+    givenFichier(format, nom);
     await whenEcranAffiche();
 
-    await whenExportDemande('cout-export-excel');
+    await whenExportDemande(bouton);
 
-    expect(portFixture.exports).toEqual([{ element: ELEMENT, format: 'EXCEL' }]);
-    expect(enregistrementFixture.fichiers.map(fichier => fichier.nom)).toEqual(['cout-de-revient-OF-2026-000001.xlsx']);
+    expect(portFixture.exports).toEqual([{ element: ELEMENT, format }]);
+    expect(enregistrementFixture.fichiers.map(fichier => fichier.nom)).toEqual([nom]);
+  });
+
+  it('should label each export, the PDF in its two versions', async () => {
+    givenRapport([ligneFixture()]);
+
+    await whenEcranAffiche();
+
+    expect(textesCompacts('cout-exports')).toEqual(['Exporter en Excel PDF synthèse PDF détaillé']);
   });
 
   it('should show the export is being prepared and refuse another one meanwhile', async () => {
@@ -807,7 +819,7 @@ describe('Cout de revient component', () => {
     await whenExportDemande('cout-export-excel');
 
     expect(texte('cout-export-excel')).toBe('Préparation…');
-    expect(requis('cout-export-excel').hasAttribute('disabled')).toBe(true);
+    expect(boutonsDesactives()).toEqual([true, true, true]);
   });
 
   it('should explain a failed export and leave it available again', async () => {
@@ -849,6 +861,9 @@ describe('Cout de revient component', () => {
   const givenExportEnEchec = (): void => {
     portFixture.exportFailure = new Error('panne');
   };
+
+  const boutonsDesactives = (): boolean[] =>
+    ['cout-export-excel', 'cout-export-pdf-synthese', 'cout-export-pdf-detail'].map(bouton => requis(bouton).hasAttribute('disabled'));
 
   const whenExportDemande = async (selector: string): Promise<void> => {
     requis(selector).click();

@@ -40,15 +40,17 @@
       [attr.aria-label]="libelles.exports.groupe"
       data-selector="cout-exports"
     >
+      @for (bouton of boutonsDExport; track bouton.format) {
       <button
         mat-stroked-button
         type="button"
         [disabled]="exportEnCours() !== undefined"
-        (click)="exporter(vue.element, 'EXCEL')"
-        data-selector="cout-export-excel"
+        (click)="exporter(vue.element, bouton.format)"
+        [attr.data-selector]="bouton.selecteur"
       >
-        {{ libelles.exports.bouton('EXCEL', exportEnCours()) }}
+        {{ libelles.exports.bouton(bouton.format, exportEnCours()) }}
       </button>
+      }
     </div>
     @if (echecDExport()) {
     <p class="mt-2 text-body-sm text-danger" role="alert" data-selector="cout-export-echec">{{ libelles.exports.echec }}</p>

@@ -89,7 +89,8 @@ pour laquelle ils sont affichés séparément.
 - **ElementDisponible** : projection immuable associant l’identité nom/catégorie à son identifiant opaque pour le choix.
 - **CoutDeRevientPort** : port secondaire de lecture du rapport, des identités disponibles et des exports du
   rapport.
-- **FormatDExport** : le fichier demandé au serveur — `EXCEL`.
+- **FormatDExport** : le fichier demandé au serveur — `EXCEL`, `PDF_SYNTHESE` (une ligne par nature) ou
+  `PDF_DETAIL` (avec, en plus, une ligne par pointage).
 - **FichierExporte** : un export reçu, son nom et son contenu, tels que le serveur les a produits.
 - **EnregistrementDeFichierPort** : port secondaire qui remet un fichier exporté au navigateur.
 

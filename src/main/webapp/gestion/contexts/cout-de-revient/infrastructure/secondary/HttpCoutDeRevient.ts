@@ -39,6 +39,7 @@ type RestActiviteCitee = components['schemas']['RestActiviteCiteeDuCout'];
 type RestPoste = components['schemas']['RestPosteDuCout'];
 
 const ROUTE = '/api/couts-de-revient/{elementId}';
+const ROUTE_PDF = '/api/couts-de-revient/{elementId}/export.pdf';
 const ELEMENT_INCONNU = 404;
 
 const toDuree = (total: components['schemas']['RestDureeDuCout'] | undefined, chemin: string): DureePassee =>
@@ -262,6 +263,8 @@ export class HttpCoutDeRevient extends CoutDeRevientPort {
     const pathParams = { elementId: element.value };
     const telechargements: Record<FormatDExport, () => Promise<DownloadedFile>> = {
       EXCEL: () => this.api.download('/api/couts-de-revient/{elementId}/export.xlsx', { pathParams }),
+      PDF_SYNTHESE: () => this.api.download(ROUTE_PDF, { pathParams, queryParams: { version: 'synthese' } }),
+      PDF_DETAIL: () => this.api.download(ROUTE_PDF, { pathParams, queryParams: { version: 'detail' } }),
     };
     return telechargements[format]();
   }

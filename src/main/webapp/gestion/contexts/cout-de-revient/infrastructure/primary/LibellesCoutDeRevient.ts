@@ -123,6 +123,8 @@ const detailDuBandeau = (rapport: CoutDeRevient): string =>
 
 const BOUTONS_D_EXPORT: Record<FormatDExport, string> = {
   EXCEL: 'Exporter en Excel',
+  PDF_SYNTHESE: 'PDF synthèse',
+  PDF_DETAIL: 'PDF détaillé',
 };
 
 const boutonDExport = (format: FormatDExport, enCours: FormatDExport | undefined): string =>
