@@ -3,11 +3,18 @@ import { interceptForever } from '../../../utils/Interceptor';
 import {
   CoutDeRevientApiFixture,
   coutDeRevientFixture,
+  fichierExporteFixture,
   rapportAutomatiqueFixture,
   rapportEnCoursFixture,
 } from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
 
 const RAPPORT = '/couts-de-revient/element-1';
+
+const EXPORTS: readonly (readonly [string, string, string])[] = [
+  ['cout-export-excel', 'cout-de-revient-OF-2026-000001.xlsx', 'xlsx'],
+  ['cout-export-pdf-synthese', 'cout-de-revient-OF-2026-000001-synthese.pdf', 'pdf-synthese'],
+  ['cout-export-pdf-detail', 'cout-de-revient-OF-2026-000001-detail.pdf', 'pdf-detail'],
+];
 
 describe('Cost of manufacture in gestion', () => {
   let api: CoutDeRevientApiFixture;
@@ -103,6 +110,41 @@ describe('Cost of manufacture in gestion', () => {
 
     thenTheDetailToggleHasFocus();
   });
+
+  for (const [bouton, nom, contenu] of EXPORTS) {
+    it(`should download the export ${bouton} of the report under the name the server gave it`, () => {
+      givenReport();
+      whenVisitingTheReport();
+      whenExporting(bouton);
+
+      thenTheFileIsDownloaded(nom, contenu);
+    });
+  }
+
+  it('should show the workbook in preparation until the server sends it', () => {
+    givenAPendingExport('/api/couts-de-revient/element-1/export.xlsx');
+    whenVisitingTheReport();
+    whenExporting('cout-export-excel');
+
+    thenTheExportIsInPreparation('cout-export-excel');
+  });
+
+  const givenAPendingExport = (route: string): void => {
+    api.install();
+    interceptForever({ method: 'GET', pathname: route }, fichierExporteFixture(`http://localhost${route}`), 'pendingExport');
+  };
+
+  const whenExporting = (selector: string): void => {
+    cy.get(dataSelector(selector)).click();
+  };
+
+  const thenTheFileIsDownloaded = (nom: string, contenu: string): void => {
+    cy.readFile(`cypress/downloads/${nom}`).should('eq', contenu);
+  };
+
+  const thenTheExportIsInPreparation = (selector: string): void => {
+    cy.get(dataSelector(selector)).should('contain.text', 'Préparation…').and('be.disabled');
+  };
 
   const givenAutomaticReport = (): void => {
     api.rapport = rapportAutomatiqueFixture();

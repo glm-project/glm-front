@@ -5,7 +5,7 @@ gestionnaire consulte sur un élément de fabrication : ce que sa fabrication a 
 été passé, ligne par ligne.
 
 Il est **purement lecteur**. Aucun acte, aucune écriture, aucun refus métier à traduire en geste : un
-rapport se demande et s'affiche.
+rapport se demande, s'affiche et s'exporte.
 
 ## Comptabilisation opérationnelle
 
@@ -87,7 +87,12 @@ pour laquelle ils sont affichés séparément.
 - **Montant** : Value Object d'une valeur certaine en euros, finie et jamais négative.
 - **ActivitesEnCoursExclues** : nombre reçu d’activités exclues du temps, du coût et du diviseur.
 - **ElementDisponible** : projection immuable associant l’identité nom/catégorie à son identifiant opaque pour le choix.
-- **CoutDeRevientPort** : port secondaire de lecture du rapport et des identités disponibles.
+- **CoutDeRevientPort** : port secondaire de lecture du rapport, des identités disponibles et des exports du
+  rapport.
+- **FormatDExport** : le fichier demandé au serveur — `EXCEL`, `PDF_SYNTHESE` (une ligne par nature) ou
+  `PDF_DETAIL` (avec, en plus, une ligne par pointage).
+- **FichierExporte** : un export reçu, son nom et son contenu, tels que le serveur les a produits.
+- **EnregistrementDeFichierPort** : port secondaire qui remet un fichier exporté au navigateur.
 
 ## Responsabilités et invariants
 
@@ -167,5 +172,10 @@ pour laquelle ils sont affichés séparément.
 - **Les instants s'affichent dans le fuseau du navigateur.** Les périodes du rapport sont des
   `java.time.Instant` sérialisés en UTC ; aucune configuration de ce front ne porte le fuseau de
   l'entreprise. Même limite connue et même arbitrage que `releve-des-heures`.
+- **Les exports sont produits par le serveur, jamais par ce front.** L'écran demande le fichier du rapport
+  affiché et le remet tel quel au navigateur, sous le nom que le serveur a posé dans `Content-Disposition` ;
+  une réponse sans nom rejette l'export, signalé une seule fois par l'adapter. La lecture passe par
+  `ApiClient` en `blob` : un simple lien ne porterait pas le jeton. Les boutons n'apparaissent qu'avec un
+  rapport lu ; pendant la génération, ils sont désactivés et l'indiquent, et un échec laisse réessayer.
 - Tous les mots affichés vivent dans `LibellesCoutDeRevient`. Aucun mot en dur dans un template. La catégorie
   fait exception : chaque entreprise déclare les siennes, et leur code s'affiche tel quel.

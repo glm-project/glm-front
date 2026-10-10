@@ -9,6 +9,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CategorieDElementChiffre } from '../../../domain/element/CategorieDElementChiffre';
 import { ElementChiffre } from '../../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../../domain/element/ElementChiffreId';
+import { EnregistrementDeFichierPort } from '../../../domain/export/EnregistrementDeFichierPort';
+import { FichierExporte } from '../../../domain/export/FichierExporte';
+import { FormatDExport } from '../../../domain/export/FormatDExport';
 import { Cout } from '../../../domain/montant/Cout';
 import { Montant } from '../../../domain/montant/Montant';
 import { ActiviteCitee } from '../../../domain/pointage/ActiviteCitee';
@@ -54,6 +57,14 @@ class RouterFixture {
       throw this.failure;
     }
     return true;
+  }
+}
+
+class EnregistrementFixture extends EnregistrementDeFichierPort {
+  readonly fichiers: FichierExporte[] = [];
+
+  override enregistre(fichier: FichierExporte): void {
+    this.fichiers.push(fichier);
   }
 }
 
@@ -152,8 +163,10 @@ describe('Cout de revient component', () => {
   let routeFixture: RouteFixture;
   let routerFixture: RouterFixture;
   let errorsFixture: ErrorHandlerFixture;
+  let enregistrementFixture: EnregistrementFixture;
 
   beforeEach(() => {
+    enregistrementFixture = new EnregistrementFixture();
     portFixture = new CoutDeRevientFixture();
     routeFixture = new RouteFixture();
     routerFixture = new RouterFixture();
@@ -162,6 +175,7 @@ describe('Cout de revient component', () => {
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: CoutDeRevientPort, useValue: portFixture },
+        { provide: EnregistrementDeFichierPort, useValue: enregistrementFixture },
         { provide: ErrorHandlerPort, useValue: errorsFixture },
         { provide: Router, useValue: routerFixture },
         { provide: ActivatedRoute, useValue: routeFixture },
@@ -773,6 +787,89 @@ describe('Cout de revient component', () => {
 
     expect(portFixture.demandes).toHaveLength(2);
   });
+
+  it.each([
+    ['cout-export-excel', 'EXCEL', 'cout-de-revient-OF-2026-000001.xlsx'],
+    ['cout-export-pdf-synthese', 'PDF_SYNTHESE', 'cout-de-revient-OF-2026-000001-synthese.pdf'],
+    ['cout-export-pdf-detail', 'PDF_DETAIL', 'cout-de-revient-OF-2026-000001-detail.pdf'],
+  ] as const)('should save the export %s of the displayed report under the name the server gave it', async (bouton, format, nom) => {
+    givenRapport([ligneFixture()]);
+    givenFichier(format, nom);
+    await whenEcranAffiche();
+
+    await whenExportDemande(bouton);
+
+    expect(portFixture.exports).toEqual([{ element: ELEMENT, format }]);
+    expect(enregistrementFixture.fichiers.map(fichier => fichier.nom)).toEqual([nom]);
+  });
+
+  it('should label each export, the PDF in its two versions', async () => {
+    givenRapport([ligneFixture()]);
+
+    await whenEcranAffiche();
+
+    expect(textesCompacts('cout-exports')).toEqual(['Exporter en Excel PDF synthèse PDF détaillé']);
+  });
+
+  it('should show the export is being prepared and refuse another one meanwhile', async () => {
+    givenRapport([ligneFixture()]);
+    givenExportSuspendu();
+    await whenEcranAffiche();
+
+    await whenExportDemande('cout-export-excel');
+
+    expect(texte('cout-export-excel')).toBe('Préparation…');
+    expect(boutonsDesactives()).toEqual([true, true, true]);
+  });
+
+  it('should explain a failed export and leave it available again', async () => {
+    givenRapport([ligneFixture()]);
+    givenExportEnEchec();
+    await whenEcranAffiche();
+
+    await whenExportDemande('cout-export-excel');
+
+    expect(texte('cout-export-echec')).toBe('L’export n’a pas pu être généré. Vérifiez la connexion puis réessayez.');
+    expect(texte('cout-export-excel')).toBe('Exporter en Excel');
+    expect(requis('cout-export-excel').hasAttribute('disabled')).toBe(false);
+  });
+
+  it('should offer no export while the report is loading', () => {
+    givenLectureSuspendue();
+
+    whenEcranMonte();
+
+    expect(present('cout-exports')).toBe(false);
+  });
+
+  it('should offer no export for an element the referential does not know', async () => {
+    givenElementInconnu();
+
+    await whenEcranAffiche();
+
+    expect(present('cout-exports')).toBe(false);
+  });
+
+  const givenFichier = (format: FormatDExport, nom: string): void => {
+    portFixture.fichiers.set(`${ELEMENT}:${format}`, { nom, contenu: new Blob([format]) });
+  };
+
+  const givenExportSuspendu = (): void => {
+    portFixture.exportDiffere = new Promise(() => undefined);
+  };
+
+  const givenExportEnEchec = (): void => {
+    portFixture.exportFailure = new Error('panne');
+  };
+
+  const boutonsDesactives = (): boolean[] =>
+    ['cout-export-excel', 'cout-export-pdf-synthese', 'cout-export-pdf-detail'].map(bouton => requis(bouton).hasAttribute('disabled'));
+
+  const whenExportDemande = async (selector: string): Promise<void> => {
+    requis(selector).click();
+    await new Promise(resolve => setTimeout(resolve));
+    await componentFixture.whenStable();
+  };
 
   const rapportTermineFixture = (heures: number, montant: number, automatique: boolean): CoutDeRevient => {
     const temps = new TempsPasse(new DureePassee(`PT${String(heures)}H`), new DureePassee('PT0S'), new DureePassee(`PT${String(heures)}H`));
