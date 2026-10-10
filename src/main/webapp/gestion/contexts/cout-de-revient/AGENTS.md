@@ -135,7 +135,8 @@ pour laquelle ils sont affichés séparément.
   nature porte une pastille avec le nombre de fins automatiques. Dépliée, chaque anomalie est montrée sur son
   pointage avec une explication en clair. Ce lecteur ne calcule aucune échéance : la durée maximale d'une
   activité est une règle du serveur.
-- Aucun lien ne mène d'ici à la régularisation d'une fin automatique : elle se fait depuis la liste du contexte anomalies-de-pointage.
+- Seul le blocage des exports mène à la régularisation : il renvoie à la liste des anomalies de l'élément
+  (`/anomalies?element=<id>`), où elle se fait dans le contexte anomalies-de-pointage.
 - Une réponse incohérente (valeur absente, fin de pointage manquante) rejette la lecture, signalée une seule
   fois par l’adapter.
 
@@ -176,6 +177,9 @@ pour laquelle ils sont affichés séparément.
   affiché et le remet tel quel au navigateur, sous le nom que le serveur a posé dans `Content-Disposition` ;
   une réponse sans nom rejette l'export, signalé une seule fois par l'adapter. La lecture passe par
   `ApiClient` en `blob` : un simple lien ne porterait pas le jeton. Les boutons n'apparaissent qu'avec un
-  rapport lu ; pendant la génération, ils sont désactivés et l'indiquent, et un échec laisse réessayer.
+  rapport lu. `estExportable()` reprend la règle du back : aucune fin automatique et aucun tarif manquant
+  (taux horaire absent, ou coût horaire absent sur un pointage qui a un poste ; 0 € est un tarif). Sinon les
+  boutons restent visibles mais désactivés, avec la raison. Un refus `rapport-non-exportable` du serveur
+  (rapport changé entre-temps) relit le rapport, qui montre alors la même raison. Pendant la génération, ils sont désactivés et l'indiquent, et un échec laisse réessayer.
 - Tous les mots affichés vivent dans `LibellesCoutDeRevient`. Aucun mot en dur dans un template. La catégorie
   fait exception : chaque entreprise déclare les siennes, et leur code s'affiche tel quel.

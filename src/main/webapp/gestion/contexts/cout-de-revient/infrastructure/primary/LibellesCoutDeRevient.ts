@@ -130,6 +130,14 @@ const BOUTONS_D_EXPORT: Record<FormatDExport, string> = {
 const boutonDExport = (format: FormatDExport, enCours: FormatDExport | undefined): string =>
   format === enCours ? 'Préparation…' : BOUTONS_D_EXPORT[format];
 
+const blocageDExport = (rapport: CoutDeRevient): string => {
+  const raisons = [
+    rapport.finsAutomatiques() > 0 ? `${pluriel(rapport.finsAutomatiques(), 'fin automatique', 'fins automatiques')} à régulariser` : '',
+    rapport.tarifsManquants() > 0 ? `${pluriel(rapport.tarifsManquants(), 'pointage', 'pointages')} sans tarif` : '',
+  ].filter(raison => raison !== '');
+  return `Export impossible : ${raisons.join(', ')}.`;
+};
+
 export const LIBELLES_COUT_DE_REVIENT = {
   titre: 'Coût de revient',
   element: 'Élément',
@@ -211,6 +219,8 @@ export const LIBELLES_COUT_DE_REVIENT = {
   exports: {
     groupe: 'Exporter le rapport',
     bouton: boutonDExport,
+    blocage: blocageDExport,
+    voirAnomalies: 'Voir les anomalies de l’élément',
     echec: 'L’export n’a pas pu être généré. Vérifiez la connexion puis réessayez.',
   },
 

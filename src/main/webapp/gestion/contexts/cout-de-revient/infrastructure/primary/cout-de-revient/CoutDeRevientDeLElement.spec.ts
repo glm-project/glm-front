@@ -834,6 +834,50 @@ describe('Cout de revient component', () => {
     expect(requis('cout-export-excel').hasAttribute('disabled')).toBe(false);
   });
 
+  it('should disable the exports while a clocking ends automatically, and lead to the anomalies of the element', async () => {
+    givenFinAutomatique();
+
+    await whenEcranAffiche();
+
+    expect(texte('cout-export-blocage')).toContain('Export impossible : 1 fin automatique à régulariser.');
+    expect(present('cout-export-anomalies')).toBe(true);
+    expect(boutonsDesactives()).toEqual([true, true, true]);
+  });
+
+  it('should disable the exports while a clocking misses a rate, without leading to the anomalies', async () => {
+    givenRapport([ligneFixture({}, { pointages: [pointageSeulFixture({ tauxHoraire: undefined })] })]);
+
+    await whenEcranAffiche();
+
+    expect(texte('cout-export-blocage')).toBe('Export impossible : 1 pointage sans tarif.');
+    expect(present('cout-export-anomalies')).toBe(false);
+    expect(boutonsDesactives()).toEqual([true, true, true]);
+  });
+
+  it('should name every reason that blocks the exports', async () => {
+    givenRapport([
+      ligneFixture(
+        {},
+        { pointages: [pointageSeulFixture({ anomalies: ['FIN_AUTOMATIQUE'] }), pointageSeulFixture({ coutHoraire: undefined })] },
+      ),
+    ]);
+
+    await whenEcranAffiche();
+
+    expect(texte('cout-export-blocage')).toContain('Export impossible : 1 fin automatique à régulariser, 1 pointage sans tarif.');
+  });
+
+  it('should read the report again when the server refuses to export it', async () => {
+    givenRapport([ligneFixture()]);
+    givenExportRefuse();
+    await whenEcranAffiche();
+
+    await whenExportDemande('cout-export-excel');
+
+    expect(portFixture.demandes).toHaveLength(2);
+    expect(enregistrementFixture.fichiers).toEqual([]);
+  });
+
   it('should offer no export while the report is loading', () => {
     givenLectureSuspendue();
 
@@ -856,6 +900,10 @@ describe('Cout de revient component', () => {
 
   const givenExportSuspendu = (): void => {
     portFixture.exportDiffere = new Promise(() => undefined);
+  };
+
+  const givenExportRefuse = (): void => {
+    portFixture.exportRefuse = true;
   };
 
   const givenExportEnEchec = (): void => {

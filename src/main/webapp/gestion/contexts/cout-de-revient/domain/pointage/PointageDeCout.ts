@@ -59,6 +59,14 @@ export class PointageDeCout {
     return this.categorie === 'NON_CONFORMITE';
   }
 
+  manqueUnTarif(): boolean {
+    return this.tauxHoraire === undefined || this.manqueLeCoutDuPoste();
+  }
+
+  private manqueLeCoutDuPoste(): boolean {
+    return this.poste !== undefined && this.coutHoraire === undefined;
+  }
+
   detailleSonPartage(): boolean {
     return this.parts.length > 1 || this.parts.some(part => part.estPartagee());
   }

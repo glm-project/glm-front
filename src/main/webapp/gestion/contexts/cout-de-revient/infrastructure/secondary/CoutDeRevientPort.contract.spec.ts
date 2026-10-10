@@ -929,6 +929,15 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     expect(errorHandler.errors).toHaveLength(1);
   });
 
+  it('should answer nothing, without reporting it, when the server refuses a report that is not exportable', async () => {
+    const result = port.exporte(DEMANDE, 'PDF_DETAIL');
+
+    await whenExportFails('export.pdf', 409, JSON.stringify({ type: 'urn:glm:erreur:cout-de-revient:rapport-non-exportable' }));
+
+    expect(await result).toBeUndefined();
+    expect(errorHandler.errors).toEqual([]);
+  });
+
   it('should report a failed export once through the error handler and reject', async () => {
     const result = port.exporte(DEMANDE, 'EXCEL').catch((failure: unknown) => failure);
 
@@ -984,7 +993,7 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
   };
 });
 
-const thenTheFileIs = async (fichier: FichierExporte, nom: string, contenu: string): Promise<void> => {
-  expect(fichier.nom).toBe(nom);
-  expect(await fichier.contenu.text()).toBe(contenu);
+const thenTheFileIs = async (fichier: FichierExporte | undefined, nom: string, contenu: string): Promise<void> => {
+  expect(fichier?.nom).toBe(nom);
+  expect(await fichier?.contenu.text()).toBe(contenu);
 };

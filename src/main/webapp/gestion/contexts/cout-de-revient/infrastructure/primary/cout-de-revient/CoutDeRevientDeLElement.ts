@@ -146,7 +146,12 @@ export class CoutDeRevientDeLElement {
 
   private async telecharger(element: ElementChiffreId, format: FormatDExport): Promise<void> {
     try {
-      this.enregistrement.enregistre(await this.port.exporte(element, format));
+      const fichier = await this.port.exporte(element, format);
+      if (fichier === undefined) {
+        this.lecture.reload();
+        return;
+      }
+      this.enregistrement.enregistre(fichier);
     } catch {
       this.echecDExport.set(true);
     } finally {

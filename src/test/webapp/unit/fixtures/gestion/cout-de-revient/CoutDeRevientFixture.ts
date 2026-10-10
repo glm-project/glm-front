@@ -19,6 +19,7 @@ export class CoutDeRevientFixture extends CoutDeRevientPort {
   readonly exports: { readonly element: string; readonly format: FormatDExport }[] = [];
   fichiers = new Map<string, FichierExporte>();
   exportFailure: Error | undefined;
+  exportRefuse = false;
   exportDiffere: Promise<FichierExporte> | undefined;
 
   override async elementsDisponibles(): Promise<readonly ElementDisponible[]> {
@@ -48,10 +49,13 @@ export class CoutDeRevientFixture extends CoutDeRevientPort {
     return auTourSuivant(rapport);
   }
 
-  override exporte(element: ElementChiffreId, format: FormatDExport): Promise<FichierExporte> {
+  override exporte(element: ElementChiffreId, format: FormatDExport): Promise<FichierExporte | undefined> {
     this.exports.push({ element: element.value, format });
     if (this.exportDiffere !== undefined) {
       return this.exportDiffere;
+    }
+    if (this.exportRefuse) {
+      return auTourSuivant(undefined);
     }
     if (this.exportFailure !== undefined) {
       return Promise.reject(this.exportFailure);
