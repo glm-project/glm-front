@@ -1,7 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse, provideHttpClient } from '@angular/common/http';
+import { HttpBackend, HttpErrorResponse, HttpEvent, HttpHeaders, HttpRequest, HttpResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
@@ -11,6 +11,8 @@ import { CategorieDElementChiffre } from '../../domain/element/CategorieDElement
 import { ElementChiffre } from '../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../domain/element/ElementChiffreId';
 import { ElementDisponible } from '../../domain/element/ElementDisponible';
+import { FichierExporte } from '../../domain/export/FichierExporte';
+import { FormatDExport } from '../../domain/export/FormatDExport';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
 import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
@@ -152,6 +154,7 @@ class CoutDeRevientHttpBackendFixture implements HttpBackend {
   elementInconnu = false;
   elements: readonly ElementDisponible[] = [];
   collectionFailure = false;
+  fichier = { nom: 'cout-de-revient.xlsx', contenu: '' };
 
   handle(request: HttpRequest<unknown>): Observable<HttpEvent<unknown>> {
     if (request.url === '/api/elements-de-fabrication') {
@@ -193,6 +196,13 @@ class CoutDeRevientHttpBackendFixture implements HttpBackend {
     if (request.url.startsWith('/api/elements-de-fabrication/')) {
       return new HttpResponse({ status: 200, body: { id: ELEMENT } });
     }
+    if (request.url.includes('/export.')) {
+      return new HttpResponse({
+        status: 200,
+        body: new Blob([this.fichier.contenu]),
+        headers: new HttpHeaders({ 'Content-Disposition': `attachment; filename="${this.fichier.nom}"` }),
+      });
+    }
     return new HttpResponse({ status: 200, body: toRest(this.lignes) });
   }
 }
@@ -203,6 +213,7 @@ interface CoutDeRevientHarness {
   seedElementInconnu(): void;
   seedElements(elements: readonly ElementDisponible[]): void;
   failCollection(): void;
+  seedFichier(format: FormatDExport, nom: string, contenu: string): void;
 }
 
 const createHttpHarness = (): CoutDeRevientHarness => {
@@ -232,6 +243,9 @@ const createHttpHarness = (): CoutDeRevientHarness => {
     seedElementInconnu: () => {
       backend.elementInconnu = true;
     },
+    seedFichier: (_format, nom, contenu) => {
+      backend.fichier = { nom, contenu };
+    },
   };
 };
 
@@ -251,6 +265,9 @@ const createFixtureHarness = (): CoutDeRevientHarness => {
     },
     seedElementInconnu: () => {
       fixture.elementsInconnus.add(ELEMENT);
+    },
+    seedFichier: (format, nom, contenu) => {
+      fixture.fichiers.set(`${ELEMENT}:${format}`, { nom, contenu: new Blob([contenu]) });
     },
   };
 };
@@ -363,6 +380,14 @@ describe.each(adapters)('CoutDeRevientPort contract, honoured by %s', (_adapter,
     const rapport = await port.rapport(DEMANDE);
 
     expect(rapport).toBeUndefined();
+  });
+
+  it('should hand back the exported workbook under the name the server gave it', async () => {
+    harness.seedFichier('EXCEL', 'cout-de-revient-OF-2026-000001.xlsx', 'classeur');
+
+    const fichier = await port.exporte(DEMANDE, 'EXCEL');
+
+    await thenTheFileIs(fichier, 'cout-de-revient-OF-2026-000001.xlsx', 'classeur');
   });
 
   const givenRapport = (lignes: readonly LigneFixture[]): void => {
@@ -879,6 +904,32 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     expect(errorHandler.errors).toEqual([]);
   });
 
+  it('should ask the server for the workbook of the element', async () => {
+    const result = port.exporte(DEMANDE, 'EXCEL');
+
+    await whenServerSendsTheFile('export.xlsx', 'attachment; filename="cout-de-revient-OF-2026-000001.xlsx"');
+
+    await thenTheFileIs(await result, 'cout-de-revient-OF-2026-000001.xlsx', 'fichier');
+  });
+
+  it('should reject a file the server sent without a name and report it once', async () => {
+    const result = port.exporte(DEMANDE, 'EXCEL').catch((failure: unknown) => failure);
+
+    await whenServerSendsTheFile('export.xlsx');
+
+    expect(await result).toEqual(new Error('Content-Disposition.filename manque dans la réponse du serveur'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should report a failed export once through the error handler and reject', async () => {
+    const result = port.exporte(DEMANDE, 'EXCEL').catch((failure: unknown) => failure);
+
+    await whenExportFails('export.xlsx', 500);
+
+    expect(await result).toBeInstanceOf(HttpErrorResponse);
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
   it('should keep a refused read a technical failure', async () => {
     const result = port.rapport(DEMANDE).catch((failure: unknown) => failure);
     await whenServerFails(403, {});
@@ -899,6 +950,24 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
     return request;
   };
 
+  const whenServerSendsTheFile = async (route: string, disposition?: string): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    server.expectOne(`${ROUTE}/${ELEMENT}/${route}`).flush(new Blob(['fichier']), {
+      headers: disposition === undefined ? new HttpHeaders() : new HttpHeaders({ 'Content-Disposition': disposition }),
+    });
+  };
+
+  const whenExportFails = async (route: string, status: number, corps = '{}'): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    server
+      .expectOne(candidate => candidate.urlWithParams.startsWith(`${ROUTE}/${ELEMENT}/${route}`))
+      .flush(new Blob([corps]), {
+        status,
+        statusText: 'Failure',
+      });
+    await new Promise(resolve => setTimeout(resolve));
+  };
+
   const whenServerFails = async (status: number, error: object): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));
     server
@@ -906,3 +975,8 @@ describe('Beyond the contract: HttpCoutDeRevient', () => {
       .flush(error, { status, statusText: 'Failure' });
   };
 });
+
+const thenTheFileIs = async (fichier: FichierExporte, nom: string, contenu: string): Promise<void> => {
+  expect(fichier.nom).toBe(nom);
+  expect(await fichier.contenu.text()).toBe(contenu);
+};

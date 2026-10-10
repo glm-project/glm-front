@@ -1,7 +1,7 @@
 import { paths } from '@/app/generated/schema';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { firstValueFrom, timeout } from 'rxjs';
+import { catchError, firstValueFrom, from, map, Observable, switchMap, throwError, timeout } from 'rxjs';
 
 const NETWORK_TIMEOUT_MS = 30_000;
 
@@ -16,6 +16,12 @@ type DeleteRoute = { [Route in keyof paths]: paths[Route]['delete'] extends Oper
 
 type ImageRoute = {
   [Route in keyof paths]: paths[Route]['get'] extends { responses: { 200: { content: { 'image/png': unknown } } } } ? Route : never;
+}[keyof paths];
+
+type DownloadedContent = { 'application/pdf': unknown } | { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': unknown };
+
+type DownloadRoute = {
+  [Route in keyof paths]: paths[Route]['get'] extends { responses: { 200: { content: DownloadedContent } } } ? Route : never;
 }[keyof paths];
 
 type UploadRoute = {
@@ -49,6 +55,8 @@ type RequestBody<Op> = Op extends { requestBody: { content: { 'application/json'
 
 type ImageRequest<Route extends ImageRoute> = PathParameters<paths[Route]['get']>;
 
+type DownloadRequest<Route extends DownloadRoute> = PathParameters<paths[Route]['get']> & QueryParameters<paths[Route]['get']>;
+
 type ReadRequest<Route extends ReadRoute> = PathParameters<ReadOperation<Route>> & QueryParameters<ReadOperation<Route>>;
 
 type WriteRequest<Route extends WriteRoute> = PathParameters<WriteOperation<Route>>
@@ -78,6 +86,55 @@ const filterFilled = (queryParams: Record<string, unknown> | undefined): [string
 const buildParamsFrom = (queryParams: Record<string, unknown> | undefined): HttpParams =>
   new HttpParams({ fromObject: Object.fromEntries(filterFilled(queryParams)) });
 
+export interface DownloadedFile {
+  readonly content: Blob;
+  readonly filename: string | undefined;
+}
+
+const ENCODED_FILENAME = /filename\*=UTF-8''([^;]+)/i;
+const FILENAME = /filename="([^"]+)"/i;
+
+const filenameIn = (disposition: string): string | undefined => {
+  const encoded = ENCODED_FILENAME.exec(disposition)?.[1];
+  return encoded === undefined ? FILENAME.exec(disposition)?.[1] : decodeURIComponent(encoded);
+};
+
+const toDownloadedFile = (response: HttpResponse<Blob>): DownloadedFile => ({
+  content: response.body ?? new Blob(),
+  filename: filenameIn(response.headers.get('Content-Disposition') ?? ''),
+});
+
+const parsedOrRaw = (text: string): unknown => {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+};
+
+type ProblemSentAsBytes = Omit<HttpErrorResponse, 'error'> & { readonly error: Blob };
+
+const isProblemSentAsBytes = (failure: unknown): failure is ProblemSentAsBytes =>
+  failure instanceof HttpErrorResponse && failure.error instanceof Blob;
+
+const withReadableProblem = (failure: unknown): Observable<never> => {
+  if (!isProblemSentAsBytes(failure)) {
+    return throwError(() => failure);
+  }
+  return from(failure.error.text()).pipe(
+    switchMap(text =>
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            error: parsedOrRaw(text),
+            headers: failure.headers,
+            status: failure.status,
+          }),
+      ),
+    ),
+  );
+};
+
 @Injectable()
 export class ApiClient {
   private readonly http = inject(HttpClient);
@@ -96,6 +153,16 @@ export class ApiClient {
     const { pathParams } = request as RawRequest;
 
     return firstValueFrom(this.http.get(buildUrlFor(route, pathParams), { responseType: 'blob' }).pipe(timeout(NETWORK_TIMEOUT_MS)));
+  }
+
+  download<Route extends DownloadRoute>(route: Route, request: DownloadRequest<Route>): Promise<DownloadedFile> {
+    const { pathParams, queryParams } = request as RawRequest;
+
+    return firstValueFrom(
+      this.http
+        .get(buildUrlFor(route, pathParams), { params: buildParamsFrom(queryParams), observe: 'response', responseType: 'blob' })
+        .pipe(timeout(NETWORK_TIMEOUT_MS), map(toDownloadedFile), catchError(withReadableProblem)),
+    );
   }
 
   upload<Route extends UploadRoute>(route: Route, part: UploadPart<Route>, file: Blob): Promise<ResponseBody<paths[Route]['put']>> {

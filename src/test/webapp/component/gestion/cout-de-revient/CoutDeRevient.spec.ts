@@ -3,6 +3,7 @@ import { interceptForever } from '../../../utils/Interceptor';
 import {
   CoutDeRevientApiFixture,
   coutDeRevientFixture,
+  fichierExporteFixture,
   rapportAutomatiqueFixture,
   rapportEnCoursFixture,
 } from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
@@ -103,6 +104,39 @@ describe('Cost of manufacture in gestion', () => {
 
     thenTheDetailToggleHasFocus();
   });
+
+  it('should download the workbook of the report under the name the server gave it', () => {
+    givenReport();
+    whenVisitingTheReport();
+    whenExporting('cout-export-excel');
+
+    thenTheFileIsDownloaded('cout-de-revient-OF-2026-000001.xlsx', 'xlsx');
+  });
+
+  it('should show the workbook in preparation until the server sends it', () => {
+    givenAPendingExport('/api/couts-de-revient/element-1/export.xlsx');
+    whenVisitingTheReport();
+    whenExporting('cout-export-excel');
+
+    thenTheExportIsInPreparation('cout-export-excel');
+  });
+
+  const givenAPendingExport = (route: string): void => {
+    api.install();
+    interceptForever({ method: 'GET', pathname: route }, fichierExporteFixture(`http://localhost${route}`), 'pendingExport');
+  };
+
+  const whenExporting = (selector: string): void => {
+    cy.get(dataSelector(selector)).click();
+  };
+
+  const thenTheFileIsDownloaded = (nom: string, contenu: string): void => {
+    cy.readFile(`cypress/downloads/${nom}`).should('eq', contenu);
+  };
+
+  const thenTheExportIsInPreparation = (selector: string): void => {
+    cy.get(dataSelector(selector)).should('contain.text', 'Préparation…').and('be.disabled');
+  };
 
   const givenAutomaticReport = (): void => {
     api.rapport = rapportAutomatiqueFixture();

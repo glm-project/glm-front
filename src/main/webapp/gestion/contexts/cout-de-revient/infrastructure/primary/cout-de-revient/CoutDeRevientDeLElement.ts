@@ -8,6 +8,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ElementChiffre } from '../../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../../domain/element/ElementChiffreId';
 import { ElementDisponible } from '../../../domain/element/ElementDisponible';
+import { EnregistrementDeFichierPort } from '../../../domain/export/EnregistrementDeFichierPort';
+import { FormatDExport } from '../../../domain/export/FormatDExport';
 import { CoutDeRevient } from '../../../domain/rapport/CoutDeRevient';
 import { CoutDeRevientPort } from '../../../domain/rapport/CoutDeRevientPort';
 import { LigneDeCout } from '../../../domain/rapport/LigneDeCout';
@@ -18,7 +20,7 @@ export type EtatVueCoutDeRevient =
   | { readonly kind: 'CHARGEMENT' }
   | { readonly kind: 'ERREUR' }
   | { readonly kind: 'ELEMENT_INTROUVABLE' }
-  | { readonly kind: 'SUCCES'; readonly rapport: CoutDeRevient };
+  | { readonly kind: 'SUCCES'; readonly element: ElementChiffreId; readonly rapport: CoutDeRevient };
 
 @Component({
   selector: 'glm-cout-de-revient',
@@ -35,6 +37,7 @@ export class CoutDeRevientDeLElement {
   private readonly errors = inject(ErrorHandlerPort);
   private readonly route = inject(ActivatedRoute);
   private readonly port = inject(CoutDeRevientPort);
+  private readonly enregistrement = inject(EnregistrementDeFichierPort);
 
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
 
@@ -53,16 +56,24 @@ export class CoutDeRevientDeLElement {
     computation: () => null,
   });
 
+  protected readonly exportEnCours = linkedSignal<string | undefined, FormatDExport | undefined>({
+    source: computed(() => this.element()?.value),
+    computation: () => undefined,
+  });
+
+  protected readonly echecDExport = linkedSignal({ source: computed(() => this.element()?.value), computation: () => false });
+
   private readonly lecture = resource({
     params: () => this.element(),
     loader: ({ params }) => this.port.rapport(params),
   });
 
   protected readonly etat: Signal<EtatVueCoutDeRevient> = computed(() => {
-    if (this.element() === undefined) {
+    const element = this.element();
+    if (element === undefined) {
       return { kind: 'ELEMENT_INTROUVABLE' };
     }
-    return this.etatDeLaLecture();
+    return this.etatDeLaLecture(element);
   });
 
   protected readonly collection = resource({
@@ -120,7 +131,23 @@ export class CoutDeRevientDeLElement {
     return this.ligneDepliee() === this.cleDe(ligne);
   }
 
-  private etatDeLaLecture(): EtatVueCoutDeRevient {
+  protected exporter(element: ElementChiffreId, format: FormatDExport): void {
+    this.echecDExport.set(false);
+    this.exportEnCours.set(format);
+    void this.telecharger(element, format);
+  }
+
+  private async telecharger(element: ElementChiffreId, format: FormatDExport): Promise<void> {
+    try {
+      this.enregistrement.enregistre(await this.port.exporte(element, format));
+    } catch {
+      this.echecDExport.set(true);
+    } finally {
+      this.exportEnCours.set(undefined);
+    }
+  }
+
+  private etatDeLaLecture(element: ElementChiffreId): EtatVueCoutDeRevient {
     if (this.lecture.isLoading()) {
       return { kind: 'CHARGEMENT' };
     }
@@ -131,6 +158,6 @@ export class CoutDeRevientDeLElement {
     if (rapport === undefined) {
       return { kind: 'ELEMENT_INTROUVABLE' };
     }
-    return { kind: 'SUCCES', rapport };
+    return { kind: 'SUCCES', element, rapport };
   }
 }

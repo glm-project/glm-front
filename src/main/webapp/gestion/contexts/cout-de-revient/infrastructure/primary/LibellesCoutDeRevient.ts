@@ -5,6 +5,7 @@ import {
   localCalendarDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { CategorieDElementChiffre } from '../../domain/element/CategorieDElementChiffre';
+import { FormatDExport } from '../../domain/export/FormatDExport';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
 import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
@@ -120,6 +121,13 @@ const detailDuBandeau = (rapport: CoutDeRevient): string =>
     .map(ligne => `${ligne.nature?.value ?? SANS_POSTE} : ${ligne.anomalies().map(compteDAnomalies).join(', ')}`)
     .join(' · ')}. Dépliez la nature concernée pour voir ce qu’il manque sur chaque pointage.`;
 
+const BOUTONS_D_EXPORT: Record<FormatDExport, string> = {
+  EXCEL: 'Exporter en Excel',
+};
+
+const boutonDExport = (format: FormatDExport, enCours: FormatDExport | undefined): string =>
+  format === enCours ? 'Préparation…' : BOUTONS_D_EXPORT[format];
+
 export const LIBELLES_COUT_DE_REVIENT = {
   titre: 'Coût de revient',
   element: 'Élément',
@@ -196,6 +204,12 @@ export const LIBELLES_COUT_DE_REVIENT = {
     compte: compteDAnomalies,
     titre: titreDuBandeau,
     detail: detailDuBandeau,
+  },
+
+  exports: {
+    groupe: 'Exporter le rapport',
+    bouton: boutonDExport,
+    echec: 'L’export n’a pas pu être généré. Vérifiez la connexion puis réessayez.',
   },
 
   chargement: 'Chargement du coût de revient…',

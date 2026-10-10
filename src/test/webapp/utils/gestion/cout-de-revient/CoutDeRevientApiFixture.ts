@@ -136,11 +136,26 @@ export const rapportAutomatiqueFixture = (): RestRapport => {
 
 export const rapportEnCoursFixture = (): RestRapport => ({ ...rapportVideFixture(), activitesEnCours: 2 });
 
+export const fichierExporteFixture = (adresse: string): { body: string; headers: Record<string, string> } => {
+  const { pathname, searchParams } = new URL(adresse);
+  const extension = pathname.slice(pathname.lastIndexOf('.') + 1);
+  const version = searchParams.get('version');
+  const suffixe = version === null ? '' : `-${version}`;
+  return {
+    body: `${extension}${suffixe}`,
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="cout-de-revient-OF-2026-000001${suffixe}.${extension}"`,
+    },
+  };
+};
+
 export class CoutDeRevientApiFixture {
   failRead = false;
   elementInconnu = false;
   sansPointage = false;
   readonly lectures: string[] = [];
+  readonly exports: string[] = [];
   rapport: RestRapport = coutDeRevientFixture();
 
   install(): void {
@@ -152,6 +167,10 @@ export class CoutDeRevientApiFixture {
       this.lectures.push(element);
       request.reply(this.reponse(element));
     }).as('coutDeRevientRead');
+    cy.intercept({ method: 'GET', pathname: '/api/couts-de-revient/*/export.*' }, request => {
+      this.exports.push(request.url);
+      request.reply(fichierExporteFixture(request.url));
+    }).as('coutDeRevientExport');
   }
 
   private reponse(element: string): { statusCode?: number; body: RestRapport | object } {

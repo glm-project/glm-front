@@ -1,5 +1,5 @@
 import { components } from '@/app/generated/schema';
-import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { ApiClient, DownloadedFile } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
@@ -9,6 +9,8 @@ import { CategorieDElementChiffre } from '../../domain/element/CategorieDElement
 import { ElementChiffre } from '../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../domain/element/ElementChiffreId';
 import { ElementDisponible } from '../../domain/element/ElementDisponible';
+import { FichierExporte } from '../../domain/export/FichierExporte';
+import { FormatDExport } from '../../domain/export/FormatDExport';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';
 import { ActiviteCitee } from '../../domain/pointage/ActiviteCitee';
@@ -244,5 +246,23 @@ export class HttpCoutDeRevient extends CoutDeRevientPort {
       this.errors.handleError(failure);
       throw failure;
     }
+  }
+
+  override async exporte(element: ElementChiffreId, format: FormatDExport): Promise<FichierExporte> {
+    try {
+      const fichier = await this.telecharge(element, format);
+      return { nom: required(fichier.filename, 'Content-Disposition.filename'), contenu: fichier.content };
+    } catch (failure) {
+      this.errors.handleError(failure);
+      throw failure;
+    }
+  }
+
+  private telecharge(element: ElementChiffreId, format: FormatDExport): Promise<DownloadedFile> {
+    const pathParams = { elementId: element.value };
+    const telechargements: Record<FormatDExport, () => Promise<DownloadedFile>> = {
+      EXCEL: () => this.api.download('/api/couts-de-revient/{elementId}/export.xlsx', { pathParams }),
+    };
+    return telechargements[format]();
   }
 }

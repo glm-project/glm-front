@@ -1,14 +1,16 @@
 import { components } from '@/app/generated/schema';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpErrorResponse, HttpHeaders, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { ApiClient } from './ApiClient';
+import { ApiClient, DownloadedFile } from './ApiClient';
+import { findApiErrorIn } from './findApiErrorIn';
 
 const SUIVI_ID = 'b7f0c2de-1f2a-4c3b-9d4e-5f6a7b8c9d0e';
 const OPERATEUR_ID = '0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d';
 const POINTAGE_ID = '932c0c0b-a676-408d-8f82-e9b56ad7791c';
 const PLEINE_PAGE = 100;
 const POSTE_ID = 'poste/avec espace';
+const ELEMENT_ID = '4f8d1e0a-1111-2222-3333-444455556666';
 const MODIFICATION_POSTE = {
   libelle: 'Tour 2',
   natureId: 'nature-tournage',
@@ -74,6 +76,68 @@ describe('ApiClient', () => {
     thenItReached(requete, '/api/parametrage/logo/0123456789abcdef');
     expect(requete.request.responseType).toBe('blob');
     expect(await (await lecture).text()).toBe('png');
+  });
+
+  it('should hand back a downloaded file with the name the server attached to it', async () => {
+    const telechargement = whenDownloadingTheDetailedPdf();
+
+    const requete = await whenTheServerSendsAFile('pdf', 'attachment; filename="cout-de-revient-OF-1-detail.pdf"');
+
+    thenItReached(requete, `/api/couts-de-revient/${ELEMENT_ID}/export.pdf?version=detail`);
+    await thenTheFileIs(telechargement, 'cout-de-revient-OF-1-detail.pdf', 'pdf');
+  });
+
+  it('should decode a file name the server encoded', async () => {
+    const telechargement = whenDownloadingTheWorkbook();
+
+    await whenTheServerSendsAFile('xlsx', "attachment; filename*=UTF-8''cout-de-revient-Moul%C3%A9.xlsx");
+
+    await thenTheFileIs(telechargement, 'cout-de-revient-Moulé.xlsx', 'xlsx');
+  });
+
+  it('should leave the file name unknown when the server attaches none', async () => {
+    const telechargement = whenDownloadingTheWorkbook();
+
+    await whenTheServerSendsAFile('xlsx');
+
+    await thenTheFileIs(telechargement, undefined, 'xlsx');
+  });
+
+  it('should hand back an empty file when the server sends no bytes', async () => {
+    const telechargement = whenDownloadingTheWorkbook();
+
+    await whenTheServerAnswers(null);
+
+    await thenTheFileIs(telechargement, undefined, '');
+  });
+
+  it('should make a refusal sent in place of a file readable by its stable code', async () => {
+    const telechargement = whenDownloadingTheWorkbook().catch((failure: unknown) => failure);
+
+    await whenTheServerRefusesTheFile(
+      JSON.stringify({ type: 'urn:glm:erreur:cout-de-revient:rapport-non-exportable', message: 'Rapport non exportable' }),
+    );
+
+    expect(findApiErrorIn(await telechargement)).toEqual({
+      urn: 'urn:glm:erreur:cout-de-revient:rapport-non-exportable',
+      message: 'Rapport non exportable',
+    });
+  });
+
+  it('should keep the text of a refusal that is not a problem', async () => {
+    const telechargement = whenDownloadingTheWorkbook().catch((failure: unknown) => failure);
+
+    await whenTheServerRefusesTheFile('Bad Gateway');
+
+    expect(await telechargement).toMatchObject({ status: 409, error: 'Bad Gateway' });
+  });
+
+  it('should propagate a download failure that carries no answer unchanged', async () => {
+    const telechargement = whenDownloadingTheWorkbook().catch((failure: unknown) => failure);
+
+    await whenTheNetworkFails();
+
+    expect(((await telechargement) as HttpErrorResponse).error).toBeInstanceOf(ProgressEvent);
   });
 
   it('should send a file in the part the route names, and hand back the answer', async () => {
@@ -161,24 +225,28 @@ describe('ApiClient', () => {
     });
   });
 
-  it.each(['read', 'write', 'update', 'delete'] as const)('should cancel a stalled %s after thirty seconds', async operation => {
-    givenAStoppedNetworkClock();
-    const result = whenStartingAStalledRequest(operation);
-    const request = givenTheServerDoesNotAnswer();
+  it.each(['read', 'download', 'write', 'update', 'delete'] as const)(
+    'should cancel a stalled %s after thirty seconds',
+    async operation => {
+      givenAStoppedNetworkClock();
+      const result = whenStartingAStalledRequest(operation);
+      const request = givenTheServerDoesNotAnswer();
 
-    await whenThirtySecondsElapse();
+      await whenThirtySecondsElapse();
 
-    thenTheRequestWasCancelled(request);
-    await thenTheTimeoutWasReported(result);
-  });
+      thenTheRequestWasCancelled(request);
+      await thenTheTimeoutWasReported(result);
+    },
+  );
 
   const givenAStoppedNetworkClock = (): void => {
     vi.useFakeTimers();
   };
 
-  const whenStartingAStalledRequest = (operation: 'read' | 'write' | 'update' | 'delete'): Promise<unknown> => {
+  const whenStartingAStalledRequest = (operation: 'read' | 'download' | 'write' | 'update' | 'delete'): Promise<unknown> => {
     const requests = {
       read: whenReadingOperators,
+      download: whenDownloadingTheWorkbook,
       write: whenFinishingActivity,
       update: whenUpdatingAWorkstation,
       delete: whenDeletingAWorkstation,
@@ -206,6 +274,45 @@ describe('ApiClient', () => {
     requete.flush(image);
 
     return requete;
+  };
+
+  const whenDownloadingTheDetailedPdf = (): Promise<DownloadedFile> =>
+    api.download('/api/couts-de-revient/{elementId}/export.pdf', {
+      pathParams: { elementId: ELEMENT_ID },
+      queryParams: { version: 'detail' },
+    });
+
+  const whenDownloadingTheWorkbook = (): Promise<DownloadedFile> =>
+    api.download('/api/couts-de-revient/{elementId}/export.xlsx', { pathParams: { elementId: ELEMENT_ID } });
+
+  const whenTheServerSendsAFile = async (contenu: string, disposition?: string): Promise<TestRequest> => {
+    await unTourDeBoucle();
+
+    const requete = serveur.expectOne(() => true);
+    requete.flush(new Blob([contenu]), {
+      headers: disposition === undefined ? new HttpHeaders() : new HttpHeaders({ 'Content-Disposition': disposition }),
+    });
+
+    return requete;
+  };
+
+  const whenTheServerRefusesTheFile = async (corps: string): Promise<void> => {
+    await unTourDeBoucle();
+
+    serveur.expectOne(() => true).flush(new Blob([corps]), { status: 409, statusText: 'Conflict' });
+    await unTourDeBoucle();
+  };
+
+  const whenTheNetworkFails = async (): Promise<void> => {
+    await unTourDeBoucle();
+
+    serveur.expectOne(() => true).error(new ProgressEvent('error'));
+  };
+
+  const thenTheFileIs = async (telechargement: Promise<DownloadedFile>, nom: string | undefined, contenu: string): Promise<void> => {
+    const fichier = await telechargement;
+    expect(fichier.filename).toBe(nom);
+    expect(await fichier.content.text()).toBe(contenu);
   };
 
   const whenReadingWorkshopElementsInProgress = (): Promise<unknown> =>

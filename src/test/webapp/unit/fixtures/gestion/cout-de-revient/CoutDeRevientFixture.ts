@@ -1,5 +1,7 @@
 import { ElementChiffreId } from '@/gestion/contexts/cout-de-revient/domain/element/ElementChiffreId';
 import { ElementDisponible } from '@/gestion/contexts/cout-de-revient/domain/element/ElementDisponible';
+import { FichierExporte } from '@/gestion/contexts/cout-de-revient/domain/export/FichierExporte';
+import { FormatDExport } from '@/gestion/contexts/cout-de-revient/domain/export/FormatDExport';
 import { CoutDeRevient } from '@/gestion/contexts/cout-de-revient/domain/rapport/CoutDeRevient';
 import { CoutDeRevientPort } from '@/gestion/contexts/cout-de-revient/domain/rapport/CoutDeRevientPort';
 
@@ -14,6 +16,10 @@ export class CoutDeRevientFixture extends CoutDeRevientPort {
   elementsInconnus = new Set<string>();
   lectureFailure: Error | undefined;
   lectureDifferee: Promise<CoutDeRevient | undefined> | undefined;
+  readonly exports: { readonly element: string; readonly format: FormatDExport }[] = [];
+  fichiers = new Map<string, FichierExporte>();
+  exportFailure: Error | undefined;
+  exportDiffere: Promise<FichierExporte> | undefined;
 
   override async elementsDisponibles(): Promise<readonly ElementDisponible[]> {
     this.lecturesCollection += 1;
@@ -40,5 +46,20 @@ export class CoutDeRevientFixture extends CoutDeRevientPort {
       return Promise.reject(new Error(`Aucun rapport semé pour ${element.value}`));
     }
     return auTourSuivant(rapport);
+  }
+
+  override exporte(element: ElementChiffreId, format: FormatDExport): Promise<FichierExporte> {
+    this.exports.push({ element: element.value, format });
+    if (this.exportDiffere !== undefined) {
+      return this.exportDiffere;
+    }
+    if (this.exportFailure !== undefined) {
+      return Promise.reject(this.exportFailure);
+    }
+    const fichier = this.fichiers.get(`${element.value}:${format}`);
+    if (fichier === undefined) {
+      return Promise.reject(new Error(`Aucun fichier semé pour ${element.value} en ${format}`));
+    }
+    return auTourSuivant(fichier);
   }
 }
