@@ -5,6 +5,7 @@ import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { NaturesDeTravailFixture } from '@test/unit/fixtures/gestion/poste/NaturesDeTravailFixture';
 import { PostesFixture } from '@test/unit/fixtures/gestion/poste/PostesFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
@@ -13,11 +14,24 @@ import { CoutHoraire } from '../../../domain/CoutHoraire';
 import { LibellePoste } from '../../../domain/LibellePoste';
 import { LibellePosteDejaUtilise } from '../../../domain/LibellePosteDejaUtilise';
 import { NatureDeTravail } from '../../../domain/NatureDeTravail';
+import { NatureDeTravailId } from '../../../domain/NatureDeTravailId';
+import { NatureGeree } from '../../../domain/NatureGeree';
+import { NatureInconnue } from '../../../domain/NatureInconnue';
+import { NaturesDeTravailPort } from '../../../domain/NaturesDeTravailPort';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PosteDeTravailId } from '../../../domain/PosteDeTravailId';
 import { PosteIntrouvable } from '../../../domain/PosteIntrouvable';
 import { PostesPort } from '../../../domain/PostesPort';
-import { PosteFormDialog, PosteFormDialogData } from './PosteFormDialog';
+import { PosteFormDialog, PosteFormDialogData, ResultatFormulairePoste } from './PosteFormDialog';
+
+const tournageFixture = new NatureGeree(new NatureDeTravailId('nature-tournage'), new NatureDeTravail('tournage'), {
+  utilisee: true,
+  postes: 1,
+});
+const soudageFixture = new NatureGeree(new NatureDeTravailId('nature-soudage'), new NatureDeTravail('soudage'), {
+  utilisee: true,
+  postes: 2,
+});
 
 @Component({ template: '' })
 class DialogHostFixture {}
@@ -25,12 +39,15 @@ class DialogHostFixture {}
 describe('PosteFormDialog', () => {
   let fixture: ComponentFixture<DialogHostFixture>;
   let port: PostesFixture;
+  let natures: NaturesDeTravailFixture;
   let errors: ErrorHandlerFixture;
-  let dialog: MatDialogRef<PosteFormDialog, boolean>;
-  let closed: (boolean | undefined)[];
-  let fermeture: Promise<boolean | undefined>;
+  let dialog: MatDialogRef<PosteFormDialog, ResultatFormulairePoste>;
+  let closed: (ResultatFormulairePoste | undefined)[];
+  let fermeture: Promise<ResultatFormulairePoste | undefined>;
   beforeEach(() => {
     port = new PostesFixture();
+    natures = new NaturesDeTravailFixture();
+    natures.liste = [tournageFixture, soudageFixture];
     errors = new ErrorHandlerFixture();
     closed = [];
     fermeture = Promise.resolve(undefined);
@@ -38,6 +55,7 @@ describe('PosteFormDialog', () => {
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: PostesPort, useValue: port },
+        { provide: NaturesDeTravailPort, useValue: natures },
         { provide: ErrorHandlerPort, useValue: errors },
       ],
     });
@@ -54,7 +72,7 @@ describe('PosteFormDialog', () => {
     await whenSubmitting();
 
     expect(text('poste-libelle-error')).toContain('Le libellé est obligatoire');
-    expect(text('poste-nature-error')).toContain('La nature est obligatoire');
+    expect(text('poste-nature-error')).toContain('Choisissez une nature dans la liste.');
     expect(port.enregistrements).toEqual([]);
     expect(closed).toEqual([]);
   });
@@ -71,16 +89,86 @@ describe('PosteFormDialog', () => {
         type: 'CREATION',
         libelle: new LibellePoste('Tour 1'),
         nature: new NatureDeTravail('tournage'),
+        natureId: new NatureDeTravailId('nature-tournage'),
         coutHoraire: new CoutHoraire(45.5),
       },
     ]);
     expect(closed).toEqual([true]);
   });
 
+  it('should offer only the natures of the referential matching the typed text', async () => {
+    await whenOpening();
+
+    await whenEntering('poste-nature', 'sou');
+
+    expect(texts('poste-nature-option')).toEqual(['soudage']);
+  });
+
+  it('should refuse a typed nature that was not chosen from the list', async () => {
+    await whenOpening();
+    await whenEntering('poste-libelle', 'Tour 1');
+    await whenEntering('poste-nature', 'tournage');
+
+    await whenSubmitting();
+
+    expect(text('poste-nature-error')).toBe('Choisissez une nature dans la liste.');
+    expect(port.enregistrements).toEqual([]);
+  });
+
+  it('should ask for another nature when the chosen one disappeared meanwhile', async () => {
+    givenCreationRefusesAnUnknownNature();
+    await whenOpening();
+    await whenFillingValidEntries();
+    await whenTheChosenNatureIsRemovedMeanwhile();
+
+    await whenSubmitting();
+
+    expect(text('poste-nature-error')).toBe("Cette nature n'existe plus : choisissez-en une autre dans la liste.");
+    expect(closed).toEqual([]);
+  });
+
+  it('should offer a fresh list of natures after an unknown nature refusal', async () => {
+    givenCreationRefusesAnUnknownNature();
+    await whenOpening();
+    await whenFillingValidEntries();
+    await whenTheChosenNatureIsRemovedMeanwhile();
+    await whenSubmitting();
+
+    await whenEntering('poste-nature', 'tour');
+
+    expect(texts('poste-nature-option')).toEqual([]);
+  });
+
+  it('should invite to add a nature when the referential has none', async () => {
+    givenNoNature();
+
+    await whenOpening();
+
+    expect(text('poste-natures-empty')).toContain("Aucune nature n'est encore enregistrée");
+    expect(isShown('poste-nature')).toBe(false);
+  });
+
+  it('should close to add a nature from the natures column', async () => {
+    givenNoNature();
+    await whenOpening();
+
+    await whenClicking('poste-nature-add');
+    await whenClosed();
+
+    expect(closed).toEqual(['ajouter-une-nature']);
+  });
+
+  it('should start on the nature given by the page', async () => {
+    await whenOpening(null, tournageFixture);
+
+    expect(input('poste-nature').value).toBe('tournage');
+  });
+
   it('should prefill and modify an existing workstation', async () => {
     const poste = new PosteDeTravail(new PosteDeTravailId('tour-1'), {
       libelle: new LibellePoste('Tour 1'),
       nature: new NatureDeTravail('tournage'),
+      natureId: new NatureDeTravailId('nature-tournage'),
       coutHoraire: new CoutHoraire(45.5),
     });
     await whenOpening(poste);
@@ -96,6 +184,7 @@ describe('PosteFormDialog', () => {
       id: new PosteDeTravailId('tour-1'),
       libelle: new LibellePoste('Tour 2'),
       nature: new NatureDeTravail('tournage'),
+      natureId: new NatureDeTravailId('nature-tournage'),
       coutHoraire: undefined,
     });
     expect(closed).toEqual([true]);
@@ -121,6 +210,7 @@ describe('PosteFormDialog', () => {
       new PosteDeTravail(new PosteDeTravailId('tour-1'), {
         libelle: new LibellePoste('Tour 1'),
         nature: new NatureDeTravail('tournage'),
+        natureId: new NatureDeTravailId('nature-tournage'),
         coutHoraire: undefined,
       }),
     );
@@ -167,6 +257,17 @@ describe('PosteFormDialog', () => {
     expect(closed).toEqual([false]);
   });
 
+  const givenNoNature = (): void => {
+    natures.liste = [];
+  };
+  const isShown = (selector: string): boolean => document.querySelector(dataSelector(selector)) !== null;
+  const givenCreationRefusesAnUnknownNature = (): void => {
+    port.creation = err(new NatureInconnue());
+  };
+  const whenTheChosenNatureIsRemovedMeanwhile = async (): Promise<void> => {
+    natures.liste = [soudageFixture];
+    await fixture.whenStable();
+  };
   const givenDuplicateLabelIsRefused = (): void => {
     port.creation = err(new LibellePosteDejaUtilise());
   };
@@ -180,9 +281,9 @@ describe('PosteFormDialog', () => {
     port.creationDifferee = deferred.promise;
   };
 
-  const whenOpening = async (poste: PosteDeTravail | null = null): Promise<void> => {
-    dialog = TestBed.inject(MatDialog).open<PosteFormDialog, PosteFormDialogData, boolean>(PosteFormDialog, {
-      data: { poste },
+  const whenOpening = async (poste: PosteDeTravail | null = null, nature?: NatureGeree): Promise<void> => {
+    dialog = TestBed.inject(MatDialog).open<PosteFormDialog, PosteFormDialogData, ResultatFormulairePoste>(PosteFormDialog, {
+      data: { poste, ...(nature === undefined ? {} : { nature }) },
     });
     fermeture = firstValueFrom(dialog.afterClosed());
     dialog.afterClosed().subscribe(result => closed.push(result));
@@ -201,7 +302,15 @@ describe('PosteFormDialog', () => {
   };
   const whenFillingValidEntries = async (): Promise<void> => {
     await whenEntering('poste-libelle', 'Tour 1');
-    await whenEntering('poste-nature', 'tournage');
+    await whenChoosingNature('tour', 'tournage');
+  };
+  const whenChoosingNature = async (filtre: string, libelle: string): Promise<void> => {
+    await whenEntering('poste-nature', filtre);
+    const option = [...document.querySelectorAll<HTMLElement>(dataSelector('poste-nature-option'))].find(
+      candidate => candidate.textContent.trim() === libelle,
+    );
+    requiredFixture(option, libelle).click();
+    await fixture.whenStable();
   };
   const whenSubmitting = async (): Promise<void> => {
     requiredFixture(document.querySelector(dataSelector('poste-form')), 'form').dispatchEvent(
@@ -217,5 +326,7 @@ describe('PosteFormDialog', () => {
     requiredFixture(document.querySelector<HTMLInputElement>(dataSelector(selector)), selector);
   const button = (selector: string): HTMLButtonElement =>
     requiredFixture(document.querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
+  const texts = (selector: string): string[] =>
+    [...document.querySelectorAll(dataSelector(selector))].map(element => element.textContent.trim());
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';
 });

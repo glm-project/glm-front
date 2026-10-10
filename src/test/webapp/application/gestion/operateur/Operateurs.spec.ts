@@ -126,7 +126,8 @@ const whenCreatingWorkstationFromSettings = (libelle: string, nature: string): v
   cy.get(dataSelector('gestion-navigation-postes')).click();
   cy.get(dataSelector('postes-new')).should('be.enabled').click();
   whenReplacing('poste-libelle', libelle);
-  whenReplacing('poste-nature', nature);
+  cy.get(dataSelector('poste-nature')).type(nature.slice(0, 3));
+  cy.get(dataSelector('poste-nature-option')).contains(nature).click();
   cy.get(dataSelector('poste-save')).click();
   cy.wait('@posteCreate');
 };

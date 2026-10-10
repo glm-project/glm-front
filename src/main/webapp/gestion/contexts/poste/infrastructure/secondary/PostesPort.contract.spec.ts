@@ -13,11 +13,14 @@ import { CoutHoraire } from '../../domain/CoutHoraire';
 import { LibellePoste } from '../../domain/LibellePoste';
 import { LibellePosteDejaUtilise } from '../../domain/LibellePosteDejaUtilise';
 import { NatureDeTravail } from '../../domain/NatureDeTravail';
+import { NatureDeTravailId } from '../../domain/NatureDeTravailId';
+import { NatureInconnue } from '../../domain/NatureInconnue';
 import { PosteDeTravail } from '../../domain/PosteDeTravail';
 import { PosteDeTravailId } from '../../domain/PosteDeTravailId';
 import { PosteIntrouvable } from '../../domain/PosteIntrouvable';
 import { PosteNonSupprimable } from '../../domain/PosteNonSupprimable';
 import { PostesPort } from '../../domain/PostesPort';
+import { RefusCreationPoste } from '../../domain/RefusCreationPoste';
 import { RefusModificationPoste } from '../../domain/RefusModificationPoste';
 import { RefusSuppressionPoste } from '../../domain/RefusSuppressionPoste';
 import { RequetePostes } from '../../domain/RequetePostes';
@@ -46,9 +49,9 @@ class PostesHttpBackendFixture implements HttpBackend {
       case 'GET':
         return this.handleGet(pathname, url.searchParams);
       case 'POST':
-        return this.handlePost(pathname, request.body as { libelle: string; nature: string; coutHoraire?: number });
+        return this.handlePost(pathname, request.body as { libelle: string; natureId: string; coutHoraire?: number });
       case 'PUT':
-        return this.handlePut(pathname, request.body as { libelle: string; nature: string; coutHoraire?: number });
+        return this.handlePut(pathname, request.body as { libelle: string; natureId: string; coutHoraire?: number });
       case 'DELETE':
         return this.handleDelete(pathname);
       default:
@@ -71,7 +74,7 @@ class PostesHttpBackendFixture implements HttpBackend {
 
   private handlePost(
     pathname: string,
-    body: { libelle: string; nature: string; coutHoraire?: number },
+    body: { libelle: string; natureId: string; coutHoraire?: number },
   ): HttpResponse<unknown> | HttpErrorResponse {
     if (pathname !== '/api/postes-de-travail') {
       return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
@@ -79,8 +82,8 @@ class PostesHttpBackendFixture implements HttpBackend {
     const created: RestPoste = {
       id: 'created-poste',
       libelle: body.libelle,
-      nature: body.nature,
-      natureId: 'nature-' + body.nature,
+      nature: body.natureId.replace('nature-', ''),
+      natureId: body.natureId,
       ...(body.coutHoraire !== undefined ? { coutHoraire: body.coutHoraire } : {}),
     };
     this.postes = [...this.postes, created];
@@ -89,7 +92,7 @@ class PostesHttpBackendFixture implements HttpBackend {
 
   private handlePut(
     pathname: string,
-    body: { libelle: string; nature: string; coutHoraire?: number },
+    body: { libelle: string; natureId: string; coutHoraire?: number },
   ): HttpResponse<unknown> | HttpErrorResponse {
     if (!pathname.startsWith('/api/postes-de-travail/')) {
       return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
@@ -100,8 +103,8 @@ class PostesHttpBackendFixture implements HttpBackend {
         ? {
             id,
             libelle: body.libelle,
-            nature: body.nature,
-            natureId: 'nature-' + body.nature,
+            nature: body.natureId.replace('nature-', ''),
+            natureId: body.natureId,
             ...(body.coutHoraire !== undefined ? { coutHoraire: body.coutHoraire } : {}),
           }
         : p,
@@ -156,6 +159,7 @@ const createFixtureHarness = (): PostesHarness => {
           new PosteDeTravail(new PosteDeTravailId(poste.id), {
             libelle: new LibellePoste(poste.libelle),
             nature: new NatureDeTravail(poste.nature),
+            natureId: new NatureDeTravailId(poste.natureId),
             coutHoraire: poste.coutHoraire !== undefined ? new CoutHoraire(poste.coutHoraire) : undefined,
           }),
       );
@@ -212,66 +216,15 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     thenPageMatches(page, 0, []);
   });
 
-  it('should return distinct suggestions in French alphabetical order', async () => {
-    givenWorkstations([
-      { id: '1', libelle: 'Poste 1', nature: 'tournage', natureId: 'nature-tournage' },
-      { id: '2', libelle: 'Poste 2', nature: 'sciage', natureId: 'nature-sciage' },
-      { id: '3', libelle: 'Poste 3', nature: 'Tournage', natureId: 'nature-Tournage' },
-      { id: '4', libelle: 'Poste 4', nature: 'ébavurage', natureId: 'nature-ébavurage' },
-    ]);
-
-    await whenQueryingNatures();
-    const natures = await whenQueryingNatures();
-
-    thenNaturesAre(natures, ['ébavurage', 'sciage', 'tournage']);
-  });
-
-  it('should include a nature beyond the first hundred workstations and deduplicate across pages', async () => {
-    givenWorkstations([
-      ...Array.from({ length: 100 }, (_, index) => ({
-        id: `p-${index}`,
-        libelle: `Poste ${index}`,
-        nature: 'tournage',
-        natureId: 'nature-tournage',
-      })),
-      { id: 'p-100', libelle: 'Poste 100', nature: 'Tournage', natureId: 'nature-Tournage' },
-      { id: 'p-101', libelle: 'Poste 101', nature: 'soudage', natureId: 'nature-soudage' },
-    ]);
-
-    const natures = await whenQueryingNatures();
-
-    thenNaturesAre(natures, ['soudage', 'tournage']);
-  });
-
-  it('should return no suggested natures for an empty workshop', async () => {
-    givenWorkstations([]);
-
-    const natures = await whenQueryingNatures();
-
-    thenNaturesAre(natures, []);
-  });
-
-  it('should read the current suggested natures on every acquisition', async () => {
-    givenWorkstations([tourFixture]);
-    await port.natures();
-    givenWorkstations([scieFixture]);
-
-    const natures = await whenQueryingNatures();
-
-    thenNaturesAre(natures, ['sciage']);
-  });
-
   it('should create a workstation with hourly cost and reflect it in queries', async () => {
     givenWorkstations([scieFixture]);
-    await whenQueryingNatures();
     const resultat = await whenCreatingWorkstation('Tour 1', 'tournage', 45.5);
 
     thenCommandSucceeded(resultat);
-    await thenWorkstationExists('Tour 1', 'tournage', 45.5, ['sciage', 'tournage']);
+    await thenWorkstationExists('Tour 1', 'tournage', 45.5);
   });
 
   it('should create a workstation without hourly cost and reflect it in queries', async () => {
-    await whenQueryingNatures();
     const resultat = await whenCreatingWorkstation('Scie 1', 'sciage');
 
     thenCommandSucceeded(resultat);
@@ -284,7 +237,6 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
   ] as const)('should update an existing workstation %s and reflect changes in queries', async (_scenario, coutHoraire) => {
     givenWorkstations([tourFixture]);
 
-    await whenQueryingNatures();
     const resultat = await whenModifyingWorkstation('tour-1', 'Tour 1 Modifié', 'fraisage', coutHoraire);
 
     thenCommandSucceeded(resultat);
@@ -294,13 +246,10 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
   it('should remove a workstation and reflect its absence in queries', async () => {
     givenWorkstations([tourFixture]);
 
-    await whenQueryingNatures();
     const resultat = await whenDeletingWorkstation('tour-1');
-    const natures = await whenQueryingNatures();
 
     thenCommandSucceeded(resultat);
     await thenWorkstationDoesNotExist('tour-1');
-    thenNaturesAre(natures, []);
   });
 
   const givenWorkstations = (postes: readonly RestPoste[]): void => {
@@ -319,13 +268,12 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
 
   const whenQueryingPage = (page: number, size: number): Promise<Page<PosteDeTravail>> => port.postes(new RequetePostes(page, size));
 
-  const whenQueryingNatures = (): Promise<readonly NatureDeTravail[]> => port.natures();
-
-  const whenCreatingWorkstation = (libelle: string, nature: string, coutHoraire?: number): Promise<Result<void, LibellePosteDejaUtilise>> =>
+  const whenCreatingWorkstation = (libelle: string, nature: string, coutHoraire?: number): Promise<Result<void, RefusCreationPoste>> =>
     port.creer({
       type: 'CREATION',
       libelle: new LibellePoste(libelle),
       nature: new NatureDeTravail(nature),
+      natureId: new NatureDeTravailId('nature-' + nature),
       coutHoraire: coutHoraire !== undefined ? new CoutHoraire(coutHoraire) : undefined,
     });
 
@@ -340,6 +288,7 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
       id: new PosteDeTravailId(id),
       libelle: new LibellePoste(libelle),
       nature: new NatureDeTravail(nature),
+      natureId: new NatureDeTravailId('nature-' + nature),
       coutHoraire: coutHoraire !== undefined ? new CoutHoraire(coutHoraire) : undefined,
     });
 
@@ -372,24 +321,13 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     expect(page.elements[count - 1]?.id.value).toBe(lastId);
   };
 
-  const thenNaturesAre = (natures: readonly NatureDeTravail[], expected: string[]): void => {
-    expect(natures).toEqual(expected.map(nature => new NatureDeTravail(nature)));
-  };
-
-  const thenWorkstationExists = async (
-    libelle: string,
-    nature: string,
-    coutHoraire?: number,
-    expectedNatures: string[] = [nature],
-  ): Promise<void> => {
+  const thenWorkstationExists = async (libelle: string, nature: string, coutHoraire?: number): Promise<void> => {
     const page = await port.postes(new RequetePostes(0, 20));
     const matching = page.elements.find(poste => poste.libelle.value === libelle);
     expect(matching).toBeDefined();
     expect(matching?.nature.value).toBe(nature);
     expect(matching?.coutHoraire?.value).toBe(coutHoraire);
-
-    const natures = await port.natures();
-    expect(natures.map(value => value.value)).toEqual(expectedNatures);
+    expect(matching?.natureId.value).toBe('nature-' + nature);
   };
 
   const thenWorkstationDoesNotExist = async (id: string): Promise<void> => {
@@ -423,40 +361,6 @@ describe('Beyond the contract: HttpPostes', () => {
     server.verify();
   });
 
-  it('should reject incomplete nature acquisition when the server stops providing entries', async () => {
-    const result = port.natures().catch((failure: unknown) => failure);
-    await whenReferentialAnswers([], 1);
-
-    expect(await result).toEqual(new Error('Le référentiel des natures est incomplet.'));
-    expect(errorHandler.errors).toHaveLength(1);
-    expect(errorHandler.errors[0]).toEqual(new Error('Le référentiel des natures est incomplet.'));
-  });
-
-  it('should reject a failed nature refresh without reusing earlier suggestions and allow retry', async () => {
-    const earlier = port.natures();
-    await whenReferentialAnswers([tourFixture]);
-    await earlier;
-
-    const result = port.natures().catch((failure: unknown) => failure);
-    await whenFirstNaturePageAnswers();
-    await whenServerFails('/api/postes-de-travail?page=1&size=100', 500);
-    const failure = await result;
-    const retry = port.natures();
-    await whenReferentialAnswers([
-      ...Array.from({ length: 100 }, (_, index) => ({
-        id: `p-${index}`,
-        libelle: `Poste ${index}`,
-        nature: 'tournage',
-        natureId: 'nature-tournage',
-      })),
-      { id: 'p-100', libelle: 'Poste 100', nature: 'soudage', natureId: 'nature-soudage' },
-    ]);
-
-    expect(failure).toBeInstanceOf(HttpErrorResponse);
-    expect(errorHandler.errors).toEqual([failure]);
-    expect((await retry).map(nature => nature.value)).toEqual(['soudage', 'tournage']);
-  });
-
   it('should report a technical read failure to ErrorHandlerPort and reject', async () => {
     const result = port.referentiel().catch((failure: unknown) => failure);
     await whenServerFails('/api/postes-de-travail?page=0&size=100', 500);
@@ -469,6 +373,8 @@ describe('Beyond the contract: HttpPostes', () => {
   it.each([
     ['creer', '/api/postes-de-travail', 409, 'libelle-deja-utilise', new LibellePosteDejaUtilise()],
     ['modifier', '/api/postes-de-travail/tour-1', 409, 'libelle-deja-utilise', new LibellePosteDejaUtilise()],
+    ['creer', '/api/postes-de-travail', 422, 'nature-inconnue', new NatureInconnue()],
+    ['modifier', '/api/postes-de-travail/tour-1', 422, 'nature-inconnue', new NatureInconnue()],
     ['modifier', '/api/postes-de-travail/tour-1', 404, 'poste-de-travail-introuvable', new PosteIntrouvable()],
     ['supprimer', '/api/postes-de-travail/tour-1', 404, 'poste-de-travail-introuvable', new PosteIntrouvable()],
     ['supprimer', '/api/postes-de-travail/tour-1', 409, 'poste-de-travail-pointe', new PosteNonSupprimable()],
@@ -509,6 +415,7 @@ describe('Beyond the contract: HttpPostes', () => {
           type: 'CREATION',
           libelle: new LibellePoste('Tour 1'),
           nature: new NatureDeTravail('tournage'),
+          natureId: new NatureDeTravailId('nature-tournage'),
           coutHoraire: undefined,
         });
       case 'modifier':
@@ -517,6 +424,7 @@ describe('Beyond the contract: HttpPostes', () => {
           id: new PosteDeTravailId('tour-1'),
           libelle: new LibellePoste('Tour 1'),
           nature: new NatureDeTravail('tournage'),
+          natureId: new NatureDeTravailId('nature-tournage'),
           coutHoraire: undefined,
         });
       case 'supprimer':
@@ -529,34 +437,6 @@ describe('Beyond the contract: HttpPostes', () => {
     const request = server.expectOne(url);
     request.flush(body, { status, statusText: 'Response' });
     return request;
-  };
-
-  const whenFirstNaturePageAnswers = async (): Promise<void> => {
-    await new Promise(resolve => setTimeout(resolve));
-    const request = server.expectOne('/api/postes-de-travail?page=0&size=100');
-    request.flush({
-      content: Array.from({ length: 100 }, (_, index) => ({
-        id: `p-${index}`,
-        libelle: `Poste ${index}`,
-        nature: 'tournage',
-        natureId: 'nature-tournage',
-      })),
-      currentPage: 0,
-      pageSize: 100,
-      totalElementsCount: 101,
-    });
-  };
-
-  const whenReferentialAnswers = async (postes: RestPoste[], totalElementsCount = postes.length): Promise<void> => {
-    let end: number;
-    do {
-      await new Promise(resolve => setTimeout(resolve));
-      const request = server.expectOne(req => req.method === 'GET' && req.url === '/api/postes-de-travail');
-      const page = Number(request.request.params.get('page'));
-      const size = Number(request.request.params.get('size'));
-      end = (page + 1) * size;
-      request.flush({ content: postes.slice(page * size, end), currentPage: page, pageSize: size, totalElementsCount });
-    } while (end < totalElementsCount);
   };
 
   const whenServerFails = async (url: string, status: number, body: object = {}): Promise<void> => {

@@ -4,7 +4,7 @@ import { CommandeModificationPoste } from './CommandeModificationPoste';
 import { CoutHoraire } from './CoutHoraire';
 import { ErreursFormulairePoste } from './ErreursFormulairePoste';
 import { LibellePoste } from './LibellePoste';
-import { NatureDeTravail } from './NatureDeTravail';
+import { NatureChoisie } from './NatureChoisie';
 import { PosteDeTravail } from './PosteDeTravail';
 import { PosteDeTravailId } from './PosteDeTravailId';
 import { RefusModificationPoste } from './RefusModificationPoste';
@@ -17,26 +17,46 @@ interface SaisiePoste {
 
 export type CommandePoste = CommandeCreationPoste | CommandeModificationPoste;
 
-export class FormulairePosteDeTravail {
-  private constructor(
-    readonly saisie: SaisiePoste,
-    readonly id?: PosteDeTravailId,
-    private readonly refus?: RefusModificationPoste,
-  ) {}
+interface EtatFormulairePoste {
+  readonly saisie: SaisiePoste;
+  readonly id: PosteDeTravailId | undefined;
+  readonly refus: RefusModificationPoste | undefined;
+  readonly natureChoisie: NatureChoisie | undefined;
+}
 
-  static pourCreation(): FormulairePosteDeTravail {
-    return new FormulairePosteDeTravail({ libelle: '', nature: '', coutHoraire: '' });
+export class FormulairePosteDeTravail {
+  readonly saisie: SaisiePoste;
+  readonly id: PosteDeTravailId | undefined;
+  private readonly refus: RefusModificationPoste | undefined;
+  private readonly natureChoisie: NatureChoisie | undefined;
+
+  private constructor(etat: EtatFormulairePoste) {
+    this.saisie = etat.saisie;
+    this.id = etat.id;
+    this.refus = etat.refus;
+    this.natureChoisie = etat.natureChoisie;
+  }
+
+  static pourCreation(nature?: NatureChoisie): FormulairePosteDeTravail {
+    return new FormulairePosteDeTravail({
+      saisie: { libelle: '', nature: nature?.libelle.value ?? '', coutHoraire: '' },
+      id: undefined,
+      refus: undefined,
+      natureChoisie: nature,
+    });
   }
 
   static pourModification(poste: PosteDeTravail): FormulairePosteDeTravail {
-    return new FormulairePosteDeTravail(
-      {
+    return new FormulairePosteDeTravail({
+      saisie: {
         libelle: poste.libelle.value,
         nature: poste.nature.value,
         coutHoraire: poste.coutHoraire?.value.toString() ?? '',
       },
-      poste.id,
-    );
+      id: poste.id,
+      refus: undefined,
+      natureChoisie: { id: poste.natureId, libelle: poste.nature },
+    });
   }
 
   estValide(): boolean {
@@ -44,37 +64,49 @@ export class FormulairePosteDeTravail {
   }
 
   produireCommande(): Result<CommandePoste, ErreursFormulairePoste> {
+    const choisie = this.natureChoisie;
+    if (choisie === undefined) {
+      return err(this.erreurs());
+    }
     if (!this.estValide()) {
       return err(this.erreurs());
     }
     const libelle = new LibellePoste(this.saisie.libelle);
-    const nature = new NatureDeTravail(this.saisie.nature);
+    const { id: natureId, libelle: nature } = choisie;
     const coutHoraire = this.coutEstRenseigne() ? new CoutHoraire(this.coutNumerique()) : undefined;
 
     if (this.id === undefined) {
-      return ok({ type: 'CREATION', libelle, nature, coutHoraire });
+      return ok({ type: 'CREATION', libelle, nature, natureId, coutHoraire });
     }
-    return ok({ type: 'MODIFICATION', id: this.id, libelle, nature, coutHoraire });
+    return ok({ type: 'MODIFICATION', id: this.id, libelle, nature, natureId, coutHoraire });
   }
 
   avecLibelle(libelle: string): FormulairePosteDeTravail {
-    return new FormulairePosteDeTravail(
-      { ...this.saisie, libelle },
-      this.id,
-      libelle !== this.saisie.libelle && this.refus?.code === 'libelle-deja-utilise' ? undefined : this.refus,
-    );
+    return this.avec({
+      saisie: { ...this.saisie, libelle },
+      refus: libelle !== this.saisie.libelle && this.refus?.code === 'libelle-deja-utilise' ? undefined : this.refus,
+    });
   }
 
   avecNature(nature: string): FormulairePosteDeTravail {
-    return new FormulairePosteDeTravail({ ...this.saisie, nature }, this.id, this.refus);
+    const choisie = nature === this.natureChoisie?.libelle.value ? this.natureChoisie : undefined;
+    return this.avec({ saisie: { ...this.saisie, nature }, natureChoisie: choisie });
+  }
+
+  choisirNature(nature: NatureChoisie): FormulairePosteDeTravail {
+    return this.avec({
+      saisie: { ...this.saisie, nature: nature.libelle.value },
+      natureChoisie: nature,
+      refus: this.refus?.code === 'nature-inconnue' ? undefined : this.refus,
+    });
   }
 
   avecCoutHoraire(coutHoraire: string): FormulairePosteDeTravail {
-    return new FormulairePosteDeTravail({ ...this.saisie, coutHoraire }, this.id, this.refus);
+    return this.avec({ saisie: { ...this.saisie, coutHoraire } });
   }
 
   avecRefus(refus: RefusModificationPoste): FormulairePosteDeTravail {
-    return new FormulairePosteDeTravail(this.saisie, this.id, refus);
+    return this.avec({ refus });
   }
 
   erreurLibelle(): string | undefined {
@@ -82,7 +114,10 @@ export class FormulairePosteDeTravail {
   }
 
   erreurNature(): string | undefined {
-    return NatureDeTravail.erreur(this.saisie.nature);
+    if (this.refus?.code === 'nature-inconnue') {
+      return this.refus.message;
+    }
+    return this.natureChoisie === undefined ? 'Choisissez une nature dans la liste.' : undefined;
   }
 
   erreurCoutHoraire(): string | undefined {
@@ -91,6 +126,16 @@ export class FormulairePosteDeTravail {
 
   erreurEnregistrement(): string | undefined {
     return this.refus?.code === 'poste-introuvable' ? this.refus.message : undefined;
+  }
+
+  private avec(changement: Partial<EtatFormulairePoste>): FormulairePosteDeTravail {
+    return new FormulairePosteDeTravail({
+      saisie: this.saisie,
+      id: this.id,
+      refus: this.refus,
+      natureChoisie: this.natureChoisie,
+      ...changement,
+    });
   }
 
   private erreurs(): ErreursFormulairePoste {

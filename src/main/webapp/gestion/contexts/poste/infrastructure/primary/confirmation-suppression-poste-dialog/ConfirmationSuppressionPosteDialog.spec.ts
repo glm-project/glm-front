@@ -11,6 +11,7 @@ import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
 import { LibellePoste } from '../../../domain/LibellePoste';
 import { NatureDeTravail } from '../../../domain/NatureDeTravail';
+import { NatureDeTravailId } from '../../../domain/NatureDeTravailId';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PosteDeTravailId } from '../../../domain/PosteDeTravailId';
 import { PosteIntrouvable } from '../../../domain/PosteIntrouvable';
@@ -25,6 +26,7 @@ class DialogHostFixture {}
 const tourFixture = new PosteDeTravail(new PosteDeTravailId('tour-1'), {
   libelle: new LibellePoste('Tour 1'),
   nature: new NatureDeTravail('tournage'),
+  natureId: new NatureDeTravailId('nature-tournage'),
   coutHoraire: undefined,
 });
 

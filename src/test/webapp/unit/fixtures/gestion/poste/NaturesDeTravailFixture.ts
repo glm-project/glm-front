@@ -25,7 +25,7 @@ export class NaturesDeTravailFixture extends NaturesDeTravailPort {
 
   override natures(): Promise<readonly NatureGeree[]> {
     if (this.lectureFailure !== undefined) return Promise.reject(this.lectureFailure);
-    return Promise.resolve([...this.liste].sort((gauche, droite) => gauche.libelle.compare(droite.libelle)));
+    return Promise.resolve([...this.liste].sort((gauche, droite) => gauche.libelle.value.localeCompare(droite.libelle.value, 'fr')));
   }
 
   override async enregistrer(libelle: NatureDeTravail): Promise<Result<void, NatureDejaExistante>> {

@@ -5,13 +5,21 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { CommandePoste, FormulairePosteDeTravail } from '../../../domain/FormulairePosteDeTravail';
-import { NatureDeTravail } from '../../../domain/NatureDeTravail';
+import { NatureChoisie } from '../../../domain/NatureChoisie';
+import { NatureGeree } from '../../../domain/NatureGeree';
+import { NatureInconnue } from '../../../domain/NatureInconnue';
+import { NaturesDeTravailPort } from '../../../domain/NaturesDeTravailPort';
 import { PosteDeTravail } from '../../../domain/PosteDeTravail';
 import { PostesPort } from '../../../domain/PostesPort';
+import { RefusModificationPoste } from '../../../domain/RefusModificationPoste';
+
+export const AJOUTER_UNE_NATURE = 'ajouter-une-nature';
+
+export type ResultatFormulairePoste = boolean | typeof AJOUTER_UNE_NATURE;
 
 export interface PosteFormDialogData {
   readonly poste: PosteDeTravail | null;
-  readonly nature?: NatureDeTravail;
+  readonly nature?: NatureChoisie;
 }
 
 @Component({
@@ -22,36 +30,53 @@ export interface PosteFormDialogData {
 })
 export class PosteFormDialog implements OnInit {
   private readonly data = inject<PosteFormDialogData>(MAT_DIALOG_DATA);
-  private readonly dialog = inject<MatDialogRef<PosteFormDialog, boolean>>(MatDialogRef);
+  private readonly dialog = inject<MatDialogRef<PosteFormDialog, ResultatFormulairePoste>>(MatDialogRef);
   private readonly port = inject(PostesPort);
+  private readonly naturesPort = inject(NaturesDeTravailPort);
   private readonly errors = inject(ErrorHandlerPort);
 
   protected readonly formulaire = signal(
     this.data.poste === null
-      ? FormulairePosteDeTravail.pourCreation().avecNature(this.data.nature?.value ?? '')
+      ? FormulairePosteDeTravail.pourCreation(this.data.nature)
       : FormulairePosteDeTravail.pourModification(this.data.poste),
   );
   protected readonly titre = this.formulaire().id === undefined ? 'Nouveau poste' : 'Modifier le poste';
   protected readonly soumis = signal(false);
   protected readonly enregistrement = signal(false);
   protected readonly erreurTechnique = signal(false);
-  protected readonly natures = signal<readonly NatureDeTravail[]>([]);
+  protected readonly natures = signal<readonly NatureGeree[]>([]);
+  protected readonly naturesLues = signal(false);
   protected readonly suggestions = computed(() => {
     const saisie = this.formulaire().saisie.nature;
-    return this.natures().filter(nature => nature.correspondA(saisie));
+    return this.natures().filter(nature => nature.libelle.correspondA(saisie));
   });
 
   ngOnInit(): void {
+    this.chargerNatures();
+  }
+
+  private chargerNatures(): void {
     this.errors.observe(
-      this.port.natures().then(natures => {
+      this.naturesPort.natures().then(natures => {
         this.natures.set(natures);
+        this.naturesLues.set(true);
       }),
     );
+  }
+
+  protected ajouterUneNature(): void {
+    this.dialog.close(AJOUTER_UNE_NATURE);
+  }
+
+  protected choisirNature(nature: NatureGeree): void {
+    this.formulaire.update(formulaire => formulaire.choisirNature(nature));
   }
 
   protected changeLibelle(libelle: string): void {
     this.formulaire.update(formulaire => formulaire.avecLibelle(libelle));
   }
+
+  protected readonly libelleDe = (nature: NatureGeree): string => nature.libelle.value;
 
   protected changeNature(nature: string): void {
     this.formulaire.update(formulaire => formulaire.avecNature(nature));
@@ -80,6 +105,7 @@ export class PosteFormDialog implements OnInit {
         this.dialog.close(true);
       } else {
         this.formulaire.update(formulaire => formulaire.avecRefus(resultat.error));
+        this.relireNaturesApres(resultat.error);
       }
     } catch (failure) {
       this.erreurTechnique.set(true);
@@ -87,6 +113,12 @@ export class PosteFormDialog implements OnInit {
     } finally {
       this.enregistrement.set(false);
       this.dialog.disableClose = false;
+    }
+  }
+
+  private relireNaturesApres(refus: RefusModificationPoste): void {
+    if (refus instanceof NatureInconnue) {
+      this.chargerNatures();
     }
   }
 

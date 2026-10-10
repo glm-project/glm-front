@@ -113,7 +113,7 @@ describe('Workstation settings in gestion', () => {
     whenFilteringByNature('ponçage');
     whenCreatingWorkstationOfChosenNature('Polisseuse');
 
-    thenWorkstationWasCreatedWithNature(api, 'ponçage');
+    thenWorkstationWasCreatedWithNature(api, 'nature-poncage');
   });
 
   it('should reach workstation settings from the gestion menu', () => {
@@ -161,7 +161,7 @@ const whenReplacing = (selector: string, value: string): void => {
 const whenCreating = (libelle: string, nature: string, cout: string): void => {
   whenOpeningCreation();
   whenReplacing('poste-libelle', libelle);
-  whenReplacing('poste-nature', nature);
+  whenPickingNature(nature);
   whenReplacing('poste-cout', cout);
   whenSaving('posteCreate');
 };
@@ -259,6 +259,11 @@ const whenCreatingWorkstationOfChosenNature = (libelle: string): void => {
   cy.get(dataSelector('poste-libelle')).type(libelle);
   whenSaving('posteCreate');
 };
-const thenWorkstationWasCreatedWithNature = (api: PostesApiFixture, nature: string): void => {
-  cy.wrap(api.writes).its(0).its('nature').should('eq', nature);
+const thenWorkstationWasCreatedWithNature = (api: PostesApiFixture, natureId: string): void => {
+  cy.wrap(api.writes).its(0).its('natureId').should('eq', natureId);
+};
+const whenPickingNature = (libelle: string): void => {
+  cy.get(dataSelector('poste-nature')).clear();
+  cy.get(dataSelector('poste-nature')).type(libelle.slice(0, 3));
+  cy.get(dataSelector('poste-nature-option')).contains(libelle).click();
 };

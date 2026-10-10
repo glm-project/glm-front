@@ -25,11 +25,13 @@ import { PostesDeTravail } from './PostesDeTravail';
 const tourFixture = new PosteDeTravail(new PosteDeTravailId('tour-1'), {
   libelle: new LibellePoste('Tour 1'),
   nature: new NatureDeTravail('tournage'),
+  natureId: new NatureDeTravailId('nature-tournage'),
   coutHoraire: new CoutHoraire(45.5),
 });
 const scieFixture = new PosteDeTravail(new PosteDeTravailId('scie-1'), {
   libelle: new LibellePoste('Scie 1'),
   nature: new NatureDeTravail('sciage'),
+  natureId: new NatureDeTravailId('nature-sciage'),
   coutHoraire: undefined,
 });
 
@@ -176,6 +178,7 @@ describe('PostesDeTravail page', () => {
       new PosteDeTravail(tourFixture.id, {
         libelle: new LibellePoste('Tour Modifié'),
         nature: tourFixture.nature,
+        natureId: tourFixture.natureId,
         coutHoraire: tourFixture.coutHoraire,
       }),
     ];
@@ -341,6 +344,17 @@ describe('PostesDeTravail page', () => {
       expect(natureField()).toBe('tournage');
     });
 
+    it('should open the nature entry when the poste form asks to add a nature', async () => {
+      givenWorkstations();
+      await whenOpening();
+      await whenClicking('postes-new');
+
+      await whenClicking('poste-nature-add');
+      await whenEveryDialogHasClosed();
+
+      expect(natureEntryIsOpen()).toBe(true);
+    });
+
     it('should invite to declare natures when none exists', async () => {
       givenWorkstations();
 
@@ -414,6 +428,7 @@ describe('PostesDeTravail page', () => {
         new PosteDeTravail(new PosteDeTravailId(String(index)), {
           libelle: new LibellePoste('Poste ' + String(index + 1)),
           nature: new NatureDeTravail('tournage'),
+          natureId: new NatureDeTravailId('nature-tournage'),
           coutHoraire: undefined,
         }),
     );
@@ -437,6 +452,11 @@ describe('PostesDeTravail page', () => {
     const closed = firstValueFrom(dialogs.afterAllClosed);
     dialogs.openDialogs[dialogs.openDialogs.length - 1]?.close(result);
     await closed;
+    await fixture.whenStable();
+  };
+  const natureEntryIsOpen = (): boolean => document.querySelector('#nature-libelle') !== null;
+  const whenEveryDialogHasClosed = async (): Promise<void> => {
+    await firstValueFrom(TestBed.inject(MatDialog).afterAllClosed);
     await fixture.whenStable();
   };
   const whenViewSettles = async (): Promise<void> => {
