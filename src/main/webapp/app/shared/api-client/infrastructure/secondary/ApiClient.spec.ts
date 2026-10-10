@@ -11,10 +11,10 @@ const PLEINE_PAGE = 100;
 const POSTE_ID = 'poste/avec espace';
 const MODIFICATION_POSTE = {
   libelle: 'Tour 2',
-  nature: 'tournage',
+  natureId: 'nature-tournage',
   coutHoraire: 45.5,
 } satisfies components['schemas']['RestModificationPosteDeTravail'];
-const UN_POSTE = { id: POSTE_ID, natureId: 'nature-tournage', ...MODIFICATION_POSTE } satisfies components['schemas']['RestPosteDeTravail'];
+const UN_POSTE = { id: POSTE_ID, nature: 'tournage', ...MODIFICATION_POSTE } satisfies components['schemas']['RestPosteDeTravail'];
 
 const UNE_PAGE_DOPERATEURS = {
   content: [{ id: OPERATEUR_ID, nom: 'Dupont', prenom: 'Jean', natures: [], postes: [] }],
