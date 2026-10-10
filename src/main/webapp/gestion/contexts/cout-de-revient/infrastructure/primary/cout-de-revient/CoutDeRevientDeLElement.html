@@ -44,7 +44,7 @@
       <button
         mat-stroked-button
         type="button"
-        [disabled]="exportEnCours() !== undefined"
+        [disabled]="exportEnCours() !== undefined || !vue.rapport.estExportable()"
         (click)="exporter(vue.element, bouton.format)"
         [attr.data-selector]="bouton.selecteur"
       >
@@ -52,7 +52,15 @@
       </button>
       }
     </div>
-    @if (echecDExport()) {
+    @if (!vue.rapport.estExportable()) {
+    <p class="mt-2 text-body-sm text-danger" data-selector="cout-export-blocage">
+      {{ libelles.exports.blocage(vue.rapport) }} @if (vue.rapport.finsAutomatiques() > 0) {
+      <a routerLink="/anomalies" [queryParams]="{ element: vue.element.value }" data-selector="cout-export-anomalies"
+        >{{ libelles.exports.voirAnomalies }}</a
+      >
+      }
+    </p>
+    } @if (echecDExport()) {
     <p class="mt-2 text-body-sm text-danger" role="alert" data-selector="cout-export-echec">{{ libelles.exports.echec }}</p>
     } } }
   </header>

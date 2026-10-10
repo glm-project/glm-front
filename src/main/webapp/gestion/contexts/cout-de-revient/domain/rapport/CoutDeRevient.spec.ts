@@ -4,6 +4,7 @@ import { Cout } from '../montant/Cout';
 import { Montant } from '../montant/Montant';
 import { OperateurCite } from '../pointage/OperateurCite';
 import { AnomalieDePointage, PointageDeCout } from '../pointage/PointageDeCout';
+import { PosteCite } from '../pointage/PosteCite';
 import { DureePassee } from '../temps/DureePassee';
 import { InstantDeTravail } from '../temps/InstantDeTravail';
 import { PeriodeDeTravail } from '../temps/PeriodeDeTravail';
@@ -15,7 +16,19 @@ import { NatureDOperation } from './NatureDOperation';
 
 const ELEMENT = new ElementChiffre('OF-2026-000001', new CategorieDElementChiffre('OF'));
 
-const pointageFixture = (anomalies: readonly AnomalieDePointage[]): PointageDeCout =>
+interface TarifsFixture {
+  readonly poste?: PosteCite | undefined;
+  readonly coutHoraire?: Montant | undefined;
+  readonly tauxHoraire?: Montant | undefined;
+}
+
+const TARIFS_COMPLETS: TarifsFixture = {
+  poste: new PosteCite('poste-1', 'DMG'),
+  coutHoraire: new Montant(0),
+  tauxHoraire: new Montant(35),
+};
+
+const pointageFixture = (anomalies: readonly AnomalieDePointage[], tarifs: TarifsFixture = {}): PointageDeCout =>
   new PointageDeCout({
     anomalies,
     operateur: new OperateurCite('operateur-1', 'Julien', 'Martin'),
@@ -27,6 +40,7 @@ const pointageFixture = (anomalies: readonly AnomalieDePointage[]): PointageDeCo
     tauxHoraire: undefined,
     cout: new Cout(new Montant(0), new Montant(0), new Montant(0)),
     parts: [],
+    ...tarifs,
   });
 
 const ligneFixture = (nature: string, pointages: readonly PointageDeCout[] = []): LigneDeCout =>
@@ -62,6 +76,36 @@ describe('CoutDeRevient', () => {
     ]);
 
     expect(rapport.lignesEnAnomalie().map(ligne => ligne.nature?.value)).toEqual(['Tournage', 'Polissage']);
+  });
+
+  it('should be exportable when no clocking ends automatically and every rate is known, a zero cost included', () => {
+    const rapport = rapportFixture([ligneFixture('Fraisage', [pointageFixture([], TARIFS_COMPLETS)])]);
+
+    expect([rapport.estExportable(), rapport.finsAutomatiques(), rapport.tarifsManquants()]).toEqual([true, 0, 0]);
+  });
+
+  it('should not be exportable while a clocking ends automatically', () => {
+    const rapport = rapportFixture([
+      ligneFixture('Fraisage', [pointageFixture(['FIN_AUTOMATIQUE'], TARIFS_COMPLETS), pointageFixture([], TARIFS_COMPLETS)]),
+      ligneFixture('Tournage', [pointageFixture(['FIN_AUTOMATIQUE'], TARIFS_COMPLETS)]),
+    ]);
+
+    expect([rapport.estExportable(), rapport.finsAutomatiques(), rapport.tarifsManquants()]).toEqual([false, 2, 0]);
+  });
+
+  it.each([
+    ['the operator rate', { ...TARIFS_COMPLETS, tauxHoraire: undefined }],
+    ['the workstation cost', { ...TARIFS_COMPLETS, coutHoraire: undefined }],
+  ])('should not be exportable while a clocking misses %s', (_tarif, tarifs) => {
+    const rapport = rapportFixture([ligneFixture('Fraisage', [pointageFixture([], tarifs), pointageFixture([], TARIFS_COMPLETS)])]);
+
+    expect([rapport.estExportable(), rapport.finsAutomatiques(), rapport.tarifsManquants()]).toEqual([false, 0, 1]);
+  });
+
+  it('should not ask a workstation cost of a clocking without workstation', () => {
+    const rapport = rapportFixture([ligneFixture('Fraisage', [pointageFixture([], { tauxHoraire: new Montant(35) })])]);
+
+    expect(rapport.estExportable()).toBe(true);
   });
 
   it('should carry the element the report resolved', () => {

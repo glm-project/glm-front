@@ -1,5 +1,6 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient, DownloadedFile } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary/findApiErrorIn';
 import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
@@ -41,6 +42,7 @@ type RestPoste = components['schemas']['RestPosteDuCout'];
 const ROUTE = '/api/couts-de-revient/{elementId}';
 const ROUTE_PDF = '/api/couts-de-revient/{elementId}/export.pdf';
 const ELEMENT_INCONNU = 404;
+const RAPPORT_NON_EXPORTABLE = 'urn:glm:erreur:cout-de-revient:rapport-non-exportable';
 
 const toDuree = (total: components['schemas']['RestDureeDuCout'] | undefined, chemin: string): DureePassee =>
   new DureePassee(required(required(total, chemin).valeur, `${chemin}.valeur`));
@@ -249,11 +251,14 @@ export class HttpCoutDeRevient extends CoutDeRevientPort {
     }
   }
 
-  override async exporte(element: ElementChiffreId, format: FormatDExport): Promise<FichierExporte> {
+  override async exporte(element: ElementChiffreId, format: FormatDExport): Promise<FichierExporte | undefined> {
     try {
       const fichier = await this.telecharge(element, format);
       return { nom: required(fichier.filename, 'Content-Disposition.filename'), contenu: fichier.content };
     } catch (failure) {
+      if (findApiErrorIn(failure)?.urn === RAPPORT_NON_EXPORTABLE) {
+        return undefined;
+      }
       this.errors.handleError(failure);
       throw failure;
     }
