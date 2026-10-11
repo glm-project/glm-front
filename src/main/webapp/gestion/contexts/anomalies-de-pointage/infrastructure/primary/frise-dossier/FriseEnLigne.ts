@@ -1,7 +1,8 @@
-import { ActiviteEchue } from '../../../domain/dossier/DossierAnomalie';
+import { ActiviteEchue, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import {
   BarreFrise,
+  ClotureFrise,
   DispositionFrise,
   EntreesDeFrise,
   FinAutomatiqueDeFrise,
@@ -75,22 +76,41 @@ const rangeeDePlacementSur = (placement: PlacementDeLInstant | undefined, barre:
 const gaucheDuRepere = (echelle: EchelleFrise, instant: string, largeur: number, largeurDuRepere: number): number =>
   positionDeRepereTenueAuBordDroit(positionSur(echelle, Date.parse(instant)), largeur, largeurDuRepere);
 
+const reperePlace = (pointage: PointageAnomalie, echelle: EchelleFrise, haut: number, largeur: number): RepereFrise => ({
+  ...repereDe(pointage),
+  gauche: gaucheDuRepere(echelle, pointage.fait.instant, largeur, LARGEUR_D_UN_REPERE_PX),
+  haut,
+});
+
+const cloturePlacee = (borne: string, echelle: EchelleFrise, haut: number, largeur: number): ClotureFrise => ({
+  ...clotureDe(borne),
+  gauche: gaucheDuRepere(echelle, borne, largeur, LARGEUR_DE_LA_CLOTURE_PX),
+  haut,
+});
+
+const elementDeLaBorne = (
+  demarrage: PointageAnomalie | undefined,
+  cloture: string | undefined,
+  echelle: EchelleFrise,
+  haut: number,
+  largeur: number,
+): readonly (RepereFrise | ClotureFrise)[] => {
+  if (demarrage !== undefined) return [reperePlace(demarrage, echelle, haut, largeur)];
+  return cloture === undefined ? [] : [cloturePlacee(cloture, echelle, haut, largeur)];
+};
+
 export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise => {
   const { vue, maintenant: now, poignee, placement, largeur } = entrees;
-  const { pointages, echelle } = lectureDeLaFrise(entrees);
+  const { pointages, demarrageDeLaBorne, finDuCadre, echelle } = lectureDeLaFrise(entrees);
   const activite = vue.activite;
   const haut = HAUTEUR_DE_L_AXE_PX + ESPACE_ENTRE_RANGEES_PX;
   const barreRecue = barreDe(activite, haut, { now, echelle });
   const barre = poignee === undefined ? barreRecue : barreJusquALaPoignee(barreRecue, poignee, echelle);
-  const reperes = pointages.map((pointage): RepereFrise => ({
-    ...repereDe(pointage),
-    gauche: gaucheDuRepere(echelle, pointage.fait.instant, largeur, LARGEUR_D_UN_REPERE_PX),
-    haut,
-  }));
-  const borne = clotureDeLaFrise(vue);
-  const clotures =
-    borne === undefined ? [] : [{ ...clotureDe(borne), gauche: gaucheDuRepere(echelle, borne, largeur, LARGEUR_DE_LA_CLOTURE_PX), haut }];
-  const elements = [barre, ...reperes, ...clotures, ...positionsDePoignee(entrees, activite, barre, echelle, largeur)].sort(
+  const reperes = pointages.map(pointage => reperePlace(pointage, echelle, haut, largeur));
+  const borne = elementDeLaBorne(demarrageDeLaBorne, clotureDeLaFrise(vue), echelle, haut, largeur).filter(
+    element => entrees.cadreComplet || element.instant <= finDuCadre,
+  );
+  const elements = [barre, ...reperes, ...borne, ...positionsDePoignee(entrees, activite, barre, echelle, largeur)].sort(
     (gauche, droite) => gauche.instant - droite.instant,
   );
   return {

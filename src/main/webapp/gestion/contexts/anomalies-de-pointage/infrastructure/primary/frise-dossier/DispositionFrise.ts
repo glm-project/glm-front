@@ -10,6 +10,7 @@ export interface EntreesDeFrise {
   readonly poignee: PoigneeDeFrise | undefined;
   readonly placement: PlacementDeLInstant | undefined;
   readonly largeur: number;
+  readonly cadreComplet: boolean;
 }
 
 export type FinDeBarre = 'AUTOMATIQUE' | 'PROPOSEE';

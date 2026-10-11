@@ -1,6 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
+import { LimiteDeLaFin } from '../../../domain/regularisation/CadreDeLaFin';
 import { FriseDossier } from '../frise-dossier/FriseDossier';
 import { DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from '../frise-dossier/PoigneeDeFrise';
 import { jourDeLaJournee } from '../JourneeDeLOperateur';
@@ -19,6 +20,7 @@ export class SectionDeFrise {
   readonly operateur = input<string | undefined>(undefined);
   readonly poignee = input<PoigneeDeFrise | undefined>(undefined);
   readonly placement = input<PlacementDeLInstant | undefined>(undefined);
+  readonly limite = input<LimiteDeLaFin | undefined>(undefined);
   readonly deplacementDemande = output<DeplacementDemande>();
   readonly placementDemande = output<PlacementDemande>();
   protected readonly libelles = LIBELLES_ANOMALIES;

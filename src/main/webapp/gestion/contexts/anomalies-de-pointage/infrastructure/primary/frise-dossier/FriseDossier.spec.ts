@@ -6,6 +6,7 @@ import { instantLocalFixture } from '@test/utils/gestion/anomalies-de-pointage/I
 import { ActiviteAnomalieId } from '../../../domain/dossier/ActiviteAnomalieId';
 import { ActiviteEchue, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
+import { LimiteDeLaFin } from '../../../domain/regularisation/CadreDeLaFin';
 import { VueDeFrise } from './DispositionFrise';
 import { FriseDossier } from './FriseDossier';
 import { DemandeDeDeplacement, DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
@@ -69,11 +70,17 @@ const avecLaBorneLe = (vue: VueDeFrise, jour: number, heure: string, ...pointage
 
 const dossierDeLaFinAutomatique = (): VueDeFrise => vueDe(activiteFixture('a-1', '08:00', '12:00'));
 
-const poigneeFixture = (heure: string, surcharge: Partial<PoigneeDeFrise> = {}): PoigneeDeFrise => ({
-  instant: instantAt(heure),
+const poigneeFixture = (heure: string, surcharge: Partial<PoigneeDeFrise> = {}, jour = 14): PoigneeDeFrise => ({
+  instant: instantAt(heure, jour),
   bornes: { min: instantAt('08:00'), max: instantAt('15:00') },
   ...surcharge,
 });
+
+const poigneeJusqua = (heure: string, jour = 14): Pick<PoigneeDeFrise, 'bornes'> => ({
+  bornes: { min: instantAt('08:00'), max: instantAt(heure, jour) },
+});
+
+const poigneeJusquaLe17 = (): Pick<PoigneeDeFrise, 'bornes'> => poigneeJusqua('08:00', 17);
 
 const placementFixture = (surcharge: Partial<PlacementDeLInstant> = {}): PlacementDeLInstant => ({
   bornes: { min: instantAt('08:00'), max: instantAt('13:00') },
@@ -81,6 +88,8 @@ const placementFixture = (surcharge: Partial<PlacementDeLInstant> = {}): Placeme
 });
 
 const placementDeLaFixture = (): PlacementDeLInstant => placementFixture({ bornes: { min: instantAt('08:00'), max: instantAt('15:00') } });
+
+const limiteFixture = (par: LimiteDeLaFin['par'], heure: string, jour = 17): LimiteDeLaFin => ({ par, instant: instantAt(heure, jour) });
 
 const PLAN_WIDTH = 1000;
 
@@ -347,10 +356,10 @@ describe('Frise of a dossier', () => {
     thenNoPlacementRowIsDrawn();
   });
 
-  it('should extend the scale to the hour that follows the bound of the handle while an instant waits to be placed', async () => {
+  it('should stop the scale an hour after the automatic end while an instant waits to be placed', async () => {
     await whenRenderingTheFrise(dossierDeLaFinAutomatique(), undefined, placementDeLaFixture());
 
-    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
   });
 
   it('should draw the handle of the proposed instant as a slider', async () => {
@@ -359,10 +368,10 @@ describe('Frise of a dossier', () => {
     thenTheHandleIsASlider();
   });
 
-  it('should extend the scale to the hour that follows the bound of the handle while a handle is active', async () => {
+  it('should stop the scale an hour after the automatic end while a handle is active', async () => {
     await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
 
-    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
   });
 
   it('should keep the normal scale when the clock stands before the last received instant', async () => {
@@ -374,11 +383,13 @@ describe('Frise of a dossier', () => {
     thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
   });
 
-  it('should extend the scale only up to the hour that follows the clock', async () => {
+  it('should extend the scale only up to the hour that follows the clock once the handle stands beyond the frame', async () => {
     await whenRenderingTheFrise(
       dossierDeLaFinAutomatique(),
       poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('14:20') } }),
     );
+
+    await whenTheHandleMovesTo(poigneeFixture('14:20', { bornes: { min: instantAt('08:00'), max: instantAt('14:20') } }));
 
     thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
   });
@@ -407,6 +418,167 @@ describe('Frise of a dossier', () => {
       now: new Date(2026, 8, 14, 10, 5).getTime(),
       text: '10:05',
     });
+  });
+
+  it('should end the frame two hours after an automatic end that does not fall on the hour', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '12:30'));
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00']);
+  });
+
+  it('should frame the activity, not the bound nor the range of the handle, when they fall days after', async () => {
+    const dossier = avecLaBorneLe(vueEntre('08:30', '12:00'), 17, '08:00');
+
+    await whenRenderingTheFrise(dossier, poigneeFixture('10:00', poigneeJusquaLe17()));
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
+  });
+
+  it.each([
+    { cas: 'after the end of the frame', clientX: 5000, instant: new Date(2026, 8, 14, 13, 0) },
+    { cas: 'before the start of the frame', clientX: -4000, instant: new Date(2026, 8, 14, 7, 0) },
+  ])('should ask for the edge of the frame when the handle is dragged $cas', async ({ clientX, instant }) => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
+
+    whenDraggingTheHandle({ from: 500, to: clientX });
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: instant.getTime() }]);
+  });
+
+  it('should keep the whole frame once the handle has left the frame, even when it comes back', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
+
+    await whenTheHandleMovesTo(poigneeFixture('15:00'));
+    await whenTheHandleMovesTo(poigneeFixture('10:00'));
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
+  });
+
+  it('should not change the scale under a drag when the handle comes back into the frame of the activity', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('15:00'));
+    await whenTheHandleMovesTo(poigneeFixture('10:00'));
+
+    whenDraggingTheHandle({ from: 500, to: 625 });
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 0).getTime() }]);
+  });
+
+  it('should go on showing the bound up to the hour that follows it once the handle is gone, after the whole frame was shown', async () => {
+    await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '20:00'), poigneeFixture('15:00'));
+
+    await whenTheHandleIsRemoved();
+
+    thenTheClosureIsNamed('20:00:00 · Clôture');
+  });
+
+  describe('of the button that widens the frise to the limit of the end', () => {
+    const avecLeDemarrageSuivant = (): VueDeFrise =>
+      avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00', pointageA('debut-suivant', 'DEMARRAGE', instantAt('08:00', 17)));
+    const avecLaCloture = (): VueDeFrise => avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00');
+
+    it.each([
+      {
+        cas: 'the next start of the key',
+        dossier: avecLeDemarrageSuivant,
+        limite: limiteFixture('BORNE', '08:00'),
+        texte: 'Voir jusqu’au démarrage suivant · jeu. 17 sept. 08:00',
+      },
+      {
+        cas: 'the closure',
+        dossier: avecLaCloture,
+        limite: limiteFixture('BORNE', '08:00'),
+        texte: 'Voir jusqu’à la clôture · jeu. 17 sept. 08:00',
+      },
+      {
+        cas: 'the clock, without a day',
+        dossier: dossierDeLaFinAutomatique,
+        limite: limiteFixture('HORLOGE', '18:00', 14),
+        texte: 'Voir jusqu’à maintenant',
+      },
+    ])('should offer to see up to $cas when the limit of the end falls after the frame', async ({ dossier, limite, texte }) => {
+      await whenRenderingTheFrise(dossier(), poigneeFixture('10:00'), undefined, limite);
+
+      thenTheFrameButtonReads(texte);
+    });
+
+    it.each([
+      { cas: 'within the frame', limite: limiteFixture('HORLOGE', '12:30', 14) },
+      { cas: 'on the end of the frame', limite: limiteFixture('HORLOGE', '13:00', 14) },
+      { cas: 'unknown', limite: undefined },
+    ])('should offer nothing when the limit of the end is $cas', async ({ limite }) => {
+      await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'), undefined, limite);
+
+      thenNoFrameButtonIsDrawn();
+    });
+
+    it('should offer nothing while the handle stands beyond the frame', async () => {
+      await whenRenderingTheFrise(
+        avecLaCloture(),
+        poigneeFixture('14:00', poigneeJusquaLe17()),
+        undefined,
+        limiteFixture('BORNE', '08:00'),
+      );
+
+      thenNoFrameButtonIsDrawn();
+    });
+
+    it('should show the whole frame, with the bound, by the same button which only changes its text', async () => {
+      await whenRenderingTheFrise(
+        avecLaCloture(),
+        poigneeFixture('10:00', poigneeJusquaLe17()),
+        undefined,
+        limiteFixture('BORNE', '08:00'),
+      );
+      const button = frameButton();
+
+      await whenPressingTheFrameButton();
+
+      thenTheFrameButtonReads('Revenir sur l’activité');
+      thenTheFrameButtonIs(button);
+      thenTheClosureIsNamed('08:00:00 · Clôture');
+    });
+
+    it('should bring the frame back to the activity by the same button, which only changes its text', async () => {
+      await whenRenderingTheFrise(
+        avecLaCloture(),
+        poigneeFixture('10:00', poigneeJusquaLe17()),
+        undefined,
+        limiteFixture('BORNE', '08:00'),
+      );
+      const button = frameButton();
+      await whenPressingTheFrameButton();
+
+      await whenPressingTheFrameButton();
+
+      thenTheFrameButtonReads('Voir jusqu’à la clôture · jeu. 17 sept. 08:00');
+      thenTheFrameButtonIs(button);
+      thenNoClosureIsDrawn();
+    });
+
+    it('should be a button that submits nothing', async () => {
+      await whenRenderingTheFrise(avecLaCloture(), poigneeFixture('10:00'), undefined, limiteFixture('BORNE', '08:00'));
+
+      thenTheFrameButtonSubmitsNothing();
+    });
+
+    it('should widen the frise to the bound once the end is regularised and no handle is left', async () => {
+      await whenRenderingTheFrise(
+        avecLaBorne(vueEntre('08:00', '12:00'), '20:00'),
+        undefined,
+        undefined,
+        limiteFixture('BORNE', '20:00', 14),
+      );
+
+      await whenPressingTheFrameButton();
+
+      thenTheClosureIsNamed('20:00:00 · Clôture');
+    });
+  });
+
+  it('should hold the handle on the edge of the frame, with the frame of the activity, while it stands on it', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('13:00'));
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
   });
 
   it.each<{ touche: string; maj: boolean; demande: DemandeDeDeplacement }>([
@@ -517,17 +689,17 @@ describe('Frise of a dossier', () => {
 
   describe('of the bound of the end', () => {
     it('should draw the marker of the next start of the key on the instant that bounds the end', async () => {
-      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '20:00', pointageFixture('debut-suivant', 'DEMARRAGE', '20:00'));
+      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '12:30', pointageFixture('debut-suivant', 'DEMARRAGE', '12:30'));
 
       await whenRenderingTheFrise(dossier);
 
       thenTheMarkersAre(['debut-a-1', 'debut-suivant']);
-      thenTheMarkerIsNamed('debut-suivant', '20:00:00 · Démarrage');
-      thenTheMarkerStandsAtTheHour('debut-suivant', 20);
+      thenTheMarkerIsNamed('debut-suivant', '12:30:00 · Démarrage');
+      thenTheMarkerStandsAtTheHour('debut-suivant', 12, 30);
     });
 
     it('should draw the marker of a next start in non-conformity as a non-conformity', async () => {
-      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '20:00', pointageFixture('nc-suivante', 'DEMARRAGE_NC', '20:00'));
+      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '12:30', pointageFixture('nc-suivante', 'DEMARRAGE_NC', '12:30'));
 
       await whenRenderingTheFrise(dossier);
 
@@ -535,22 +707,22 @@ describe('Frise of a dossier', () => {
     });
 
     it('should draw a closure marker when no start of the key bounds the end', async () => {
-      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '20:00');
+      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '12:30');
 
       await whenRenderingTheFrise(dossier);
 
       thenTheMarkersAre(['debut-a-1']);
-      thenTheClosureIsNamed('20:00:00 · Clôture');
-      thenTheClosureReads('Clôture 20:00');
+      thenTheClosureIsNamed('12:30:00 · Clôture');
+      thenTheClosureReads('Clôture 12:30');
     });
 
     it('should draw a closure marker rather than a stop that falls on the instant of the bound', async () => {
-      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '20:00', pointageFixture('fin-20', 'ARRET', '20:00'));
+      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '12:30', pointageFixture('fin-20', 'ARRET', '12:30'));
 
       await whenRenderingTheFrise(dossier);
 
       thenTheMarkersAre(['debut-a-1']);
-      thenTheClosureIsNamed('20:00:00 · Clôture');
+      thenTheClosureIsNamed('12:30:00 · Clôture');
     });
 
     it('should draw no marker for the bound when nothing bounds the end', async () => {
@@ -559,9 +731,33 @@ describe('Frise of a dossier', () => {
       thenNoClosureIsDrawn();
     });
 
-    it('should extend the scale to the hour after the bound of the end', async () => {
+    it('should not stretch the scale to a bound that falls after the frame, and draw no marker for it', async () => {
+      const suivant = pointageA('debut-suivant', 'DEMARRAGE', instantAt('20:00'));
+
+      await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '20:00', suivant));
+
+      thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
+      thenTheMarkersAre(['debut-a-1']);
+    });
+
+    it('should draw no closure for a bound that falls after the frame', async () => {
       await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '20:00'));
 
+      thenNoClosureIsDrawn();
+    });
+
+    it('should draw the bound that falls on the end of the frame', async () => {
+      await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '13:00'));
+
+      thenTheClosureIsNamed('13:00:00 · Clôture');
+    });
+
+    it('should draw the bound in the whole frame once the handle stands beyond the frame, extending the scale to the hour after it', async () => {
+      await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '20:00'), poigneeFixture('10:00', poigneeJusqua('20:00')));
+
+      await whenTheHandleMovesTo(poigneeFixture('20:00', poigneeJusqua('20:00')));
+
+      thenTheClosureIsNamed('20:00:00 · Clôture');
       thenTheGraduationsAre([
         '07:00',
         '08:00',
@@ -582,7 +778,9 @@ describe('Frise of a dossier', () => {
     });
 
     it('should keep the closure marker whole inside the frise when the bound falls days after the end', async () => {
-      await whenRenderingTheFrise(avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00'));
+      const dossier = avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00');
+      await whenRenderingTheFrise(dossier, poigneeFixture('10:00', poigneeJusquaLe17()));
+      await whenTheHandleMovesTo(poigneeFixture('08:00', poigneeJusquaLe17(), 17));
 
       await whenTheFriseIsMeasured(1000);
 
@@ -591,7 +789,11 @@ describe('Frise of a dossier', () => {
 
     it('should keep the marker of the next start whole inside the frise when the bound falls days after the end', async () => {
       const suivant = pointageA('debut-suivant', 'DEMARRAGE', instantAt('08:00', 17));
-      await whenRenderingTheFrise(avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00', suivant));
+      await whenRenderingTheFrise(
+        avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00', suivant),
+        poigneeFixture('10:00', poigneeJusquaLe17()),
+      );
+      await whenTheHandleMovesTo(poigneeFixture('08:00', poigneeJusquaLe17(), 17));
 
       await whenTheFriseIsMeasured(1000);
 
@@ -599,7 +801,7 @@ describe('Frise of a dossier', () => {
     });
 
     it('should let the pointer through the closure marker to the placement row under it', async () => {
-      await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '20:00'), undefined, placementDeLaFixture());
+      await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '12:30'), undefined, placementDeLaFixture());
 
       thenThePointerGoesThroughTheClosure();
     });
@@ -632,7 +834,7 @@ describe('Frise of a dossier', () => {
     it('should stand an hourless handle at the received end of the bar it will terminate, in the tab order and read as holding no hour', async () => {
       await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
 
-      thenTheHandleStandsAt({ left: '62.5%', onTheRowOf: 'a-1' });
+      thenTheHandleStandsAt({ left: (5 / 6) * 100, onTheRowOf: 'a-1' });
       thenTheHandleIsHourless('Heure ?');
       thenTheHandleIsASliderInTheTabOrderWithNoHour();
       thenTheAutomaticEndsDrawnAre([]);
@@ -642,16 +844,16 @@ describe('Frise of a dossier', () => {
     it('should ask to place the instant where the hourless handle is dragged to', async () => {
       await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
 
-      whenDraggingTheHandle({ from: 625, to: 750 });
+      whenDraggingTheHandle({ from: 833, to: 917 });
 
-      thenThePlacementsAsked([new Date(2026, 8, 14, 13, 0).getTime()]);
+      thenThePlacementsAsked([new Date(2026, 8, 14, 12, 30).getTime()]);
       thenTheMovesAsked([]);
     });
 
     it('should ask for nothing when the hourless handle is pressed and released without moving', async () => {
       await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
 
-      whenPressingTheHandleAt(625);
+      whenPressingTheHandleAt(833);
       whenTheGestureEndsWith('pointerup');
 
       thenThePlacementsAsked([]);
@@ -700,27 +902,27 @@ describe('Frise of a dossier', () => {
 
     it('should go on moving the handle within the same gesture once the first move gave the fact an hour', async () => {
       await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
-      whenDraggingTheHandle({ from: 625, to: 750 });
-      await whenTheFactGetsItsHour(poigneeFixture('13:00', { bornes: placementDeLaFixture().bornes }));
+      whenDraggingTheHandle({ from: 833, to: 917 });
+      await whenTheFactGetsItsHour(poigneeFixture('12:30', { bornes: placementDeLaFixture().bornes }));
 
-      whenMovingThePointerOverTheHandleTo(875);
+      whenMovingThePointerOverTheHandleTo(750);
 
-      thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 14, 0).getTime() }]);
+      thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 30).getTime() }]);
     });
 
-    it('should ask to place the instant where the row of the bar is clicked beyond the bar', async () => {
+    it('should ask to place the instant where the row of the bar is clicked', async () => {
       await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
 
-      whenClickingThePlacementRowAt(750);
+      whenClickingThePlacementRowAt(917);
 
-      thenThePlacementsAsked([new Date(2026, 8, 14, 13, 0).getTime()]);
+      thenThePlacementsAsked([new Date(2026, 8, 14, 12, 30).getTime()]);
     });
 
     it('should end the bar the handle terminates at the time the handle stands at', async () => {
       await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('10:00'));
 
-      thenTheBarSpans('a-1', { left: '12.5%', width: '25%' });
-      thenTheHandleStandsAt({ left: '37.5%', onTheRowOf: 'a-1' });
+      thenTheBarSpans('a-1', { left: 100 / 6, width: 200 / 6 });
+      thenTheHandleStandsAt({ left: 50, onTheRowOf: 'a-1' });
       thenTheBarAttributeIs('a-1', 'data-fin', 'PROPOSEE');
       thenTheBarIsNamed(
         'a-1',
@@ -731,7 +933,7 @@ describe('Frise of a dossier', () => {
     it('should draw the part the handle removes up to the received end', async () => {
       await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('10:00'));
 
-      thenTheRemovedPartSpans({ left: '37.5%', width: '25%' });
+      thenTheRemovedPartSpans({ left: 50, width: 200 / 6 });
       thenTheRemovedPartStandsOnTheRowOf('a-1');
       thenTheRemovedPartIsDecorative();
     });
@@ -739,7 +941,7 @@ describe('Frise of a dossier', () => {
     it('should lengthen the bar past its received end when the handle stands after it, with nothing removed', async () => {
       await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('14:00'));
 
-      thenTheBarSpans('a-1', { left: '12.5%', width: '75%' });
+      thenTheBarSpans('a-1', { left: 12.5, width: 75 });
       thenNoPartIsRemoved();
     });
 
@@ -747,7 +949,7 @@ describe('Frise of a dossier', () => {
       await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('10:00'));
 
       thenTheAutomaticEndsDrawnAre(['Fin automatique 12:00']);
-      thenTheAutomaticEndStands({ left: '62.5%', onTheRowOf: 'a-1' });
+      thenTheAutomaticEndStands({ left: (5 / 6) * 100, onTheRowOf: 'a-1' });
       thenTheAutomaticEndIsDecorative();
     });
 
@@ -789,8 +991,14 @@ describe('Frise of a dossier', () => {
     });
   });
 
-  const whenRenderingTheFrise = async (dossier: VueDeFrise, poignee?: PoigneeDeFrise, placement?: PlacementDeLInstant): Promise<void> => {
+  const whenRenderingTheFrise = async (
+    dossier: VueDeFrise,
+    poignee?: PoigneeDeFrise,
+    placement?: PlacementDeLInstant,
+    limite?: LimiteDeLaFin,
+  ): Promise<void> => {
     fixture = TestBed.createComponent(FriseDossier);
+    fixture.componentRef.setInput('limite', limite);
     fixture.componentRef.setInput('dossier', dossier);
     fixture.componentRef.setInput('poignee', poignee);
     fixture.componentRef.setInput('placement', placement);
@@ -804,6 +1012,43 @@ describe('Frise of a dossier', () => {
     fixture.componentRef.setInput('placement', undefined);
     fixture.componentRef.setInput('poignee', poignee);
     await fixture.whenStable();
+  };
+
+  const whenTheHandleMovesTo = async (poignee: PoigneeDeFrise): Promise<void> => {
+    fixture.componentRef.setInput('poignee', poignee);
+    await fixture.whenStable();
+  };
+
+  const whenTheHandleIsRemoved = async (): Promise<void> => {
+    fixture.componentRef.setInput('poignee', undefined);
+    await fixture.whenStable();
+  };
+
+  const frameButton = (): HTMLButtonElement =>
+    requiredFixture(
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(dataSelector('anomalie-frise-cadre')),
+      'frame button',
+    );
+
+  const whenPressingTheFrameButton = async (): Promise<void> => {
+    frameButton().click();
+    await fixture.whenStable();
+  };
+
+  const thenTheFrameButtonIs = (expected: HTMLElement): void => {
+    expect(frameButton()).toBe(expected);
+  };
+
+  const thenTheFrameButtonSubmitsNothing = (): void => {
+    expect(frameButton().getAttribute('type')).toBe('button');
+  };
+
+  const thenTheFrameButtonReads = (expected: string): void => {
+    expect(frameButton().textContent.trim()).toBe(expected);
+  };
+
+  const thenNoFrameButtonIsDrawn = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('anomalie-frise-cadre'))).toBeNull();
   };
 
   const whenTheFriseIsMeasured = async (width: number): Promise<void> => {
@@ -879,11 +1124,9 @@ describe('Frise of a dossier', () => {
     expect(requestedMoves.map(deplacement => deplacement.demande)).toEqual(expected);
   };
 
-  const thenTheHandleStandsAt = (expected: { left: string; onTheRowOf: string }): void => {
-    expect({ left: handle().style.left, top: handle().style.top }).toEqual({
-      left: expected.left,
-      top: bar(expected.onTheRowOf).style.top,
-    });
+  const thenTheHandleStandsAt = (expected: { left: number; onTheRowOf: string }): void => {
+    expect(Number.parseFloat(handle().style.left)).toBeCloseTo(expected.left);
+    expect(handle().style.top).toBe(bar(expected.onTheRowOf).style.top);
   };
 
   const thenTheHandleIsHourless = (expectedText: string): void => {
@@ -1075,9 +1318,10 @@ describe('Frise of a dossier', () => {
   const removedPart = (): HTMLElement | null =>
     (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-frise-retrait'));
 
-  const thenTheRemovedPartSpans = (expected: { left: string; width: string }): void => {
+  const thenTheRemovedPartSpans = (expected: { left: number; width: number }): void => {
     const part = requiredFixture(removedPart(), 'removed part');
-    expect({ left: part.style.left, width: part.style.width }).toEqual(expected);
+    expect(Number.parseFloat(part.style.left)).toBeCloseTo(expected.left);
+    expect(Number.parseFloat(part.style.width)).toBeCloseTo(expected.width);
   };
 
   const thenTheRemovedPartStandsOnTheRowOf = (activite: string): void => {
@@ -1096,12 +1340,10 @@ describe('Frise of a dossier', () => {
     expect(automaticEnds().map(end => end.textContent.replace(/\s+/g, ' ').trim())).toEqual(expected);
   };
 
-  const thenTheAutomaticEndStands = (expected: { left: string; onTheRowOf: string }): void => {
-    const [end] = automaticEnds();
-    expect({ left: requiredFixture(end, 'automatic end').style.left, top: requiredFixture(end, 'automatic end').style.top }).toEqual({
-      left: expected.left,
-      top: bar(expected.onTheRowOf).style.top,
-    });
+  const thenTheAutomaticEndStands = (expected: { left: number; onTheRowOf: string }): void => {
+    const end = requiredFixture(automaticEnds()[0], 'automatic end');
+    expect(Number.parseFloat(end.style.left)).toBeCloseTo(expected.left);
+    expect(end.style.top).toBe(bar(expected.onTheRowOf).style.top);
   };
 
   const thenTheAutomaticEndIsDecorative = (): void => {
@@ -1112,8 +1354,9 @@ describe('Frise of a dossier', () => {
     expect(requiredFixture(removedPart(), 'removed part').getAttribute('aria-hidden')).toBe('true');
   };
 
-  const thenTheBarSpans = (activite: string, expected: { left: string; width: string }): void => {
-    expect({ left: bar(activite).style.left, width: bar(activite).style.width }).toEqual(expected);
+  const thenTheBarSpans = (activite: string, expected: { left: number; width: number }): void => {
+    expect(Number.parseFloat(bar(activite).style.left)).toBeCloseTo(expected.left);
+    expect(Number.parseFloat(bar(activite).style.width)).toBeCloseTo(expected.width);
   };
 
   const thenThePlacementRowStandsAt = (expected: { top: number; height: number }): void => {
@@ -1152,10 +1395,10 @@ describe('Frise of a dossier', () => {
     expect(getComputedStyle(requiredFixture(closure(), 'closure marker')).pointerEvents).toBe('none');
   };
 
-  const thenTheMarkerStandsAtTheHour = (pointage: string, heure: number): void => {
+  const thenTheMarkerStandsAtTheHour = (pointage: string, heure: number, minutes: number): void => {
     const debut = Date.parse(instantAt('07:00'));
-    const fin = Date.parse(instantAt('21:00'));
-    const attendu = ((new Date(2026, 8, 14, heure).getTime() - debut) / (fin - debut)) * 100;
+    const fin = Date.parse(instantAt('13:00'));
+    const attendu = ((new Date(2026, 8, 14, heure, minutes).getTime() - debut) / (fin - debut)) * 100;
     expect(Number.parseFloat(marker(pointage).style.left)).toBeCloseTo(attendu);
   };
 
@@ -1194,6 +1437,7 @@ describe('Frise of a dossier', () => {
         dossier,
         poigneeFixture('00:00', { instant: new Date(Date.UTC(2026, 9, 24, 22, 30)).toISOString(), bornes }),
       );
+      await whenTheHandleMovesTo(poigneeFixture('00:00', { instant: bornes.max, bornes }));
 
       thenTheNumberOfGraduationsIs(7);
       thenTheDaysShownCountIs(1);

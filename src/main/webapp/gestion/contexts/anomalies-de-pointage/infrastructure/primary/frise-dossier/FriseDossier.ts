@@ -1,7 +1,9 @@
-import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, input, output, signal } from '@angular/core';
+import { formatInstantShortWeekdayDayMonth, formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
+import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, input, linkedSignal, output, signal } from '@angular/core';
+import { LimiteDeLaFin } from '../../../domain/regularisation/CadreDeLaFin';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { PositionDePoignee, PositionSansHeure, VueDeFrise } from './DispositionFrise';
-import { instantSousLePointeur, positionSur } from './EchelleFrise';
+import { finDuCadreDe, instantSousLePointeur, positionSur } from './EchelleFrise';
 import { dispositionDeFrise } from './FriseEnLigne';
 import {
   DemandeDeDeplacement,
@@ -11,6 +13,7 @@ import {
   PlacementDemande,
   PoigneeDeFrise,
 } from './PoigneeDeFrise';
+import { clotureDeLaFrise } from './PointagesDeLaFrise';
 
 const LARGEUR_DE_REFERENCE_PX = 1214;
 
@@ -20,18 +23,30 @@ const placementAuClavier = (demande: DemandeDeDeplacement, position: PositionSan
 @Component({
   selector: 'glm-frise-dossier',
   templateUrl: './FriseDossier.html',
-  styleUrl: './FriseDossier.css',
+  styleUrls: ['./FriseDossier.css', '../Boutons.css'],
 })
 export class FriseDossier {
   readonly dossier = input.required<VueDeFrise>();
   readonly now = input.required<Date>();
   readonly poignee = input<PoigneeDeFrise | undefined>(undefined);
   readonly placement = input<PlacementDeLInstant | undefined>(undefined);
+  readonly limite = input<LimiteDeLaFin | undefined>(undefined);
   readonly deplacementDemande = output<DeplacementDemande>();
   readonly placementDemande = output<PlacementDemande>();
   protected readonly libelles = LIBELLES_ANOMALIES;
   private readonly hote = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly largeur = signal(LARGEUR_DE_REFERENCE_PX);
+  private readonly finDuCadre = computed(() => finDuCadreDe(this.dossier().activite));
+  private readonly poigneeAuDela = computed(() => {
+    const poignee = this.poignee();
+    if (poignee === undefined) return false;
+    const { min, max } = poignee.bornes;
+    return Math.min(Math.max(Date.parse(poignee.instant), Date.parse(min)), Date.parse(max)) > this.finDuCadre();
+  });
+  private readonly cadreComplet = linkedSignal<boolean, boolean>({
+    source: this.poigneeAuDela,
+    computation: (auDela, precedent) => auDela || (precedent?.value ?? false),
+  });
   private prise: { readonly decalage: number } | undefined;
   protected readonly disposition = computed(() =>
     dispositionDeFrise({
@@ -40,8 +55,14 @@ export class FriseDossier {
       poignee: this.poignee(),
       placement: this.placement(),
       largeur: this.largeur(),
+      cadreComplet: this.cadreComplet(),
     }),
   );
+
+  protected readonly texteDuCadre = computed(() => {
+    const limite = this.limite();
+    return limite !== undefined && this.limiteHorsCadre(limite) ? this.texteDuBouton(limite) : undefined;
+  });
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -67,6 +88,28 @@ export class FriseDossier {
     const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), pointeur.clientX - this.prise.decalage);
     if (position.heure === 'AVEC_HEURE') this.deplacementDemande.emit({ demande: { kind: 'VERS', instant }, poignee: position.source });
     else this.placementDemande.emit({ demande: { kind: 'VERS', instant } });
+  }
+
+  protected bascule(): void {
+    this.cadreComplet.update(complet => !complet);
+  }
+
+  private limiteHorsCadre(limite: LimiteDeLaFin): boolean {
+    return !this.poigneeAuDela() && Date.parse(limite.instant) > this.finDuCadre();
+  }
+
+  private texteDuBouton(limite: LimiteDeLaFin): string {
+    return this.cadreComplet() ? LIBELLES_ANOMALIES.frise.revenirSurLActivite : this.texteDeLaLimite(limite);
+  }
+
+  private texteDeLaLimite(limite: LimiteDeLaFin): string {
+    const libelles = LIBELLES_ANOMALIES.frise;
+    if (limite.par === 'HORLOGE') return libelles.voirJusquAMaintenant;
+    const instant = new Date(limite.instant);
+    const moment = `${formatInstantShortWeekdayDayMonth(instant)} ${formatInstantTime(instant)}`;
+    return clotureDeLaFrise(this.dossier()) === undefined
+      ? libelles.voirJusquAuDemarrageSuivant(moment)
+      : libelles.voirJusquALaCloture(moment);
   }
 
   private mesure(largeur: number): void {
