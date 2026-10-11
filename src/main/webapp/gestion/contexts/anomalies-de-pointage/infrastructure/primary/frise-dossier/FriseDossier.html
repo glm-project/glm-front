@@ -1,4 +1,17 @@
 <div class="rounded-surface border border-border bg-surface" data-selector="anomalie-frise">
+  @if (disposition().bandeau.length > 0) {
+  <div class="relative h-8 overflow-hidden border-b border-b-border" aria-hidden="true" data-selector="anomalie-frise-bandeau">
+    @for (jour of disposition().bandeau; track jour.instant) {
+    <span
+      class="jour absolute inset-y-0 truncate pl-2 text-(length:--text-label) leading-8 font-semibold text-ink"
+      data-selector="anomalie-frise-bandeau-jour"
+      [style.left.%]="jour.gauche"
+      [style.width.%]="jour.largeur"
+      >{{ jour.jour }}</span
+    >
+    }
+  </div>
+  }
   <div #plan class="relative w-full overflow-x-clip" data-selector="anomalie-frise-plan" [style.height.px]="disposition().hauteur">
     @for (graduation of disposition().graduations; track graduation.instant) {
     <span
@@ -8,9 +21,6 @@
       [style.left.%]="graduation.gauche"
     >
       <span data-selector="anomalie-frise-graduation-heure">{{ graduation.heure }}</span>
-      @if (graduation.jour; as jour) {
-      <span data-selector="anomalie-frise-jour">{{ jour }}</span>
-      }
     </span>
     } @if (disposition().rangeeDePlacement; as rangee) {
     <div
@@ -105,7 +115,14 @@
     >
       {{ element.etiquette }}
     </div>
-    } } }
+    } } } @for (minuit of disposition().minuits; track minuit.instant) {
+    <span
+      class="minuit pointer-events-none absolute inset-y-0 z-1 w-0"
+      aria-hidden="true"
+      data-selector="anomalie-frise-minuit"
+      [style.left.%]="minuit.gauche"
+    ></span>
+    }
   </div>
 </div>
 @if (texteDuCadre(); as texte) {

@@ -88,3 +88,11 @@
   background: var(--gestion-hachure-fin-automatique);
   content: '';
 }
+
+.jour + .jour {
+  border-left: 2px solid var(--color-ink-muted);
+}
+.minuit {
+  border-left: 2px solid var(--color-ink-muted);
+  box-shadow: 0 0 0 2px var(--color-surface);
+}

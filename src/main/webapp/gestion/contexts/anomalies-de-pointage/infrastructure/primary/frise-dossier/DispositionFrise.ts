@@ -1,5 +1,5 @@
 import { ActiviteEchue, DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
-import { EchelleFrise, Graduation } from './EchelleFrise';
+import { EchelleFrise, Graduation, JourDeFrise } from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise } from './PoigneeDeFrise';
 
 export type VueDeFrise = Pick<DossierAnomalie, 'journal' | 'activite' | 'borneDeFin'>;
@@ -105,6 +105,8 @@ export interface DispositionFrise {
   readonly echelle: EchelleFrise;
   readonly hauteur: number;
   readonly graduations: readonly Graduation[];
+  readonly bandeau: readonly JourDeFrise[];
+  readonly minuits: readonly JourDeFrise[];
   readonly elements: readonly ElementFrise[];
   readonly rangeeDePlacement: RangeeDePlacement | undefined;
   readonly retrait: RetraitDeFrise | undefined;

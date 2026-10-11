@@ -14,6 +14,8 @@ import {
 import {
   EchelleFrise,
   graduationsDe,
+  JourDeFrise,
+  joursDe,
   LARGEUR_D_UN_REPERE_PX,
   LARGEUR_DE_LA_CLOTURE_PX,
   positionDeRepereTenueAuBordDroit,
@@ -99,10 +101,13 @@ const elementDeLaBorne = (
   return cloture === undefined ? [] : [cloturePlacee(cloture, echelle, haut, largeur)];
 };
 
+const bandeauDe = (jours: readonly JourDeFrise[]): readonly JourDeFrise[] => (jours.length > 1 ? jours : []);
+
 export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise => {
   const { vue, maintenant: now, poignee, placement, largeur } = entrees;
   const { pointages, demarrageDeLaBorne, finDuCadre, echelle } = lectureDeLaFrise(entrees);
   const activite = vue.activite;
+  const jours = joursDe(echelle);
   const haut = HAUTEUR_DE_L_AXE_PX + ESPACE_ENTRE_RANGEES_PX;
   const barreRecue = barreDe(activite, haut, { now, echelle });
   const barre = poignee === undefined ? barreRecue : barreJusquALaPoignee(barreRecue, poignee, echelle);
@@ -117,6 +122,8 @@ export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise =>
     echelle,
     hauteur: hauteurDeLaFrise(elements),
     graduations: graduationsDe(echelle, largeur),
+    bandeau: bandeauDe(jours),
+    minuits: jours.slice(1),
     elements,
     retrait: poignee === undefined ? undefined : retraitDe(activite, barre, poignee, echelle),
     finAutomatique: poignee === undefined ? undefined : finAutomatiqueTraceeDe(activite, barre, echelle),
