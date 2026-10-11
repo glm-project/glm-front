@@ -1,7 +1,7 @@
-import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, input, output, signal } from '@angular/core';
+import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, input, linkedSignal, output, signal } from '@angular/core';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
 import { PositionDePoignee, PositionSansHeure, VueDeFrise } from './DispositionFrise';
-import { instantSousLePointeur, positionSur } from './EchelleFrise';
+import { finDuCadreDe, instantSousLePointeur, positionSur } from './EchelleFrise';
 import { dispositionDeFrise } from './FriseEnLigne';
 import {
   DemandeDeDeplacement,
@@ -32,6 +32,16 @@ export class FriseDossier {
   protected readonly libelles = LIBELLES_ANOMALIES;
   private readonly hote = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly largeur = signal(LARGEUR_DE_REFERENCE_PX);
+  private readonly poigneeAuDela = computed(() => {
+    const poignee = this.poignee();
+    if (poignee === undefined) return false;
+    const { min, max } = poignee.bornes;
+    return Math.min(Math.max(Date.parse(poignee.instant), Date.parse(min)), Date.parse(max)) > finDuCadreDe(this.dossier().activite);
+  });
+  private readonly cadreComplet = linkedSignal<boolean, boolean>({
+    source: this.poigneeAuDela,
+    computation: (auDela, precedent) => auDela || (precedent?.value ?? false),
+  });
   private prise: { readonly decalage: number } | undefined;
   protected readonly disposition = computed(() =>
     dispositionDeFrise({
@@ -40,6 +50,7 @@ export class FriseDossier {
       poignee: this.poignee(),
       placement: this.placement(),
       largeur: this.largeur(),
+      cadreComplet: this.cadreComplet(),
     }),
   );
 

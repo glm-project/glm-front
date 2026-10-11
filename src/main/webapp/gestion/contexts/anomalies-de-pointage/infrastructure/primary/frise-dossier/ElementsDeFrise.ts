@@ -12,7 +12,7 @@ import {
   PositionSansHeure,
   RepereASituer,
 } from './DispositionFrise';
-import { echelleDe, EchelleFrise, instantsDeLActivite, positionSur, positionTenueAuxBords } from './EchelleFrise';
+import { echelleDe, EchelleFrise, finDuCadreDe, instantsDeLActivite, positionSur, positionTenueAuxBords } from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
 import { demarrageDeLaBorneDeLaFrise, pointagesDeLActivite } from './PointagesDeLaFrise';
 
@@ -73,17 +73,20 @@ const echelleDeLaFrise = (
   borneDeFin: string | undefined,
   poignee: PoigneeDeFrise | undefined,
   placement: PlacementDeLInstant | undefined,
+  cadreComplet: boolean,
 ): EchelleFrise => {
+  if (!cadreComplet) return echelleDe(activite);
   const bornes = (poignee ?? placement)?.bornes;
   return echelleDe(activite, { borne: borneDeFin, plafond: bornes && Date.parse(bornes.max) });
 };
 
-export const lectureDeLaFrise = ({ vue, poignee, placement }: EntreesDeFrise) => {
+export const lectureDeLaFrise = ({ vue, poignee, placement, cadreComplet }: EntreesDeFrise) => {
   const pointages = pointagesDeLActivite(vue);
   return {
     pointages,
     demarrageDeLaBorne: demarrageDeLaBorneDeLaFrise(vue),
-    echelle: echelleDeLaFrise(instantsDeLActivite(pointages, vue.activite), vue.borneDeFin, poignee, placement),
+    finDuCadre: finDuCadreDe(vue.activite),
+    echelle: echelleDeLaFrise(instantsDeLActivite(pointages, vue.activite), vue.borneDeFin, poignee, placement, cadreComplet),
   };
 };
 

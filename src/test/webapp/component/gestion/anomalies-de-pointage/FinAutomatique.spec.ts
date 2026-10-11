@@ -118,6 +118,15 @@ const whenDraggingTheHandleTo = (hour: number): void => {
   });
 };
 
+const whenClickingTheRowOfTheBarAt = (hour: number): void => {
+  cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
+    const { left } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
+    abscisseDeLHeure(hour).then(clientX => {
+      cy.get(dataSelector('anomalie-frise-placement')).click(clientX - left, 20);
+    });
+  });
+};
+
 const whenPressingEndOnTheHandle = (): void => {
   cy.get(dataSelector('anomalie-poignee')).focus();
   cy.get(dataSelector('anomalie-poignee')).trigger('keydown', { key: 'End' });
@@ -184,15 +193,6 @@ describe('End placement on the frise in Gestion', () => {
   });
 
   const whenOpeningTheAutomaticEndRegularisation = whenOpeningTheResolutionView;
-
-  const whenClickingTheRowOfTheBarAt = (hour: number): void => {
-    cy.get(dataSelector('anomalie-frise-placement')).then(rangee => {
-      const { left } = requiredFixture(rangee[0], 'rangée de placement').getBoundingClientRect();
-      abscisseDeLHeure(hour).then(clientX => {
-        cy.get(dataSelector('anomalie-frise-placement')).click(clientX - left, 20);
-      });
-    });
-  };
 
   const whenDraggingTheHourlessHandleTo = (hour: number): void => {
     abscisseDeLHeure(hour).then(clientX => {
@@ -443,15 +443,17 @@ describe('Bound of the end on the frise in Gestion', () => {
     whenOpeningTheResolutionView();
     whenPressingEndOnTheHourlessHandle();
 
-    thenTheClosureStandsAt(23);
     thenTheHandleHolds(borne);
+    thenTheClosureStandsAt(23);
   });
 
   it('should draw the next start where the end is bounded, instead of a closure', () => {
     givenTheDossierBoundedByANextStartAt(borne);
 
     whenOpeningTheResolutionView();
+    whenPressingEndOnTheHourlessHandle();
 
+    thenTheHandleHolds(borne);
     thenTheNextStartStandsAt(23);
     thenNoClosureIsDrawn();
   });
@@ -461,15 +463,37 @@ describe('Bound of the end on the frise in Gestion', () => {
       givenTheDossierBoundedBy(new Date(2026, 8, 17, 8, 0));
 
       whenOpeningTheResolutionViewAt(width);
+      whenPressingEndOnTheHourlessHandle();
 
       thenTheClosureIsWholeInsideTheFrise();
     });
   });
 
+  [1280, 390].forEach(width => {
+    it(`should frame the end of the frame at the right edge when the bound falls days after the end at ${width} pixels`, () => {
+      givenTheDossierBoundedBy(new Date(2026, 8, 17, 8, 0));
+
+      whenOpeningTheFriseAt(width);
+
+      thenTheFrameEndsAnHourAfterTheEndOfTheBar();
+      thenNoClosureIsDrawn();
+    });
+  });
+
+  const thenTheFrameEndsAnHourAfterTheEndOfTheBar = (): void => {
+    cy.get(dataSelector('anomalie-frise-plan')).then(plan => {
+      const { left, width } = requiredFixture(plan[0], 'plan de la frise').getBoundingClientRect();
+      barreDeLActivite().should(barre => {
+        const { right } = requiredFixture(barre[0], 'barre').getBoundingClientRect();
+        expect((right - left) / width).to.be.closeTo(14 / 15, 0.005);
+      });
+    });
+  };
+
   const whenOpeningTheResolutionViewAt = (width: number): void => {
     cy.viewport(width, 900);
     cy.visit(`/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`);
-    cy.get(dataSelector('anomalie-cloture')).should('be.visible');
+    cy.get(dataSelector('anomalie-resolution')).should('be.visible');
   };
 
   const thenTheClosureIsWholeInsideTheFrise = (): void => {
@@ -526,6 +550,27 @@ describe('Bound of the end on the frise in Gestion', () => {
         });
     });
   };
+});
+
+describe('Click on the frise in Gestion', () => {
+  const suiviUrl = `/api/atelier/suivis/${suiviFinAutomatiqueFixture}/anomalies/${ouvrantFinAutomatiqueFixture}`;
+
+  beforeEach(() => {
+    cy.clock(new Date(2026, 8, 20, 10, 0).getTime(), ['Date']);
+    givenTheReferentielFinAutomatique();
+    cy.intercept('GET', suiviUrl, {
+      body: { ...dossierFinAutomatiqueFixture(), borneDeFin: instantLocalFixture(new Date(2026, 8, 17, 8, 0)) },
+    });
+  });
+
+  [1280, 390].forEach(width => {
+    it(`should place the handle at the quarter of an hour aimed at by a click, within five minutes, at ${width} pixels`, () => {
+      whenOpeningTheFriseAt(width);
+      whenClickingTheRowOfTheBarAt(14.25);
+
+      thenTheHandleHolds(new Date(2026, 8, 14, 14, 15));
+    });
+  });
 });
 
 describe('Geometry of the frise in Gestion', () => {

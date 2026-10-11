@@ -101,13 +101,15 @@ const elementDeLaBorne = (
 
 export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise => {
   const { vue, maintenant: now, poignee, placement, largeur } = entrees;
-  const { pointages, demarrageDeLaBorne, echelle } = lectureDeLaFrise(entrees);
+  const { pointages, demarrageDeLaBorne, finDuCadre, echelle } = lectureDeLaFrise(entrees);
   const activite = vue.activite;
   const haut = HAUTEUR_DE_L_AXE_PX + ESPACE_ENTRE_RANGEES_PX;
   const barreRecue = barreDe(activite, haut, { now, echelle });
   const barre = poignee === undefined ? barreRecue : barreJusquALaPoignee(barreRecue, poignee, echelle);
   const reperes = pointages.map(pointage => reperePlace(pointage, echelle, haut, largeur));
-  const borne = elementDeLaBorne(demarrageDeLaBorne, clotureDeLaFrise(vue), echelle, haut, largeur);
+  const borne = elementDeLaBorne(demarrageDeLaBorne, clotureDeLaFrise(vue), echelle, haut, largeur).filter(
+    element => entrees.cadreComplet || element.instant <= finDuCadre,
+  );
   const elements = [barre, ...reperes, ...borne, ...positionsDePoignee(entrees, activite, barre, echelle, largeur)].sort(
     (gauche, droite) => gauche.instant - droite.instant,
   );

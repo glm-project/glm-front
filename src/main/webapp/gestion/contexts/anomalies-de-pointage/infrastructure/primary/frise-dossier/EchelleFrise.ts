@@ -55,6 +55,8 @@ export const echelleDe = (instantsDeLActiviteRecus: readonly number[], auDela: A
   };
 };
 
+export const finDuCadreDe = (activite: ActiviteEchue): number => heureEntiereApres(Date.parse(activite.echeance) + UNE_HEURE);
+
 export const pixelsParHeureDe = (echelle: EchelleFrise, largeur: number): number => largeur / ((echelle.fin - echelle.debut) / UNE_HEURE);
 
 export const positionSur = (echelle: EchelleFrise, instant: number): number =>
@@ -74,7 +76,7 @@ export const instantSousLePointeur = (
   abscisse: number,
 ): number => {
   const instant = echelle.debut + ((abscisse - plan.left) / plan.width) * (echelle.fin - echelle.debut);
-  return Math.round(instant / CINQ_MINUTES) * CINQ_MINUTES;
+  return Math.min(Math.max(Math.round(instant / CINQ_MINUTES) * CINQ_MINUTES, echelle.debut), echelle.fin);
 };
 
 const ecartEnPixels = (premier: number, second: number, pixelsParHeure: number): number =>

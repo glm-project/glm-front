@@ -24,13 +24,14 @@ dans [`AGENTS.md`](AGENTS.md) ; ce fichier dit ce que les tests garantissent et 
 - **Domaine** (`CadreDeLaFin.spec.ts`, `InstantPointage.spec.ts`) : le minimum est la première minute entière
   strictement après le début ; le maximum est le plus petit de l'horloge et de `borneDeFin`, comparés comme instants.
 - **Primaire** (`FriseDossier.spec.ts`, `PoigneeDeFrise.spec.ts`, `DeplacementDeLaPoignee.spec.ts`) : flèches, Maj,
-  Origine et Fin, clic arrondi, jamais hors des bornes.
+  Origine et Fin, clic arrondi, jamais hors des bornes ni de l'échelle affichée (clic et glisser). Le cadre de l'activité
+  s'arrête à `finDuCadre` ; le cadre complet est collant après Fin ; une borne hors cadre n'est pas dessinée.
 - **Composant** : aucune heure n'est inventée avant le placement, le clic avant le début ramène au début, le glissé
   depuis la fin automatique place l'heure à son premier mouvement, la poignée reste à 22 px des bords, la barre
-  s'arrête à l'échéance, l'échelle tient dans la largeur à 1280 et 390 px.
+  s'arrête à l'échéance, l'échelle tient dans la largeur à 1280 et 390 px, cadrée sur l'activité, et un clic pose l'heure visée à 5 minutes près.
 - **Borne** (`DemarrageDeLaBorne.spec.ts` et composant) : le démarrage suivant se dessine à son instant, sinon la
   clôture ; une `FIN` n'est jamais une borne ; la clôture reste entière quand la borne tombe plusieurs jours après
-  l'échéance.
+  l'échéance. Elle ne se voit entière qu'en cadre complet (touche Fin) quand elle tombe hors du cadre de l'activité.
 
 ## Anomalie suivante et retour à la liste
 

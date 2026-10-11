@@ -80,7 +80,8 @@ au jour local du début de l'activité échue. Ce contexte ne calcule aucune sem
 Avant toute heure la poignée se tient « sans heure » sur la fin automatique : aucune heure n'est inventée et
 « Valider la fin » est inactif. Le clic sur la frise (arrondi à 5 minutes), le glissé ou une touche posent l'heure
 initiale ; ensuite seuls le glisser et le clavier (flèches : 1 minute, Maj : 15, Origine et Fin : aux bornes)
-la déplacent, le clic n'agit plus. Ses bornes viennent de `CadreDeLaFin.depuis(dossier, maintenant)` :
+la déplacent, le clic n'agit plus. La touche Fin porte la poignée à son maximum ; si celui-ci dépasse `finDuCadre`,
+la frise passe au cadre complet. Ses bornes viennent de `CadreDeLaFin.depuis(dossier, maintenant)` :
 
 - **minimum** : la première minute entière strictement après le début de l'activité ; le serveur refuse une
   fin qui n'est pas postérieure au début ;
@@ -104,11 +105,18 @@ La frise (`glm-frise-dossier`) dessine, du plus tôt au plus tard :
   repère « Clôture » ;
 - la poignée.
 
-Les autres pointages de la clé ne sont pas tracés. L'échelle va d'une heure avant le premier instant dessiné à
-une heure après le dernier, par heures entières, et s'étend jusqu'à la borne de la poignée. Elle tient dans la
+Les autres pointages de la clé ne sont pas tracés. Par défaut l'échelle **cadre l'activité** : de l'heure entière qui précède d'une heure
+le début à `finDuCadre`, soit l'heure entière qui suit l'échéance plus une heure (1 à 2 h de marge),
+sans égard à la borne ni à l'horloge. La borne ne se dessine que si elle tombe au plus tard à `finDuCadre`. Le **cadre
+complet** est l'ancienne échelle, jusqu'à l'heure qui suit le plafond de la poignée et la borne, qui s'y dessine
+toujours. Il est **collant** : `FriseDossier` le tient dans un `linkedSignal` (`cadreComplet`) que ferme seule une
+action explicite ; dès que l'instant de la poignée, tenu par les bornes du domaine et non par l'échelle, dépasse
+strictement `finDuCadre` (touche Fin, Maj + →), il reste affiché même si la poignée rentre dans le cadre. Une relecture
+détruit la vue et le cadre repart de l'activité. Le pointeur est tenu à l'échelle affichée : un glisser hors du plan
+s'arrête à `finDuCadre`, qui n'est pas « au-delà », donc il ne change jamais de cadre. Les graduations et le plan tiennent dans la
 largeur de l'hôte, sans défilement (`ResizeObserver` créé dans `afterNextRender`) : les graduations s'espacent selon
-la largeur, jamais à moins de 64 px, la poignée reste à 22 px des bords et les repères restent dans le plan. Le repère de la borne est serré
-contre le bord droit pour rester entier ; son heure reste exacte dans son texte. Barres et repères sont des images
+la largeur, jamais à moins de 64 px, la poignée reste à 22 px des bords et les repères restent dans le plan. Le repère de la borne, quand
+il se dessine, est serré contre le bord droit pour rester entier ; son heure reste exacte dans son texte. Barres et repères sont des images
 (`role="img"`) ; la poignée est un `slider` dans l'ordre de tabulation. Les tests lisent les attributs `data-*`,
 jamais les classes ; la position horizontale se prouve en Cypress sur la géométrie rendue des graduations
 (`AbscisseSurLaFrise.ts`).
