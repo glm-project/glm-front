@@ -226,7 +226,7 @@ describe('Frise of a dossier', () => {
     await whenTheFriseIsMeasured(largeur);
 
     thenTheGraduationsAre(jours.map(() => '00:00'));
-    thenTheDaysShownAre(jours);
+    thenTheGraduationsOpenTheDaysOfTheBand(jours);
   });
 
   it('should graduate the midnight that opens a week counted from the start of the scale', async () => {
@@ -234,7 +234,7 @@ describe('Frise of a dossier', () => {
 
     await whenTheFriseIsMeasured(100);
 
-    thenTheDaysShownAre(['lun. 21 sept.']);
+    thenTheGraduationsOpenTheDaysOfTheBand(['lun. 21 sept.']);
   });
 
   it('should graduate the hours the way it did when the frise is wide, as the reference width leaves 64 pixels per hour', async () => {
@@ -302,17 +302,38 @@ describe('Frise of a dossier', () => {
     thenTheGraduationsAre(['05:00', '06:00', '07:00', '08:00', '09:00']);
   });
 
-  it('should show the day at midnight when the activity spans several days', async () => {
+  it('should leave the day to the band and graduate midnight by its hour alone', async () => {
     await whenRenderingTheFrise(vueEntre('22:00', '02:00', 15));
 
     thenTheGraduationsAre(['21:00', '22:00', '23:00', '00:00', '01:00', '02:00', '03:00']);
-    thenTheDaysShownAre(['mar. 15 sept.']);
+    thenNoGraduationTellsItsDay();
   });
 
-  it('should show no day on an activity that crosses no midnight', async () => {
+  it('should name in a band every day the frise covers when it crosses midnight', async () => {
+    await whenRenderingTheFrise(vueEntre('22:00', '02:00', 15));
+
+    thenTheDaysOfTheBandAre(['lun. 14 sept.', 'mar. 15 sept.']);
+  });
+
+  it('should span every day of the band from its midnight, or the start of the scale, to the next midnight, or the end of the scale', async () => {
+    await whenRenderingTheFrise(vueEntre('20:30', '02:00', 15));
+
+    thenTheDaysOfTheBandSpan([
+      { left: 0, width: 62.5 },
+      { left: 62.5, width: 37.5 },
+    ]);
+  });
+
+  it('should draw a line across the frise at midnight', async () => {
+    await whenRenderingTheFrise(vueEntre('20:30', '02:00', 15));
+
+    thenTheMidnightLinesStandAt([62.5]);
+  });
+
+  it('should draw no band of days when the frise stays within one day', async () => {
     await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
 
-    thenTheDaysShownAre([]);
+    thenNoBandOfDaysIsDrawn();
   });
 
   it('should draw no marker for a pointage whose instant it cannot read, nor let it spoil the scale', async () => {
@@ -1297,13 +1318,51 @@ describe('Frise of a dossier', () => {
   const thePlan = (): HTMLElement =>
     requiredFixture((fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('anomalie-frise-plan')), 'frise plan');
 
-  const thenTheDaysShownCountIs = (expected: number): void => {
-    expect((fixture.nativeElement as HTMLElement).querySelectorAll(dataSelector('anomalie-frise-jour'))).toHaveLength(expected);
+  const graduations = (): HTMLElement[] => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-frise-graduation')),
+  ];
+
+  const thenNoGraduationTellsItsDay = (): void => {
+    expect(graduations().map(graduation => graduation.textContent.trim())).not.toContainEqual(expect.stringContaining('sept.'));
   };
 
-  const thenTheDaysShownAre = (expected: readonly string[]): void => {
-    const jours = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-frise-jour'))];
-    expect(jours.map(jour => jour.textContent.trim())).toEqual(expected);
+  const thenTheGraduationsOpenTheDaysOfTheBand = (expected: readonly string[]): void => {
+    const dayOpenedAt = (left: number): string | undefined =>
+      daysOfTheBand()
+        .find(jour => Math.abs(Number.parseFloat(jour.style.left) - left) < 1e-9)
+        ?.textContent.trim();
+    expect(graduations().map(graduation => dayOpenedAt(Number.parseFloat(graduation.style.left)))).toEqual(expected);
+  };
+
+  const daysOfTheBand = (): HTMLElement[] => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-frise-bandeau-jour')),
+  ];
+
+  const thenTheDaysOfTheBandAre = (expected: readonly string[]): void => {
+    expect(daysOfTheBand().map(jour => jour.textContent.trim())).toEqual(expected);
+  };
+
+  const thenTheDaysOfTheBandSpan = (expected: readonly { left: number; width: number }[]): void => {
+    const spans = daysOfTheBand().map(jour => ({ left: Number.parseFloat(jour.style.left), width: Number.parseFloat(jour.style.width) }));
+    expect(spans).toHaveLength(expected.length);
+    expected.forEach(({ left, width }, rang) => {
+      expect(spans[rang]?.left).toBeCloseTo(left);
+      expect(spans[rang]?.width).toBeCloseTo(width);
+    });
+  };
+
+  const thenTheMidnightLinesStandAt = (expected: readonly number[]): void => {
+    const lefts = [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('anomalie-frise-minuit'))].map(
+      ligne => Number.parseFloat(ligne.style.left),
+    );
+    expect(lefts).toHaveLength(expected.length);
+    expected.forEach((left, rang) => {
+      expect(lefts[rang]).toBeCloseTo(left);
+    });
+  };
+
+  const thenNoBandOfDaysIsDrawn = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('anomalie-frise-bandeau'))).toBeNull();
   };
 
   const thenTheBarsStandOnRowsAt = (expected: readonly number[]): void => {
@@ -1440,7 +1499,6 @@ describe('Frise of a dossier', () => {
       await whenTheHandleMovesTo(poigneeFixture('00:00', { instant: bornes.max, bornes }));
 
       thenTheNumberOfGraduationsIs(7);
-      thenTheDaysShownCountIs(1);
     });
 
     it.each([
@@ -1513,7 +1571,6 @@ describe('Frise of a dossier', () => {
       await whenTheFriseIsMeasured(400);
 
       thenTheGraduationsStandAt([12.5, 50, 75, 100]);
-      thenTheDaysShownCountIs(1);
     });
   });
 });

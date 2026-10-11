@@ -124,6 +124,11 @@ il se dessine, est serré contre le bord droit pour rester entier ; son heure re
 jamais les classes ; la position horizontale se prouve en Cypress sur la géométrie rendue des graduations
 (`AbscisseSurLaFrise.ts`).
 
+Quand l'échelle couvre plus d'un jour, un **bandeau des jours** au-dessus des graduations nomme chaque jour
+(« mer. 9 sept. ») sur sa largeur, et un trait de minuit traverse le plan, au-dessus des barres qu'il entaille d'un
+liseré `surface` mais sous la poignée. La graduation de 00:00 ne porte que l'heure. Bandeau et traits viennent des
+jours de l'échelle (`joursDe`), non des graduations : ils restent quand celles-ci s'espacent.
+
 Un seul `<button type="button">` sous la frise (`anomalie-frise-cadre`), dont seul le texte change, bascule entre les
 deux cadres. Il est affiché si et seulement si la limite de la fin (reçue de la page, qui la lit dans `CadreDeLaFin`)
 dépasse `finDuCadre` et que la poignée n'est pas au-delà : « Voir jusqu'au démarrage suivant · jeu. 17 sept. 08:00 »,

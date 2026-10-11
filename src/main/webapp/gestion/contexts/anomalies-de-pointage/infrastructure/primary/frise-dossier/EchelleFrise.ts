@@ -22,7 +22,7 @@ export interface Graduation {
   readonly instant: number;
   readonly gauche: number;
   readonly heure: string;
-  readonly jour: string | undefined;
+  readonly minuit: boolean;
 }
 
 const heureEntiereAvant = (instant: number): number => {
@@ -34,6 +34,13 @@ const heureEntiereApres = (instant: number): number => {
   const avant = heureEntiereAvant(instant);
   return avant === instant ? instant : avant + UNE_HEURE;
 };
+
+export interface JourDeFrise {
+  readonly instant: number;
+  readonly gauche: number;
+  readonly largeur: number;
+  readonly jour: string;
+}
 
 export interface AuDelaDeLActivite {
   readonly borne?: string | undefined;
@@ -89,7 +96,7 @@ const graduationHoraire = (echelle: EchelleFrise, rang: number): Graduation => {
     instant,
     gauche: positionSur(echelle, instant),
     heure: formatInstantTime(date),
-    jour: date.getHours() === 0 ? formatInstantShortWeekdayDayMonth(date) : undefined,
+    minuit: date.getHours() === 0,
   };
 };
 
@@ -100,10 +107,8 @@ const jourCivil = (date: Date): number => Date.UTC(date.getFullYear(), date.getM
 
 const joursDepuis = (debut: Date, date: Date): number => Math.round((jourCivil(date) - jourCivil(debut)) / (HEURES_PAR_JOUR * UNE_HEURE));
 
-const estMinuit = (graduation: Graduation): boolean => graduation.jour !== undefined;
-
 const estMinuitDUnJourDuPas = (graduation: Graduation, debut: Date, pasEnHeures: number): boolean =>
-  estMinuit(graduation) && joursDepuis(debut, new Date(graduation.instant)) % (pasEnHeures / HEURES_PAR_JOUR) === 0;
+  graduation.minuit && joursDepuis(debut, new Date(graduation.instant)) % (pasEnHeures / HEURES_PAR_JOUR) === 0;
 
 const estMultipleDuPas = (graduation: Graduation, debut: Date, pasEnHeures: number): boolean =>
   pasEnHeures < HEURES_PAR_JOUR
@@ -115,7 +120,7 @@ const laisseLaPlace = (derniere: Graduation | undefined, graduation: Graduation,
 
 const ajouteEnEspacant = (gardees: readonly Graduation[], graduation: Graduation, pixelsParHeure: number): readonly Graduation[] => {
   if (laisseLaPlace(gardees.at(-1), graduation, pixelsParHeure)) return [...gardees, graduation];
-  return estMinuit(graduation) ? ajouteEnEspacant(gardees.slice(0, -1), graduation, pixelsParHeure) : gardees;
+  return graduation.minuit ? ajouteEnEspacant(gardees.slice(0, -1), graduation, pixelsParHeure) : gardees;
 };
 
 export const graduationsDe = (echelle: EchelleFrise, largeur: number): readonly Graduation[] => {
@@ -125,4 +130,25 @@ export const graduationsDe = (echelle: EchelleFrise, largeur: number): readonly 
   return Array.from({ length: Math.ceil((echelle.fin - echelle.debut) / UNE_HEURE) + 1 }, (_, rang) => graduationHoraire(echelle, rang))
     .filter(graduation => estMultipleDuPas(graduation, debut, pas))
     .reduce<readonly Graduation[]>((gardees, graduation) => ajouteEnEspacant(gardees, graduation, pixelsParHeure), []);
+};
+
+const minuitSuivant = (instant: number): number => {
+  const date = new Date(instant);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).getTime();
+};
+
+const jourDeFrise = (echelle: EchelleFrise, instant: number): JourDeFrise => {
+  const gauche = positionSur(echelle, instant);
+  return {
+    instant,
+    gauche,
+    largeur: positionSur(echelle, Math.min(minuitSuivant(instant), echelle.fin)) - gauche,
+    jour: formatInstantShortWeekdayDayMonth(new Date(instant)),
+  };
+};
+
+export const joursDe = (echelle: EchelleFrise): readonly JourDeFrise[] => {
+  const jours: JourDeFrise[] = [];
+  for (let instant = echelle.debut; instant < echelle.fin; instant = minuitSuivant(instant)) jours.push(jourDeFrise(echelle, instant));
+  return jours;
 };

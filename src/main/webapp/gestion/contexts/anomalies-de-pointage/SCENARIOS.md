@@ -28,7 +28,9 @@ dans [`AGENTS.md`](AGENTS.md) ; ce fichier dit ce que les tests garantissent et 
   Origine et Fin, clic arrondi, jamais hors des bornes ni de l'échelle affichée (clic et glisser). Le cadre de l'activité
   s'arrête à `finDuCadre` ; le cadre complet est collant après Fin ; une borne hors cadre n'est pas dessinée. Le bouton du cadre apparaît
   quand la limite dépasse `finDuCadre` (démarrage suivant, clôture ou maintenant), bascule vers le cadre complet et revient,
-  et reste le même élément ; après régularisation il se fonde sur la borne seule.
+  et reste le même élément ; après régularisation il se fonde sur la borne seule. Une frise qui passe minuit nomme ses
+  jours dans un bandeau, chacun de son minuit (ou du début de l'échelle) au suivant (ou à la fin), et trace un trait à
+  chaque minuit ; la graduation de minuit ne dit que l'heure ; une frise d'un seul jour n'a pas de bandeau.
 - **Composant** : aucune heure n'est inventée avant le placement, le clic avant le début ramène au début, le glissé
   depuis la fin automatique place l'heure à son premier mouvement, la poignée reste à 22 px des bords, la barre
   s'arrête à l'échéance, l'échelle tient dans la largeur à 1280 et 390 px, cadrée sur l'activité, et un clic pose l'heure visée à 5 minutes près ; le bouton élargit la frise et montre la borne entière à 1280 et 390 px.
