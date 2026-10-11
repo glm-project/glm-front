@@ -12,9 +12,9 @@ import {
   PositionSansHeure,
   RepereASituer,
 } from './DispositionFrise';
-import { echelleDe, EchelleFrise, instantsRecus, positionSur, positionTenueAuxBords } from './EchelleFrise';
+import { echelleDe, EchelleFrise, instantsDeLActivite, positionSur, positionTenueAuxBords } from './EchelleFrise';
 import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
-import { pointagesDeLaFrise } from './PointagesDeLaFrise';
+import { demarrageDeLaBorneDeLaFrise, pointagesDeLActivite } from './PointagesDeLaFrise';
 
 export interface ContexteDeFrise {
   readonly now: Date;
@@ -69,19 +69,21 @@ export const barreDe = (activite: ActiviteEchue, haut: number, contexte: Context
 };
 
 const echelleDeLaFrise = (
-  instants: readonly number[],
+  activite: readonly number[],
+  borneDeFin: string | undefined,
   poignee: PoigneeDeFrise | undefined,
   placement: PlacementDeLInstant | undefined,
 ): EchelleFrise => {
   const bornes = (poignee ?? placement)?.bornes;
-  return echelleDe(instants, bornes && Date.parse(bornes.max));
+  return echelleDe(activite, { borne: borneDeFin, plafond: bornes && Date.parse(bornes.max) });
 };
 
 export const lectureDeLaFrise = ({ vue, poignee, placement }: EntreesDeFrise) => {
-  const pointages = pointagesDeLaFrise(vue);
+  const pointages = pointagesDeLActivite(vue);
   return {
     pointages,
-    echelle: echelleDeLaFrise(instantsRecus(pointages, vue.activite, vue.borneDeFin), poignee, placement),
+    demarrageDeLaBorne: demarrageDeLaBorneDeLaFrise(vue),
+    echelle: echelleDeLaFrise(instantsDeLActivite(pointages, vue.activite), vue.borneDeFin, poignee, placement),
   };
 };
 

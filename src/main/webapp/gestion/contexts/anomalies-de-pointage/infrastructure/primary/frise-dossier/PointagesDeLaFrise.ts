@@ -9,11 +9,13 @@ const ouvreLActivite = (dossier: DossierDeLaFrise, pointage: PointageAnomalie): 
 
 const demarreALaBorne = (dossier: DossierDeLaFrise, pointage: PointageAnomalie): boolean => demarrageDeLaBorne(dossier) === pointage;
 
-const estDessine = (dossier: DossierDeLaFrise, pointage: PointageAnomalie): boolean =>
-  estLisible(pointage) && (ouvreLActivite(dossier, pointage) || demarreALaBorne(dossier, pointage));
+export const pointagesDeLActivite = (dossier: DossierDeLaFrise): readonly PointageAnomalie[] =>
+  dossier.journal.filter(pointage => estLisible(pointage) && ouvreLActivite(dossier, pointage));
 
-export const pointagesDeLaFrise = (dossier: DossierDeLaFrise): readonly PointageAnomalie[] =>
-  dossier.journal.filter(pointage => estDessine(dossier, pointage));
+export const demarrageDeLaBorneDeLaFrise = (dossier: DossierDeLaFrise): PointageAnomalie | undefined => {
+  const demarrage = dossier.journal.find(pointage => demarreALaBorne(dossier, pointage));
+  return demarrage !== undefined && estLisible(demarrage) && !ouvreLActivite(dossier, demarrage) ? demarrage : undefined;
+};
 
 export const clotureDeLaFrise = (dossier: DossierDeLaFrise): string | undefined =>
   demarrageDeLaBorne(dossier) === undefined ? dossier.borneDeFin : undefined;

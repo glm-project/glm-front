@@ -35,21 +35,23 @@ const heureEntiereApres = (instant: number): number => {
   return avant === instant ? instant : avant + UNE_HEURE;
 };
 
-export const instantsRecus = (pointages: readonly PointageAnomalie[], activite: ActiviteEchue, borneDeFin?: string): readonly number[] =>
-  [
-    ...pointages.map(pointage => pointage.fait.instant),
-    activite.debut,
-    activite.echeance,
-    ...(borneDeFin === undefined ? [] : [borneDeFin]),
-  ]
+export interface AuDelaDeLActivite {
+  readonly borne?: string | undefined;
+  readonly plafond?: number | undefined;
+}
+
+export const instantsDeLActivite = (pointages: readonly PointageAnomalie[], activite: ActiviteEchue): readonly number[] =>
+  [...pointages.map(pointage => pointage.fait.instant), activite.debut, activite.echeance]
     .map(instant => Date.parse(instant))
     .filter(Number.isFinite);
 
-export const echelleDe = (instants: readonly number[], plafondElargi?: number): EchelleFrise => {
+export const echelleDe = (instantsDeLActiviteRecus: readonly number[], auDela: AuDelaDeLActivite = {}): EchelleFrise => {
+  const borne = auDela.borne === undefined ? [] : [Date.parse(auDela.borne)].filter(Number.isFinite);
+  const instants = [...instantsDeLActiviteRecus, ...borne];
   const finNormale = heureEntiereApres(Math.max(...instants) + UNE_HEURE);
   return {
     debut: heureEntiereAvant(Math.min(...instants) - UNE_HEURE),
-    fin: plafondElargi === undefined ? finNormale : Math.max(finNormale, heureEntiereApres(plafondElargi)),
+    fin: auDela.plafond === undefined ? finNormale : Math.max(finNormale, heureEntiereApres(auDela.plafond)),
   };
 };
 
