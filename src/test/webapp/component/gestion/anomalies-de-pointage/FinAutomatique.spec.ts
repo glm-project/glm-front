@@ -127,6 +127,15 @@ const whenClickingTheRowOfTheBarAt = (hour: number): void => {
   });
 };
 
+const thenTheClosureIsWholeInsideTheFrise = (): void => {
+  cy.get(dataSelector('anomalie-frise-plan')).then(plan => {
+    const { right } = requiredFixture(plan[0], 'plan de la frise').getBoundingClientRect();
+    cy.get(dataSelector('anomalie-cloture')).should(cloture => {
+      expect(requiredFixture(cloture[0], 'closure marker').getBoundingClientRect().right).to.be.at.most(right + 0.5);
+    });
+  });
+};
+
 const whenPressingEndOnTheHandle = (): void => {
   cy.get(dataSelector('anomalie-poignee')).focus();
   cy.get(dataSelector('anomalie-poignee')).trigger('keydown', { key: 'End' });
@@ -496,15 +505,6 @@ describe('Bound of the end on the frise in Gestion', () => {
     cy.get(dataSelector('anomalie-resolution')).should('be.visible');
   };
 
-  const thenTheClosureIsWholeInsideTheFrise = (): void => {
-    cy.get(dataSelector('anomalie-frise-plan')).then(plan => {
-      const { right } = requiredFixture(plan[0], 'plan de la frise').getBoundingClientRect();
-      cy.get(dataSelector('anomalie-cloture')).should(cloture => {
-        expect(requiredFixture(cloture[0], 'closure marker').getBoundingClientRect().right).to.be.at.most(right + 0.5);
-      });
-    });
-  };
-
   const givenTheDossierBoundedBy = (instant: Date): void => {
     cy.intercept('GET', suiviUrl, { body: { ...dossierFinAutomatiqueFixture(), borneDeFin: instantLocalFixture(instant) } });
   };
@@ -571,6 +571,23 @@ describe('Click on the frise in Gestion', () => {
       thenTheHandleHolds(new Date(2026, 8, 14, 14, 15));
     });
   });
+  [1280, 390].forEach(width => {
+    it(`should widen the frise to the closure with the button, which then shows the closure whole, at ${width} pixels`, () => {
+      whenOpeningTheFriseAt(width);
+      whenPressingTheFrameButton();
+
+      thenTheClosureIsWholeInsideTheFrise();
+      thenTheFrameButtonOffersToGoBack();
+    });
+  });
+
+  const whenPressingTheFrameButton = (): void => {
+    cy.get(dataSelector('anomalie-frise-cadre')).should('contain.text', 'Voir jusqu’à la clôture · jeu. 17 sept. 08:00').click();
+  };
+
+  const thenTheFrameButtonOffersToGoBack = (): void => {
+    cy.get(dataSelector('anomalie-frise-cadre')).should('contain.text', 'Revenir sur l’activité');
+  };
 });
 
 describe('Geometry of the frise in Gestion', () => {

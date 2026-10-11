@@ -6,6 +6,7 @@ import { instantLocalFixture } from '@test/utils/gestion/anomalies-de-pointage/I
 import { ActiviteAnomalieId } from '../../../domain/dossier/ActiviteAnomalieId';
 import { ActiviteEchue, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { PointageAnomalieId } from '../../../domain/dossier/PointageAnomalieId';
+import { LimiteDeLaFin } from '../../../domain/regularisation/CadreDeLaFin';
 import { VueDeFrise } from './DispositionFrise';
 import { FriseDossier } from './FriseDossier';
 import { DemandeDeDeplacement, DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
@@ -87,6 +88,8 @@ const placementFixture = (surcharge: Partial<PlacementDeLInstant> = {}): Placeme
 });
 
 const placementDeLaFixture = (): PlacementDeLInstant => placementFixture({ bornes: { min: instantAt('08:00'), max: instantAt('15:00') } });
+
+const limiteFixture = (par: LimiteDeLaFin['par'], heure: string, jour = 17): LimiteDeLaFin => ({ par, instant: instantAt(heure, jour) });
 
 const PLAN_WIDTH = 1000;
 
@@ -466,6 +469,110 @@ describe('Frise of a dossier', () => {
     await whenTheHandleIsRemoved();
 
     thenTheClosureIsNamed('20:00:00 · Clôture');
+  });
+
+  describe('of the button that widens the frise to the limit of the end', () => {
+    const avecLeDemarrageSuivant = (): VueDeFrise =>
+      avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00', pointageA('debut-suivant', 'DEMARRAGE', instantAt('08:00', 17)));
+    const avecLaCloture = (): VueDeFrise => avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00');
+
+    it.each([
+      {
+        cas: 'the next start of the key',
+        dossier: avecLeDemarrageSuivant,
+        limite: limiteFixture('BORNE', '08:00'),
+        texte: 'Voir jusqu’au démarrage suivant · jeu. 17 sept. 08:00',
+      },
+      {
+        cas: 'the closure',
+        dossier: avecLaCloture,
+        limite: limiteFixture('BORNE', '08:00'),
+        texte: 'Voir jusqu’à la clôture · jeu. 17 sept. 08:00',
+      },
+      {
+        cas: 'the clock, without a day',
+        dossier: dossierDeLaFinAutomatique,
+        limite: limiteFixture('HORLOGE', '18:00', 14),
+        texte: 'Voir jusqu’à maintenant',
+      },
+    ])('should offer to see up to $cas when the limit of the end falls after the frame', async ({ dossier, limite, texte }) => {
+      await whenRenderingTheFrise(dossier(), poigneeFixture('10:00'), undefined, limite);
+
+      thenTheFrameButtonReads(texte);
+    });
+
+    it.each([
+      { cas: 'within the frame', limite: limiteFixture('HORLOGE', '12:30', 14) },
+      { cas: 'on the end of the frame', limite: limiteFixture('HORLOGE', '13:00', 14) },
+      { cas: 'unknown', limite: undefined },
+    ])('should offer nothing when the limit of the end is $cas', async ({ limite }) => {
+      await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'), undefined, limite);
+
+      thenNoFrameButtonIsDrawn();
+    });
+
+    it('should offer nothing while the handle stands beyond the frame', async () => {
+      await whenRenderingTheFrise(
+        avecLaCloture(),
+        poigneeFixture('14:00', poigneeJusquaLe17()),
+        undefined,
+        limiteFixture('BORNE', '08:00'),
+      );
+
+      thenNoFrameButtonIsDrawn();
+    });
+
+    it('should show the whole frame, with the bound, by the same button which only changes its text', async () => {
+      await whenRenderingTheFrise(
+        avecLaCloture(),
+        poigneeFixture('10:00', poigneeJusquaLe17()),
+        undefined,
+        limiteFixture('BORNE', '08:00'),
+      );
+      const button = frameButton();
+
+      await whenPressingTheFrameButton();
+
+      thenTheFrameButtonReads('Revenir sur l’activité');
+      thenTheFrameButtonIs(button);
+      thenTheClosureIsNamed('08:00:00 · Clôture');
+    });
+
+    it('should bring the frame back to the activity by the same button, which only changes its text', async () => {
+      await whenRenderingTheFrise(
+        avecLaCloture(),
+        poigneeFixture('10:00', poigneeJusquaLe17()),
+        undefined,
+        limiteFixture('BORNE', '08:00'),
+      );
+      const button = frameButton();
+      await whenPressingTheFrameButton();
+
+      await whenPressingTheFrameButton();
+
+      thenTheFrameButtonReads('Voir jusqu’à la clôture · jeu. 17 sept. 08:00');
+      thenTheFrameButtonIs(button);
+      thenNoClosureIsDrawn();
+    });
+
+    it('should be a button that submits nothing', async () => {
+      await whenRenderingTheFrise(avecLaCloture(), poigneeFixture('10:00'), undefined, limiteFixture('BORNE', '08:00'));
+
+      thenTheFrameButtonSubmitsNothing();
+    });
+
+    it('should widen the frise to the bound once the end is regularised and no handle is left', async () => {
+      await whenRenderingTheFrise(
+        avecLaBorne(vueEntre('08:00', '12:00'), '20:00'),
+        undefined,
+        undefined,
+        limiteFixture('BORNE', '20:00', 14),
+      );
+
+      await whenPressingTheFrameButton();
+
+      thenTheClosureIsNamed('20:00:00 · Clôture');
+    });
   });
 
   it('should hold the handle on the edge of the frame, with the frame of the activity, while it stands on it', async () => {
@@ -884,8 +991,14 @@ describe('Frise of a dossier', () => {
     });
   });
 
-  const whenRenderingTheFrise = async (dossier: VueDeFrise, poignee?: PoigneeDeFrise, placement?: PlacementDeLInstant): Promise<void> => {
+  const whenRenderingTheFrise = async (
+    dossier: VueDeFrise,
+    poignee?: PoigneeDeFrise,
+    placement?: PlacementDeLInstant,
+    limite?: LimiteDeLaFin,
+  ): Promise<void> => {
     fixture = TestBed.createComponent(FriseDossier);
+    fixture.componentRef.setInput('limite', limite);
     fixture.componentRef.setInput('dossier', dossier);
     fixture.componentRef.setInput('poignee', poignee);
     fixture.componentRef.setInput('placement', placement);
@@ -909,6 +1022,33 @@ describe('Frise of a dossier', () => {
   const whenTheHandleIsRemoved = async (): Promise<void> => {
     fixture.componentRef.setInput('poignee', undefined);
     await fixture.whenStable();
+  };
+
+  const frameButton = (): HTMLButtonElement =>
+    requiredFixture(
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(dataSelector('anomalie-frise-cadre')),
+      'frame button',
+    );
+
+  const whenPressingTheFrameButton = async (): Promise<void> => {
+    frameButton().click();
+    await fixture.whenStable();
+  };
+
+  const thenTheFrameButtonIs = (expected: HTMLElement): void => {
+    expect(frameButton()).toBe(expected);
+  };
+
+  const thenTheFrameButtonSubmitsNothing = (): void => {
+    expect(frameButton().getAttribute('type')).toBe('button');
+  };
+
+  const thenTheFrameButtonReads = (expected: string): void => {
+    expect(frameButton().textContent.trim()).toBe(expected);
+  };
+
+  const thenNoFrameButtonIsDrawn = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('anomalie-frise-cadre'))).toBeNull();
   };
 
   const whenTheFriseIsMeasured = async (width: number): Promise<void> => {

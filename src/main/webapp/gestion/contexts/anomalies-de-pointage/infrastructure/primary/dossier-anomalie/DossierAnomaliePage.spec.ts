@@ -537,6 +537,50 @@ describe('Anomaly dossier page', () => {
       thenTheHandleHoldsAt(new Date(2026, 8, 14, 22, 30));
     });
 
+    it('should offer to see the frise up to the closure when it falls days after the end', async () => {
+      read.result = {
+        kind: 'DOSSIER',
+        dossier: { ...dossierFinAutomatiqueFixture(), borneDeFin: instantLocalFixture(new Date(2026, 8, 17, 8, 0)) },
+      };
+      whenTheClockIs(new Date(2026, 8, 20, 10, 0));
+
+      await whenRendering();
+
+      thenTextContains('anomalie-frise-cadre', 'Voir jusqu’à la clôture · jeu. 17 sept. 08:00');
+    });
+
+    it('should offer to see the frise up to now when the clock stands days after the end and nothing bounds it', async () => {
+      whenTheClockIs(new Date(2026, 8, 16, 10, 0));
+
+      await whenRendering();
+
+      thenTextContains('anomalie-frise-cadre', 'Voir jusqu’à maintenant');
+    });
+
+    it('should go on offering to see the bound of the end once the end is regularised', async () => {
+      read.result = {
+        kind: 'DOSSIER',
+        dossier: { ...dossierFinAutomatiqueFixture(), borneDeFin: instantLocalFixture(new Date(2026, 8, 17, 8, 0)) },
+      };
+      whenTheClockIs(new Date(2026, 8, 20, 10, 0));
+      await whenRendering();
+      await whenPressingOnTheHandle('ArrowLeft');
+
+      await whenValidating();
+
+      thenTextContains('anomalie-frise-cadre', 'Voir jusqu’à la clôture · jeu. 17 sept. 08:00');
+    });
+
+    it('should offer no widening up to now once the end is regularised, the clock bounding nothing anymore', async () => {
+      whenTheClockIs(new Date(2026, 8, 16, 10, 0));
+      await whenRendering();
+      await whenPressingOnTheHandle('ArrowLeft');
+
+      await whenValidating();
+
+      thenAbsent('anomalie-frise-cadre');
+    });
+
     it.each(['Home', 'End', 'ArrowLeft'])(
       'should leave the handle without hour and the validation unavailable when %s is pressed and no whole minute separates the start from the bound',
       async touche => {

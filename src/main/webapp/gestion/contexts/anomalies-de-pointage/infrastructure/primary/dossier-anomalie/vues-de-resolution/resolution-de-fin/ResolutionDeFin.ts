@@ -12,6 +12,7 @@ import { instantDeplace, uneMinuteEntiereEntre } from '../../../frise-dossier/De
 import {
   bornesDuFait,
   DeplacementDemande,
+  limiteDuDossier,
   PlacementDemande,
   placementDuDossier,
   poigneeDuDossier,
@@ -61,6 +62,10 @@ export class ResolutionDeFin {
   protected readonly placement = computed(() =>
     this.regularisee() === undefined ? placementDuDossier(this.dossier(), this.instant(), this.maintenant()) : undefined,
   );
+  protected readonly limite = computed(() => {
+    const limite = limiteDuDossier(this.dossier(), this.maintenant());
+    return this.regularisee() === undefined || limite.par === 'BORNE' ? limite : undefined;
+  });
   protected readonly validable = computed(() => new InstantPointage(this.instant()).isValid() && this.etat().kind !== 'EN_COURS');
   protected readonly libelleDeValider = computed(() =>
     new InstantPointage(this.instant()).isValid()

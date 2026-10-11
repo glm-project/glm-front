@@ -25,7 +25,7 @@ et des coûts reste au backend, selon l'[ADR 0047](../../../../../../documentati
 - **Régulariser la fin** : l'unique vue du dossier (`ResolutionDeFin`). Aucun autre acte n'existe : ni
   correction, ni annulation, ni aperçu, ni confirmation, ni reçu.
 - **Poignée** : l'heure de fin que le gestionnaire place sur la frise ; une saisie qui émet un instant.
-- **Cadre de la fin** (`CadreDeLaFin`) : Value Object qui rend les bornes de la poignée (voir « Poignée »).
+- **Cadre de la fin** (`CadreDeLaFin`) : Value Object qui rend les bornes de la poignée et la limite qui les plafonne (voir « Poignée »).
 - **Frise** : représentation, en présentation seule, de l'activité échue, du pointage qui l'ouvre, de la borne
   de fin et de la poignée sur une échelle de temps. Elle n'invente aucune fin ni aucune heure.
 - **Saisie de régularisation** (`SaisieDeRegularisation`) : activité, heure et identifiant de la commande à envoyer.
@@ -88,6 +88,9 @@ la frise passe au cadre complet. Ses bornes viennent de `CadreDeLaFin.depuis(dos
 - **maximum** : `min(maintenant, borneDeFin)`, soit le plus tôt de l'heure courante et de ce qui borne la fin.
   Elle peut dépasser l'échéance.
 
+`CadreDeLaFin.limite()` dit ce qui plafonne la fin, `BORNE` ou `HORLOGE`, avec son instant (le maximum, à la minute
+entière) ; la borne l'emporte quand elle ne suit pas l'horloge. La frise s'en sert pour nommer son bouton.
+
 Les bornes sont des pré-contrôles : le serveur reste l'autorité (`fin-avant-debut`, `fin-apres-borne`,
 `date-de-survenue-future`). Les instants se comparent comme instants (`InstantPointage`, nanosecondes
 comprises), jamais comme chaînes. Quand le minimum dépasse le maximum, la poignée ne bouge pas.
@@ -120,6 +123,12 @@ il se dessine, est serré contre le bord droit pour rester entier ; son heure re
 (`role="img"`) ; la poignée est un `slider` dans l'ordre de tabulation. Les tests lisent les attributs `data-*`,
 jamais les classes ; la position horizontale se prouve en Cypress sur la géométrie rendue des graduations
 (`AbscisseSurLaFrise.ts`).
+
+Un seul `<button type="button">` sous la frise (`anomalie-frise-cadre`), dont seul le texte change, bascule entre les
+deux cadres. Il est affiché si et seulement si la limite de la fin (reçue de la page, qui la lit dans `CadreDeLaFin`)
+dépasse `finDuCadre` et que la poignée n'est pas au-delà : « Voir jusqu'au démarrage suivant · jeu. 17 sept. 08:00 »,
+« Voir jusqu'à la clôture · … » ou « Voir jusqu'à maintenant » ; en cadre complet, « Revenir sur l'activité ». Après la
+régularisation, plus de poignée : seule la borne de fin fonde le bouton, l'horloge ne plafonne plus rien.
 
 ### Validation
 

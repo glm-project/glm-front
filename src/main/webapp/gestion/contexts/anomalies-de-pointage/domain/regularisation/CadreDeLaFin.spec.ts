@@ -58,4 +58,40 @@ describe('Frame of a fact proposed on a dossier', () => {
 
     expect(Date.parse(bornes.max)).toBe(Date.parse(MAINTENANT));
   });
+
+  it.each([
+    {
+      cas: 'the bound of the end when it comes before the clock',
+      borneDeFin: '2026-09-14T14:30:00Z',
+      par: 'BORNE',
+      instant: '2026-09-14T14:30:00.000Z',
+    },
+    {
+      cas: 'the clock when the bound of the end comes after it',
+      borneDeFin: '2026-09-14T22:00:00Z',
+      par: 'HORLOGE',
+      instant: '2026-09-14T18:00:00.000Z',
+    },
+    { cas: 'the clock when nothing bounds the end', borneDeFin: undefined, par: 'HORLOGE', instant: '2026-09-14T18:00:00.000Z' },
+    {
+      cas: 'the bound of the end when it falls on the clock',
+      borneDeFin: '2026-09-14T18:00:30Z',
+      par: 'BORNE',
+      instant: '2026-09-14T18:00:00.000Z',
+    },
+  ] as const)('should limit the end by $cas', ({ borneDeFin, par, instant }) => {
+    const dossier = dossierFixture('2026-09-14T08:00:00-03:00', borneDeFin);
+
+    const limite = CadreDeLaFin.depuis(dossier, MAINTENANT).limite();
+
+    expect(limite).toEqual({ par, instant });
+  });
+
+  it('should compare the bound of the end and the clock as instants, whatever their writing', () => {
+    const dossier = dossierFixture('2026-09-14T08:00:00-03:00', '2026-09-14T17:59:00Z');
+
+    const limite = CadreDeLaFin.depuis(dossier, MAINTENANT).limite();
+
+    expect(limite.par).toBe('BORNE');
+  });
 });

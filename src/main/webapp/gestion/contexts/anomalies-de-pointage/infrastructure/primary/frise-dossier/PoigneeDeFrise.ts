@@ -1,7 +1,7 @@
 import { formatInstantTimeUnambiguous } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { DossierAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { InstantPointage } from '../../../domain/dossier/InstantPointage';
-import { BornesDeLaFin, CadreDeLaFin } from '../../../domain/regularisation/CadreDeLaFin';
+import { BornesDeLaFin, CadreDeLaFin, LimiteDeLaFin } from '../../../domain/regularisation/CadreDeLaFin';
 
 export type DemandeDeDeplacement =
   | { readonly kind: 'DE'; readonly minutes: number }
@@ -25,6 +25,9 @@ type DossierDeLaFrise = Pick<DossierAnomalie, 'activite' | 'borneDeFin'>;
 
 export const bornesDuFait = (dossier: DossierDeLaFrise, maintenant: string): BornesDeLaFin =>
   CadreDeLaFin.depuis(dossier, maintenant).bornes();
+
+export const limiteDuDossier = (dossier: DossierDeLaFrise, maintenant: string): LimiteDeLaFin =>
+  CadreDeLaFin.depuis(dossier, maintenant).limite();
 
 export const texteDeLHeure = (instant: string): string => formatInstantTimeUnambiguous(new Date(instant));
 
