@@ -1,6 +1,11 @@
 <main class="mx-auto max-w-7xl px-4 py-6 text-ink md:px-8 md:py-8" aria-labelledby="cout-de-revient-heading">
   <header class="mb-6">
-    <a class="gestion-retour" routerLink="/atelier" [attr.aria-label]="libelles.retourAria" data-selector="cout-retour"
+    <a
+      class="gestion-retour"
+      routerLink="/produits"
+      [queryParams]="{ etat: 'en-atelier' }"
+      [attr.aria-label]="libelles.retourAria"
+      data-selector="cout-retour"
       ><glm-icon name="arrowLeft" /> {{ libelles.retour }}</a
     >
     <h1 id="cout-de-revient-heading" class="mt-2 text-title">{{ libelles.titre }}</h1>

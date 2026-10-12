@@ -346,7 +346,7 @@ describe('Navigation between cost reports', () => {
   const whenLeavingAndReturningToTheReport = (): void => {
     cy.get(dataSelector('cout-element-trigger')).should('be.enabled');
     cy.get(dataSelector('cout-retour')).click();
-    cy.location('pathname').should('equal', '/atelier');
+    cy.location('pathname').should('equal', '/produits');
     cy.go('back');
   };
   const whenVisitingTheUnlistedReportAndChoosingTheMould = (): void => {
@@ -364,7 +364,9 @@ describe('Navigation between cost reports', () => {
   };
   const thenTheNewMountReloadedTheReference = (): void => {
     cy.get(dataSelector('cout-total')).should('contain.text', '700,00');
-    cy.get('@elementsRead.all').should('have.length', 2);
+    cy.get<{ request: { query: Record<string, unknown> } }[]>('@elementsRead.all').should(lectures => {
+      expect(lectures.filter(lecture => !('cycle' in lecture.request.query))).to.have.length(2);
+    });
     cy.get('@reportRead.all').should('have.length', 2);
   };
   const thenTheMouldReportIsDisplayedAfterTheUnlistedConsultation = (): void => {
