@@ -1,6 +1,7 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
+import { EnregistrementDeFichierPort } from '@/gestion/shared/enregistrement-de-fichier/domain/EnregistrementDeFichierPort';
 import { Component, computed, inject, linkedSignal, resource, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,7 +9,6 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ElementChiffre } from '../../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../../domain/element/ElementChiffreId';
 import { ElementDisponible } from '../../../domain/element/ElementDisponible';
-import { EnregistrementDeFichierPort } from '../../../domain/export/EnregistrementDeFichierPort';
 import { FormatDExport } from '../../../domain/export/FormatDExport';
 import { CoutDeRevient } from '../../../domain/rapport/CoutDeRevient';
 import { CoutDeRevientPort } from '../../../domain/rapport/CoutDeRevientPort';

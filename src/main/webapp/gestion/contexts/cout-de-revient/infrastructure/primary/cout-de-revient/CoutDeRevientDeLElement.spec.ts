@@ -1,4 +1,6 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { EnregistrementDeFichierPort } from '@/gestion/shared/enregistrement-de-fichier/domain/EnregistrementDeFichierPort';
+import { FichierExporte } from '@/gestion/shared/enregistrement-de-fichier/domain/FichierExporte';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router, UrlTree } from '@angular/router';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
@@ -9,8 +11,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CategorieDElementChiffre } from '../../../domain/element/CategorieDElementChiffre';
 import { ElementChiffre } from '../../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../../domain/element/ElementChiffreId';
-import { EnregistrementDeFichierPort } from '../../../domain/export/EnregistrementDeFichierPort';
-import { FichierExporte } from '../../../domain/export/FichierExporte';
 import { FormatDExport } from '../../../domain/export/FormatDExport';
 import { Cout } from '../../../domain/montant/Cout';
 import { Montant } from '../../../domain/montant/Montant';
