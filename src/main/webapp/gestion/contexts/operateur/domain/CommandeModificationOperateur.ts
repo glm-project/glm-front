@@ -11,6 +11,6 @@ export interface CommandeModificationOperateur {
   readonly nom: NomOperateur;
   readonly prenom: PrenomOperateur;
   readonly identifiant: Identifiant | undefined;
-  readonly tauxHoraire: TauxHoraire | undefined;
+  readonly tauxHoraire: TauxHoraire;
   readonly postes: readonly PosteHabilitableId[];
 }

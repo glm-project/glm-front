@@ -38,6 +38,14 @@ const jeanFixture = new Operateur(new OperateurId('jean'), {
   postes: [tourFixture],
   natures: ['tournage'],
 });
+const sansTauxFixture = new Operateur(new OperateurId('lea'), {
+  nom: new NomOperateur('Martin'),
+  prenom: new PrenomOperateur('Léa'),
+  identifiant: undefined,
+  tauxHoraire: undefined,
+  postes: [],
+  natures: [],
+});
 
 describe('OperateurFormDialog', () => {
   let fixture: ComponentFixture<DialogHostFixture>;
@@ -75,13 +83,14 @@ describe('OperateurFormDialog', () => {
 
     expect(text('operateur-nom-error')).toContain('Le nom est obligatoire');
     expect(text('operateur-prenom-error')).toContain('Le prénom est obligatoire');
+    expect(text('operateur-taux-error')).toBe('Le taux horaire est obligatoire.');
     expect(port.enregistrements).toEqual([]);
     expect(closed).toEqual([]);
   });
 
   it('should declare an operator from the entered values and close after success', async () => {
     await whenOpening();
-    await whenFillingIdentity();
+    await whenFillingRequiredEntries();
     await whenEntering('operateur-identifiant', '049');
     await whenEntering('operateur-taux', '22,5');
     await whenSubmitting();
@@ -110,12 +119,11 @@ describe('OperateurFormDialog', () => {
     expect(input('operateur-identifiant').value).toBe(identifiant);
   });
 
-  it('should prefill and revise an existing operator, dropping its blank optional entries', async () => {
+  it('should prefill and revise an existing operator, dropping its blank payroll number', async () => {
     await whenOpening(jeanFixture);
     const initialIdentifiant = input('operateur-identifiant').value;
     await whenEntering('operateur-nom', 'Durand');
     await whenEntering('operateur-identifiant', '');
-    await whenEntering('operateur-taux', '');
     await whenSubmitting();
     await whenClosed();
 
@@ -127,10 +135,21 @@ describe('OperateurFormDialog', () => {
         nom: new NomOperateur('Durand'),
         prenom: new PrenomOperateur('Jean'),
         identifiant: undefined,
-        tauxHoraire: undefined,
+        tauxHoraire: new TauxHoraire(22),
         postes: [tourFixture.id],
       },
     ]);
+  });
+
+  it('should ask for the hourly rate before revising an operator who has none', async () => {
+    await whenOpening(sansTauxFixture);
+    const initialRate = input('operateur-taux').value;
+    await whenSubmitting();
+
+    expect(initialRate).toBe('');
+    expect(text('operateur-taux-error')).toBe('Le taux horaire est obligatoire.');
+    expect(port.enregistrements).toEqual([]);
+    expect(closed).toEqual([]);
   });
 
   it('should suggest workstations matching the search on label or trade', async () => {
@@ -171,7 +190,7 @@ describe('OperateurFormDialog', () => {
 
   it('should send the granted habilitations with the declaration', async () => {
     await whenOpening();
-    await whenFillingIdentity();
+    await whenFillingRequiredEntries();
     await whenEntering('operateur-poste-recherche', 'tour');
     await whenClicking('operateur-poste-option');
     await whenSubmitting();
@@ -190,7 +209,7 @@ describe('OperateurFormDialog', () => {
   it('should show a duplicate identity refusal until the manager changes the family name', async () => {
     givenDuplicateIdentityIsRefused();
     await whenOpening();
-    await whenFillingIdentity();
+    await whenFillingRequiredEntries();
     await whenSubmitting();
     const duplicate = text('operateur-nom-error');
     const remainedOpen = closed.length;
@@ -204,7 +223,7 @@ describe('OperateurFormDialog', () => {
   it('should show a duplicate payroll number refusal on its own field', async () => {
     givenDuplicatePayrollNumberIsRefused();
     await whenOpening();
-    await whenFillingIdentity();
+    await whenFillingRequiredEntries();
     await whenEntering('operateur-identifiant', '049');
     await whenSubmitting();
 
@@ -224,7 +243,7 @@ describe('OperateurFormDialog', () => {
   it('should report a technical failure and let the manager retry', async () => {
     givenSavingFails();
     await whenOpening();
-    await whenFillingIdentity();
+    await whenFillingRequiredEntries();
     await whenSubmitting();
 
     expect(text('operateur-technical-error')).toContain('L’enregistrement a échoué.');
@@ -236,7 +255,7 @@ describe('OperateurFormDialog', () => {
     const deferred = new DeferredFixture<Result<void, RefusCreationOperateur>>();
     givenSavingIsPending(deferred);
     await whenOpening();
-    await whenFillingIdentity();
+    await whenFillingRequiredEntries();
     await whenSubmitting();
     const busy = button('operateur-save').disabled;
     await whenSubmitting();
@@ -299,9 +318,10 @@ describe('OperateurFormDialog', () => {
     field.dispatchEvent(new Event('input', { bubbles: true }));
     await fixture.whenStable();
   };
-  const whenFillingIdentity = async (): Promise<void> => {
+  const whenFillingRequiredEntries = async (): Promise<void> => {
     await whenEntering('operateur-nom', 'Dupont');
     await whenEntering('operateur-prenom', 'Jean');
+    await whenEntering('operateur-taux', '22');
   };
   const whenSubmitting = async (): Promise<void> => {
     requiredFixture(document.querySelector(dataSelector('operateur-form')), 'form').dispatchEvent(

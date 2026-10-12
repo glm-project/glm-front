@@ -36,6 +36,7 @@ describe('Operator interactions and rendering', () => {
     whenOpeningCreation();
     whenReplacing('operateur-nom', 'Dupont');
     whenReplacing('operateur-prenom', 'Jean');
+    whenReplacing('operateur-taux', '22');
     whenSubmittingInvalidEntries();
     whenTryingToDismissPendingSave();
     whenCompletingCreation(response);
@@ -179,6 +180,7 @@ const whenDeclaring = (nom: string, prenom: string, identifiant: string): void =
   whenReplacing('operateur-nom', nom);
   whenReplacing('operateur-prenom', prenom);
   whenReplacing('operateur-identifiant', identifiant);
+  whenReplacing('operateur-taux', '22');
   whenSaving();
 };
 const whenSaving = (): void => {
@@ -254,6 +256,7 @@ const thenValidationIsVisible = (api: OperateursApiFixture): void => {
   cy.get(dataSelector('operateur-nom-error')).should('contain.text', 'obligatoire');
   cy.get(dataSelector('operateur-prenom-error')).should('contain.text', 'obligatoire');
   cy.get(dataSelector('operateur-taux-error')).should('contain.text', 'strictement positif');
+  cy.get(dataSelector('operateur-taux')).should('have.attr', 'required');
   cy.wrap(api.writes).should('be.empty');
 };
 const thenNoHabilitationRemains = (): void => {

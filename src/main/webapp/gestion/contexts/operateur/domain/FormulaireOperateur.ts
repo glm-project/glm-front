@@ -59,7 +59,7 @@ export class FormulaireOperateur {
     const nom = new NomOperateur(this.saisie.nom);
     const prenom = new PrenomOperateur(this.saisie.prenom);
     const identifiant = this.identifiantEstRenseigne() ? new Identifiant(this.saisie.identifiant) : undefined;
-    const tauxHoraire = this.tauxEstRenseigne() ? new TauxHoraire(this.tauxNumerique()) : undefined;
+    const tauxHoraire = new TauxHoraire(this.tauxNumerique());
     const postes = this.saisie.postes.map(poste => poste.id);
 
     if (this.id === undefined) {
@@ -133,7 +133,7 @@ export class FormulaireOperateur {
   }
 
   erreurTauxHoraire(): string | undefined {
-    return this.tauxEstRenseigne() ? TauxHoraire.erreur(this.tauxNumerique()) : undefined;
+    return this.tauxEstRenseigne() ? TauxHoraire.erreur(this.tauxNumerique()) : 'Le taux horaire est obligatoire.';
   }
 
   erreurEnregistrement(): string | undefined {

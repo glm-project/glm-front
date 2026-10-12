@@ -268,7 +268,7 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, cr
     thenCatalogueIs(postes, []);
   });
 
-  it('should declare an operator with its optional entries and derive its trades', async () => {
+  it('should declare an operator with its payroll number, its hourly rate and its habilitations and derive its trades', async () => {
     givenReferential([], [tourFixture, scieFixture]);
 
     const resultat = await whenDeclaring('Dupont', 'Jean', { identifiant: '049', tauxHoraire: 22, postes: ['tour-1', 'scie-1'] });
@@ -282,31 +282,31 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, cr
     });
   });
 
-  it('should declare an operator without payroll number, hourly rate nor habilitation', async () => {
+  it('should declare an operator without payroll number nor habilitation', async () => {
     givenReferential([], [tourFixture]);
 
-    const resultat = await whenDeclaring('Martin', 'Léa', {});
+    const resultat = await whenDeclaring('Martin', 'Léa', { tauxHoraire: 18 });
 
     thenCommandSucceeded(resultat);
-    await thenOperateurExists('Martin', { postes: [], natures: [] });
+    await thenOperateurExists('Martin', { tauxHoraire: 18, postes: [], natures: [] });
   });
 
   it('should replace the previous habilitations on revision', async () => {
     givenReferential([jeanFixture], [tourFixture, scieFixture]);
 
-    const resultat = await whenRevising('jean', 'Dupont', 'Jean', { postes: ['scie-1'] });
+    const resultat = await whenRevising('jean', 'Dupont', 'Jean', { tauxHoraire: 22, postes: ['scie-1'] });
 
     thenCommandSucceeded(resultat);
-    await thenOperateurExists('Dupont', { postes: ['Scie 1'], natures: ['sciage'] });
+    await thenOperateurExists('Dupont', { tauxHoraire: 22, postes: ['Scie 1'], natures: ['sciage'] });
   });
 
-  it('should drop the payroll number and the hourly rate left blank on revision', async () => {
+  it('should drop the payroll number left blank on revision', async () => {
     givenReferential([jeanFixture], [tourFixture]);
 
-    const resultat = await whenRevising('jean', 'Dupont', 'Jean', { postes: ['tour-1'] });
+    const resultat = await whenRevising('jean', 'Dupont', 'Jean', { tauxHoraire: 24, postes: ['tour-1'] });
 
     thenCommandSucceeded(resultat);
-    await thenOperateurExists('Dupont', { postes: ['Tour 1'], natures: ['tournage'] });
+    await thenOperateurExists('Dupont', { tauxHoraire: 24, postes: ['Tour 1'], natures: ['tournage'] });
   });
 
   it('should remove an operator and reflect its absence in queries', async () => {
@@ -390,7 +390,7 @@ describe.each(adapters)('OperateursPort contract, honoured by %s', (_adapter, cr
 
 interface OptionsOperateur {
   readonly identifiant?: string;
-  readonly tauxHoraire?: number;
+  readonly tauxHoraire: number;
   readonly postes?: readonly string[];
 }
 
@@ -408,7 +408,7 @@ const attributs = (nom: string, prenom: string, options: OptionsOperateur) => ({
   nom: new NomOperateur(nom),
   prenom: new PrenomOperateur(prenom),
   identifiant: options.identifiant === undefined ? undefined : new Identifiant(options.identifiant),
-  tauxHoraire: options.tauxHoraire === undefined ? undefined : new TauxHoraire(options.tauxHoraire),
+  tauxHoraire: new TauxHoraire(options.tauxHoraire),
   postes: (options.postes ?? []).map(id => new PosteHabilitableId(id)),
 });
 
@@ -540,7 +540,7 @@ describe('Beyond the contract: HttpOperateurs', () => {
     }));
 
   const whenCommandStarts = (action: 'creer' | 'modifier' | 'supprimer') => {
-    const communs = attributs('Dupont', 'Jean', { postes: ['tour-1'] });
+    const communs = attributs('Dupont', 'Jean', { tauxHoraire: 22, postes: ['tour-1'] });
     switch (action) {
       case 'creer':
         return port.creer({ type: 'CREATION', ...communs });

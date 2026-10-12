@@ -4,13 +4,13 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 
 ## Langage
 
-**Opérateur** : personne de l'atelier qui pointe du temps. Elle porte une identité, éventuellement un identifiant et un taux horaire, et un ensemble d'habilitations.
+**Opérateur** : personne de l'atelier qui pointe du temps. Elle porte une identité, éventuellement un identifiant, un taux horaire et un ensemble d'habilitations.
 
 **Identité** : le couple nom et prénom. C'est elle qui distingue deux opérateurs, chacun obligatoire et ne dépassant pas 100 caractères.
 
 **Identifiant** : code de 1 à 6 chiffres que l'entreprise donne elle-même à ses collaborateurs, et qu'ils tapent au pupitre. Une chaîne, pas un nombre : `007` reste distinct de `7`. Facultatif, car toutes les entreprises n'en attribuent pas ; unique dès qu'il est renseigné. Ce n'est ni un secret ni un moyen de connexion.
 
-**Taux horaire** : taux appliqué au temps pointé par l'opérateur, destiné au coût de revient. Facultatif, et strictement positif lorsqu'il est renseigné.
+**Taux horaire** : taux appliqué au temps pointé par l'opérateur, destiné au coût de revient. Exigé pour déclarer ou réviser un opérateur, et strictement positif. Un opérateur existant sans taux horaire s'affiche normalement (« Non renseigné ») ; il faut seulement le renseigner pour le réviser.
 
 **Poste habilitable** : poste de travail de l'atelier sur lequel un opérateur peut être habilité. Le même objet décrit une entrée du catalogue proposé à la saisie et une habilitation déjà acquise.
 
@@ -22,7 +22,7 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 
 ## Modèle de domaine
 
-- **Operateur** : agrégat racine représentant un opérateur déclaré, portant son `OperateurId` immuable, son identité, son identifiant et son taux horaire éventuels, ses postes habilités et ses métiers déduits.
+- **Operateur** : agrégat racine représentant un opérateur déclaré, portant son `OperateurId` immuable, son identité, son identifiant éventuel, son taux horaire (absent chez un opérateur déclaré avant qu'il soit exigé), ses postes habilités et ses métiers déduits.
 - **OperateurId** : Value Object représentant l'identifiant unique et immuable d'un opérateur.
 - **NomOperateur**, **PrenomOperateur** : Value Objects garantissant un texte non vide et borné à 100 caractères.
 - **Identifiant** : Value Object garantissant 1 à 6 chiffres. `Identifiant.saisie` ne garde d'une frappe que ses six premiers chiffres, ce qui limite le champ du formulaire aux chiffres. Son caractère facultatif est porté par l'absence de valeur, pas par le Value Object.
@@ -40,7 +40,7 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 
 - L'identité, couple nom et prénom, est unique dans l'entreprise. Un refus 409 serveur (`IdentiteDejaUtilisee`) est reporté sur le champ nom sans fermer le formulaire, et disparaît dès que le nom ou le prénom change.
 - L'identifiant est facultatif et unique dès qu'il est renseigné. Un identifiant laissé vide est retiré de la fiche. Le refus 409 (`IdentifiantDejaUtilise`) est reporté sur le champ identifiant.
-- Le taux horaire est facultatif et strictement positif. Laissé vide, il est retiré plutôt que ramené à zéro.
+- Le taux horaire est exigé et strictement positif : le tarif est figé sur le pointage à sa saisie, et un pointage sans tarif rend le coût de revient non exportable. Laissé vide, il bloque l'enregistrement sur son champ.
 - Les métiers ne sont jamais saisis. Le serveur les déduit des natures des postes habilités et les rend triés ; ce contexte les lit et les affiche sans les recalculer.
 - La liste de postes fournie à la révision remplace la précédente. Rien n'est copié du poste : seul son identifiant est retenu, libellé et nature sont relus à chaque lecture, si bien qu'un poste renommé s'affiche renommé partout.
 - Un opérateur au nom duquel du temps a été pointé ne peut pas être supprimé : le journal d'atelier ne retient que son identifiant, et sa disparition laisserait des heures sans personne. Le refus 409 (`OperateurAyantPointe`) affiche un message explicatif.
