@@ -58,8 +58,24 @@ Une adresse invalide au montage n'acquiert ni relevé ni liste.
   aujourd'hui se déduisent du jour fourni par le primaire.
 
 Ce contexte n'importe aucun contexte de `pupitre`, `operateur`, `poste` ou `element-de-fabrication`.
-Il possède ses identifiants et reçoit les noms utiles des rapports. Le lien depuis les opérateurs est un
-`routerLink`. L'identifiant de saisie au pupitre n'est ni porté par ces rapports ni acquis pour ce choix.
+
+## Rapport d’activité
+
+La fenêtre `RapportDActiviteDialog` prépare le rapport d’activité d’un opérateur (glm-front#290). La page
+Opérateurs l’ouvre depuis chaque ligne en ne lui passant que l’identifiant, le prénom et le nom : le contexte
+`operateur` ne dépend d’aucun type de ce domaine.
+
+- **Période du rapport** : `PeriodeDuRapport`, une `SemaineISO` ou un `MoisCivil`. Elle s’ouvre sur la semaine
+  d’aujourd’hui ; aucune période qui n’a pas commencé n’est proposée. Passer de la semaine au mois, et
+  inversement, garde aujourd’hui sauf si la période est passée : on part alors de son premier jour.
+- **Résumé** : `ResumeDuRapport`, lu par `RapportDActivitePort` sur
+  `GET /api/syntheses-des-heures/{operateurId}/rapport`. Le temps pointé vient du serveur : une heure sur deux
+  éléments y compte deux fois, comme dans le relevé. Un résumé d’une autre période que celle demandée est
+  refusé et signalé une fois.
+- Vocabulaire à l’écran : « temps pointé », « pointées », jamais « heures travaillées » ni présence. Aucun
+  identifiant d’opérateur dans le rapport.
+  Il possède ses identifiants et reçoit les noms utiles des rapports. Le lien depuis les opérateurs est un
+  `routerLink`. L'identifiant de saisie au pupitre n'est ni porté par ces rapports ni acquis pour ce choix.
 
 ## Restitution
 

@@ -4,7 +4,7 @@ import { coutDeRevientProvider } from './cout-de-revient.provider';
 import { elementsDeFabricationProvider } from './elements-de-fabrication.provider';
 import { operateursProvider } from './operateurs.provider';
 import { postesProvider } from './postes.provider';
-import { releveDesHeuresProvider } from './releve-des-heures.provider';
+import { rapportDActiviteProvider, releveDesHeuresProvider } from './releve-des-heures.provider';
 import { reservedToGestionnaire } from './shared/authentication/infrastructure/primary/reserved-to-gestionnaire.guard';
 import { supervisionAtelierProvider } from './supervision-atelier.provider';
 
@@ -49,7 +49,7 @@ export const routes: Routes = [
   {
     path: 'operateurs',
     loadComponent: () => import('./contexts/operateur/infrastructure/primary/operateurs/Operateurs').then(m => m.Operateurs),
-    providers: operateursProvider,
+    providers: [...operateursProvider, ...rapportDActiviteProvider],
   },
   {
     path: 'operateurs/:operateur/heures',

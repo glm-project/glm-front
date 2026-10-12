@@ -1,4 +1,8 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
+import {
+  RapportDActiviteDialog,
+  RapportDActiviteDialogData,
+} from '@/gestion/contexts/releve-des-heures/infrastructure/primary/rapport-d-activite/RapportDActiviteDialog';
 import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
 import {
   createPaginatorIntl,
@@ -108,6 +112,15 @@ export class Operateurs implements OnInit {
       if (saved) {
         void this.load();
       }
+    });
+  }
+
+  protected openRapport(operateur: Operateur): void {
+    this.dialogs.open<RapportDActiviteDialog, RapportDActiviteDialogData>(RapportDActiviteDialog, {
+      data: { operateur: operateur.id.value, prenom: operateur.prenom.value, nom: operateur.nom.value },
+      viewContainerRef: this.viewContainerRef,
+      width: '32rem',
+      maxWidth: 'calc(100vw - 2rem)',
     });
   }
 

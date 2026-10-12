@@ -1,0 +1,75 @@
+<h2 mat-dialog-title class="text-section" data-selector="rapport-titre">Rapport d’activité</h2>
+<mat-dialog-content>
+  <p class="mb-5 text-body-sm text-ink-muted" data-selector="rapport-operateur">{{ identite }}</p>
+
+  <section class="mb-5" aria-labelledby="rapport-periode-label">
+    <p id="rapport-periode-label" class="mb-2 text-body-sm font-semibold text-ink-muted">Période</p>
+    <div class="mb-3 flex gap-2" role="group" aria-label="Durée de la période">
+      <button
+        mat-stroked-button
+        type="button"
+        [attr.aria-pressed]="periode().borne.genre === 'SEMAINE'"
+        (click)="parSemaine()"
+        data-selector="rapport-par-semaine"
+      >
+        Semaine
+      </button>
+      <button
+        mat-stroked-button
+        type="button"
+        [attr.aria-pressed]="periode().borne.genre === 'MOIS'"
+        (click)="parMois()"
+        data-selector="rapport-par-mois"
+      >
+        Mois
+      </button>
+    </div>
+    <div class="flex items-center gap-2">
+      @if (precedente(); as precedente) {
+      <button
+        mat-icon-button
+        type="button"
+        aria-label="Période précédente"
+        (click)="periode.set(precedente)"
+        data-selector="rapport-precedente"
+      >
+        <glm-icon name="chevronLeft" />
+      </button>
+      } @else {
+      <button mat-icon-button type="button" aria-label="Période précédente" disabled data-selector="rapport-precedente">
+        <glm-icon name="chevronLeft" />
+      </button>
+      }
+      <p class="flex-1 text-center text-body font-semibold" aria-live="polite" data-selector="rapport-periode">{{ libellePeriode() }}</p>
+      @if (suivante(); as suivante) {
+      <button mat-icon-button type="button" aria-label="Période suivante" (click)="periode.set(suivante)" data-selector="rapport-suivante">
+        <glm-icon name="chevronRight" />
+      </button>
+      } @else {
+      <button mat-icon-button type="button" aria-label="Période suivante" disabled data-selector="rapport-suivante">
+        <glm-icon name="chevronRight" />
+      </button>
+      }
+    </div>
+    @if (resume.isLoading()) {
+    <p role="status" class="mt-2 text-center text-body-sm text-ink-muted" data-selector="rapport-resume-chargement">
+      Lecture de la période…
+    </p>
+    } @else if (resume.error()) {
+    <glm-error-message
+      class="mt-2"
+      [inline]="true"
+      message="Impossible de lire la période. Vérifiez la connexion puis réessayez."
+      retryLabel="Réessayer"
+      retrySelector="rapport-resume-reessayer"
+      (retryRequested)="resume.reload()"
+      data-selector="rapport-resume-echec"
+    />
+    } @else if (resume.value(); as valeur) {
+    <p class="mt-2 text-center text-body-sm text-ink-muted" data-selector="rapport-resume">{{ libelleResume(valeur) }}</p>
+    }
+  </section>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close data-selector="rapport-fermer">Fermer</button>
+</mat-dialog-actions>
