@@ -34,6 +34,15 @@ describe('Manufacturing element referential in gestion', () => {
     thenAddressIs('?etat=en-preparation');
   });
 
+  it('should put a product into the workshop from its row and keep the products in preparation shown', () => {
+    givenProductsInTheirCycles().installMiseALAtelier();
+    whenVisiting('/produits?etat=en-preparation');
+    whenPuttingFirstProductIntoTheWorkshop();
+
+    thenNoProductListed();
+    thenCountersAre(['0', '2', '0']);
+  });
+
   it('should keep the products in preparation on their own tab', () => {
     givenProductsInTheirCycles();
     whenVisitingReferential();
@@ -152,13 +161,27 @@ const givenReferential = (nombre = 0): ElementsApiFixture => {
 const givenProductsInPreparation = (nombre: number): void => {
   new ElementsApiFixture(elementsFixture(nombre, 'EN_PREPARATION')).install();
 };
-const givenProductsInTheirCycles = (): void => {
+const givenProductsInTheirCycles = (): ElementsApiFixture => {
   const [enAtelier] = elementsFixture(1);
   const [enPreparation] = elementsFixture(1, 'EN_PREPARATION');
-  new ElementsApiFixture([
+  const api = new ElementsApiFixture([
     ...(enAtelier === undefined ? [] : [enAtelier]),
     ...(enPreparation === undefined ? [] : [{ ...enPreparation, id: 'element-2', reference: '2001' }]),
-  ]).install();
+  ]);
+  api.install();
+  return api;
+};
+const whenPuttingFirstProductIntoTheWorkshop = (): void => {
+  cy.get(dataSelector('element-mise-a-l-atelier')).first().click();
+  cy.wait('@miseALAtelier');
+};
+const thenNoProductListed = (): void => {
+  cy.get(dataSelector('elements-empty')).should('contain.text', 'Aucun produit en préparation');
+};
+const thenCountersAre = (compteurs: readonly string[]): void => {
+  cy.get(dataSelector('elements-compteur')).should(elements => {
+    expect(Array.from(elements, element => element.textContent.trim())).to.deep.equal(compteurs);
+  });
 };
 const whenVisiting = (url: string): void => {
   cy.viewport(1280, 900);

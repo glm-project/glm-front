@@ -22,18 +22,16 @@ describe('Putting moules and OF at the workshop from gestion', () => {
     thenEngagementCarriedOnlyTheElement(api);
   });
 
-  it('should aim the engagement at the element the referential row pointed at', () => {
+  it('should aim the engagement at the element its address names', () => {
     givenWorkshop(0, 2);
-    whenVisitingReferential();
-    whenSendingFirstElementToWorkshop();
+    whenVisitingWorkshopAimedAt('element-1');
 
     thenCandidateIsAimedAt('1015');
   });
 
   it('should put the aimed element at the workshop and list it', () => {
     givenWorkshop(0, 2);
-    whenVisitingReferential();
-    whenSendingFirstElementToWorkshop();
+    whenVisitingWorkshopAimedAt('element-1');
     whenConfirmingAimedEngagement();
 
     thenElementIsAtWorkshop('PRD-2026-000001', 'MOULE', 'En attente');
@@ -77,7 +75,7 @@ describe('Putting moules and OF at the workshop from gestion', () => {
 });
 
 const givenWorkshop = (engages: number, engageables: number): AtelierApiFixture => {
-  const referentiel = new ElementsApiFixture(elementsFixture(Math.max(engages, engageables), 'EN_PREPARATION'));
+  const referentiel = new ElementsApiFixture(elementsFixture(Math.max(engages, engageables)));
   referentiel.install();
   const api = new AtelierApiFixture(suivisFixture(engages));
   api.engageables = engageablesFixture(Math.max(engages, engageables));
@@ -90,11 +88,10 @@ const whenVisitingWorkshop = (): void => {
   cy.visit('/atelier');
   cy.wait('@atelierRead');
 };
-const whenVisitingReferential = (): void => {
+const whenVisitingWorkshopAimedAt = (element: string): void => {
   cy.viewport(1280, 900);
-  cy.visit('/produits');
-  cy.get(dataSelector('elements-cycle-EN_PREPARATION')).click();
-  cy.wait('@elementsRead');
+  cy.visit(`/atelier?element=${element}`);
+  cy.wait('@elementRead');
 };
 const whenOpeningFromTheMenu = (): void => {
   cy.visit('/');
@@ -108,10 +105,6 @@ const whenOpeningEngagement = (): void => {
 const whenEngagingFirstCandidate = (): void => {
   cy.get(dataSelector('engageable-engage')).first().click();
   cy.wait('@atelierEngage');
-};
-const whenSendingFirstElementToWorkshop = (): void => {
-  cy.get(dataSelector('element-mise-a-l-atelier')).first().click();
-  cy.wait('@elementRead');
 };
 const whenConfirmingAimedEngagement = (): void => {
   cy.get(dataSelector('atelier-engagement-confirm')).click();

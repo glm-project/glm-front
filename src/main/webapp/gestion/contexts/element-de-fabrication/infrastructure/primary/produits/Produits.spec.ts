@@ -1,16 +1,19 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Page } from '@/app/shared/pagination/domain/Page';
+import { ok, Result } from '@/app/shared/result/domain/Result';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, ParamMap, Params, Router } from '@angular/router';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { ActesDAtelierFixture } from '@test/unit/fixtures/gestion/element-de-fabrication/ActesDAtelierFixture';
 import { CategoriesDeProduitFixture } from '@test/unit/fixtures/gestion/element-de-fabrication/CategoriesDeProduitFixture';
 import { ElementsDeFabricationFixture } from '@test/unit/fixtures/gestion/element-de-fabrication/ElementsDeFabricationFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { BehaviorSubject, EMPTY, firstValueFrom } from 'rxjs';
+import { ActesDAtelierPort } from '../../../domain/ActesDAtelierPort';
 import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { CategoriesDeProduitPort } from '../../../domain/CategoriesDeProduitPort';
 import { CycleDuProduit } from '../../../domain/CycleDuProduit';
@@ -21,6 +24,7 @@ import { LibelleDElement } from '../../../domain/LibelleDElement';
 import { NomDElement } from '../../../domain/NomDElement';
 import { PassageALAtelier, ProduitDansSonCycle } from '../../../domain/ProduitDansSonCycle';
 import { ReferenceDElement } from '../../../domain/ReferenceDElement';
+import { RefusDActeDAtelier } from '../../../domain/RefusDActeDAtelier';
 import { Produits } from './Produits';
 
 const CREE_LE = new Date('2026-10-01T11:00:00Z');
@@ -102,7 +106,11 @@ describe('Produits page', () => {
   let categories: CategoriesDeProduitFixture;
   let router: RouterFixture;
   let adresse: Params;
+  let actes: ActesDAtelierFixture;
+  let errors: ErrorHandlerFixture;
   beforeEach(() => {
+    actes = new ActesDAtelierFixture();
+    errors = new ErrorHandlerFixture();
     port = new ElementsDeFabricationFixture();
     categories = new CategoriesDeProduitFixture();
     router = new RouterFixture();
@@ -115,7 +123,8 @@ describe('Produits page', () => {
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: ElementsDeFabricationPort, useValue: port },
         { provide: CategoriesDeProduitPort, useValue: categories },
-        { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+        { provide: ActesDAtelierPort, useValue: actes },
+        { provide: ErrorHandlerPort, useValue: errors },
       ],
     });
   });
@@ -266,9 +275,72 @@ describe('Produits page', () => {
 
     await whenChoosingCycle('EN_PREPARATION');
 
-    expect(hrefs('element-mise-a-l-atelier')).toEqual(['/atelier?element=moule-1', '/atelier?element=of-1']);
     expect(labels('element-mise-a-l-atelier')).toEqual(['Mettre 1015 à l’atelier', 'Mettre OF-2026-000042 à l’atelier']);
     expect(hrefs('element-cout-de-revient')).toEqual([]);
+  });
+
+  it('should put a product into the workshop from its row and stay on the products in preparation', async () => {
+    givenProducts();
+    givenWorkshopAccepts('moule-1');
+    givenAddress({ etat: 'en-preparation' });
+    await whenOpening();
+
+    await whenClickingFirst('element-mise-a-l-atelier');
+
+    expect(actes.miseALAtelier).toEqual(['moule-1']);
+    expect(pressedCycle()).toBe('En préparation');
+    expect(texts('element-nom-cell')).toEqual(['OF-2026-000042']);
+    expect(counters()).toEqual(['1', '3', '1']);
+  });
+
+  it('should tell why the workshop refused a product', async () => {
+    givenProducts();
+    givenAddress({ etat: 'en-preparation' });
+    await whenOpening();
+
+    await whenClickingFirst('element-mise-a-l-atelier');
+
+    expect(text('elements-action-refus')).toBe('Cet élément n’existe plus. Actualisez la liste.');
+  });
+
+  it('should report a technical failure of the workshop and keep the products', async () => {
+    givenProducts();
+    givenWorkshopFails();
+    givenAddress({ etat: 'en-preparation' });
+    await whenOpening();
+
+    await whenClickingFirst('element-mise-a-l-atelier');
+
+    expect(text('elements-action-erreur')).toBe('L’action a échoué. Vérifiez la connexion puis réessayez.');
+    expect(errors.errors).toEqual([new Error('Network down')]);
+    expect(texts('element-nom-cell')).toEqual(['MOULE-2026-000001', 'OF-2026-000042']);
+  });
+
+  it('should forget the previous refusal when a new act starts', async () => {
+    givenProducts();
+    givenAddress({ etat: 'en-preparation' });
+    await whenOpening();
+    await whenClickingFirst('element-mise-a-l-atelier');
+    givenWorkshopAccepts('moule-1');
+
+    await whenClickingFirst('element-mise-a-l-atelier');
+
+    expect(text('elements-action-refus')).toBe('');
+  });
+
+  it('should not put the same product twice into the workshop while the first act is pending', async () => {
+    givenProducts();
+    const pending = new DeferredFixture<Result<void, RefusDActeDAtelier>>();
+    givenWorkshopIsPending(pending);
+    givenAddress({ etat: 'en-preparation' });
+    await whenOpening();
+    await whenClickingFirst('element-mise-a-l-atelier');
+    const busy = button('element-mise-a-l-atelier').disabled;
+    pending.resolve(ok(undefined));
+    await whenViewSettles();
+
+    expect(busy).toBe(true);
+    expect(button('element-mise-a-l-atelier').disabled).toBe(false);
   });
 
   it.each(['EN_ATELIER', 'CLOTURE'] as const)(
@@ -280,7 +352,7 @@ describe('Produits page', () => {
       await whenChoosingCycle(cycle);
 
       expect(hrefs('element-cout-de-revient')[0]).toMatch(/^\/couts-de-revient\/moule-[23]$/);
-      expect(hrefs('element-mise-a-l-atelier')).toEqual([]);
+      expect(labels('element-mise-a-l-atelier')).toEqual([]);
     },
   );
 
@@ -565,6 +637,22 @@ describe('Produits page', () => {
   const givenCategories = (codes: readonly string[]): void => {
     categories.liste = codes.map(code => new CategorieDeProduit(code));
   };
+  const givenWorkshopAccepts = (element: string): void => {
+    actes.existants = [element];
+    actes.apresMiseALAtelier = () => {
+      port.produitsEnregistres = port.produitsEnregistres.map(produit =>
+        produit.element.id.value === element
+          ? produitFixture(produit.element, { cycle: 'EN_ATELIER', etat: 'EN_ATTENTE', misALAtelierLe: MIS_A_L_ATELIER_LE })
+          : produit,
+      );
+    };
+  };
+  const givenWorkshopFails = (): void => {
+    actes.ecritureFailure = new Error('Network down');
+  };
+  const givenWorkshopIsPending = (pending: DeferredFixture<Result<void, RefusDActeDAtelier>>): void => {
+    actes.miseALAtelierDifferee = pending.promise;
+  };
   const givenAddress = (parametres: Params): void => {
     adresse = parametres;
   };
@@ -605,7 +693,7 @@ describe('Produits page', () => {
   };
   const whenClickingFirst = async (selector: string): Promise<void> => {
     requiredFixture([...document.querySelectorAll<HTMLButtonElement>(dataSelector(selector))][0], selector).click();
-    await fixture.whenStable();
+    await whenViewSettles();
   };
   const whenClosingDialog = async (result: boolean): Promise<void> => {
     const dialogs = TestBed.inject(MatDialog);

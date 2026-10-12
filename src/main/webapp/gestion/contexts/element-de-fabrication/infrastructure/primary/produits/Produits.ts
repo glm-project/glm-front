@@ -1,5 +1,7 @@
 import { formatInstantNumericDateTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { Result } from '@/app/shared/result/domain/Result';
 import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
 import { Component, computed, DestroyRef, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -7,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
 import { ActivatedRoute, convertToParamMap, Router, RouterLink } from '@angular/router';
+import { ActesDAtelierPort } from '../../../domain/ActesDAtelierPort';
 import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { CategoriesDeProduitPort } from '../../../domain/CategoriesDeProduitPort';
 import { CompteursDesCycles } from '../../../domain/CompteursDesCycles';
@@ -15,6 +18,7 @@ import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
 import { EtatDAtelier } from '../../../domain/EtatDAtelier';
 import { ProduitDansSonCycle } from '../../../domain/ProduitDansSonCycle';
+import { RefusDActeDAtelier } from '../../../domain/RefusDActeDAtelier';
 import { CriteresDesProduits, TAILLE_DES_PAGES } from '../../../domain/RequeteProduits';
 import { CategoriesDeProduitDialog } from '../categories-de-produit-dialog/CategoriesDeProduitDialog';
 import { ElementFormDialog, ElementFormDialogData } from '../element-form-dialog/ElementFormDialog';
@@ -82,6 +86,8 @@ const COLONNES: Record<CycleDuProduit, readonly string[]> = {
 export class Produits implements OnInit {
   private readonly port = inject(ElementsDeFabricationPort);
   private readonly categoriesPort = inject(CategoriesDeProduitPort);
+  private readonly actes = inject(ActesDAtelierPort);
+  private readonly errors = inject(ErrorHandlerPort);
   private readonly dialogs = inject(MatDialog);
   private readonly viewContainerRef = inject(ViewContainerRef);
   private readonly route = inject(ActivatedRoute);
@@ -116,6 +122,9 @@ export class Produits implements OnInit {
     const premier = this.page() * TAILLE_DES_PAGES;
     return this.libelles.pagination.intervalle(premier + 1, premier + this.etat().produits.length, this.etat().total);
   });
+  protected readonly acteEnCours = signal<string | undefined>(undefined);
+  protected readonly refusAction = signal<RefusDActeDAtelier | undefined>(undefined);
+  protected readonly erreurAction = signal(false);
   protected readonly filtree = computed(() => this.filtre() !== undefined || this.recherche().trim() !== '');
 
   ngOnInit(): void {
@@ -159,6 +168,10 @@ export class Produits implements OnInit {
     return produit.element.id.value;
   }
 
+  protected mettreALAtelier(produit: ProduitDansSonCycle): void {
+    this.errors.observe(this.agir(produit, () => this.actes.mettreALAtelier(produit.element.id)));
+  }
+
   protected openCreation(): void {
     const categories = this.etat().categories;
     this.openForm({ element: null, categories, categorie: categories.find(categorie => this.estFiltree(categorie)) }, () => {
@@ -182,6 +195,25 @@ export class Produits implements OnInit {
     dialogRef.afterClosed().subscribe(() => {
       this.reload();
     });
+  }
+
+  private async agir(produit: ProduitDansSonCycle, acte: () => Promise<Result<void, RefusDActeDAtelier>>): Promise<void> {
+    this.refusAction.set(undefined);
+    this.erreurAction.set(false);
+    this.acteEnCours.set(produit.element.id.value);
+    try {
+      const resultat = await acte();
+      if (resultat.ok) {
+        void this.load(false);
+      } else {
+        this.refusAction.set(resultat.error);
+      }
+    } catch (failure) {
+      this.erreurAction.set(true);
+      this.errors.handleError(failure);
+    } finally {
+      this.acteEnCours.set(undefined);
+    }
   }
 
   private afficher(changements: Partial<CriteresDesProduits>, remplacer = false): void {

@@ -88,8 +88,10 @@ l'expression.
 - `app/shared/result` : `Result<T, E>` pour les retours d'écriture.
 - `app/shared/pagination` : `Page<T>` pour les lectures paginées.
 - `element-de-fabrication` possède le référentiel et ses règles de saisie. **Ce contexte ne l'importe pas** : il
-  lit `/api/elements-de-fabrication` par son propre port, avec sa propre vue minimale. Le lien entre les deux
-  écrans est un `routerLink` vers `/atelier?element=<id>`, jamais un import.
+  lit `/api/elements-de-fabrication` par son propre port, avec sa propre vue minimale.
+- La page Produits fait ses actes d'atelier par `TypeScriptActesDAtelier`, l'adaptateur primaire que ce contexte
+  lui expose. Il prend et rend des valeurs simples — l'identifiant, puis le code du refus ou rien — pour que
+  l'appelant n'importe aucun modèle d'ici.
 - `cout-de-revient` chiffre ce que la fabrication d'un élément a coûté. **Ce contexte ne l'importe pas** : le
   lien est un `routerLink` vers `/couts-de-revient/<id>`, posé sur chaque ligne parce qu'un coût de revient
   ne se consulte qu'une fois l'élément mis à l'atelier. Un élément réengagé occupe plusieurs lignes et tous

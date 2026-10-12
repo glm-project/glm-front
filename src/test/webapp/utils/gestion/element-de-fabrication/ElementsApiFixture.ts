@@ -58,6 +58,18 @@ export class ElementsApiFixture {
     this.installModification();
   }
 
+  installMiseALAtelier(): void {
+    cy.intercept('POST', '/api/atelier/suivis', request => {
+      const { element } = request.body as { element: string };
+      this.elements = this.elements.map(candidat =>
+        candidat.id === element
+          ? { ...candidat, cycle: 'EN_ATELIER', etatDAtelier: 'EN_ATTENTE', misALAtelierLe: MIS_A_L_ATELIER_LE }
+          : candidat,
+      );
+      request.reply({ statusCode: 201, body: {} });
+    }).as('miseALAtelier');
+  }
+
   private installCompteurs(): void {
     cy.intercept({ method: 'GET', pathname: `${ROUTE}/compteurs` }, request => {
       const compter = (cycle: string): number => this.elements.filter(element => correspond(element, { ...request.query, cycle })).length;

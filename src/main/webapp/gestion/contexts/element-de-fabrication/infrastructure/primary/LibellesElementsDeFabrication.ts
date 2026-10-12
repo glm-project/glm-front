@@ -61,6 +61,7 @@ export const LIBELLES_ELEMENTS_DE_FABRICATION = {
   chargement: 'Chargement des produits…',
   erreur: 'Impossible de charger les produits. Vérifiez la connexion puis réessayez.',
   reessayer: 'Réessayer',
+  erreurAction: 'L’action a échoué. Vérifiez la connexion puis réessayez.',
   vides: VIDES,
   sansCategorie: 'Aucune catégorie de produit',
   sansCategorieDetails: 'Déclarez d’abord une catégorie de produit : les produits se créent dans une catégorie.',
