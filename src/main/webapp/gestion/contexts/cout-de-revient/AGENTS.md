@@ -174,6 +174,9 @@ pour laquelle ils sont affichés séparément.
   d'œuvre ou total, sur un pointage, une ligne de nature ou le pied du tableau, comme le PDF. Le calcul machine
   d'un poste à 0 €/h ne s'affiche pas non plus. Un tarif absent garde sa mention « non valorisé ». L'indicateur
   « Coût de revient » en tête d'écran garde « 0,00 € » : c'est la réponse, pas une cellule.
+- **La division par 1 ne s'affiche pas.** Une part où l'opérateur n'occupe qu'un poste n'a ni badge de diviseur
+  ni « ÷ 1 » dans son calcul (« 32,50 × 1,50 = 48,75 € ») ; le badge et la division n'apparaissent que pour un
+  diviseur supérieur à 1. L'aide « taux × durée ÷ postes simultanés » et la légende restent : elles décrivent la règle.
 - **Les instants s'affichent dans le fuseau du navigateur.** Les périodes du rapport sont des
   `java.time.Instant` sérialisés en UTC ; aucune configuration de ce front ne porte le fuseau de
   l'entreprise. Même limite connue et même arbitrage que `releve-des-heures`.

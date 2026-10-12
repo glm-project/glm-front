@@ -232,11 +232,11 @@
                           <span data-selector="cout-pointage-taux">{{ libelles.detail.tauxNonValorise }}</span>
                           } @else {
                           <span data-selector="cout-pointage-taux">{{ libelles.detail.tarif(pointage.tauxHoraire) }}</span>
-                          } @for (part of pointage.parts; track $index) {
-                          <span class="diviseur" [class.diviseur-partage]="part.estPartagee()" data-selector="cout-pointage-diviseur"
+                          } @for (part of pointage.parts; track $index) { @if (part.estPartagee()) {
+                          <span class="diviseur diviseur-partage" data-selector="cout-pointage-diviseur"
                             >{{ libelles.detail.diviseur(part) }}</span
                           >
-                          }
+                          } }
                         </span>
                         <strong data-selector="cout-pointage-main-d-oeuvre">{{ libelles.cellule(pointage.cout.mainDOeuvre) }}</strong>
                       </td>

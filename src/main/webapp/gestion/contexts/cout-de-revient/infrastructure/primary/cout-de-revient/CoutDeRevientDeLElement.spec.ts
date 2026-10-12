@@ -567,11 +567,17 @@ describe('Cout de revient component', () => {
     ]);
   });
 
-  it('should show the divisor of each share of a clocking, the shared ones apart', async () => {
+  it('should show the divisor of the shares of a clocking only where the operator ran several work stations', async () => {
     await givenDetailDe([pointageFixture()]);
 
-    expect(textes('cout-pointage-diviseur')).toEqual(['÷1', '÷2', '÷1']);
+    expect(textes('cout-pointage-diviseur')).toEqual(['÷2']);
     expect(diviseursPartages()).toEqual(['÷2']);
+  });
+
+  it('should show no divisor for a clocking run alone from start to finish', async () => {
+    await givenDetailDe([pointageSeulFixture()]);
+
+    expect(present('cout-pointage-diviseur')).toBe(false);
   });
 
   it('should justify each share with what else the operator ran and its calculation', async () => {
@@ -583,7 +589,7 @@ describe('Cout de revient component', () => {
       '↳ 10:30 → 11:30 · seul poste occupé',
     ]);
     expect(textes('cout-part-duree')).toEqual(['1 h 30', '1 h 30', '1 h 00']);
-    expect(textes('cout-part-calcul')).toEqual(['35,00 × 1,50 ÷ 1 = 52,50 €', '35,00 × 1,50 ÷ 2 = 26,25 €', '35,00 × 1,00 ÷ 1 = 35,00 €']);
+    expect(textes('cout-part-calcul')).toEqual(['35,00 × 1,50 = 52,50 €', '35,00 × 1,50 ÷ 2 = 26,25 €', '35,00 × 1,00 = 35,00 €']);
   });
 
   it('should not detail the shares of a clocking run alone from start to finish', async () => {

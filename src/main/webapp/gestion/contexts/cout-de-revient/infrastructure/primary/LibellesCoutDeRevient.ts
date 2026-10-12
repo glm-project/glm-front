@@ -76,7 +76,8 @@ const calculDePart = (pointage: PointageDeCout, part: PartDePointage): string =>
   if (pointage.tauxHoraire === undefined) {
     return 'Opérateur non valorisé';
   }
-  return `${DECIMALES.format(pointage.tauxHoraire.euros)} × ${heuresDecimales(part)} ÷ ${part.diviseur} = ${formatMontant(part.mainDOeuvre)}`;
+  const division = part.estPartagee() ? ` ÷ ${part.diviseur}` : '';
+  return `${DECIMALES.format(pointage.tauxHoraire.euros)} × ${heuresDecimales(part)}${division} = ${formatMontant(part.mainDOeuvre)}`;
 };
 
 const calculMachine = (pointage: PointageDeCout): string => {
