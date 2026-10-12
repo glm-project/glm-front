@@ -8,19 +8,11 @@
       <button mat-button type="button" (click)="openCategories()" [disabled]="etat().chargement" data-selector="elements-categories">
         {{ libellesCategories.ouvrir }}
       </button>
-      <div class="flex flex-wrap gap-2" data-selector="elements-creations">
-        @for (categorie of etat().categories; track categorie.value) {
-        <button
-          mat-stroked-button
-          (click)="openCreation(categorie)"
-          [disabled]="etat().chargement"
-          [attr.aria-label]="libelles.creation(categorie)"
-          [attr.data-selector]="'elements-new-' + categorie.value"
-        >
-          <glm-icon name="plus" /> {{ categorie.value }}
-        </button>
-        }
-      </div>
+      @if (etat().categories.length > 0) {
+      <button mat-flat-button type="button" (click)="openCreation()" [disabled]="etat().chargement" data-selector="elements-new">
+        <glm-icon name="plus" /> {{ libelles.creation }}
+      </button>
+      }
     </div>
   </header>
 
@@ -84,18 +76,9 @@
     <div class="px-6 py-16 text-center" data-selector="elements-empty">
       <h2 class="text-section">{{ libelles.vide }}</h2>
       <p class="mx-auto mb-6 mt-2 max-w-lg text-body text-ink-muted">{{ libelles.videDetails }}</p>
-      <div class="flex flex-wrap justify-center gap-2">
-        @for (categorie of etat().categories; track categorie.value) {
-        <button
-          mat-stroked-button
-          (click)="openCreation(categorie)"
-          [attr.aria-label]="libelles.creation(categorie)"
-          [attr.data-selector]="'elements-empty-create-' + categorie.value"
-        >
-          <glm-icon name="plus" /> {{ categorie.value }}
-        </button>
-        }
-      </div>
+      <button mat-flat-button type="button" (click)="openCreation()" data-selector="elements-empty-create">
+        <glm-icon name="plus" /> {{ libelles.creation }}
+      </button>
     </div>
     } @else if (resultats().length === 0) {
     <p role="status" class="px-6 py-12 text-center text-body text-ink-muted" data-selector="elements-no-results">

@@ -45,8 +45,9 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   choisi par l'entreprise, et tous les éléments. `estSansCategorie()` dit qu'aucun produit ne peut encore
   être créé.
 - **FormulaireElementDeFabrication** : modèle riche d'interaction pour la création et la modification, qui
-  valide les saisies, produit la commande adéquate et efface le refus de doublon dès que la référence est
-  modifiée.
+  valide les saisies, exige une catégorie choisie parmi celles proposées à la création, produit la commande
+  adéquate, efface le refus de doublon dès que la référence est modifiée et le refus `CategorieInconnue` dès
+  qu'une autre catégorie est choisie.
 - **ElementsDeFabricationPort** : port secondaire exposant la consultation paginée, la création et la
   modification, les écritures rendant un `Result<T, Refus>`.
 - **FormulaireCategorieDeProduit** : modèle de la déclaration d'une catégorie. Il met la saisie en
@@ -76,9 +77,12 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   (`urn:glm:erreur:element-de-fabrication:reference-deja-utilisee`) se reporte sur le champ référence sans
   fermer le formulaire.
 - Le nom n'est jamais saisi ni envoyé : le domaine du back le produit à la création.
-- La catégorie est obligatoire à la création et immuable ensuite. Un bouton par catégorie déclarée la porte
-  et ouvre le même formulaire, catégorie pré-remplie et non affichée. Boutons et filtres suivent l'ordre des
-  catégories ; sans catégorie, l'écran invite à en déclarer une et ne propose aucune création.
+- La catégorie est obligatoire à la création et immuable ensuite. Un seul bouton « Nouveau produit » ouvre
+  le formulaire, qui la fait choisir parmi les catégories déclarées : elle est préremplie par le filtre
+  actif et reste à choisir sous « Tous ». La modification ne l'affiche pas. Filtres et choix suivent l'ordre
+  des catégories ; sans catégorie, l'écran invite à en déclarer une et ne propose aucune création.
+- Le formulaire n'annonce pas le nom qui sera donné : le compteur du back n'avance qu'à la création et
+  aucune lecture ne le prédit.
 - **L'écran ne propose pas de supprimer.** Le `DELETE` existe à l'API, mais le client parle de clôture, et
   supprimer un élément portant des temps détruirait des heures de paie. La sortie d'un élément est la
   clôture de son suivi d'atelier, qui appartient à un autre contexte.

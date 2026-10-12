@@ -115,12 +115,13 @@ export class Produits implements OnInit {
     return element.id.value;
   }
 
-  protected openCreation(categorie: CategorieDeProduit): void {
-    this.openForm({ categorie, element: null });
+  protected openCreation(): void {
+    const categories = this.etat().categories;
+    this.openForm({ element: null, categories, categorie: categories.find(categorie => this.estFiltree(categorie)) });
   }
 
   protected openModification(element: ElementDeFabrication): void {
-    this.openForm({ categorie: element.categorie, element });
+    this.openForm({ element });
   }
 
   private correspondAuFiltre(element: ElementDeFabrication): boolean {

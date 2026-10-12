@@ -8,7 +8,7 @@ export const LIBELLES_ELEMENTS_DE_FABRICATION = {
   tous: 'Tous',
   aucunResultat: 'Aucun produit ne correspond à cette recherche.',
   sousTitre: 'Créez et tenez à jour les produits de l’atelier, rangés par catégorie.',
-  creation: (categorie: CategorieDeProduit): string => `Nouveau produit ${categorie.value}`,
+  creation: 'Nouveau produit',
   modification: (numero: string): string => `Modifier ${numero}`,
   miseALAtelier: 'Mettre à l’atelier',
   miseALAtelierDe: (numero: string): string => `Mettre ${numero} à l’atelier`,
@@ -76,7 +76,11 @@ export const LIBELLES_SUPPRESSION_CATEGORIE = {
 } as const;
 
 export const LIBELLES_FORMULAIRE_ELEMENT = {
-  introduction: 'Les deux champs sont facultatifs : un produit se réduit légitimement à son seul numéro, attribué automatiquement.',
+  categorie: 'Catégorie',
+  categorieAChoisir: '— Choisir —',
+  categorieAide: 'Son code préfixe le nom du produit. Elle ne se change plus ensuite.',
+  introduction:
+    'La référence et le libellé sont facultatifs : un produit se réduit légitimement à son seul numéro, attribué automatiquement.',
   reference: 'Référence',
   referenceComplement: '(le numéro de l’entreprise, facultatif)',
   referenceAide: 'Laissez vide si l’entreprise ne donne pas de numéro à cet élément.',

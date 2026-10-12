@@ -14,15 +14,15 @@ describe('Manufacturing element referential in gestion', () => {
   it('should create the first moule and list it with its screen words', () => {
     givenReferential();
     whenVisitingReferential();
-    whenCreating('elements-empty-create-MOULE', '1015', 'Moule de capot');
+    whenCreating('elements-empty-create', 'MOULE', '1015', 'Moule de capot');
 
     thenElementIsListed('1015', 'MOULE', 'Moule de capot');
   });
 
-  it('should create an OF carrying the type of the button that opened the form', () => {
+  it('should create an OF in the category chosen in the form', () => {
     givenReferential();
     whenVisitingReferential();
-    whenCreating('elements-empty-create-OF', '1016', 'Reprise du capot');
+    whenCreating('elements-empty-create', 'OF', '1016', 'Reprise du capot');
 
     thenElementIsListed('1016', 'OF', 'Reprise du capot');
   });
@@ -30,7 +30,8 @@ describe('Manufacturing element referential in gestion', () => {
   it('should create an element reduced to its produced number', () => {
     const api = givenReferential();
     whenVisitingReferential();
-    whenOpeningCreation('elements-empty-create-MOULE');
+    whenOpeningCreation('elements-empty-create');
+    whenChoosingCategory('MOULE');
     whenSaving();
 
     thenElementWithoutFicheIsListed(api);
@@ -39,7 +40,7 @@ describe('Manufacturing element referential in gestion', () => {
   it('should save and list the element after correcting a duplicate reference', () => {
     givenReferential(1);
     whenVisitingReferential();
-    whenCreating('elements-new-MOULE', '1015', 'Moule de capot');
+    whenCreating('elements-new', 'MOULE', '1015', 'Moule de capot');
     whenCorrectingReference('1099');
 
     thenElementIsListed('1099', 'MOULE', 'Moule de capot');
@@ -60,15 +61,26 @@ describe('Manufacturing element referential in gestion', () => {
     givenReferential();
     whenVisitingReferential();
     whenDeclaringCategory('piece');
-    whenCreating('elements-new-PIECE', '2001', 'Insert');
+    whenCreating('elements-new', 'PIECE', '2001', 'Insert');
 
     thenElementIsListed('2001', 'PIECE', 'Insert');
   });
 
-  it('should offer the creations in the order chosen in the category management', () => {
+  it('should create a product in the category of the active filter without choosing it again', () => {
+    givenReferential();
+    whenVisitingReferential();
+    whenFilteringOn('OF');
+    whenOpeningCreation('elements-new');
+    whenSaving();
+
+    thenElementIsListed('—', 'OF', '—');
+  });
+
+  it('should offer the categories of the creation form in the order chosen in the category management', () => {
     givenReferential();
     whenVisitingReferential();
     whenMovingCategoryDown('MOULE');
+    whenOpeningCreation('elements-new');
 
     thenCreationsAreOffered(['OF', 'MOULE']);
   });
@@ -77,7 +89,8 @@ describe('Manufacturing element referential in gestion', () => {
     givenReferential();
     whenVisitingReferential();
     whenRemovingCategory('MOULE');
-    whenClosingCategoryManagement();
+    whenClosingCategoryManagementWithout('MOULE');
+    whenOpeningCreation('elements-new');
 
     thenCreationsAreOffered(['OF']);
   });
@@ -111,18 +124,20 @@ const whenDeclaringCategory = (code: string): void => {
   cy.get(dataSelector('categorie-code')).type(`${code}{enter}`);
   cy.get(dataSelector('categorie-item')).should('contain.text', code.toUpperCase());
   cy.get(dataSelector('categories-close')).click();
+  cy.get(dataSelector(`elements-categorie-${code.toUpperCase()}`)).should('exist');
 };
 const whenMovingCategoryDown = (code: string): void => {
   cy.get(dataSelector('elements-categories')).click();
   cy.get(dataSelector(`categorie-descendre-${code}`)).click();
   cy.wait('@categoriesReorder');
   cy.get(dataSelector('categories-close')).click();
+  cy.get(dataSelector('elements-filtres')).find('button').last().invoke('text').invoke('trim').should('equal', code);
 };
 const thenCreationsAreOffered = (codes: readonly string[]): void => {
-  cy.get(dataSelector('elements-creations'))
-    .find('button')
-    .should(buttons => {
-      expect(Array.from(buttons, button => button.textContent.trim())).to.deep.equal(codes);
+  cy.get(dataSelector('element-categorie'))
+    .find('option:not([value=""])')
+    .should(options => {
+      expect(Array.from(options, option => option.textContent.trim())).to.deep.equal(codes);
     });
 };
 const whenRemovingCategory = (code: string): void => {
@@ -131,9 +146,10 @@ const whenRemovingCategory = (code: string): void => {
   cy.get(dataSelector('categorie-delete-confirm')).click();
   cy.wait('@categorieDelete');
 };
-const whenClosingCategoryManagement = (): void => {
+const whenClosingCategoryManagementWithout = (code: string): void => {
   cy.get(dataSelector('categorie-delete-confirm')).should('not.exist');
   cy.get(dataSelector('categories-close')).click();
+  cy.get(dataSelector(`elements-categorie-${code}`)).should('not.exist');
 };
 const whenOpeningCategoryManagement = (): void => {
   cy.get(dataSelector('elements-categories')).click();
@@ -156,12 +172,19 @@ const whenOpeningFromTheMenu = (): void => {
 const whenOpeningCreation = (selector: string): void => {
   cy.get(dataSelector(selector)).should('be.enabled').click();
 };
+const whenChoosingCategory = (code: string): void => {
+  cy.get(dataSelector('element-categorie')).select(code);
+};
+const whenFilteringOn = (code: string): void => {
+  cy.get(dataSelector(`elements-categorie-${code}`)).click();
+};
 const whenReplacing = (selector: string, value: string): void => {
   cy.get(dataSelector(selector)).clear();
   if (value !== '') cy.get(dataSelector(selector)).type(value);
 };
-const whenCreating = (selector: string, reference: string, libelle: string): void => {
+const whenCreating = (selector: string, categorie: string, reference: string, libelle: string): void => {
   whenOpeningCreation(selector);
+  whenChoosingCategory(categorie);
   whenReplacing('element-reference', reference);
   whenReplacing('element-libelle', libelle);
   whenSaving();
