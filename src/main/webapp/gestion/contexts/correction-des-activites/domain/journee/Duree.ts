@@ -1,0 +1,36 @@
+const FORMAT = /^PT(?=\d)(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/;
+const MILLISECONDES_PAR_SECONDE = 1000;
+const MILLISECONDES_PAR_MINUTE = 60 * MILLISECONDES_PAR_SECONDE;
+const MILLISECONDES_PAR_HEURE = 60 * MILLISECONDES_PAR_MINUTE;
+
+interface Composantes {
+  readonly heures: string | undefined;
+  readonly minutes: string | undefined;
+  readonly secondes: string | undefined;
+}
+
+const composantesDe = (value: string): Composantes | undefined => {
+  const parties = FORMAT.exec(value);
+  return parties === null ? undefined : { heures: parties[1], minutes: parties[2], secondes: parties[3] };
+};
+
+const millisecondesDe = (composantes: Composantes): number =>
+  Number(composantes.heures ?? 0) * MILLISECONDES_PAR_HEURE
+  + Number(composantes.minutes ?? 0) * MILLISECONDES_PAR_MINUTE
+  + Math.round(Number(composantes.secondes ?? 0) * MILLISECONDES_PAR_SECONDE);
+
+export class Duree {
+  readonly millisecondes: number;
+
+  constructor(value: string) {
+    const composantes = composantesDe(value);
+    if (composantes === undefined) {
+      throw new Error(`La durée « ${value} » reçue du serveur n’est pas une durée.`);
+    }
+    this.millisecondes = millisecondesDe(composantes);
+  }
+
+  plus(autre: Duree): Duree {
+    return new Duree(`PT${(this.millisecondes + autre.millisecondes) / MILLISECONDES_PAR_SECONDE}S`);
+  }
+}

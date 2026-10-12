@@ -1,0 +1,76 @@
+<section class="gestion-carte" aria-labelledby="frise-titre">
+  <div class="flex flex-wrap justify-between gap-x-4 gap-y-2 px-5 py-4">
+    <h2 id="frise-titre" class="text-section">{{ libelles.titre }}</h2>
+    <p class="text-body-sm text-ink-muted" data-selector="frise-operationnel">
+      {{ libelles.operationnel }} : <strong class="text-ink">{{ frise().operationnel }}</strong>
+    </p>
+  </div>
+  @if (frise().lignes.length === 0) {
+  <p class="px-5 py-6 text-body text-ink-muted" data-selector="frise-vide">{{ libelles.vide }}</p>
+  } @else {
+  <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.titre">
+    <div class="frise">
+      <div class="ligne entete">
+        <span class="etiquette">{{ libelles.colonneElement }}</span>
+        <span class="reperes" aria-hidden="true">
+          @for (repere of frise().reperes; track repere.minutes) {
+          <span [class]="'repere ' + repere.ancrage" [style.left.%]="repere.gauche" data-selector="frise-repere">{{ repere.libelle }}</span>
+          }
+        </span>
+      </div>
+      @for (ligne of frise().lignes; track ligne.cle) {
+      <div class="ligne element" data-selector="frise-ligne">
+        <span class="etiquette">
+          <span class="text-body font-semibold" data-selector="frise-ligne-element">{{ ligne.element }}</span>
+          <span class="text-body-sm text-ink-muted" data-selector="frise-ligne-poste">{{ ligne.poste }}</span>
+        </span>
+        <span class="piste">
+          @for (barre of ligne.barres; track $index) {
+          <span
+            [class]="'barre ' + barre.style"
+            [style.left.%]="barre.gauche"
+            [style.width.%]="barre.largeur"
+            [title]="barre.enonce"
+            data-selector="frise-barre"
+            [attr.data-style]="barre.style"
+            [attr.data-automatique]="barre.automatique"
+            [attr.data-coupee-au-debut]="barre.coupeeAuDebut"
+            [attr.data-coupee-a-la-fin]="barre.coupeeALaFin"
+            ><span class="sr-only">{{ barre.enonce }}</span>@if (barre.automatique) {<span
+              class="embout-automatique"
+              aria-hidden="true"
+              data-selector="frise-fin-automatique"
+            ></span
+            >}</span
+          >
+          } @for (marque of ligne.marques; track $index) {
+          <span
+            [class]="'forme marque ' + marque.type"
+            [style.left.%]="marque.gauche"
+            [title]="marque.titre"
+            aria-hidden="true"
+            data-selector="frise-marque"
+            [attr.data-type]="marque.type"
+          ></span>
+          } @for (mention of ligne.mentions; track $index) {
+          <span [class]="'mention ' + mention.cote" data-selector="frise-mention">{{ mention.texte }}</span>
+          }
+        </span>
+      </div>
+      }
+    </div>
+  </div>
+  <ul
+    class="legende flex flex-wrap gap-x-5 gap-y-2 border-t border-border bg-canvas px-6 py-3.5 text-ink-muted *:inline-flex *:items-center *:gap-2"
+  >
+    <li data-selector="frise-legende"><i class="pastille pastille-travail" aria-hidden="true"></i>{{ libelles.legende.travail }}</li>
+    <li data-selector="frise-legende"><i class="pastille pastille-nc" aria-hidden="true"></i>{{ libelles.legende.nonConformite }}</li>
+    <li data-selector="frise-legende"><i class="pastille pastille-en-cours" aria-hidden="true"></i>{{ libelles.legende.enCours }}</li>
+    <li data-selector="frise-legende">
+      <i class="pastille pastille-fin-automatique" aria-hidden="true"></i>{{ libelles.legende.finAutomatique }}
+    </li>
+    <li data-selector="frise-legende"><i class="forme debut" aria-hidden="true"></i>{{ libelles.legende.debut }}</li>
+    <li data-selector="frise-legende"><i class="forme fin" aria-hidden="true"></i>{{ libelles.legende.fin }}</li>
+  </ul>
+  }
+</section>

@@ -1,21 +1,9 @@
 import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, UrlTree } from '@angular/router';
-import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
+import { RolesFixture } from '@test/unit/fixtures/gestion/authentication/RolesFixture';
 import { ROLE_GESTIONNAIRE } from './gestionnaire';
 import { reservedToGestionnaire } from './reserved-to-gestionnaire.guard';
-
-class RolesFixture extends RolesPort {
-  private readonly roles = new DeferredFixture<readonly string[]>();
-
-  override realmRoles(): Promise<readonly string[]> {
-    return this.roles.promise;
-  }
-
-  grant(roles: readonly string[]): void {
-    this.roles.resolve(roles);
-  }
-}
 
 describe('Route reserved to the gestionnaire', () => {
   let roles: RolesFixture;

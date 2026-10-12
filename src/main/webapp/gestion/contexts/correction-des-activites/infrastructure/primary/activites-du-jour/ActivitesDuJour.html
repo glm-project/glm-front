@@ -1,0 +1,47 @@
+<section class="gestion-carte" aria-labelledby="activites-titre">
+  <div class="px-5 py-4">
+    <h2 id="activites-titre" class="text-section" data-selector="activites-titre">{{ libelles.titre(lignes().length) }}</h2>
+  </div>
+  @if (lignes().length === 0) {
+  <p class="px-5 py-6 text-body text-ink-muted" data-selector="activites-vide">{{ libelles.vide }}</p>
+  } @else {
+  <ol>
+    @for (ligne of lignes(); track ligne.cle) {
+    <li class="activite" data-selector="activite">
+      <span class="flex flex-col items-start">
+        <span class="font-semibold tabular-nums" data-selector="activite-horaires">{{ ligne.horaires }}</span>
+        @if (ligne.debutAilleurs; as lien) {
+        <a class="lien-jour" [routerLink]="['/operateurs', operateur(), 'journees', lien.jour]" data-selector="activite-lien-debut"
+          >{{ lien.libelle }}</a
+        >
+        } @if (ligne.finAilleurs; as lien) {
+        <a class="lien-jour" [routerLink]="['/operateurs', operateur(), 'journees', lien.jour]" data-selector="activite-lien-fin"
+          >{{ lien.libelle }}</a
+        >
+        }
+      </span>
+      <span class="flex min-w-0 flex-col">
+        <span class="font-semibold" data-selector="activite-element"
+          >{{ ligne.element }}@if (ligne.designation) { <span class="designation"> {{ ligne.designation }}</span> }</span
+        >
+      </span>
+      <span class="text-body-sm text-ink-muted" data-selector="activite-poste">{{ ligne.poste }}</span>
+      <span class="inline-flex items-center gap-2 text-body-sm text-ink-muted" data-selector="activite-type"
+        ><i [class]="'pastille pastille-' + ligne.styleDeType" aria-hidden="true"></i>{{ ligne.type }}</span
+      >
+      <span class="flex flex-col items-end tabular-nums">
+        @if (ligne.duree; as duree) {
+        <span class="font-bold" data-selector="activite-duree">{{ duree }}</span>
+        } @if (ligne.etat; as etat) {
+        <span class="text-body-sm text-ink-muted" data-selector="activite-etat">{{ etat }}</span>
+        } @if (ligne.cloture; as cloture) {
+        <span class="text-body-sm text-ink-muted" data-selector="activite-cloture">{{ cloture }}</span>
+        } @if (ligne.total; as total) {
+        <span class="text-label text-ink-muted" data-selector="activite-total">{{ total }}</span>
+        }
+      </span>
+    </li>
+    }
+  </ol>
+  }
+</section>

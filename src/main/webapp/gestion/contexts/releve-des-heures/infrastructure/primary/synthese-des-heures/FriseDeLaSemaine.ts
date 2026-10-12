@@ -21,6 +21,7 @@ export interface JourDeFrise {
   readonly reperes: readonly RepereDeFrise[];
   readonly libelle: string;
   readonly aujourdhui: boolean;
+  readonly echu: boolean;
   readonly ouvert: boolean;
   readonly operationnel: string;
   readonly sansOperationnel: boolean;
@@ -69,6 +70,7 @@ const jourDeFrise = ({ jour, axe, ouvert }: JourSurSonAxe, aujourdhui: JourCalen
   reperes: axe.reperes(false).map(repere => ({ ...repere, libelle: LIBELLES.repere(repere.minutes) })),
   libelle: LIBELLES.jour(jour.jour),
   aujourdhui: jour.jour.estLeMeme(aujourdhui),
+  echu: !jour.jour.estApres(aujourdhui),
   ouvert,
   operationnel: sansOperationnel(jour) ? LIBELLES.sansValeur : LIBELLES.duree(jour.operationnelTotal),
   sansOperationnel: sansOperationnel(jour),

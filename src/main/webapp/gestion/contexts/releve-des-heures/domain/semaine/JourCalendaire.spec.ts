@@ -60,4 +60,14 @@ describe('JourCalendaire', () => {
 
     expect(jour.estLeMeme(new JourCalendaire(autre))).toBe(memeJour);
   });
+
+  it.each([
+    ['2026-09-13', false],
+    ['2026-09-14', false],
+    ['2026-09-15', true],
+  ])('should tell whether %s is after 2026-09-14: %s', (autre, apres) => {
+    const jour = new JourCalendaire('2026-09-14');
+
+    expect(new JourCalendaire(autre).estApres(jour)).toBe(apres);
+  });
 });

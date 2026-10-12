@@ -1,5 +1,6 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
+import type {} from '../../../utils/gestion/authentication/RolesFixture';
 import {
   feuilleFixture,
   SemaineSemee,
@@ -153,6 +154,27 @@ describe('Operational time report in gestion', () => {
     whenVisiting(ADRESSE);
 
     thenShowTheReceivedClosedActivityAndOperationalTotalWithoutPresence();
+  });
+
+  it('should offer the correction of the day to the gestionnaire, towards the day opened', () => {
+    givenAWeek(semaineDeJourFixture());
+    whenVisiting(ADRESSE);
+
+    thenTheCorrectionOfTheDayIsOffered('/operateurs/op-1/journees/2026-09-14');
+  });
+
+  it('should hide the correction of the day from a consultant', () => {
+    givenAWeek(semaineDeJourFixture());
+    whenVisitingAsAConsultant(ADRESSE);
+
+    thenNoCorrectionOfTheDayIsOffered();
+  });
+
+  it('should offer no correction for a day that has not come', () => {
+    givenAWeek(semaineDeJourFixture());
+    whenVisiting('/operateurs/op-1/heures?annee=2026&semaine=40&jour=2026-09-30');
+
+    thenNoCorrectionOfTheDayIsOffered();
   });
 
   it('should split received concurrent work into one sub-row per workstation', () => {
@@ -359,6 +381,15 @@ describe('Operational time report in gestion', () => {
       document.head.append(style);
     });
   };
+  const whenVisitingAsAConsultant = (adresse: string): void => {
+    cy.viewport(1280, 900);
+    cy.clock(HORLOGE, ['Date']);
+    cy.visit(adresse, {
+      onBeforeLoad: window => {
+        window.gestionRolesFixture = ['ROLE_CONSULTANT'];
+      },
+    });
+  };
   const whenVisiting = (adresse: string): void => {
     whenVisitingAt(adresse, 1280);
   };
@@ -367,6 +398,17 @@ describe('Operational time report in gestion', () => {
   };
   const whenFocusingTheWeekSelector = (): void => {
     cy.get(dataSelector('synthese-semaine')).focus();
+  };
+
+  const thenTheCorrectionOfTheDayIsOffered = (adresseDeLaCorrection: string): void => {
+    cy.get(dataSelector('synthese-corriger-la-journee'))
+      .should('be.visible')
+      .and('contain.text', 'Corriger la journée')
+      .and('have.attr', 'href', adresseDeLaCorrection);
+  };
+  const thenNoCorrectionOfTheDayIsOffered = (): void => {
+    cy.get(dataSelector('synthese-detail-jour')).should('be.visible');
+    cy.get(dataSelector('synthese-corriger-la-journee')).should('not.exist');
   };
 
   const thenEveryDayHasTheSameWidth = (): void => {

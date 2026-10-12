@@ -1,0 +1,10 @@
+:host {
+  display: block;
+}
+
+.pas {
+  min-width: var(--spacing-touch);
+  min-height: var(--spacing-touch);
+  padding-inline: 0;
+  font-size: 1.125rem;
+}

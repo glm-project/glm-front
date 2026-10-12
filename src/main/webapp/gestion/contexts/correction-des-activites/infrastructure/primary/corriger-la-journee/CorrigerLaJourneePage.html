@@ -1,0 +1,61 @@
+<main class="mx-auto max-w-7xl px-4 py-6 text-ink md:px-8 md:py-8" aria-labelledby="corriger-titre">
+  <header class="mb-6">
+    <a class="gestion-retour" [routerLink]="retour().commandes" [queryParams]="retour().parametres" data-selector="corriger-retour"
+      ><glm-icon name="arrowLeft" /> {{ libelles.retour(identite()) }}</a
+    >
+    <h1 id="corriger-titre" class="mt-2 text-title" data-selector="corriger-titre">{{ libelles.titre }}</h1>
+    @if (entete(); as entete) {
+    <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <p class="text-section">
+        @if (identite(); as nom) {<span data-selector="corriger-identite">{{ nom }}</span> · }<span data-selector="corriger-jour"
+          >{{ libelles.jour(entete.jour) }}</span
+        >
+      </p>
+      <div class="flex items-center gap-1">
+        <a
+          mat-stroked-button
+          class="pas"
+          [routerLink]="['/operateurs', operateur(), 'journees', entete.precedent.value]"
+          [attr.aria-label]="libelles.voirLeJour(entete.precedent)"
+          data-selector="corriger-precedent"
+          ><glm-icon name="chevronLeft"
+        /></a>
+        @if (entete.suivant; as suivant) {
+        <a
+          mat-stroked-button
+          class="pas"
+          [routerLink]="['/operateurs', operateur(), 'journees', suivant.value]"
+          [attr.aria-label]="libelles.voirLeJour(suivant)"
+          data-selector="corriger-suivant"
+          ><glm-icon name="chevronRight"
+        /></a>
+        }
+      </div>
+    </div>
+    }
+  </header>
+
+  @switch (etat().kind) { @case ('ADRESSE_INVALIDE') {
+  <p role="alert" class="py-12 text-center text-body text-danger" data-selector="corriger-adresse-invalide">
+    {{ libelles.adresseInvalide }}
+  </p>
+  } @case ('CHARGEMENT') {
+  <p role="status" class="py-12 text-center text-body text-ink-muted" data-selector="corriger-chargement">{{ libelles.chargement }}</p>
+  } @case ('OPERATEUR_INTROUVABLE') {
+  <p role="alert" class="py-12 text-center text-body text-danger" data-selector="corriger-introuvable">{{ libelles.introuvable }}</p>
+  } @case ('ERREUR') {
+  <glm-error-message
+    class="py-12 text-center"
+    data-selector="corriger-erreur"
+    [message]="libelles.echec"
+    [retryLabel]="libelles.reessayer"
+    retrySelector="corriger-retry"
+    (retryRequested)="reload()"
+  />
+  } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
+  <div class="flex flex-col gap-6">
+    <glm-frise-du-jour [journee]="vue.journee" />
+    <glm-activites-du-jour [journee]="vue.journee" />
+  </div>
+  } }
+</main>
