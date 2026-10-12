@@ -17,6 +17,9 @@ réception du backend.
 - `Amends 0007`, `0009`, `0045`: le geste ne porte plus qu'un type et un poste, le stockage du journal passe à
   `atelier-activites-v2:<entreprise>`, `FenetreOperateur` prépare des pointages demandés.
 - `Amends 0031`, `0041`: la supervision ne rend plus de séquence en conflit.
+- `Amended by 0056`: une fin régularisée n'est plus définitive ; le gestionnaire ajoute, retire ou change le poste
+  d'une activité terminée depuis une page dédiée, chaque correction ajoutant un fait au journal, et la règle de
+  réception juge les pointages sur le journal après corrections.
 - `Amends 0050`, `0053`: la clé du journal est `v2` ; la traduction à la lecture d'un journal d'avant les catégories
   disparaît avec les journaux d'avant `v2`.
 

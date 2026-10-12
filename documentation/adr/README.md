@@ -150,3 +150,7 @@ something stays, with a status that says what died.
 - [0055 — Arrêter avant de changer la catégorie d'une activité](0055-stop-before-changing-the-category-of-an-activity.md) —
   une tuile active n'offre que la cible ARRÊTER et le domaine ne compose plus FIN puis ouverture ; il amende les gestes
   composés de 0054
+
+- [0056 — Laisser le gestionnaire corriger la journée d'un opérateur](0056-let-the-gestionnaire-correct-an-operator-day.md) —
+  une page dédiée corrige des activités, pas des pointages : ajouter, changer le poste, retirer ; chaque correction
+  ajoute un fait au journal, seule trace, sans motif ni historique ; une fin régularisée redevient corrigeable
