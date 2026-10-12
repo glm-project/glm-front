@@ -62,6 +62,13 @@ describe('FormulaireElementDeFabrication', () => {
     });
   });
 
+  it('should choose the only declared category without being asked', () => {
+    const formulaire = FormulaireElementDeFabrication.pourCreation([MOULE_FIXTURE], undefined);
+
+    expect(formulaire.categorie).toEqual(MOULE_FIXTURE);
+    expect(formulaire.estValide()).toBe(true);
+  });
+
   it('should create in the category chosen among the declared ones', () => {
     const formulaire = FormulaireElementDeFabrication.pourCreation(CATEGORIES_FIXTURE, MOULE_FIXTURE).avecCategorie('OF');
 

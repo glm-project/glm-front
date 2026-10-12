@@ -79,7 +79,7 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
 - Le nom n'est jamais saisi ni envoyé : le domaine du back le produit à la création.
 - La catégorie est obligatoire à la création et immuable ensuite. Un seul bouton « Nouveau produit » ouvre
   le formulaire, qui la fait choisir parmi les catégories déclarées : elle est préremplie par le filtre
-  actif et reste à choisir sous « Tous ». La modification ne l'affiche pas. Filtres et choix suivent l'ordre
+  actif et reste à choisir sous « Tous », sauf quand l'entreprise n'en a qu'une. La modification ne l'affiche pas. Filtres et choix suivent l'ordre
   des catégories ; sans catégorie, l'écran invite à en déclarer une et ne propose aucune création.
 - Le formulaire n'annonce pas le nom qui sera donné : le compteur du back n'avance qu'à la création et
   aucune lecture ne le prédit.

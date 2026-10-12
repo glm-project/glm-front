@@ -31,6 +31,9 @@ const SAISIE_VIDE: SaisieElement = { reference: '', libelle: '' };
 
 const CATEGORIE_A_CHOISIR = 'Choisissez la catégorie du produit.';
 
+const seuleCategorie = (choix: readonly CategorieDeProduit[]): CategorieDeProduit | undefined =>
+  choix.length === 1 ? choix[0] : undefined;
+
 export class FormulaireElementDeFabrication {
   readonly choix: readonly CategorieDeProduit[];
   readonly categorie: CategorieDeProduit | undefined;
@@ -47,7 +50,13 @@ export class FormulaireElementDeFabrication {
   }
 
   static pourCreation(choix: readonly CategorieDeProduit[], categorie: CategorieDeProduit | undefined): FormulaireElementDeFabrication {
-    return new FormulaireElementDeFabrication({ choix, categorie, saisie: SAISIE_VIDE, id: undefined, refus: undefined });
+    return new FormulaireElementDeFabrication({
+      choix,
+      categorie: categorie ?? seuleCategorie(choix),
+      saisie: SAISIE_VIDE,
+      id: undefined,
+      refus: undefined,
+    });
   }
 
   static pourModification(element: ElementDeFabrication): FormulaireElementDeFabrication {

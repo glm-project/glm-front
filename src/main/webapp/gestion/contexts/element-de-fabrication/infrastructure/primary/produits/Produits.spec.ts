@@ -251,6 +251,15 @@ describe('Produits page', () => {
     expect(texts('element-row')).toHaveLength(2);
   });
 
+  it('should choose the only category of the company in the creation form', async () => {
+    givenCategories(['MOULE']);
+    await whenOpening();
+
+    await whenClicking('elements-new');
+
+    expect(categoryChosen()).toBe('MOULE');
+  });
+
   it.each(['elements-new', 'elements-empty-create'])('should open the creation form from %s', async selector => {
     await whenOpening();
 
