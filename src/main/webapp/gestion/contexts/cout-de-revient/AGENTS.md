@@ -115,9 +115,9 @@ pour laquelle ils sont affichés séparément.
   le taux horaire de l'opérateur, lui, est **divisé** par le nombre de postes qu'il occupait à cet
   instant parmi les activités terminées, tous éléments confondus. Les afficher séparément est ce qui rend la règle lisible ; les fondre
   en un seul chiffre la rendrait incompréhensible le jour où quelqu'un la vérifie à la main.
-- **Le rapport est celui de l'élément, pas d'un passage en atelier.** Un élément réengagé après clôture
-  additionne ses passages : plusieurs lignes de l'écran `/atelier` mènent donc au même rapport, et c'est
-  le comportement voulu.
+- **Le rapport est celui de l'élément, pas d'un passage en atelier.** Il s'adresse par l'élément, que la page
+  Produits lie depuis ses onglets En atelier et Clôturés ; un élément ne passe qu'une fois à l'atelier, et sa
+  réouverture prolonge le même rapport.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.
 
 ## Relations de contexte

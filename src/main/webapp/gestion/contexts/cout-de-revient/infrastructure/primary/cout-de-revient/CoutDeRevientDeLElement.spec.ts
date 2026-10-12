@@ -46,7 +46,7 @@ class RouterFixture {
     return new UrlTree();
   }
   serializeUrl(): string {
-    return '/atelier';
+    return '/produits?etat=en-atelier';
   }
   async navigate(): Promise<boolean> {
     if (this.pending !== undefined) {

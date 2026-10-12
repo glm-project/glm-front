@@ -6,9 +6,9 @@ import {
   suiviFinAutomatiqueFixture,
 } from '../../../utils/gestion/anomalies-de-pointage/FinAutomatiqueHttp.fixture';
 import { givenTheElementsFinsAutomatiques } from '../../../utils/gestion/anomalies-de-pointage/FinsAutomatiquesHttp.fixture';
-import { AtelierApiFixture } from '../../../utils/gestion/atelier/AtelierApiFixture';
 import { AuthenticationFixture } from '../../../utils/gestion/authentication/AuthenticationFixture';
 import type {} from '../../../utils/gestion/authentication/RolesFixture';
+import { ElementsApiFixture } from '../../../utils/gestion/element-de-fabrication/ElementsApiFixture';
 import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
 const CONSULTANT_ROLES = ['ROLE_CONSULTANT'];
@@ -17,7 +17,7 @@ const DOSSIER_ADDRESS = `/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouv
 describe('Anomalies reserved to the gestionnaire', () => {
   beforeEach(() => {
     new SupervisionApiFixture().intercept();
-    new AtelierApiFixture().install();
+    new ElementsApiFixture().install();
     givenTheReferentielFinAutomatique();
     givenTheElementsFinsAutomatiques();
     givenAnAddressedDossier();
@@ -66,9 +66,9 @@ describe('Anomalies reserved to the gestionnaire', () => {
   });
 
   it('should return a consultant to the previous page, not to the reserved address, when going back from the redirection', () => {
-    whenVisitingTheWorkshopThenTheListAsAConsultantAndGoingBack();
+    whenVisitingTheProductsThenTheListAsAConsultantAndGoingBack();
 
-    thenTheConsultantIsBackOnTheWorkshop();
+    thenTheConsultantIsBackOnTheProducts();
   });
 });
 
@@ -114,9 +114,9 @@ const whenVisitingTheListAsAConsultant = (): void => {
   cy.visit('/anomalies', { onBeforeLoad: openingWithRoles(CONSULTANT_ROLES) });
 };
 
-const whenVisitingTheWorkshopThenTheListAsAConsultantAndGoingBack = (): void => {
+const whenVisitingTheProductsThenTheListAsAConsultantAndGoingBack = (): void => {
   cy.viewport(1440, 900);
-  cy.visit('/atelier', { onBeforeLoad: openingWithRoles(CONSULTANT_ROLES) });
+  cy.visit('/produits', { onBeforeLoad: openingWithRoles(CONSULTANT_ROLES) });
   cy.get(dataSelector('gestion-header')).should('be.visible');
   cy.visit('/anomalies', { onBeforeLoad: openingWithRoles(CONSULTANT_ROLES) });
   cy.location('pathname').should('eq', '/');
@@ -149,7 +149,7 @@ const thenTheAddressIsUnchangedAndOnlyTheRefusalIsReported = (reportedErrors: re
   cy.get(dataSelector('supervision-atelier')).should('not.exist');
 };
 
-const thenTheConsultantIsBackOnTheWorkshop = (): void => {
-  cy.location('pathname').should('eq', '/atelier');
+const thenTheConsultantIsBackOnTheProducts = (): void => {
+  cy.location('pathname').should('eq', '/produits');
   cy.get(dataSelector('gestion-header')).should('be.visible');
 };

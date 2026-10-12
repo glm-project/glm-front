@@ -79,7 +79,6 @@ describe('Gestion header', () => {
 
   it.each([
     ['gestion-navigation-supervision', '/', 'Supervision'],
-    ['gestion-navigation-atelier', '/atelier', 'Atelier'],
     ['gestion-navigation-elements', '/produits', 'Produits'],
     ['gestion-navigation-postes', '/postes-de-travail', 'Postes de travail'],
     ['gestion-navigation-operateurs', '/operateurs', 'Opérateurs'],

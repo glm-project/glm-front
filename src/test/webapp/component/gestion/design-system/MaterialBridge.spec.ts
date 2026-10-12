@@ -1,20 +1,23 @@
 import { dataSelector } from '../../../utils/DataSelector';
-import { AtelierApiFixture } from '../../../utils/gestion/atelier/AtelierApiFixture';
+import { OperateursApiFixture, operateursFixture, postesFixture } from '../../../utils/gestion/operateur/OperateursApiFixture';
 
 describe('Material bridge', () => {
   it('should paint the Material chrome with the design tokens', () => {
-    const colours = whenVisitingTheWorkshop();
+    givenOperators();
+    const colours = whenReadingTheAccentTokens();
 
     thenThePrimaryActionWearsTheAccent(colours);
   });
 
   it('should set dialog titles at the section level', () => {
+    givenOperators();
     const section = whenOpeningADialog();
 
     thenTheDialogTitleWearsTheSectionLevel(section);
   });
 
   it('should size Material buttons at the touch target', () => {
+    givenOperators();
     const touch = whenMeasuringTheTouchTarget();
 
     thenTheButtonsReachTheTouchTarget(touch);
@@ -26,14 +29,11 @@ interface ColoursFixture {
   readonly onAccent: string;
 }
 
-const whenVisitingTheWorkshop = (): Cypress.Chainable<ColoursFixture> => {
-  new AtelierApiFixture().install();
-  cy.visit('/atelier');
-  return cy.window().then(window => ({
+const whenReadingTheAccentTokens = (): Cypress.Chainable<ColoursFixture> =>
+  cy.window().then(window => ({
     accent: givenTheBrowsersValueOf(window, '--color-accent'),
     onAccent: givenTheBrowsersValueOf(window, '--color-on-accent'),
   }));
-};
 
 interface SectionLevelFixture {
   readonly size: string;
@@ -41,9 +41,7 @@ interface SectionLevelFixture {
 }
 
 const whenOpeningADialog = (): Cypress.Chainable<SectionLevelFixture> => {
-  new AtelierApiFixture().install();
-  cy.visit('/atelier');
-  cy.get(dataSelector('atelier-new')).should('be.enabled').click();
+  cy.get(dataSelector('operateurs-new')).should('be.enabled').click();
   return cy.window().then(window => {
     const probe = window.document.createElement('span');
     probe.className = 'text-section';
@@ -55,8 +53,7 @@ const whenOpeningADialog = (): Cypress.Chainable<SectionLevelFixture> => {
 };
 
 const whenMeasuringTheTouchTarget = (): Cypress.Chainable<string> => {
-  new AtelierApiFixture().install();
-  cy.visit('/atelier');
+  cy.get(dataSelector('operateurs-new')).should('be.visible');
   return cy.window().then(window => {
     const probe = window.document.createElement('span');
     probe.style.display = 'block';
@@ -66,6 +63,11 @@ const whenMeasuringTheTouchTarget = (): Cypress.Chainable<string> => {
     probe.remove();
     return height;
   });
+};
+
+const givenOperators = (): void => {
+  new OperateursApiFixture(operateursFixture(2), postesFixture(2)).install();
+  cy.visit('/operateurs');
 };
 
 const givenTheBrowsersValueOf = (window: Window, token: string): string => {
@@ -79,7 +81,7 @@ const givenTheBrowsersValueOf = (window: Window, token: string): string => {
 
 const thenThePrimaryActionWearsTheAccent = (colours: Cypress.Chainable<ColoursFixture>): void => {
   colours.then(({ accent, onAccent }) => {
-    cy.get(dataSelector('atelier-new')).should('have.css', 'background-color', accent).and('have.css', 'color', onAccent);
+    cy.get(dataSelector('operateurs-new')).should('have.css', 'background-color', accent).and('have.css', 'color', onAccent);
   });
 };
 
@@ -91,7 +93,7 @@ const thenTheDialogTitleWearsTheSectionLevel = (section: Cypress.Chainable<Secti
 
 const thenTheButtonsReachTheTouchTarget = (touch: Cypress.Chainable<string>): void => {
   touch.then(height => {
-    cy.get(dataSelector('atelier-new')).should('have.css', 'height', height);
+    cy.get(dataSelector('operateurs-new')).should('have.css', 'height', height);
     cy.get('.mat-mdc-paginator-navigation-next').should('have.css', 'height', height);
   });
 };

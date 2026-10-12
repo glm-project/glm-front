@@ -3,7 +3,6 @@ import { requiredFixture } from '@test/utils/RequiredFixture';
 import { routes } from './app.route';
 import { DossierAnomaliePage } from './contexts/anomalies-de-pointage/infrastructure/primary/dossier-anomalie/DossierAnomaliePage';
 import { ListeAnomalies } from './contexts/anomalies-de-pointage/infrastructure/primary/liste-anomalies/ListeAnomalies';
-import { Atelier } from './contexts/atelier/infrastructure/primary/atelier/Atelier';
 import { CoutDeRevientDeLElement } from './contexts/cout-de-revient/infrastructure/primary/cout-de-revient/CoutDeRevientDeLElement';
 import { Produits } from './contexts/element-de-fabrication/infrastructure/primary/produits/Produits';
 import { Operateurs } from './contexts/operateur/infrastructure/primary/operateurs/Operateurs';
@@ -16,7 +15,6 @@ const ECRANS: [string, unknown][] = [
   ['anomalies/:suivi', DossierAnomaliePage],
   ['anomalies', ListeAnomalies],
   ['', SupervisionAtelier],
-  ['atelier', Atelier],
   ['produits', Produits],
   ['postes-de-travail', PostesDeTravail],
   ['operateurs', Operateurs],

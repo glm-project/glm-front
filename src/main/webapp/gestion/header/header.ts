@@ -19,7 +19,6 @@ interface Destination {
 
 const DESTINATIONS: readonly Destination[] = [
   { route: '/', libelle: 'Supervision', selecteur: 'gestion-navigation-supervision', exacte: true, reserveeAuGestionnaire: false },
-  { route: '/atelier', libelle: 'Atelier', selecteur: 'gestion-navigation-atelier', exacte: false, reserveeAuGestionnaire: false },
   {
     route: '/produits',
     libelle: 'Produits',

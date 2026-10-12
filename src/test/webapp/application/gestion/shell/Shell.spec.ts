@@ -1,5 +1,5 @@
 import { dataSelector } from '../../../utils/DataSelector';
-import { AtelierApiFixture } from '../../../utils/gestion/atelier/AtelierApiFixture';
+import { ElementsApiFixture } from '../../../utils/gestion/element-de-fabrication/ElementsApiFixture';
 import { SyntheseDesHeuresApiFixture } from '../../../utils/gestion/releve-des-heures/SyntheseDesHeuresApiFixture';
 import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
@@ -22,10 +22,10 @@ describe('Gestion shell', () => {
 
   it('should fold the navigation away once a destination is chosen on a narrow screen', () => {
     givenANarrowScreen();
-    new AtelierApiFixture().install();
+    new ElementsApiFixture().install();
     whenVisitingTheRoot();
 
-    whenChoosingTheWorkshopFromTheMenu();
+    whenChoosingTheProductsFromTheMenu();
 
     thenTheMenuIsFolded();
   });
@@ -47,10 +47,10 @@ const whenVisitingTheHoursOfAnOperator = (): void => {
   cy.visit('/operateurs/op-1/heures');
 };
 
-const whenChoosingTheWorkshopFromTheMenu = (): void => {
-  cy.get(dataSelector('gestion-navigation-atelier')).should('not.be.visible');
+const whenChoosingTheProductsFromTheMenu = (): void => {
+  cy.get(dataSelector('gestion-navigation-elements')).should('not.be.visible');
   cy.get(dataSelector('gestion-menu')).click();
-  cy.get(dataSelector('gestion-navigation-atelier')).click();
+  cy.get(dataSelector('gestion-navigation-elements')).click();
 };
 
 const thenTheBackOfficeShellIsMounted = (): void => {
@@ -63,7 +63,7 @@ const thenOnlyTheOperatorsSectionIsCurrent = (): void => {
 };
 
 const thenTheMenuIsFolded = (): void => {
-  cy.location('pathname').should('eq', '/atelier');
+  cy.location('pathname').should('eq', '/produits');
   cy.get(dataSelector('gestion-menu')).should('have.attr', 'aria-expanded', 'false');
-  cy.get(dataSelector('gestion-navigation-atelier')).should('not.be.visible');
+  cy.get(dataSelector('gestion-navigation-elements')).should('not.be.visible');
 };

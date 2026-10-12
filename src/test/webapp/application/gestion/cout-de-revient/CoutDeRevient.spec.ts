@@ -1,24 +1,20 @@
 import { dataSelector } from '../../../utils/DataSelector';
-import { AtelierApiFixture, engageablesFixture, suivisFixture } from '../../../utils/gestion/atelier/AtelierApiFixture';
 import { CoutDeRevientApiFixture, rapportEnCoursFixture } from '../../../utils/gestion/cout-de-revient/CoutDeRevientApiFixture';
 import { ElementsApiFixture, elementsFixture } from '../../../utils/gestion/element-de-fabrication/ElementsApiFixture';
 
 describe('Cost of manufacture of an element at the workshop', () => {
-  let atelier: AtelierApiFixture;
   let elements: ElementsApiFixture;
   let cout: CoutDeRevientApiFixture;
 
   beforeEach(() => {
-    atelier = new AtelierApiFixture(suivisFixture(2));
-    atelier.engageables = engageablesFixture(2);
     elements = new ElementsApiFixture(elementsFixture(2));
     cout = new CoutDeRevientApiFixture();
   });
 
-  it('should reach the report from the workshop and preserve its element address', () => {
+  it('should reach the report from the products in the workshop and preserve its element address', () => {
     givenWorkshopAndReports();
-    whenVisitingWorkshop();
-    whenOpeningTheCostOfTheFirstElement();
+    whenVisitingTheProductsInTheWorkshop();
+    whenOpeningTheCostOfTheFirstElementListed();
 
     thenTheElementReportIsVisible();
   });
@@ -39,34 +35,19 @@ describe('Cost of manufacture of an element at the workshop', () => {
     thenTheReportIsDisplayed();
   });
 
-  it('should reach the cost of manufacture of an element from the workshop', () => {
+  it('should ask the server for the element the product row pointed at, never for its passage at the workshop', () => {
     givenWorkshopAndReports();
-    whenVisitingWorkshop();
-    whenOpeningTheCostOfTheFirstElement();
-
-    thenTheReportIsDisplayed();
-  });
-
-  it('should ask the server for the element the workshop row pointed at, never for its follow-up', () => {
-    givenWorkshopAndReports();
-    whenVisitingWorkshop();
-    whenOpeningTheCostOfTheFirstElement();
-
-    thenTheServerWasAskedFor('element-1');
-  });
-
-  it('should reach the cost of manufacture of an element from the referential, without passing through the workshop', () => {
-    givenReferentialAndReports();
-    whenVisitingReferential();
+    whenVisitingTheProductsInTheWorkshop();
     whenOpeningTheCostOfTheFirstElementListed();
 
+    thenTheServerWasAskedFor('element-1');
     thenTheReportIsDisplayed();
   });
 
   it('should come back to the products in the workshop from the report', () => {
     givenWorkshopAndReports();
-    whenVisitingWorkshop();
-    whenOpeningTheCostOfTheFirstElement();
+    whenVisitingTheProductsInTheWorkshop();
+    whenOpeningTheCostOfTheFirstElementListed();
     whenGoingBackToTheWorkshop();
 
     thenTheProductsInTheWorkshopAreVisible();
@@ -97,18 +78,12 @@ describe('Cost of manufacture of an element at the workshop', () => {
   };
 
   const givenWorkshopAndReports = (): void => {
-    atelier.install();
-    elements.install();
-    cout.install();
-  };
-
-  const givenReferentialAndReports = (): void => {
     elements.install();
     cout.install();
   };
 
   const givenAnUnknownElement = (): void => {
-    atelier.install();
+    elements.install();
     cout.elementInconnu = true;
     cout.install();
   };
@@ -121,25 +96,15 @@ describe('Cost of manufacture of an element at the workshop', () => {
     cy.get(dataSelector('cout-retry')).click();
   };
 
-  const whenVisitingWorkshop = (): void => {
+  const whenVisitingTheProductsInTheWorkshop = (): void => {
     cy.viewport(1280, 900);
-    cy.visit('/atelier');
-    cy.get(dataSelector('atelier-row')).should('have.length', 2);
+    cy.visit('/produits');
+    cy.get(dataSelector('element-row')).should('have.length', 2);
   };
 
   const whenVisitingTheReportOf = (element: string): void => {
     cy.viewport(1280, 900);
     cy.visit(`/couts-de-revient/${element}`);
-  };
-
-  const whenVisitingReferential = (): void => {
-    cy.viewport(1280, 900);
-    cy.visit('/produits');
-    cy.wait('@elementsRead');
-  };
-
-  const whenOpeningTheCostOfTheFirstElement = (): void => {
-    cy.get(dataSelector('atelier-cout-de-revient')).first().click();
   };
 
   const whenOpeningTheCostOfTheFirstElementListed = (): void => {
