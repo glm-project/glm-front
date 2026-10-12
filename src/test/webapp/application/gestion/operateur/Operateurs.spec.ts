@@ -128,6 +128,7 @@ const whenCreatingWorkstationFromSettings = (libelle: string, nature: string): v
   whenReplacing('poste-libelle', libelle);
   cy.get(dataSelector('poste-nature')).type(nature.slice(0, 3));
   cy.get(dataSelector('poste-nature-option')).contains(nature).click();
+  whenReplacing('poste-cout', '0');
   cy.get(dataSelector('poste-save')).click();
   cy.wait('@posteCreate');
 };

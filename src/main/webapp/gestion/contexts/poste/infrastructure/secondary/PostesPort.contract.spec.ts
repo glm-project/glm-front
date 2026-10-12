@@ -231,23 +231,13 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     await thenWorkstationExists('Établi 1', 'montage', 0);
   });
 
-  it('should create a workstation without hourly cost and reflect it in queries', async () => {
-    const resultat = await whenCreatingWorkstation('Scie 1', 'sciage');
-
-    thenCommandSucceeded(resultat);
-    await thenWorkstationExists('Scie 1', 'sciage');
-  });
-
-  it.each([
-    ['with hourly cost', 52],
-    ['without hourly cost', undefined],
-  ] as const)('should update an existing workstation %s and reflect changes in queries', async (_scenario, coutHoraire) => {
+  it('should update an existing workstation and reflect changes in queries', async () => {
     givenWorkstations([tourFixture]);
 
-    const resultat = await whenModifyingWorkstation('tour-1', 'Tour 1 Modifié', 'fraisage', coutHoraire);
+    const resultat = await whenModifyingWorkstation('tour-1', 'Tour 1 Modifié', 'fraisage', 52);
 
     thenCommandSucceeded(resultat);
-    await thenWorkstationExists('Tour 1 Modifié', 'fraisage', coutHoraire);
+    await thenWorkstationExists('Tour 1 Modifié', 'fraisage', 52);
   });
 
   it('should remove a workstation and reflect its absence in queries', async () => {
@@ -275,20 +265,20 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
 
   const whenQueryingPage = (page: number, size: number): Promise<Page<PosteDeTravail>> => port.postes(new RequetePostes(page, size));
 
-  const whenCreatingWorkstation = (libelle: string, nature: string, coutHoraire?: number): Promise<Result<void, RefusCreationPoste>> =>
+  const whenCreatingWorkstation = (libelle: string, nature: string, coutHoraire: number): Promise<Result<void, RefusCreationPoste>> =>
     port.creer({
       type: 'CREATION',
       libelle: new LibellePoste(libelle),
       nature: new NatureDeTravail(nature),
       natureId: new NatureDeTravailId('nature-' + nature),
-      coutHoraire: coutHoraire !== undefined ? new CoutHoraire(coutHoraire) : undefined,
+      coutHoraire: new CoutHoraire(coutHoraire),
     });
 
   const whenModifyingWorkstation = (
     id: string,
     libelle: string,
     nature: string,
-    coutHoraire?: number,
+    coutHoraire: number,
   ): Promise<Result<void, RefusModificationPoste>> =>
     port.modifier({
       type: 'MODIFICATION',
@@ -296,7 +286,7 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
       libelle: new LibellePoste(libelle),
       nature: new NatureDeTravail(nature),
       natureId: new NatureDeTravailId('nature-' + nature),
-      coutHoraire: coutHoraire !== undefined ? new CoutHoraire(coutHoraire) : undefined,
+      coutHoraire: new CoutHoraire(coutHoraire),
     });
 
   const whenDeletingWorkstation = (id: string): Promise<Result<void, RefusSuppressionPoste>> => port.supprimer(new PosteDeTravailId(id));
@@ -423,7 +413,7 @@ describe('Beyond the contract: HttpPostes', () => {
           libelle: new LibellePoste('Tour 1'),
           nature: new NatureDeTravail('tournage'),
           natureId: new NatureDeTravailId('nature-tournage'),
-          coutHoraire: undefined,
+          coutHoraire: new CoutHoraire(45.5),
         });
       case 'modifier':
         return port.modifier({
@@ -432,7 +422,7 @@ describe('Beyond the contract: HttpPostes', () => {
           libelle: new LibellePoste('Tour 1'),
           nature: new NatureDeTravail('tournage'),
           natureId: new NatureDeTravailId('nature-tournage'),
-          coutHoraire: undefined,
+          coutHoraire: new CoutHoraire(45.5),
         });
       case 'supprimer':
         return port.supprimer(new PosteDeTravailId('tour-1'));

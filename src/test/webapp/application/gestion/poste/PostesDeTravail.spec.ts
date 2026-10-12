@@ -21,15 +21,15 @@ describe('Workstation settings in gestion', () => {
     thenPosteIsListed('Tour 2', 'tournage', '45,50');
   });
 
-  it('should modify a workstation and remove its optional hourly cost', () => {
+  it('should modify a workstation into a labour-only one at zero hourly cost', () => {
     givenReferential(1);
     whenVisitingSettings();
     whenEditingFirstPoste();
     whenReplacing('poste-libelle', 'Tour révisé');
-    whenReplacing('poste-cout', '');
+    whenReplacing('poste-cout', '0');
     whenSaving('posteUpdate');
 
-    thenPosteIsListed('Tour révisé', 'ponçage', 'Non renseigné');
+    thenPosteIsListed('Tour révisé', 'ponçage', '0,00');
   });
 
   it('should remove the confirmed workstation and show the empty state', () => {
@@ -257,6 +257,7 @@ const thenNatureIsNotListed = (libelle: string): void => {
 const whenCreatingWorkstationOfChosenNature = (libelle: string): void => {
   cy.get(dataSelector('nature-new-poste')).click();
   cy.get(dataSelector('poste-libelle')).type(libelle);
+  cy.get(dataSelector('poste-cout')).type('0');
   whenSaving('posteCreate');
 };
 const thenWorkstationWasCreatedWithNature = (api: PostesApiFixture, natureId: string): void => {

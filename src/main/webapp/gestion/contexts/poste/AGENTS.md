@@ -10,7 +10,7 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 
 **Nature de travail** : métier ou type d'opération exercé sur ce poste (ex. « tournage », « soudage »), obligatoire et ne dépassant pas 50 caractères. Elle appartient au poste et qualifie le travail qui s'y effectue.
 
-**Coût horaire** : taux horaire appliqué aux pointages réalisés sur ce poste, destiné au calcul du coût de revient. Facultatif, et positif ou nul lorsqu'il est renseigné : 0 pour un poste qui ne demande que de la main d'œuvre.
+**Coût horaire** : taux horaire appliqué aux pointages réalisés sur ce poste, destiné au calcul du coût de revient. Exigé pour créer ou modifier un poste, positif ou nul : 0 pour un poste qui ne demande que de la main d'œuvre. Un poste existant sans coût horaire s'affiche normalement (« Non renseigné ») ; il faut seulement le renseigner pour modifier le poste.
 
 **Formulaire de poste** : modèle riche immutable encapsulant la saisie interactive d'un poste, la validation de ses invariants et l'affichage des refus du serveur.
 

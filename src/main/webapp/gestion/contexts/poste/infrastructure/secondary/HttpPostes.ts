@@ -36,7 +36,7 @@ const toPoste = (poste: components['schemas']['RestPosteDeTravail']): PosteDeTra
 const toRequest = (commande: CommandeCreationPoste | CommandeModificationPoste): components['schemas']['RestCreationPosteDeTravail'] => ({
   libelle: commande.libelle.value,
   natureId: commande.natureId.value,
-  ...(commande.coutHoraire === undefined ? {} : { coutHoraire: commande.coutHoraire.value }),
+  coutHoraire: commande.coutHoraire.value,
 });
 
 const refusCreation = (urn: string | undefined): RefusCreationPoste | undefined => {

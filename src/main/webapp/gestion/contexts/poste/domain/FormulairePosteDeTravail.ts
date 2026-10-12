@@ -73,7 +73,7 @@ export class FormulairePosteDeTravail {
     }
     const libelle = new LibellePoste(this.saisie.libelle);
     const { id: natureId, libelle: nature } = choisie;
-    const coutHoraire = this.coutEstRenseigne() ? new CoutHoraire(this.coutNumerique()) : undefined;
+    const coutHoraire = new CoutHoraire(this.coutNumerique());
 
     if (this.id === undefined) {
       return ok({ type: 'CREATION', libelle, nature, natureId, coutHoraire });
@@ -121,7 +121,7 @@ export class FormulairePosteDeTravail {
   }
 
   erreurCoutHoraire(): string | undefined {
-    return this.coutEstRenseigne() ? CoutHoraire.erreur(this.coutNumerique()) : undefined;
+    return this.coutEstRenseigne() ? CoutHoraire.erreur(this.coutNumerique()) : 'Le coût horaire est obligatoire.';
   }
 
   erreurEnregistrement(): string | undefined {
