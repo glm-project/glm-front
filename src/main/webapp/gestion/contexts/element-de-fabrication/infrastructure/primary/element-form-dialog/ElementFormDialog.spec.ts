@@ -30,6 +30,8 @@ const mouleFixture = new ElementDeFabrication(new ElementDeFabricationId('moule-
   libelle: new LibelleDElement('Moule de capot'),
 });
 
+const categoriesFixture = [new CategorieDeProduit('MOULE'), new CategorieDeProduit('OF')];
+
 describe('ElementFormDialog', () => {
   let fixture: ComponentFixture<DialogHostFixture>;
   let port: ElementsDeFabricationFixture;
@@ -61,6 +63,36 @@ describe('ElementFormDialog', () => {
     await whenOpeningCreation('MOULE');
 
     expect(fields()).toEqual(['element-reference', 'element-libelle']);
+  });
+
+  it('should offer the declared categories in their order and preselect the proposed one', async () => {
+    await whenOpeningCreation('OF');
+
+    expect(text('element-form-title')).toBe('Nouveau produit');
+    expect(options('element-categorie')).toEqual(['— Choisir —', 'MOULE', 'OF']);
+    expect(select('element-categorie').value).toBe('OF');
+  });
+
+  it('should refuse to create while no category is chosen', async () => {
+    await whenOpeningCreationWithoutProposal();
+    await whenSubmitting();
+
+    expect(select('element-categorie').value).toBe('');
+    expect(text('element-categorie-error')).toBe('Choisissez la catégorie du produit.');
+    expect(port.enregistrements).toEqual([]);
+    expect(closed).toEqual([]);
+  });
+
+  it('should create in the category chosen in the form', async () => {
+    await whenOpeningCreationWithoutProposal();
+    await whenChoosingCategory('MOULE');
+    await whenSubmitting();
+    await whenClosed();
+
+    expect(port.enregistrements).toEqual([
+      { kind: 'CREATION', categorie: new CategorieDeProduit('MOULE'), reference: undefined, libelle: undefined },
+    ]);
+    expect(closed).toEqual([true]);
   });
 
   it('should create an element reduced to its produced number', async () => {
@@ -129,6 +161,7 @@ describe('ElementFormDialog', () => {
   it('should prefill an existing element and modify it', async () => {
     await whenOpeningModification(mouleFixture);
     const titre = text('element-form-title');
+    const categorie = categoryField();
     const reference = input('element-reference').value;
     const libelle = input('element-libelle').value;
     await whenEntering('element-reference', '1016');
@@ -137,6 +170,7 @@ describe('ElementFormDialog', () => {
     await whenClosed();
 
     expect(titre).toBe('Modifier 1015');
+    expect(categorie).toBeNull();
     expect(reference).toBe('1015');
     expect(libelle).toBe('Moule de capot');
     expect(port.enregistrements).toEqual([
@@ -201,8 +235,11 @@ describe('ElementFormDialog', () => {
     port.creationDifferee = deferred.promise;
   };
 
-  const whenOpeningCreation = (code: string): Promise<void> => whenOpening({ categorie: new CategorieDeProduit(code), element: null });
-  const whenOpeningModification = (element: ElementDeFabrication): Promise<void> => whenOpening({ categorie: element.categorie, element });
+  const whenOpeningCreation = (code: string): Promise<void> =>
+    whenOpening({ element: null, categories: categoriesFixture, categorie: new CategorieDeProduit(code) });
+  const whenOpeningCreationWithoutProposal = (): Promise<void> =>
+    whenOpening({ element: null, categories: categoriesFixture, categorie: undefined });
+  const whenOpeningModification = (element: ElementDeFabrication): Promise<void> => whenOpening({ element });
   const whenOpening = async (data: ElementFormDialogData): Promise<void> => {
     dialog = TestBed.inject(MatDialog).open<ElementFormDialog, ElementFormDialogData, boolean>(ElementFormDialog, { data });
     fermeture = firstValueFrom(dialog.afterClosed());
@@ -220,6 +257,12 @@ describe('ElementFormDialog', () => {
     field.dispatchEvent(new Event('input', { bubbles: true }));
     await fixture.whenStable();
   };
+  const whenChoosingCategory = async (code: string): Promise<void> => {
+    const field = select('element-categorie');
+    field.value = code;
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    await fixture.whenStable();
+  };
   const whenSubmitting = async (): Promise<void> => {
     requiredFixture(document.querySelector(dataSelector('element-form')), 'form').dispatchEvent(
       new Event('submit', { bubbles: true, cancelable: true }),
@@ -232,6 +275,10 @@ describe('ElementFormDialog', () => {
   };
   const input = (selector: string): HTMLInputElement =>
     requiredFixture(document.querySelector<HTMLInputElement>(dataSelector(selector)), selector);
+  const categoryField = (): Element | null => document.querySelector(dataSelector('element-categorie'));
+  const select = (selector: string): HTMLSelectElement =>
+    requiredFixture(document.querySelector<HTMLSelectElement>(dataSelector(selector)), selector);
+  const options = (selector: string): string[] => [...select(selector).options].map(option => option.textContent.trim());
   const button = (selector: string): HTMLButtonElement =>
     requiredFixture(document.querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';

@@ -150,12 +150,11 @@ describe('Produits page', () => {
     expect(empty).toBe('');
   });
 
-  it('should offer one creation per declared category when the referential is empty', async () => {
+  it('should offer a single creation when the referential is empty', async () => {
     await whenOpening();
 
     expect(text('elements-empty')).toContain('Aucun produit');
-    expect(text('elements-empty-create-MOULE')).toContain('MOULE');
-    expect(text('elements-empty-create-OF')).toContain('OF');
+    expect(text('elements-empty-create')).toBe('Nouveau produit');
     expect(text('elements-pagination')).toContain('0 élément');
   });
 
@@ -165,7 +164,7 @@ describe('Produits page', () => {
     await whenOpening();
 
     expect(text('elements-sans-categorie')).toContain('Aucune catégorie de produit');
-    expect(creations()).toEqual([]);
+    expect(creation()).toBeNull();
   });
 
   it.each(['elements-categories', 'elements-sans-categorie-declarer'])('should open the category management from %s', async selector => {
@@ -182,20 +181,22 @@ describe('Produits page', () => {
     await whenOpening();
     await whenClicking('elements-categories');
     givenCategories(['MOULE', 'PIECE']);
-
     await whenClosingDialog(true);
 
-    expect(creations()).toEqual(['MOULE', 'PIECE']);
+    await whenClicking('elements-new');
+
+    expect(categoriesOffered()).toEqual(['— Choisir —', 'MOULE', 'PIECE']);
   });
 
-  it('should offer the creations and the filters in the order the company chose for its categories', async () => {
+  it('should offer the categories, as filters and in the creation form, in the order the company chose', async () => {
     givenCategories(['PIECE', 'OF', 'MOULE']);
     givenReferential();
-
     await whenOpening();
 
-    expect(creations()).toEqual(['PIECE', 'OF', 'MOULE']);
+    await whenClicking('elements-new');
+
     expect(buttonsIn('elements-filtres')).toEqual(['Tous', 'PIECE', 'OF', 'MOULE']);
+    expect(categoriesOffered()).toEqual(['— Choisir —', 'PIECE', 'OF', 'MOULE']);
   });
 
   it('should name each element by its screen words, its numbers and its label', async () => {
@@ -250,23 +251,41 @@ describe('Produits page', () => {
     expect(texts('element-row')).toHaveLength(2);
   });
 
-  it.each([
-    ['elements-new-MOULE', 'Nouveau produit MOULE'],
-    ['elements-new-OF', 'Nouveau produit OF'],
-    ['elements-empty-create-MOULE', 'Nouveau produit MOULE'],
-    ['elements-empty-create-OF', 'Nouveau produit OF'],
-  ])('should open the creation form with the category carried by %s', async (selector, titre) => {
+  it('should choose the only category of the company in the creation form', async () => {
+    givenCategories(['MOULE']);
     await whenOpening();
+
+    await whenClicking('elements-new');
+
+    expect(categoryChosen()).toBe('MOULE');
+  });
+
+  it.each(['elements-new', 'elements-empty-create'])('should open the creation form from %s', async selector => {
+    await whenOpening();
+
     await whenClicking(selector);
 
-    expect(text('element-form-title')).toBe(titre);
+    expect(text('element-form-title')).toBe('Nouveau produit');
     expect(fields()).toEqual(['element-reference', 'element-libelle']);
+  });
+
+  it.each([
+    ['elements-categorie-OF', 'OF'],
+    ['elements-categorie-tous', ''],
+  ])('should prefill the creation form category from the %s filter', async (filtre, expected) => {
+    givenReferential();
+    await whenOpening();
+    await whenClicking(filtre);
+
+    await whenClicking('elements-new');
+
+    expect(categoryChosen()).toBe(expected);
   });
 
   it('should reload the list after a creation succeeds', async () => {
     await whenOpening();
     givenReferential();
-    await whenClicking('elements-new-MOULE');
+    await whenClicking('elements-new');
     await whenClosingDialog(true);
 
     expect(texts('element-reference-cell')).toEqual(['1015', '—']);
@@ -275,7 +294,7 @@ describe('Produits page', () => {
   it('should keep the list unchanged when creation is cancelled', async () => {
     givenReferential();
     await whenOpening();
-    await whenClicking('elements-new-OF');
+    await whenClicking('elements-new');
     await whenClosingDialog(false);
 
     expect(texts('element-reference-cell')).toEqual(['1015', '—']);
@@ -306,7 +325,6 @@ describe('Produits page', () => {
   const givenCategories = (codes: readonly string[]): void => {
     port.categories = codes.map(code => new CategorieDeProduit(code));
   };
-  const creations = (): string[] => buttonsIn('elements-creations');
   const buttonsIn = (selector: string): string[] =>
     Array.from(document.querySelector(dataSelector(selector))?.querySelectorAll('button') ?? [], button => button.textContent.trim());
   const givenReferential = (): void => {
@@ -375,6 +393,11 @@ describe('Produits page', () => {
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';
   const texts = (selector: string): string[] =>
     [...document.querySelectorAll(dataSelector(selector))].map(element => element.textContent.trim());
+  const creation = (): Element | null => document.querySelector(dataSelector('elements-new'));
+  const categorySelect = (): HTMLSelectElement =>
+    requiredFixture(document.querySelector<HTMLSelectElement>(dataSelector('element-categorie')), 'element-categorie');
+  const categoriesOffered = (): string[] => [...categorySelect().options].map(option => option.textContent.trim());
+  const categoryChosen = (): string => categorySelect().value;
   const fields = (): (string | null)[] =>
     [...document.querySelectorAll('glm-element-form-dialog input')].map(field => field.getAttribute('data-selector'));
   const editLabels = (): (string | null)[] =>

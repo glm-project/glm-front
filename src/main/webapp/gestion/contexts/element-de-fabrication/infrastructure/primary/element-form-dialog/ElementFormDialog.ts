@@ -10,25 +10,26 @@ import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabrication
 import { CommandeElement, FormulaireElementDeFabrication, RefusDeCommande } from '../../../domain/FormulaireElementDeFabrication';
 import { LIBELLES_ELEMENTS_DE_FABRICATION, LIBELLES_FORMULAIRE_ELEMENT } from '../LibellesElementsDeFabrication';
 
-export interface ElementFormDialogData {
-  readonly categorie: CategorieDeProduit;
-  readonly element: ElementDeFabrication | null;
-}
+export type ElementFormDialogData =
+  | {
+      readonly element: null;
+      readonly categories: readonly CategorieDeProduit[];
+      readonly categorie: CategorieDeProduit | undefined;
+    }
+  | { readonly element: ElementDeFabrication };
 
 const formulairePour = (data: ElementFormDialogData): FormulaireElementDeFabrication =>
   data.element === null
-    ? FormulaireElementDeFabrication.pourCreation(data.categorie)
+    ? FormulaireElementDeFabrication.pourCreation(data.categories, data.categorie)
     : FormulaireElementDeFabrication.pourModification(data.element);
 
 const titrePour = (data: ElementFormDialogData): string =>
-  data.element === null
-    ? LIBELLES_ELEMENTS_DE_FABRICATION.creation(data.categorie)
-    : LIBELLES_ELEMENTS_DE_FABRICATION.modification(data.element.numero());
+  data.element === null ? LIBELLES_ELEMENTS_DE_FABRICATION.creation : LIBELLES_ELEMENTS_DE_FABRICATION.modification(data.element.numero());
 
 @Component({
   selector: 'glm-element-form-dialog',
   templateUrl: './ElementFormDialog.html',
-  styleUrl: './ElementFormDialog.css',
+  styleUrls: ['../../../../../shared/design-system/infrastructure/primary/forms.css', './ElementFormDialog.css'],
   imports: [TextField, MatDialogModule, MatButtonModule],
 })
 export class ElementFormDialog {
@@ -39,10 +40,15 @@ export class ElementFormDialog {
 
   protected readonly libelles = LIBELLES_FORMULAIRE_ELEMENT;
   protected readonly titre = titrePour(this.data);
+  protected readonly creation = this.data.element === null;
   protected readonly formulaire = signal(formulairePour(this.data));
   protected readonly soumis = signal(false);
   protected readonly enregistrement = signal(false);
   protected readonly erreurTechnique = signal(false);
+
+  protected changeCategorie(code: string): void {
+    this.formulaire.update(formulaire => formulaire.avecCategorie(code));
+  }
 
   protected changeReference(reference: string): void {
     this.formulaire.update(formulaire => formulaire.avecReference(reference));

@@ -3,6 +3,30 @@
   <mat-dialog-content>
     <p class="mb-6 text-body-sm text-ink-muted">{{ libelles.introduction }}</p>
     <fieldset [disabled]="enregistrement()" class="fields">
+      @if (creation) {
+      <div>
+        <label for="element-categorie" class="field-label">{{ libelles.categorie }}</label>
+        <select
+          id="element-categorie"
+          name="categorie"
+          class="field-input choix"
+          required
+          (change)="changeCategorie($any($event.target).value)"
+          [attr.aria-invalid]="soumis() && formulaire().erreurCategorie() !== undefined"
+          aria-describedby="element-categorie-help element-categorie-error"
+          data-selector="element-categorie"
+        >
+          <option value="" [selected]="formulaire().categorie === undefined">{{ libelles.categorieAChoisir }}</option>
+          @for (categorie of formulaire().choix; track categorie.value) {
+          <option [value]="categorie.value" [selected]="categorie.value === formulaire().categorie?.value">{{ categorie.value }}</option>
+          }
+        </select>
+        <p id="element-categorie-help" class="mt-2 text-body-sm text-ink-muted">{{ libelles.categorieAide }}</p>
+        <p id="element-categorie-error" class="field-error" aria-live="polite" data-selector="element-categorie-error">
+          {{ soumis() ? formulaire().erreurCategorie() : undefined }}
+        </p>
+      </div>
+      }
       <glm-text-field
         fieldId="element-reference"
         name="reference"

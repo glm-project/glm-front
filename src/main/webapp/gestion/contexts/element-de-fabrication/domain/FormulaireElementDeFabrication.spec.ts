@@ -10,10 +10,12 @@ import { ReferenceDElement } from './ReferenceDElement';
 import { ReferenceDejaUtilisee } from './ReferenceDejaUtilisee';
 
 const MOULE_FIXTURE = new CategorieDeProduit('MOULE');
+const OF_FIXTURE = new CategorieDeProduit('OF');
+const CATEGORIES_FIXTURE = [MOULE_FIXTURE, OF_FIXTURE];
 
 describe('FormulaireElementDeFabrication', () => {
   it.each(['MOULE', 'OF'])('should create a %s reduced to its produced number', code => {
-    const formulaire = FormulaireElementDeFabrication.pourCreation(new CategorieDeProduit(code));
+    const formulaire = FormulaireElementDeFabrication.pourCreation(CATEGORIES_FIXTURE, new CategorieDeProduit(code));
 
     expect(formulaire.estValide()).toBe(true);
     expect(formulaire.produireCommande()).toEqual({
@@ -23,7 +25,7 @@ describe('FormulaireElementDeFabrication', () => {
   });
 
   it('should carry the entered company number and label into the creation command', () => {
-    const formulaire = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE).avecReference('1015').avecLibelle('Moule de capot');
+    const formulaire = creationEnMouleFixture().avecReference('1015').avecLibelle('Moule de capot');
 
     expect(formulaire.produireCommande()).toEqual({
       ok: true,
@@ -35,7 +37,7 @@ describe('FormulaireElementDeFabrication', () => {
     ['blank entries', '   ', '   '],
     ['empty entries', '', ''],
   ])('should treat %s as an element without company number nor label', (_scenario, reference, libelle) => {
-    const formulaire = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE).avecReference(reference).avecLibelle(libelle);
+    const formulaire = creationEnMouleFixture().avecReference(reference).avecLibelle(libelle);
 
     expect(formulaire.produireCommande()).toEqual({
       ok: true,
@@ -43,10 +45,70 @@ describe('FormulaireElementDeFabrication', () => {
     });
   });
 
+  it('should offer the declared categories in the order the company chose', () => {
+    const formulaire = FormulaireElementDeFabrication.pourCreation([OF_FIXTURE, MOULE_FIXTURE], undefined);
+
+    expect(formulaire.choix).toEqual([OF_FIXTURE, MOULE_FIXTURE]);
+  });
+
+  it('should require a category when none is proposed', () => {
+    const formulaire = FormulaireElementDeFabrication.pourCreation(CATEGORIES_FIXTURE, undefined);
+
+    expect(formulaire.categorie).toBeUndefined();
+    expect(formulaire.estValide()).toBe(false);
+    expect(formulaire.produireCommande()).toEqual({
+      ok: false,
+      error: { categorie: 'Choisissez la catégorie du produit.', reference: undefined, libelle: undefined, enregistrement: undefined },
+    });
+  });
+
+  it('should choose the only declared category without being asked', () => {
+    const formulaire = FormulaireElementDeFabrication.pourCreation([MOULE_FIXTURE], undefined);
+
+    expect(formulaire.categorie).toEqual(MOULE_FIXTURE);
+    expect(formulaire.estValide()).toBe(true);
+  });
+
+  it('should create in the category chosen among the declared ones', () => {
+    const formulaire = FormulaireElementDeFabrication.pourCreation(CATEGORIES_FIXTURE, MOULE_FIXTURE).avecCategorie('OF');
+
+    expect(formulaire.produireCommande()).toEqual({
+      ok: true,
+      value: { kind: 'CREATION', categorie: OF_FIXTURE, reference: undefined, libelle: undefined },
+    });
+  });
+
+  it('should require a category again once the choice is cleared', () => {
+    const formulaire = FormulaireElementDeFabrication.pourCreation(CATEGORIES_FIXTURE, MOULE_FIXTURE).avecCategorie('');
+
+    expect(formulaire.erreurCategorie()).toBe('Choisissez la catégorie du produit.');
+  });
+
+  it('should keep the entries when the category changes', () => {
+    const formulaire = creationEnMouleFixture().avecReference('1015').avecLibelle('Moule de capot').avecCategorie('OF');
+
+    expect(formulaire.saisie).toEqual({ reference: '1015', libelle: 'Moule de capot' });
+  });
+
+  it('should keep a duplicate refusal when the category changes', () => {
+    const formulaire = creationEnMouleFixture().avecReference('1015').avecRefus(new ReferenceDejaUtilisee()).avecCategorie('OF');
+
+    expect(formulaire.erreurReference()).toBe('Un autre produit porte déjà cette référence.');
+  });
+
+  it('should clear a vanished category refusal once another category is chosen', () => {
+    const formulaire = creationEnMouleFixture().avecRefus(new CategorieInconnue()).avecCategorie('OF');
+
+    expect(formulaire.erreurEnregistrement()).toBeUndefined();
+    expect(formulaire.estValide()).toBe(true);
+  });
+
   it('should initialize editing from the element and keep its category', () => {
     const formulaire = FormulaireElementDeFabrication.pourModification(elementFixture('1015', 'Moule de capot'));
 
-    expect(formulaire.categorie.value).toBe('MOULE');
+    expect(formulaire.categorie?.value).toBe('MOULE');
+    expect(formulaire.choix).toEqual([]);
+    expect(formulaire.erreurCategorie()).toBeUndefined();
     expect(formulaire.saisie).toEqual({ reference: '1015', libelle: 'Moule de capot' });
     expect(formulaire.produireCommande()).toEqual({
       ok: true,
@@ -72,18 +134,23 @@ describe('FormulaireElementDeFabrication', () => {
   });
 
   it('should refuse an oversized company number without producing a command', () => {
-    const formulaire = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE).avecReference('a'.repeat(101));
+    const formulaire = creationEnMouleFixture().avecReference('a'.repeat(101));
 
     expect(formulaire.estValide()).toBe(false);
     expect(formulaire.erreurReference()).toBe('La référence est limitée à 100 caractères.');
     expect(formulaire.produireCommande()).toEqual({
       ok: false,
-      error: { reference: 'La référence est limitée à 100 caractères.', libelle: undefined, enregistrement: undefined },
+      error: {
+        categorie: undefined,
+        reference: 'La référence est limitée à 100 caractères.',
+        libelle: undefined,
+        enregistrement: undefined,
+      },
     });
   });
 
   it('should refuse a label beyond one line without producing a command', () => {
-    const formulaire = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE).avecLibelle('a'.repeat(101));
+    const formulaire = creationEnMouleFixture().avecLibelle('a'.repeat(101));
 
     expect(formulaire.estValide()).toBe(false);
     expect(formulaire.erreurLibelle()).toBe('Le libellé tient sur une ligne : 100 caractères au plus.');
@@ -91,7 +158,7 @@ describe('FormulaireElementDeFabrication', () => {
   });
 
   it('should attach the duplicate refusal to the company number and prevent resubmission', () => {
-    const initial = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE).avecReference('1015');
+    const initial = creationEnMouleFixture().avecReference('1015');
     const formulaire = initial.avecRefus(new ReferenceDejaUtilisee());
 
     expect(initial.estValide()).toBe(true);
@@ -100,7 +167,7 @@ describe('FormulaireElementDeFabrication', () => {
   });
 
   it('should clear the duplicate refusal after changing the company number', () => {
-    const refuse = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE).avecReference('1015').avecRefus(new ReferenceDejaUtilisee());
+    const refuse = creationEnMouleFixture().avecReference('1015').avecRefus(new ReferenceDejaUtilisee());
     const corrige = refuse.avecReference('1016');
 
     expect(corrige.erreurReference()).toBeUndefined();
@@ -109,14 +176,14 @@ describe('FormulaireElementDeFabrication', () => {
   });
 
   it('should keep the duplicate refusal while the label alone is edited', () => {
-    const refuse = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE).avecReference('1015').avecRefus(new ReferenceDejaUtilisee());
+    const refuse = creationEnMouleFixture().avecReference('1015').avecRefus(new ReferenceDejaUtilisee());
     const modifie = refuse.avecLibelle('Moule de capot');
 
     expect(modifie.erreurReference()).toBe('Un autre produit porte déjà cette référence.');
   });
 
   it('should keep the duplicate refusal when the company number is retyped identically', () => {
-    const refuse = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE).avecReference('1015').avecRefus(new ReferenceDejaUtilisee());
+    const refuse = creationEnMouleFixture().avecReference('1015').avecRefus(new ReferenceDejaUtilisee());
     const inchange = refuse.avecReference('1015');
 
     expect(inchange.erreurReference()).toBe('Un autre produit porte déjà cette référence.');
@@ -133,7 +200,7 @@ describe('FormulaireElementDeFabrication', () => {
   });
 
   it('should report a category that no longer exists on the saving line rather than on a field', () => {
-    const formulaire = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE).avecReference('1015').avecRefus(new CategorieInconnue());
+    const formulaire = creationEnMouleFixture().avecReference('1015').avecRefus(new CategorieInconnue());
 
     expect(formulaire.erreurEnregistrement()).toBe('Cette catégorie n’existe plus. Actualisez la liste.');
     expect(formulaire.erreurReference()).toBeUndefined();
@@ -141,9 +208,7 @@ describe('FormulaireElementDeFabrication', () => {
   });
 
   it('should show no saving error while only the company number is refused', () => {
-    const formulaire = FormulaireElementDeFabrication.pourCreation(MOULE_FIXTURE)
-      .avecReference('1015')
-      .avecRefus(new ReferenceDejaUtilisee());
+    const formulaire = creationEnMouleFixture().avecReference('1015').avecRefus(new ReferenceDejaUtilisee());
 
     expect(formulaire.erreurEnregistrement()).toBeUndefined();
   });
@@ -157,6 +222,8 @@ describe('FormulaireElementDeFabrication', () => {
     expect(corrige.erreurEnregistrement()).toBe('Cet élément n’existe plus. Actualisez la liste.');
   });
 
+  const creationEnMouleFixture = (): FormulaireElementDeFabrication =>
+    FormulaireElementDeFabrication.pourCreation(CATEGORIES_FIXTURE, MOULE_FIXTURE);
   const elementFixture = (reference: string | undefined, libelle: string | undefined): ElementDeFabrication =>
     new ElementDeFabrication(new ElementDeFabricationId('moule-1'), {
       categorie: MOULE_FIXTURE,

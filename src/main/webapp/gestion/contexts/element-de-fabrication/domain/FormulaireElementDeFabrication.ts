@@ -16,7 +16,8 @@ interface SaisieElement {
 }
 
 interface EtatFormulaireElement {
-  readonly categorie: CategorieDeProduit;
+  readonly choix: readonly CategorieDeProduit[];
+  readonly categorie: CategorieDeProduit | undefined;
   readonly saisie: SaisieElement;
   readonly id: ElementDeFabricationId | undefined;
   readonly refus: RefusDeCommande | undefined;
@@ -28,25 +29,39 @@ export type RefusDeCommande = RefusCreationElement | RefusModificationElement;
 
 const SAISIE_VIDE: SaisieElement = { reference: '', libelle: '' };
 
+const CATEGORIE_A_CHOISIR = 'Choisissez la catégorie du produit.';
+
+const seuleCategorie = (choix: readonly CategorieDeProduit[]): CategorieDeProduit | undefined =>
+  choix.length === 1 ? choix[0] : undefined;
+
 export class FormulaireElementDeFabrication {
-  readonly categorie: CategorieDeProduit;
+  readonly choix: readonly CategorieDeProduit[];
+  readonly categorie: CategorieDeProduit | undefined;
   readonly saisie: SaisieElement;
   readonly id: ElementDeFabricationId | undefined;
   private readonly refus: RefusDeCommande | undefined;
 
   private constructor(etat: EtatFormulaireElement) {
+    this.choix = etat.choix;
     this.categorie = etat.categorie;
     this.saisie = etat.saisie;
     this.id = etat.id;
     this.refus = etat.refus;
   }
 
-  static pourCreation(categorie: CategorieDeProduit): FormulaireElementDeFabrication {
-    return new FormulaireElementDeFabrication({ categorie, saisie: SAISIE_VIDE, id: undefined, refus: undefined });
+  static pourCreation(choix: readonly CategorieDeProduit[], categorie: CategorieDeProduit | undefined): FormulaireElementDeFabrication {
+    return new FormulaireElementDeFabrication({
+      choix,
+      categorie: categorie ?? seuleCategorie(choix),
+      saisie: SAISIE_VIDE,
+      id: undefined,
+      refus: undefined,
+    });
   }
 
   static pourModification(element: ElementDeFabrication): FormulaireElementDeFabrication {
     return new FormulaireElementDeFabrication({
+      choix: [],
       categorie: element.categorie,
       saisie: { reference: element.reference?.value ?? '', libelle: element.libelle?.value ?? '' },
       id: element.id,
@@ -54,7 +69,7 @@ export class FormulaireElementDeFabrication {
     });
   }
 
-  estValide(): boolean {
+  estValide(): this is FormulaireElementDeFabrication & { readonly categorie: CategorieDeProduit } {
     return Object.values(this.erreurs()).every(erreur => erreur === undefined);
   }
 
@@ -71,8 +86,19 @@ export class FormulaireElementDeFabrication {
     return ok({ kind: 'MODIFICATION', id: this.id, reference, libelle });
   }
 
+  avecCategorie(code: string): FormulaireElementDeFabrication {
+    return new FormulaireElementDeFabrication({
+      choix: this.choix,
+      categorie: this.choix.find(categorie => categorie.value === code),
+      saisie: this.saisie,
+      id: this.id,
+      refus: this.refus?.code === 'categorie-inconnue' ? undefined : this.refus,
+    });
+  }
+
   avecReference(reference: string): FormulaireElementDeFabrication {
     return new FormulaireElementDeFabrication({
+      choix: this.choix,
       categorie: this.categorie,
       saisie: { ...this.saisie, reference },
       id: this.id,
@@ -82,6 +108,7 @@ export class FormulaireElementDeFabrication {
 
   avecLibelle(libelle: string): FormulaireElementDeFabrication {
     return new FormulaireElementDeFabrication({
+      choix: this.choix,
       categorie: this.categorie,
       saisie: { ...this.saisie, libelle },
       id: this.id,
@@ -90,7 +117,11 @@ export class FormulaireElementDeFabrication {
   }
 
   avecRefus(refus: RefusDeCommande): FormulaireElementDeFabrication {
-    return new FormulaireElementDeFabrication({ categorie: this.categorie, saisie: this.saisie, id: this.id, refus });
+    return new FormulaireElementDeFabrication({ choix: this.choix, categorie: this.categorie, saisie: this.saisie, id: this.id, refus });
+  }
+
+  erreurCategorie(): string | undefined {
+    return this.categorie === undefined ? CATEGORIE_A_CHOISIR : undefined;
   }
 
   erreurReference(): string | undefined {
@@ -110,6 +141,7 @@ export class FormulaireElementDeFabrication {
 
   private erreurs(): ErreursFormulaireElement {
     return {
+      categorie: this.erreurCategorie(),
       reference: this.erreurReference(),
       libelle: this.erreurLibelle(),
       enregistrement: this.erreurEnregistrement(),

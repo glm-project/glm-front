@@ -6,9 +6,18 @@ describe('Manufacturing element interactions and rendering', () => {
   it('should open an empty creation form without premature validation errors', () => {
     const api = givenReferential();
     whenVisitingReferential();
-    whenOpeningCreation('elements-new-MOULE');
+    whenOpeningCreation();
 
     thenCreationStartsEmpty(api);
+  });
+
+  it('should require a category before writing', () => {
+    const api = givenReferential();
+    whenVisitingReferential();
+    whenOpeningCreation();
+    whenSubmittingInvalidEntries();
+
+    thenCategoryIsRequired(api);
   });
 
   it('should open the category management on its code field and show the typing in capital letters', () => {
@@ -43,7 +52,7 @@ describe('Manufacturing element interactions and rendering', () => {
   it('should dismiss creation with Escape without writing', () => {
     const api = givenReferential();
     whenVisitingReferential();
-    whenOpeningCreation('elements-new-OF');
+    whenOpeningCreation();
     whenPressingEscape('element-reference');
 
     thenCreationIsDismissed(api);
@@ -53,7 +62,8 @@ describe('Manufacturing element interactions and rendering', () => {
     givenReferential();
     const response = givenPendingCreation();
     whenVisitingReferential();
-    whenOpeningCreation('elements-new-MOULE');
+    whenOpeningCreation();
+    whenChoosingCategory('MOULE');
     whenReplacing('element-reference', '1015');
     whenTryingToDismissPendingSave();
     whenCompletingCreation(response);
@@ -72,7 +82,8 @@ describe('Manufacturing element interactions and rendering', () => {
   it('should refuse an oversized company number before writing', () => {
     const api = givenReferential();
     whenVisitingReferential();
-    whenOpeningCreation('elements-new-MOULE');
+    whenOpeningCreation();
+    whenChoosingCategory('MOULE');
     whenReplacing('element-reference', 'a'.repeat(101));
     whenSubmittingInvalidEntries();
 
@@ -104,7 +115,7 @@ describe('Manufacturing element interactions and rendering', () => {
   it('should keep creation usable on a narrow screen', () => {
     givenReferential(2);
     whenVisitingMobileReferential();
-    whenOpeningCreation('elements-new-MOULE');
+    whenOpeningCreation();
 
     thenMobileFormIsUsable();
   });
@@ -165,15 +176,19 @@ const thenExistingCategoryIsRefused = (): void => {
   cy.get(dataSelector('categorie-code-error')).should('have.text', 'Cette catégorie existe déjà.');
   cy.get(dataSelector('categories-title')).should('be.visible');
 };
-const whenOpeningCreation = (selector: string): void => {
-  cy.get(dataSelector(selector)).should('be.enabled').click();
+const whenOpeningCreation = (): void => {
+  cy.get(dataSelector('elements-new')).should('be.enabled').click();
+};
+const whenChoosingCategory = (code: string): void => {
+  cy.get(dataSelector('element-categorie')).select(code);
 };
 const whenReplacing = (selector: string, value: string): void => {
   cy.get(dataSelector(selector)).clear();
   if (value !== '') cy.get(dataSelector(selector)).type(value);
 };
 const whenCreating = (reference: string, libelle: string): void => {
-  whenOpeningCreation('elements-new-MOULE');
+  whenOpeningCreation();
+  whenChoosingCategory('MOULE');
   whenReplacing('element-reference', reference);
   whenReplacing('element-libelle', libelle);
   whenSaving();
@@ -200,15 +215,23 @@ const whenCompletingCreation = (response: ReturnType<typeof interceptForever>): 
   cy.wait('@pendingCreation');
 };
 const thenPendingSaveWasProtected = (): void => {
-  cy.get('@pendingTitle').should('contain', 'Nouveau produit MOULE');
+  cy.get('@pendingTitle').should('contain', 'Nouveau produit');
   cy.get('@pendingDisabled').should('equal', true);
   cy.get(dataSelector('element-form')).should('not.exist');
 };
 const thenCreationStartsEmpty = (api: ElementsApiFixture): void => {
-  cy.get(dataSelector('element-form-title')).should('have.text', 'Nouveau produit MOULE');
+  cy.get(dataSelector('element-form-title')).should('have.text', 'Nouveau produit');
+  cy.get(dataSelector('element-categorie')).should('have.value', '');
+  cy.get(dataSelector('element-categorie-error')).invoke('text').should('match', /^\s*$/);
   cy.get(dataSelector('element-reference')).should('have.value', '');
   cy.get(dataSelector('element-libelle')).should('have.value', '');
   cy.get(dataSelector('element-reference-error')).invoke('text').should('match', /^\s*$/);
+  cy.wrap(api.writes).should('be.empty');
+};
+const thenCategoryIsRequired = (api: ElementsApiFixture): void => {
+  cy.get(dataSelector('element-categorie-error')).should('contain.text', 'Choisissez la catégorie du produit.');
+  cy.get(dataSelector('element-categorie')).should('have.attr', 'aria-invalid', 'true');
+  cy.get(dataSelector('element-form')).should('be.visible');
   cy.wrap(api.writes).should('be.empty');
 };
 const thenCreationIsDismissed = (api: ElementsApiFixture): void => {
@@ -242,6 +265,7 @@ const thenDesktopLayoutIsVisible = (): void => {
   cy.screenshot('elements-desktop', { capture: 'fullPage' });
 };
 const thenMobileFormIsUsable = (): void => {
+  cy.get(dataSelector('element-categorie')).should('be.visible');
   cy.get(dataSelector('element-reference')).should('be.visible');
   cy.get(dataSelector('element-save')).should('be.visible');
   cy.get(dataSelector('element-cancel')).should('be.visible');
