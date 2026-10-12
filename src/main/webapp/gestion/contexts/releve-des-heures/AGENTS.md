@@ -125,12 +125,14 @@ pour la semaine en cours, même vide ; sinon le premier jour portant un pointage
 sélectionné est éphémère : aucun à l'ouverture, effacé au changement d’opérateur/jour/semaine, désélectionné par un
 second clic. Changer seulement le jour ou la sélection conserve les rapports acquis et leur évaluation.
 
-La vue de semaine garde sept colonnes de même largeur et une échelle commune de 0 à 24 h, vides compris.
+La vue de semaine garde sept colonnes de même largeur et une échelle commune de 0 à 24 h, vides compris, sans
+dépendre de la fenêtre de l'axe partagé.
 Les deux repères de chaque jour restent à l'intérieur de sa colonne, avec une marge lisible.
 Le jour consulté conserve son état dans l'URL, sans agrandir sa colonne. Le détail et le journal du jour
 figurent sous la semaine ; sur mobile, sept liens donnent accès aux jours sans défiler la frise.
-Le détail conserve un axe normalement 6–22 h, étendu au jour entier pour une borne nocturne ou à minuit.
-Une fin à minuit du lendemain ferme la portion à 1 440 minutes, sans fabriquer cette fin.
+Le détail place ses instants sur l'`AxeDuJour` du design system de gestion, qui possède la fenêtre (normalement
+6–22 h, étendue au jour entier pour une borne nocturne ou à minuit), ses repères et la coupure à minuit : une fin
+à minuit du lendemain ferme la portion à 1 440 minutes, sans fabriquer cette fin.
 Les mentions longues de fin automatique restent accessibles dans les barres, le détail et
 le panneau À vérifier, qui ne liste que des fins automatiques. Leur résumé dans la semaine ne doit pas dilater ses lignes.
 

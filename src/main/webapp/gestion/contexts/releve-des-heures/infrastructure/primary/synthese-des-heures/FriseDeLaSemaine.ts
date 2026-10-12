@@ -1,9 +1,9 @@
+import { AncrageDuRepere, AxeDuJour, minutesDeDebut } from '@/gestion/shared/design-system/infrastructure/primary/axe-du-jour/AxeDuJour';
 import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
 import { JourCalendaire } from '../../../domain/semaine/JourCalendaire';
 import { JournalDuJour, journalDuJour } from '../journal-du-jour/JournalDuJour';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
-import { AncrageDuRepere, AxeDuJour, minutesDeDebut } from './AxeDuJour';
 import { JourSurSonAxe, jourSurSonAxe } from './JourSurSonAxe';
 import { LigneDeFrise, ligneDeFrise } from './LignesDElements';
 
@@ -83,7 +83,7 @@ const repereDe = ({ axe, pointageChoisi }: JourSurSonAxe): GuideDePointage | und
   pointageChoisi === undefined
     ? undefined
     : {
-        gauche: axe.pourcentDe(minutesDeDebut(pointageChoisi.instant)),
+        gauche: axe.pourcentDe(minutesDeDebut(pointageChoisi.instant.value)),
         titre: LIBELLES.pointage(pointageChoisi.type, pointageChoisi.instant),
       };
 

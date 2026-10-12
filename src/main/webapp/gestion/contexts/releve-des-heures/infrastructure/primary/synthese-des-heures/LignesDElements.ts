@@ -1,3 +1,4 @@
+import { minutesDeDebut, minutesDeFin } from '@/gestion/shared/design-system/infrastructure/primary/axe-du-jour/AxeDuJour';
 import { CategorieDActivite } from '../../../domain/element/CategorieDActivite';
 import { ElementDuReleve } from '../../../domain/element/ElementDuReleve';
 import { IntervalleDActivite } from '../../../domain/element/IntervalleDActivite';
@@ -6,7 +7,6 @@ import { PosteReleveId } from '../../../domain/element/PosteReleveId';
 import { PointageDElement } from '../../../domain/releve/PointageDElement';
 import { TypeDePointage } from '../../../domain/releve/TypeDePointage';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
-import { minutesDeDebut, minutesDeFin } from './AxeDuJour';
 import { JourSurSonAxe } from './JourSurSonAxe';
 
 const LIBELLES = LIBELLES_RELEVE_DES_HEURES;
@@ -62,7 +62,7 @@ const STYLES_D_ACTIVITE: Record<CategorieDActivite, StyleDeBarreDActivite> = { T
 const MARQUES: Record<TypeDePointage, TypeDeMarque> = { DEBUT: 'debut', NON_CONFORMITE: 'nc', FIN: 'fin' };
 
 const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, intervalle: IntervalleDActivite): BarreDActivite => {
-  const gauche = axe.pourcentDe(minutesDeDebut(intervalle.debut));
+  const gauche = axe.pourcentDe(minutesDeDebut(intervalle.debut.value));
   if (intervalle.estEnCours()) {
     const enonce = LIBELLES.enonceDActiviteEnCours({
       element,
@@ -89,7 +89,7 @@ const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, 
     fin,
   });
   const etat = intervalle.activite.etat === 'TERMINEE_AUTOMATIQUEMENT' ? LIBELLES.finAutomatique(intervalle.activite.fin) : undefined;
-  const finSurLAxe = axe.pourcentDe(minutesDeFin(intervalle.debut, fin));
+  const finSurLAxe = axe.pourcentDe(minutesDeFin(intervalle.debut.value, fin.value));
   return {
     style: STYLES_D_ACTIVITE[intervalle.categorie],
     gauche,
@@ -103,7 +103,7 @@ const barreDActivite = (element: ElementDuReleve, { jour, axe }: JourSurSonAxe, 
 
 const marqueDe = ({ axe, pointageChoisi }: JourSurSonAxe, pointage: PointageDElement): MarqueDePointage => ({
   type: MARQUES[pointage.type],
-  gauche: axe.pourcentDe(minutesDeDebut(pointage.instant)),
+  gauche: axe.pourcentDe(minutesDeDebut(pointage.instant.value)),
   titre: LIBELLES.pointage(pointage.type, pointage.instant),
   choisie: pointage === pointageChoisi,
 });
