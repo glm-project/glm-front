@@ -113,6 +113,8 @@ describe('Produits page', () => {
   let actes: ActesDAtelierFixture;
   let errors: ErrorHandlerFixture;
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 12, 10, 0));
     actes = new ActesDAtelierFixture();
     errors = new ErrorHandlerFixture();
     port = new ElementsDeFabricationFixture();
@@ -133,6 +135,7 @@ describe('Produits page', () => {
     });
   });
   afterEach(async () => {
+    vi.useRealTimers();
     const dialogs = TestBed.inject(MatDialog);
     const closed = firstValueFrom(dialogs.afterAllClosed);
     dialogs.closeAll();
@@ -145,7 +148,13 @@ describe('Produits page', () => {
     await whenOpening();
 
     expect(pressedCycle()).toBe('En atelier');
-    expect(lastRequest()).toEqual({ cycle: 'EN_ATELIER', categorie: undefined, recherche: '', page: 0 });
+    expect(lastRequest()).toEqual({
+      cycle: 'EN_ATELIER',
+      categorie: undefined,
+      recherche: '',
+      page: 0,
+      cloture: { prereglage: 'DOUZE_MOIS' },
+    });
     expect(texts('element-nom-cell')).toEqual(['MOULE-2026-000002', 'OF-2026-000043']);
   });
 
@@ -156,7 +165,13 @@ describe('Produits page', () => {
     await whenOpening();
 
     expect(pressedCycle()).toBe('Clôturés');
-    expect(lastRequest()).toEqual({ cycle: 'CLOTURE', categorie: 'MOULE', recherche: 'capot', page: 1 });
+    expect(lastRequest()).toEqual({
+      cycle: 'CLOTURE',
+      categorie: 'MOULE',
+      recherche: 'capot',
+      page: 1,
+      cloture: { prereglage: 'DOUZE_MOIS' },
+    });
     expect(searchValue()).toBe('capot');
   });
 
@@ -191,6 +206,61 @@ describe('Produits page', () => {
 
     expect(router.navigations).toEqual([]);
     expect(texts('element-nom-cell')).toEqual(['PIECE-2026-000001']);
+  });
+
+  it('should offer the closure period on the closed products only', async () => {
+    await whenOpening();
+    const enAtelier = text('elements-periode');
+
+    await whenChoosingCycle('CLOTURE');
+
+    expect(enAtelier).toBe('');
+    expect(texts('elements-periode-prereglage')).toEqual(['Ce mois', '3 mois', '12 mois']);
+  });
+
+  it('should show the closures of the last twelve months by default', async () => {
+    givenAddress({ etat: 'clotures' });
+
+    await whenOpening();
+
+    expect(pressedPeriod()).toBe('12 mois');
+    expect(dateValue('elements-periode-du')).toBe('2025-10-12');
+    expect(dateValue('elements-periode-au')).toBe('2026-10-12');
+    expect(lastRequest().cloture).toEqual({ prereglage: 'DOUZE_MOIS' });
+  });
+
+  it('should read the closures of a chosen preset from their first page', async () => {
+    givenAddress({ etat: 'clotures', page: '2' });
+    await whenOpening();
+
+    await whenClicking('elements-periode-CE_MOIS');
+
+    expect(router.navigations.at(-1)?.queryParams).toEqual({ etat: 'clotures', periode: 'ce-mois' });
+    expect(lastRequest()).toEqual({ cycle: 'CLOTURE', categorie: undefined, recherche: '', page: 0, cloture: { prereglage: 'CE_MOIS' } });
+    expect(pressedPeriod()).toBe('Ce mois');
+  });
+
+  it.each([
+    ['elements-periode-du', '2026-03-01', { du: '2026-03-01', au: '2026-10-12' }],
+    ['elements-periode-au', '2026-03-31', { du: '2025-10-12', au: '2026-03-31' }],
+  ])('should read the closures between free days chosen with %s', async (selector, jour, bornes) => {
+    givenAddress({ etat: 'clotures' });
+    await whenOpening();
+
+    await whenChoosingDay(selector, jour);
+
+    expect(router.navigations.at(-1)?.queryParams).toEqual({ etat: 'clotures', ...bornes });
+    expect(lastRequest().cloture).toEqual(bornes);
+    expect(pressedPeriod()).toBe('');
+  });
+
+  it('should ignore a cleared day', async () => {
+    givenAddress({ etat: 'clotures' });
+    await whenOpening();
+
+    await whenChoosingDay('elements-periode-du', '');
+
+    expect(router.navigations).toEqual([]);
   });
 
   it('should offer the three cycles in the order of a product life', async () => {
@@ -237,7 +307,13 @@ describe('Produits page', () => {
 
     await whenChoosingCycle('CLOTURE');
 
-    expect(lastRequest()).toEqual({ cycle: 'CLOTURE', categorie: undefined, recherche: '', page: 0 });
+    expect(lastRequest()).toEqual({
+      cycle: 'CLOTURE',
+      categorie: undefined,
+      recherche: '',
+      page: 0,
+      cloture: { prereglage: 'DOUZE_MOIS' },
+    });
   });
 
   it('should name a product in preparation by its category, numbers, label and creation', async () => {
@@ -425,7 +501,7 @@ describe('Produits page', () => {
 
     expect(actes.reouvertures).toEqual(['suivi-moule-3']);
     expect(pressedCycle()).toBe('Clôturés');
-    expect(text('elements-empty')).toBe('Aucun produit clôturé.');
+    expect(text('elements-empty')).toBe('Aucun produit clôturé sur cette période.');
     expect(counters()).toEqual(['2', '3', '0']);
   });
 
@@ -543,7 +619,13 @@ describe('Produits page', () => {
 
     await whenSearching('capot');
 
-    expect(lastRequest()).toEqual({ cycle: 'EN_ATELIER', categorie: undefined, recherche: 'capot', page: 0 });
+    expect(lastRequest()).toEqual({
+      cycle: 'EN_ATELIER',
+      categorie: undefined,
+      recherche: 'capot',
+      page: 0,
+      cloture: { prereglage: 'DOUZE_MOIS' },
+    });
   });
 
   it.each([
@@ -562,7 +644,7 @@ describe('Produits page', () => {
   it.each([
     ['EN_PREPARATION', 'Aucun produit en préparation. Créez-en un avec « Nouveau produit ».'],
     ['EN_ATELIER', 'Rien à l’atelier pour l’instant.'],
-    ['CLOTURE', 'Aucun produit clôturé.'],
+    ['CLOTURE', 'Aucun produit clôturé sur cette période.'],
   ] as const)('should say that the %s cycle is empty', async (cycle, message) => {
     await whenOpening();
 
@@ -768,7 +850,13 @@ describe('Produits page', () => {
     await whenClosingDialog(creeFixture.element.id);
 
     expect(pressedCycle()).toBe('En préparation');
-    expect(lastRequest()).toEqual({ cycle: 'EN_PREPARATION', categorie: undefined, recherche: '', page: 0 });
+    expect(lastRequest()).toEqual({
+      cycle: 'EN_PREPARATION',
+      categorie: undefined,
+      recherche: '',
+      page: 0,
+      cloture: { prereglage: 'DOUZE_MOIS' },
+    });
     expect(texts('element-nom-cell')).toEqual(['PIECE-2026-000001', 'MOULE-2026-000001', 'OF-2026-000042']);
     expect(highlightedRows()).toEqual(['PIECE-2026-000001']);
   });
@@ -922,8 +1010,24 @@ describe('Produits page', () => {
   };
   const lastRequest = () => {
     const requete = requiredFixture(port.requetes.at(-1), 'requete');
-    return { cycle: requete.cycle, categorie: requete.categorie?.value, recherche: requete.recherche, page: requete.page };
+    return {
+      cycle: requete.cycle,
+      categorie: requete.categorie?.value,
+      recherche: requete.recherche,
+      page: requete.page,
+      cloture: requete.cloture,
+    };
   };
+  const whenChoosingDay = async (selector: string, jour: string): Promise<void> => {
+    const champ = requiredFixture(document.querySelector<HTMLInputElement>(dataSelector(selector)), selector);
+    champ.value = jour;
+    champ.dispatchEvent(new Event('change'));
+    await whenViewSettles();
+  };
+  const dateValue = (selector: string): string =>
+    requiredFixture(document.querySelector<HTMLInputElement>(dataSelector(selector)), selector).value;
+  const pressedPeriod = (): string =>
+    document.querySelector('[data-selector="elements-periode"] [aria-pressed="true"]')?.textContent.trim() ?? '';
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';
   const texts = (selector: string): string[] =>
     [...document.querySelectorAll(dataSelector(selector))].map(element => element.textContent.replace(/\s+/g, ' ').trim());

@@ -1,5 +1,6 @@
 import { CategorieDeProduit } from './CategorieDeProduit';
 import { CycleDuProduit } from './CycleDuProduit';
+import { PERIODE_DE_CLOTURE_PAR_DEFAUT, PeriodeDeCloture } from './PeriodeDeCloture';
 
 export const TAILLE_DES_PAGES = 20;
 
@@ -10,6 +11,7 @@ export interface CriteresDesProduits {
   readonly categorie: CategorieDeProduit | undefined;
   readonly recherche: string;
   readonly page: number;
+  readonly cloture?: PeriodeDeCloture;
 }
 
 export class RequeteProduits {
@@ -18,8 +20,10 @@ export class RequeteProduits {
   readonly categorie: CategorieDeProduit | undefined;
   readonly recherche: string;
   readonly page: number;
+  readonly cloture: PeriodeDeCloture;
 
-  constructor({ cycle, categorie, recherche, page }: CriteresDesProduits) {
+  constructor({ cycle, categorie, recherche, page, cloture = PERIODE_DE_CLOTURE_PAR_DEFAUT }: CriteresDesProduits) {
+    this.cloture = cloture;
     this.cycle = cycle;
     this.categorie = categorie;
     this.recherche = recherche;
@@ -35,6 +39,7 @@ export class RequeteProduits {
       categorie: this.categorie,
       recherche: this.recherche,
       page: this.page,
+      cloture: this.cloture,
       ...changements,
     });
   }

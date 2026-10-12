@@ -1,4 +1,4 @@
-import { formatInstantNumericDateTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
+import { formatInstantNumericDateTime, localCalendarDay } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Result } from '@/app/shared/result/domain/Result';
@@ -18,6 +18,7 @@ import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementDeFabricationId } from '../../../domain/ElementDeFabricationId';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
 import { EtatDAtelier } from '../../../domain/EtatDAtelier';
+import { bornesDeCloture, periodeLibre, PrereglageDeCloture, PREREGLAGES_DE_CLOTURE } from '../../../domain/PeriodeDeCloture';
 import { ProduitDansSonCycle } from '../../../domain/ProduitDansSonCycle';
 import { RefusDActeDAtelier } from '../../../domain/RefusDActeDAtelier';
 import { CriteresDesProduits, TAILLE_DES_PAGES } from '../../../domain/RequeteProduits';
@@ -110,6 +111,8 @@ export class Produits implements OnInit {
   protected readonly libelles = LIBELLES_ELEMENTS_DE_FABRICATION;
   protected readonly libellesCategories = LIBELLES_CATEGORIES_DE_PRODUIT;
   protected readonly cycles = CYCLES_DU_PRODUIT;
+  protected readonly prereglages = PREREGLAGES_DE_CLOTURE;
+  private readonly aujourdhui = new Date();
   protected readonly etat = signal<EtatProduits>({
     categories: [],
     sansCategorie: false,
@@ -126,6 +129,9 @@ export class Produits implements OnInit {
   protected readonly recherche = computed(() => this.requete().recherche);
   protected readonly page = computed(() => this.requete().page);
   protected readonly colonnes = computed(() => COLONNES[this.cycle()]);
+  private readonly bornes = computed(() => bornesDeCloture(this.requete().cloture, this.aujourdhui));
+  protected readonly du = computed(() => localCalendarDay(this.bornes().debut));
+  protected readonly au = computed(() => localCalendarDay(this.bornes().fin));
   protected readonly lignes = computed(() => this.etat().produits.map(ligneDe));
   private readonly pages = computed(() => Math.ceil(this.etat().total / TAILLE_DES_PAGES));
   protected readonly paginationVisible = computed(() => this.etat().total > 0 && (this.cycle() === 'CLOTURE' || this.pages() > 1));
@@ -165,6 +171,23 @@ export class Produits implements OnInit {
 
   protected rechercher(recherche: string): void {
     this.afficher({ recherche, page: 0 }, true);
+  }
+
+  protected choisirPrereglage(prereglage: PrereglageDeCloture): void {
+    this.afficher({ cloture: { prereglage }, page: 0 });
+  }
+
+  protected choisirDu(jour: string): void {
+    this.choisirJours(jour, this.au());
+  }
+
+  protected choisirAu(jour: string): void {
+    this.choisirJours(this.du(), jour);
+  }
+
+  protected estPrereglage(prereglage: PrereglageDeCloture): boolean {
+    const cloture = this.requete().cloture;
+    return 'prereglage' in cloture && cloture.prereglage === prereglage;
   }
 
   protected pagePrecedente(): void {
@@ -271,6 +294,13 @@ export class Produits implements OnInit {
       this.errors.handleError(failure);
     } finally {
       this.acteEnCours.set(undefined);
+    }
+  }
+
+  private choisirJours(du: string, au: string): void {
+    const cloture = periodeLibre(du, au);
+    if (cloture !== undefined) {
+      this.afficher({ cloture, page: 0 });
     }
   }
 

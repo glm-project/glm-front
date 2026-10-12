@@ -1,6 +1,7 @@
 import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
 import { CycleDuProduit } from '../../domain/CycleDuProduit';
 import { EtatDAtelier } from '../../domain/EtatDAtelier';
+import { PrereglageDeCloture } from '../../domain/PeriodeDeCloture';
 
 const CYCLES: Record<CycleDuProduit, string> = {
   EN_PREPARATION: 'En préparation',
@@ -17,7 +18,7 @@ const TABLEAUX: Record<CycleDuProduit, string> = {
 const VIDES: Record<CycleDuProduit, string> = {
   EN_PREPARATION: 'Aucun produit en préparation. Créez-en un avec « Nouveau produit ».',
   EN_ATELIER: 'Rien à l’atelier pour l’instant.',
-  CLOTURE: 'Aucun produit clôturé.',
+  CLOTURE: 'Aucun produit clôturé sur cette période.',
 };
 
 const ETATS: Record<EtatDAtelier, string> = {
@@ -66,6 +67,12 @@ export const LIBELLES_ELEMENTS_DE_FABRICATION = {
   erreur: 'Impossible de charger les produits. Vérifiez la connexion puis réessayez.',
   reessayer: 'Réessayer',
   erreurAction: 'L’action a échoué. Vérifiez la connexion puis réessayez.',
+  periode: {
+    aria: 'Période de clôture',
+    prereglages: { CE_MOIS: 'Ce mois', TROIS_MOIS: '3 mois', DOUZE_MOIS: '12 mois' } satisfies Record<PrereglageDeCloture, string>,
+    du: 'Clôturés du',
+    au: 'au',
+  },
   annonces: {
     misALAtelier: (numero: string): string => `${numero} mis à l’atelier`,
     cloture: (numero: string): string => `${numero} clôturé`,

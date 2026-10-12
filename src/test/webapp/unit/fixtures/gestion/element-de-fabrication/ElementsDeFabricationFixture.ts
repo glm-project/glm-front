@@ -7,6 +7,7 @@ import { ElementDeFabrication } from '@/gestion/contexts/element-de-fabrication/
 import { ElementDeFabricationId } from '@/gestion/contexts/element-de-fabrication/domain/ElementDeFabricationId';
 import { ElementsDeFabricationPort } from '@/gestion/contexts/element-de-fabrication/domain/ElementsDeFabricationPort';
 import { NomDElement } from '@/gestion/contexts/element-de-fabrication/domain/NomDElement';
+import { bornesDeCloture } from '@/gestion/contexts/element-de-fabrication/domain/PeriodeDeCloture';
 import { ProduitDansSonCycle } from '@/gestion/contexts/element-de-fabrication/domain/ProduitDansSonCycle';
 import { RefusCreationElement } from '@/gestion/contexts/element-de-fabrication/domain/RefusCreationElement';
 import { RefusModificationElement } from '@/gestion/contexts/element-de-fabrication/domain/RefusModificationElement';
@@ -32,8 +33,14 @@ const filtre = (produit: ProduitDansSonCycle, requete: RequeteProduits): boolean
   return dansLaCategorie && trouve;
 };
 
+const clotureDansLaPeriode = (produit: ProduitDansSonCycle, requete: RequeteProduits): boolean => {
+  if (produit.passage.cycle !== 'CLOTURE') return true;
+  const bornes = bornesDeCloture(requete.cloture, new Date());
+  return produit.passage.clotureLe >= bornes.debut && produit.passage.clotureLe <= bornes.fin;
+};
+
 const correspond = (produit: ProduitDansSonCycle, requete: RequeteProduits): boolean =>
-  produit.passage.cycle === requete.cycle && filtre(produit, requete);
+  produit.passage.cycle === requete.cycle && filtre(produit, requete) && clotureDansLaPeriode(produit, requete);
 
 export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
   produitsEnregistres: readonly ProduitDansSonCycle[] = [];
@@ -68,7 +75,7 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
   override compteurs(requete: RequeteProduits): Promise<CompteursDesCycles> {
     this.requetesDeCompteurs.push(requete);
     if (this.lectureFailure !== undefined) return Promise.reject(this.lectureFailure);
-    const filtres = this.produitsEnregistres.filter(produit => filtre(produit, requete));
+    const filtres = this.produitsEnregistres.filter(produit => filtre(produit, requete) && clotureDansLaPeriode(produit, requete));
     const compter = (cycle: ProduitDansSonCycle['passage']['cycle']): number =>
       filtres.filter(produit => produit.passage.cycle === cycle).length;
     return Promise.resolve({ EN_PREPARATION: compter('EN_PREPARATION'), EN_ATELIER: compter('EN_ATELIER'), CLOTURE: compter('CLOTURE') });

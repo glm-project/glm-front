@@ -72,6 +72,14 @@ const moulesClotureFixture: ElementFixture = {
   clotureePar: 'Claire',
 };
 
+const ancienneClotureFixture: ElementFixture = {
+  ...moulesClotureFixture,
+  id: 'moule-9',
+  nom: 'MOULE-2026-000009',
+  suivi: 'suivi-moule-9',
+  clotureLe: '2026-08-01T10:00:00Z',
+};
+
 interface ProjectionElement {
   readonly id: string;
   readonly categorie: string;
@@ -95,6 +103,9 @@ const sansCasse = (texte: string | undefined): string => (texte ?? '').toLocaleL
 const trouve = (element: ElementFixture, recherche: string | null): boolean =>
   recherche === null
   || [element.nom, element.reference, element.description].some(texte => sansCasse(texte).includes(sansCasse(recherche)));
+
+const clotureDans = (element: ElementFixture, debut: string | null, fin: string | null): boolean =>
+  element.cycle !== 'CLOTURE' || debut === null || fin === null || ((element.clotureLe ?? '') >= debut && (element.clotureLe ?? '') <= fin);
 
 class ElementsHttpBackendFixture implements HttpBackend {
   elements: ElementFixture[] = [];
@@ -135,7 +146,10 @@ class ElementsHttpBackendFixture implements HttpBackend {
   private filtres(searchParams: URLSearchParams): ElementFixture[] {
     const categorie = searchParams.get('categorie');
     return this.elements.filter(
-      element => (categorie === null || element.categorie === categorie) && trouve(element, searchParams.get('recherche')),
+      element =>
+        (categorie === null || element.categorie === categorie)
+        && trouve(element, searchParams.get('recherche'))
+        && clotureDans(element, searchParams.get('clotureDebut'), searchParams.get('clotureFin')),
     );
   }
 
@@ -238,7 +252,7 @@ const passageDe = (element: ElementFixture): ProduitDansSonCycle['passage'] => {
         cycle: 'CLOTURE',
         suivi: new SuiviDuProduitId(element.suivi ?? ''),
         misALAtelierLe: new Date(MIS_A_L_ATELIER_LE),
-        clotureLe: new Date(CLOTURE_LE),
+        clotureLe: new Date(element.clotureLe ?? CLOTURE_LE),
         clotureePar: element.clotureePar ?? '',
       };
     default:
@@ -277,7 +291,13 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
   let harness: ElementsHarness;
   let port: ElementsDeFabricationPort;
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-12T10:00:00Z'));
     harness = createHarness();
     port = harness.port;
   });
@@ -321,6 +341,29 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
       clotureLe: new Date(CLOTURE_LE),
       clotureePar: 'Claire',
     });
+  });
+
+  it.each([
+    ['CE_MOIS', ['moule-2']],
+    ['DOUZE_MOIS', ['moule-2', 'moule-9']],
+  ] as const)('should keep the products closed during the %s period', async (prereglage, ids) => {
+    givenReferential([moulesClotureFixture, ancienneClotureFixture]);
+
+    const page = await port.produits(
+      new RequeteProduits({ cycle: 'CLOTURE', categorie: undefined, recherche: '', page: 0, cloture: { prereglage } }),
+    );
+
+    expect(page.elements.map(produit => produit.element.id.value)).toEqual(ids);
+  });
+
+  it('should count only the closures of the period', async () => {
+    givenReferential([moulesClotureFixture, ancienneClotureFixture, ofALAtelierFixture]);
+
+    const compteurs = await port.compteurs(
+      new RequeteProduits({ cycle: 'EN_ATELIER', categorie: undefined, recherche: '', page: 0, cloture: { prereglage: 'CE_MOIS' } }),
+    );
+
+    expect(compteurs).toEqual({ EN_PREPARATION: 0, EN_ATELIER: 1, CLOTURE: 1 });
   });
 
   it('should keep the products of the requested category only', async () => {
@@ -504,6 +547,8 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
   let errorHandler: ErrorHandlerFixture;
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-12T10:00:00Z'));
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
@@ -521,16 +566,25 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
 
   afterEach(() => {
     server.verify();
+    vi.useRealTimers();
   });
 
-  it('should send the cycle, the category, the search and the page, without any creation period', async () => {
+  it('should send the cycle, the category, the search, the closure period and the page, without any creation period', async () => {
     const result = port.produits(
       new RequeteProduits({ cycle: 'CLOTURE', categorie: new CategorieDeProduit('MOULE'), recherche: ' capot ', page: 2 }),
     );
     const request = await whenReadAnswers([], 2);
 
     await result;
-    expect(parametres(request)).toEqual({ cycle: 'CLOTURE', categorie: 'MOULE', recherche: 'capot', page: '2', size: '20' });
+    expect(parametres(request)).toEqual({
+      cycle: 'CLOTURE',
+      categorie: 'MOULE',
+      recherche: 'capot',
+      clotureDebut: '2025-10-12T03:00:00.000Z',
+      clotureFin: '2026-10-13T02:59:59.999Z',
+      page: '2',
+      size: '20',
+    });
   });
 
   it('should send neither a category nor a search the manager did not give', async () => {
@@ -541,14 +595,19 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
     expect(parametres(request)).toEqual({ cycle: 'EN_ATELIER', page: '0', size: '20' });
   });
 
-  it('should count with the category and the search only', async () => {
+  it('should count with the category, the search and the closure period', async () => {
     const result = port.compteurs(
       new RequeteProduits({ cycle: 'CLOTURE', categorie: new CategorieDeProduit('OF'), recherche: 'capot', page: 3 }),
     );
     const request = await whenCountersAnswer();
 
     await result;
-    expect(parametres(request)).toEqual({ categorie: 'OF', recherche: 'capot' });
+    expect(parametres(request)).toEqual({
+      categorie: 'OF',
+      recherche: 'capot',
+      clotureDebut: '2025-10-12T03:00:00.000Z',
+      clotureFin: '2026-10-13T02:59:59.999Z',
+    });
   });
 
   it('should report a failed count once and reject', async () => {

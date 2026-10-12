@@ -71,6 +71,22 @@ describe('Manufacturing element referential in gestion', () => {
     thenCountersAre(['0', '1', '0']);
   });
 
+  it('should show only the products closed during the chosen period', () => {
+    givenProductsClosedLongAgoAndNow();
+    whenVisiting('/produits?etat=clotures&periode=3-mois');
+
+    thenOnlyListed('1016');
+    thenCountersAre(['0', '0', '1']);
+  });
+
+  it('should write the chosen closure period into the address', () => {
+    givenProductsClosedLongAgoAndNow();
+    whenVisiting('/produits?etat=clotures');
+    whenChoosingPeriod('CE_MOIS');
+
+    thenAddressIs('?etat=clotures&periode=ce-mois');
+  });
+
   it('should keep the products in preparation on their own tab', () => {
     givenProductsInTheirCycles();
     whenVisitingReferential();
@@ -214,17 +230,31 @@ const whenPuttingFirstProductIntoTheWorkshop = (): void => {
 };
 const givenClosedProduct = (): ElementsApiFixture => {
   const api = new ElementsApiFixture(
-    elementsFixture(1).map(element => ({ ...element, cycle: 'CLOTURE', clotureLe: '2026-10-05T16:00:00Z', clotureePar: 'Claire' })),
+    elementsFixture(1).map(element => ({ ...element, cycle: 'CLOTURE', clotureLe: new Date().toISOString(), clotureePar: 'Claire' })),
   );
   api.install();
   return api;
+};
+const givenProductsClosedLongAgoAndNow = (): void => {
+  const ilYAUnAnEtDemi = new Date(Date.now() - 540 * 24 * 60 * 60 * 1000).toISOString();
+  new ElementsApiFixture(
+    elementsFixture(2).map((element, rang) => ({
+      ...element,
+      cycle: 'CLOTURE',
+      clotureLe: rang === 0 ? ilYAUnAnEtDemi : new Date().toISOString(),
+      clotureePar: 'Claire',
+    })),
+  ).install();
+};
+const whenChoosingPeriod = (prereglage: string): void => {
+  cy.get(dataSelector(`elements-periode-${prereglage}`)).click();
 };
 const whenReopeningFirstProduct = (): void => {
   cy.get(dataSelector('element-reouverture')).first().click();
   cy.wait('@reouverture');
 };
 const thenNoClosedProduct = (): void => {
-  cy.get(dataSelector('elements-empty')).should('contain.text', 'Aucun produit clôturé.');
+  cy.get(dataSelector('elements-empty')).should('contain.text', 'Aucun produit clôturé sur cette période.');
 };
 const whenClosingFirstProduct = (): void => {
   cy.get(dataSelector('element-cloture')).first().click();

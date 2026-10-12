@@ -49,8 +49,12 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
 - **ProduitDansSonCycle** : un élément lu dans son cycle, avec sa date de création et son passage à l'atelier
   (`PassageALAtelier`) : rien en préparation, l'état et la mise à l'atelier en atelier, la mise à l'atelier,
   la clôture et son auteur une fois clôturé.
-- **RequeteProduits** : objet de requête d'un onglet — cycle, catégorie éventuelle, recherche, page — lu
-  vingt par vingt. `rechercheSaisie()` n'envoie pas une recherche blanche.
+- **PeriodeDeCloture** : la période de clôture de l'onglet Clôturés — un préréglage (`CE_MOIS`, `TROIS_MOIS`,
+  `DOUZE_MOIS` par défaut) ou deux jours libres (`periodeLibre`, remis dans l'ordre). `bornesDeCloture` la
+  traduit en instants à partir d'un « aujourd'hui » reçu : du début du mois, ou du même jour trois ou douze mois
+  plus tôt, jusqu'à la fin du jour. Le domaine ne lit pas l'horloge ; l'adaptateur HTTP la lui donne.
+- **RequeteProduits** : objet de requête d'un onglet — cycle, catégorie éventuelle, recherche, page, période de
+  clôture — lu vingt par vingt. `rechercheSaisie()` n'envoie pas une recherche blanche.
 - **FormulaireElementDeFabrication** : modèle riche d'interaction pour la création et la modification, qui
   valide les saisies, exige une catégorie choisie parmi celles proposées à la création, produit la commande
   adéquate, efface le refus de doublon dès que la référence est modifiée et le refus `CategorieInconnue` dès
@@ -148,8 +152,9 @@ recherche partent en paramètres, et le serveur trie chaque cycle par son dernie
 de catégorie ou de recherche repart de la première page. Les boutons de page ne s'affichent qu'au-delà d'une
 page, sauf sur Clôturés, liste qui ne fait que grandir et qui situe toujours ses produits (« 1–20 sur N »).
 L'adresse porte la vue — `etat` (`en-preparation`, `en-atelier`, `clotures`), `categorie`, `recherche` et
-`page` comptée depuis 1 — et la page la suit : chaque choix navigue, et c'est la nouvelle adresse qui relit.
+`page` comptée depuis 1, et sur Clôturés `periode` (`ce-mois`, `3-mois`) ou `du` et `au` — et la page la suit : chaque choix navigue, et c'est la nouvelle adresse qui relit.
 Sans paramètre, la page s'ouvre sur En atelier. Une adresse invalide retombe sur ces valeurs par défaut. La
-recherche remplace l'entrée d'historique au lieu d'en ajouter une par lettre. Les catégories se lisent à
+recherche remplace l'entrée d'historique au lieu d'en ajouter une par lettre. La période de clôture ne filtre que l'onglet Clôturés et
+son compteur : le nombre de produits clôturés hors période n'est jamais affiché. Les catégories se lisent à
 l'ouverture, à « Actualiser » et à la fermeture de l'overlay. Une réponse obsolète
 ne remplace pas une lecture récente.

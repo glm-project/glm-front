@@ -66,6 +66,45 @@
       </button>
       }
     </div>
+    @if (cycle() === 'CLOTURE') {
+    <div class="flex flex-wrap items-end gap-3" role="group" [attr.aria-label]="libelles.periode.aria" data-selector="elements-periode">
+      <div class="gestion-segments">
+        @for (prereglage of prereglages; track prereglage) {
+        <button
+          class="gestion-segment"
+          type="button"
+          [attr.aria-pressed]="estPrereglage(prereglage)"
+          (click)="choisirPrereglage(prereglage)"
+          [attr.data-selector]="'elements-periode-' + prereglage"
+        >
+          <span data-selector="elements-periode-prereglage">{{ libelles.periode.prereglages[prereglage] }}</span>
+        </button>
+        }
+      </div>
+      <label class="flex flex-col gap-1">
+        <span class="text-body-sm font-semibold text-ink-muted">{{ libelles.periode.du }}</span>
+        <input
+          type="date"
+          class="jour"
+          [value]="du()"
+          [max]="au()"
+          (change)="choisirDu($any($event.target).value)"
+          data-selector="elements-periode-du"
+        />
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="text-body-sm font-semibold text-ink-muted">{{ libelles.periode.au }}</span>
+        <input
+          type="date"
+          class="jour"
+          [value]="au()"
+          [min]="du()"
+          (change)="choisirAu($any($event.target).value)"
+          data-selector="elements-periode-au"
+        />
+      </label>
+    </div>
+    }
     <button mat-stroked-button type="button" (click)="reload()" data-selector="elements-refresh">{{ libelles.actualiser }}</button>
   </section>
 

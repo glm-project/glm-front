@@ -23,6 +23,12 @@ describe('RequeteProduits', () => {
     expect(new RequeteProduits({ cycle: 'CLOTURE', categorie: undefined, recherche, page: 0 }).rechercheSaisie()).toBe(expected);
   });
 
+  it('should read the closures of the last twelve months unless told otherwise', () => {
+    expect(new RequeteProduits({ cycle: 'CLOTURE', categorie: undefined, recherche: '', page: 0 }).cloture).toEqual({
+      prereglage: 'DOUZE_MOIS',
+    });
+  });
+
   it('should keep its other criteria when one changes', () => {
     const requete = new RequeteProduits({ cycle: 'CLOTURE', categorie: new CategorieDeProduit('OF'), recherche: 'capot', page: 3 });
 

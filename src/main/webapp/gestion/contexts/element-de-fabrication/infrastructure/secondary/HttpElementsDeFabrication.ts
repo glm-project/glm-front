@@ -18,6 +18,7 @@ import { ElementDeFabricationIntrouvable } from '../../domain/ElementDeFabricati
 import { ElementsDeFabricationPort } from '../../domain/ElementsDeFabricationPort';
 import { LibelleDElement } from '../../domain/LibelleDElement';
 import { NomDElement } from '../../domain/NomDElement';
+import { bornesDeCloture } from '../../domain/PeriodeDeCloture';
 import { PassageALAtelier, ProduitDansSonCycle } from '../../domain/ProduitDansSonCycle';
 import { ReferenceDElement } from '../../domain/ReferenceDElement';
 import { ReferenceDejaUtilisee } from '../../domain/ReferenceDejaUtilisee';
@@ -71,6 +72,11 @@ const toPassage = (element: RestElement): PassageALAtelier => {
 const toProduit = (element: RestElement): ProduitDansSonCycle =>
   new ProduitDansSonCycle(toElement(element), instant(element.dateDeCreation, 'element.dateDeCreation'), toPassage(element));
 
+const periodeDeClotureDe = (requete: RequeteProduits): { clotureDebut: string; clotureFin: string } => {
+  const bornes = bornesDeCloture(requete.cloture, new Date());
+  return { clotureDebut: bornes.debut.toISOString(), clotureFin: bornes.fin.toISOString() };
+};
+
 const filtresDe = (requete: RequeteProduits): { categorie?: string; recherche?: string } => {
   const recherche = requete.rechercheSaisie();
   return {
@@ -116,7 +122,13 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
   override async produits(requete: RequeteProduits): Promise<Page<ProduitDansSonCycle>> {
     try {
       const response = await this.api.read('/api/elements-de-fabrication', {
-        queryParams: { cycle: requete.cycle, ...filtresDe(requete), page: requete.page, size: requete.taille },
+        queryParams: {
+          cycle: requete.cycle,
+          ...filtresDe(requete),
+          ...(requete.cycle === 'CLOTURE' ? periodeDeClotureDe(requete) : {}),
+          page: requete.page,
+          size: requete.taille,
+        },
       });
       return buildPageFrom(response, toProduit, requete);
     } catch (failure) {
@@ -127,7 +139,9 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
 
   override async compteurs(requete: RequeteProduits): Promise<CompteursDesCycles> {
     try {
-      const compteurs = await this.api.read('/api/elements-de-fabrication/compteurs', { queryParams: filtresDe(requete) });
+      const compteurs = await this.api.read('/api/elements-de-fabrication/compteurs', {
+        queryParams: { ...filtresDe(requete), ...periodeDeClotureDe(requete) },
+      });
       return { EN_PREPARATION: compteurs.enPreparation, EN_ATELIER: compteurs.enAtelier, CLOTURE: compteurs.clotures };
     } catch (failure) {
       this.errors.handleError(failure);

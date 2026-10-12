@@ -33,6 +33,43 @@ describe('AdresseDesProduits', () => {
     expect(requeteDeLAdresse(convertToParamMap({ page })).page).toBe(0);
   });
 
+  it.each([
+    [{ periode: 'ce-mois' }, { prereglage: 'CE_MOIS' }],
+    [{ periode: '3-mois' }, { prereglage: 'TROIS_MOIS' }],
+    [{ periode: '12-mois' }, { prereglage: 'DOUZE_MOIS' }],
+    [{ periode: 'inconnue' }, { prereglage: 'DOUZE_MOIS' }],
+    [
+      { du: '2026-03-01', au: '2026-03-31' },
+      { du: '2026-03-01', au: '2026-03-31' },
+    ],
+    [{ du: '2026-03-01' }, { prereglage: 'DOUZE_MOIS' }],
+    [{ du: '2026-02-30', au: '2026-03-31', periode: 'ce-mois' }, { prereglage: 'CE_MOIS' }],
+  ])('should read the closure period of %j', (parametres, cloture) => {
+    expect(requeteDeLAdresse(convertToParamMap({ etat: 'clotures', ...parametres })).cloture).toEqual(cloture);
+  });
+
+  it.each([
+    [{ prereglage: 'CE_MOIS' }, { etat: 'clotures', periode: 'ce-mois' }],
+    [{ prereglage: 'TROIS_MOIS' }, { etat: 'clotures', periode: '3-mois' }],
+    [{ prereglage: 'DOUZE_MOIS' }, { etat: 'clotures' }],
+    [
+      { du: '2026-03-01', au: '2026-03-31' },
+      { etat: 'clotures', du: '2026-03-01', au: '2026-03-31' },
+    ],
+  ] as const)('should write the closure period %j', (cloture, adresse) => {
+    expect(adresseDeLaRequete(new RequeteProduits({ cycle: 'CLOTURE', categorie: undefined, recherche: '', page: 0, cloture }))).toEqual(
+      adresse,
+    );
+  });
+
+  it('should leave the closure period out of the other tabs', () => {
+    expect(
+      adresseDeLaRequete(
+        new RequeteProduits({ cycle: 'EN_ATELIER', categorie: undefined, recherche: '', page: 0, cloture: { prereglage: 'CE_MOIS' } }),
+      ),
+    ).toEqual({ etat: 'en-atelier' });
+  });
+
   it('should write only what differs from an unfiltered first page', () => {
     expect(adresseDeLaRequete(new RequeteProduits({ cycle: 'EN_ATELIER', categorie: undefined, recherche: '', page: 0 }))).toEqual({
       etat: 'en-atelier',
