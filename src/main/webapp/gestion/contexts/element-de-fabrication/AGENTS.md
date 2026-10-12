@@ -129,5 +129,9 @@ Chaque onglet lit son cycle au serveur, vingt produits par page : le cycle, la c
 recherche partent en paramètres, et le serveur trie chaque cycle par son dernier événement. Changer d'onglet,
 de catégorie ou de recherche repart de la première page. Les boutons de page ne s'affichent qu'au-delà d'une
 page, sauf sur Clôturés, liste qui ne fait que grandir et qui situe toujours ses produits (« 1–20 sur N »).
-Les catégories se lisent à l'ouverture, à « Actualiser » et à la fermeture de l'overlay. Une réponse obsolète
+L'adresse porte la vue — `etat` (`en-preparation`, `en-atelier`, `clotures`), `categorie`, `recherche` et
+`page` comptée depuis 1 — et la page la suit : chaque choix navigue, et c'est la nouvelle adresse qui relit.
+Sans paramètre, la page s'ouvre sur En atelier. Une adresse invalide retombe sur ces valeurs par défaut. La
+recherche remplace l'entrée d'historique au lieu d'en ajouter une par lettre. Les catégories se lisent à
+l'ouverture, à « Actualiser » et à la fermeture de l'overlay. Une réponse obsolète
 ne remplace pas une lecture récente.

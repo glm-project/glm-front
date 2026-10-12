@@ -22,4 +22,14 @@ describe('RequeteProduits', () => {
   ])('should search %j as %j', (recherche, expected) => {
     expect(new RequeteProduits({ cycle: 'CLOTURE', categorie: undefined, recherche, page: 0 }).rechercheSaisie()).toBe(expected);
   });
+
+  it('should keep its other criteria when one changes', () => {
+    const requete = new RequeteProduits({ cycle: 'CLOTURE', categorie: new CategorieDeProduit('OF'), recherche: 'capot', page: 3 });
+
+    const suivante = requete.avec({ cycle: 'EN_PREPARATION', page: 0 });
+
+    expect(suivante).toEqual(
+      new RequeteProduits({ cycle: 'EN_PREPARATION', categorie: new CategorieDeProduit('OF'), recherche: 'capot', page: 0 }),
+    );
+  });
 });

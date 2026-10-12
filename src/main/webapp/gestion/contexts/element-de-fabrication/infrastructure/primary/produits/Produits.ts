@@ -1,23 +1,25 @@
 import { formatInstantNumericDateTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
-import { Component, computed, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal, ViewContainerRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router, RouterLink } from '@angular/router';
 import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { CategoriesDeProduitPort } from '../../../domain/CategoriesDeProduitPort';
 import { CompteursDesCycles } from '../../../domain/CompteursDesCycles';
-import { CYCLE_PAR_DEFAUT, CycleDuProduit, CYCLES_DU_PRODUIT } from '../../../domain/CycleDuProduit';
+import { CycleDuProduit, CYCLES_DU_PRODUIT } from '../../../domain/CycleDuProduit';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
 import { EtatDAtelier } from '../../../domain/EtatDAtelier';
 import { ProduitDansSonCycle } from '../../../domain/ProduitDansSonCycle';
-import { RequeteProduits, TAILLE_DES_PAGES } from '../../../domain/RequeteProduits';
+import { CriteresDesProduits, TAILLE_DES_PAGES } from '../../../domain/RequeteProduits';
 import { CategoriesDeProduitDialog } from '../categories-de-produit-dialog/CategoriesDeProduitDialog';
 import { ElementFormDialog, ElementFormDialogData } from '../element-form-dialog/ElementFormDialog';
 import { LIBELLES_CATEGORIES_DE_PRODUIT, LIBELLES_ELEMENTS_DE_FABRICATION } from '../LibellesElementsDeFabrication';
+import { adresseDeLaRequete, requeteDeLAdresse } from './AdresseDesProduits';
 
 interface LigneDeProduit {
   readonly produit: ProduitDansSonCycle;
@@ -82,6 +84,9 @@ export class Produits implements OnInit {
   private readonly categoriesPort = inject(CategoriesDeProduitPort);
   private readonly dialogs = inject(MatDialog);
   private readonly viewContainerRef = inject(ViewContainerRef);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   private lecture = 0;
   protected readonly libelles = LIBELLES_ELEMENTS_DE_FABRICATION;
   protected readonly libellesCategories = LIBELLES_CATEGORIES_DE_PRODUIT;
@@ -96,10 +101,11 @@ export class Produits implements OnInit {
     echec: false,
   });
 
-  protected readonly cycle = signal<CycleDuProduit>(CYCLE_PAR_DEFAUT);
-  protected readonly filtre = signal<CategorieDeProduit | undefined>(undefined);
-  protected readonly recherche = signal('');
-  protected readonly page = signal(0);
+  private readonly requete = signal(requeteDeLAdresse(convertToParamMap({})));
+  protected readonly cycle = computed(() => this.requete().cycle);
+  protected readonly filtre = computed(() => this.requete().categorie);
+  protected readonly recherche = computed(() => this.requete().recherche);
+  protected readonly page = computed(() => this.requete().page);
   protected readonly colonnes = computed(() => COLONNES[this.cycle()]);
   protected readonly lignes = computed(() => this.etat().produits.map(ligneDe));
   private readonly pages = computed(() => Math.ceil(this.etat().total / TAILLE_DES_PAGES));
@@ -113,7 +119,12 @@ export class Produits implements OnInit {
   protected readonly filtree = computed(() => this.filtre() !== undefined || this.recherche().trim() !== '');
 
   ngOnInit(): void {
-    this.reload();
+    let premiereLecture = true;
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(parametres => {
+      this.requete.set(requeteDeLAdresse(parametres));
+      void this.load(premiereLecture);
+      premiereLecture = false;
+    });
   }
 
   protected reload(): void {
@@ -121,28 +132,23 @@ export class Produits implements OnInit {
   }
 
   protected choisirCycle(cycle: CycleDuProduit): void {
-    this.cycle.set(cycle);
-    this.relirePremierePage();
+    this.afficher({ cycle, page: 0 });
   }
 
   protected choisirCategorie(categorie: CategorieDeProduit | undefined): void {
-    this.filtre.set(categorie);
-    this.relirePremierePage();
+    this.afficher({ categorie, page: 0 });
   }
 
-  protected rechercher(value: string): void {
-    this.recherche.set(value);
-    this.relirePremierePage();
+  protected rechercher(recherche: string): void {
+    this.afficher({ recherche, page: 0 }, true);
   }
 
   protected pagePrecedente(): void {
-    this.page.update(page => page - 1);
-    void this.load(false);
+    this.afficher({ page: this.page() - 1 });
   }
 
   protected pageSuivante(): void {
-    this.page.update(page => page + 1);
-    void this.load(false);
+    this.afficher({ page: this.page() + 1 });
   }
 
   protected estFiltree(categorie: CategorieDeProduit): boolean {
@@ -178,9 +184,14 @@ export class Produits implements OnInit {
     });
   }
 
-  private relirePremierePage(): void {
-    this.page.set(0);
-    void this.load(false);
+  private afficher(changements: Partial<CriteresDesProduits>, remplacer = false): void {
+    const actuelle = adresseDeLaRequete(this.requete());
+    const suivante = adresseDeLaRequete(this.requete().avec(changements));
+    if (JSON.stringify(suivante) === JSON.stringify(actuelle)) {
+      void this.load(false);
+      return;
+    }
+    void this.router.navigate([], { relativeTo: this.route, queryParams: suivante, replaceUrl: remplacer });
   }
 
   private openForm(data: ElementFormDialogData, apresEnregistrement: () => void): void {
@@ -201,12 +212,7 @@ export class Produits implements OnInit {
     const lecture = ++this.lecture;
     this.etat.update(etat => ({ ...etat, chargement: true, echec: false }));
     try {
-      const requete = new RequeteProduits({
-        cycle: this.cycle(),
-        categorie: this.filtre(),
-        recherche: this.recherche(),
-        page: this.page(),
-      });
+      const requete = this.requete();
       const [categories, page, compteurs] = await Promise.all([
         this.categoriesSi(avecCategories),
         this.port.produits(requete),

@@ -3,14 +3,14 @@ import { Page } from '@/app/shared/pagination/domain/Page';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, ParamMap, Params, Router } from '@angular/router';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { CategoriesDeProduitFixture } from '@test/unit/fixtures/gestion/element-de-fabrication/CategoriesDeProduitFixture';
 import { ElementsDeFabricationFixture } from '@test/unit/fixtures/gestion/element-de-fabrication/ElementsDeFabricationFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
-import { firstValueFrom } from 'rxjs';
+import { BehaviorSubject, EMPTY, firstValueFrom } from 'rxjs';
 import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { CategoriesDeProduitPort } from '../../../domain/CategoriesDeProduitPort';
 import { CycleDuProduit } from '../../../domain/CycleDuProduit';
@@ -59,19 +59,59 @@ const mouleClotureFixture = produitFixture(elementFixture('moule-3', 'MOULE', 'M
   clotureePar: 'Claire',
 });
 
+class RouteFixture {
+  readonly queryParamMap: BehaviorSubject<ParamMap>;
+
+  constructor(parametres: Params) {
+    this.queryParamMap = new BehaviorSubject<ParamMap>(convertToParamMap(parametres));
+  }
+}
+
+interface UrlTreeFixture {
+  readonly commands: readonly unknown[];
+  readonly queryParams: Params;
+}
+
+class RouterFixture {
+  readonly navigations: { readonly queryParams: Params; readonly replaceUrl: boolean }[] = [];
+  readonly events = EMPTY;
+  route: RouteFixture | undefined;
+
+  createUrlTree(commands: readonly unknown[], extras?: { queryParams?: Params | null }): UrlTreeFixture {
+    return { commands, queryParams: extras?.queryParams ?? {} };
+  }
+
+  serializeUrl(arbre: UrlTreeFixture): string {
+    const requete = new URLSearchParams(arbre.queryParams).toString();
+    const chemin = arbre.commands.map(String).join('/');
+    return requete === '' ? chemin : `${chemin}?${requete}`;
+  }
+
+  navigate(_commands: unknown[], extras: { queryParams: Params; replaceUrl: boolean }): Promise<boolean> {
+    this.navigations.push({ queryParams: extras.queryParams, replaceUrl: extras.replaceUrl });
+    this.route?.queryParamMap.next(convertToParamMap(extras.queryParams));
+    return Promise.resolve(true);
+  }
+}
+
 const creeFixture = produitFixture(elementFixture('piece-1', 'PIECE', 'PIECE-2026-000001'), { cycle: 'EN_PREPARATION' });
 
 describe('Produits page', () => {
   let fixture: ComponentFixture<Produits>;
   let port: ElementsDeFabricationFixture;
   let categories: CategoriesDeProduitFixture;
+  let router: RouterFixture;
+  let adresse: Params;
   beforeEach(() => {
     port = new ElementsDeFabricationFixture();
     categories = new CategoriesDeProduitFixture();
+    router = new RouterFixture();
+    adresse = {};
     givenCategories(['MOULE', 'OF']);
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([]),
+        { provide: Router, useValue: router },
+        { provide: ActivatedRoute, useFactory: () => (router.route = new RouteFixture(adresse)) },
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: ElementsDeFabricationPort, useValue: port },
         { provide: CategoriesDeProduitPort, useValue: categories },
@@ -94,6 +134,50 @@ describe('Produits page', () => {
     expect(pressedCycle()).toBe('En atelier');
     expect(lastRequest()).toEqual({ cycle: 'EN_ATELIER', categorie: undefined, recherche: '', page: 0 });
     expect(texts('element-nom-cell')).toEqual(['MOULE-2026-000002', 'OF-2026-000043']);
+  });
+
+  it('should open the tab, the category, the search and the page its address carries', async () => {
+    givenProducts();
+    givenAddress({ etat: 'clotures', categorie: 'MOULE', recherche: 'capot', page: '2' });
+
+    await whenOpening();
+
+    expect(pressedCycle()).toBe('Clôturés');
+    expect(lastRequest()).toEqual({ cycle: 'CLOTURE', categorie: 'MOULE', recherche: 'capot', page: 1 });
+    expect(searchValue()).toBe('capot');
+  });
+
+  it('should write the chosen tab into the address, from its first page', async () => {
+    givenManyProductsInTheWorkshop(21);
+    await whenOpening();
+    await whenClicking('elements-page-suivante');
+
+    await whenChoosingCycle('CLOTURE');
+
+    expect(router.navigations).toEqual([
+      { queryParams: { etat: 'en-atelier', page: 2 }, replaceUrl: false },
+      { queryParams: { etat: 'clotures' }, replaceUrl: false },
+    ]);
+  });
+
+  it('should keep the history clean while the search is typed', async () => {
+    await whenOpening();
+
+    await whenSearching('capot');
+
+    expect(router.navigations).toEqual([{ queryParams: { etat: 'en-atelier', recherche: 'capot' }, replaceUrl: true }]);
+  });
+
+  it('should reread the products in preparation after a creation made from their tab', async () => {
+    givenAddress({ etat: 'en-preparation' });
+    await whenOpening();
+    await whenClicking('elements-new');
+    port.produitsEnregistres = [creeFixture];
+
+    await whenClosingDialog(true);
+
+    expect(router.navigations).toEqual([]);
+    expect(texts('element-nom-cell')).toEqual(['PIECE-2026-000001']);
   });
 
   it('should offer the three cycles in the order of a product life', async () => {
@@ -481,6 +565,9 @@ describe('Produits page', () => {
   const givenCategories = (codes: readonly string[]): void => {
     categories.liste = codes.map(code => new CategorieDeProduit(code));
   };
+  const givenAddress = (parametres: Params): void => {
+    adresse = parametres;
+  };
   const givenProducts = (): void => {
     port.produitsEnregistres = [moulePrepareFixture, ofPrepareFixture, mouleEnCoursFixture, ofInterrompuFixture, mouleClotureFixture];
   };
@@ -551,6 +638,8 @@ describe('Produits page', () => {
     document
       .querySelector('[data-selector="elements-cycles"] [aria-pressed="true"] [data-selector="elements-cycle-libelle"]')
       ?.textContent.trim() ?? '';
+  const searchValue = (): string =>
+    requiredFixture(document.querySelector<HTMLInputElement>(dataSelector('elements-search')), 'elements-search').value;
   const counters = (): string[] => texts('elements-compteur');
   const headers = (): string[] => [...document.querySelectorAll('th')].map(header => header.textContent.trim());
   const creation = (): Element | null => document.querySelector(dataSelector('elements-new'));

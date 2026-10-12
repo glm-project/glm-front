@@ -18,6 +18,22 @@ describe('Manufacturing element referential in gestion', () => {
     thenOnlyListed('1015');
   });
 
+  it('should reopen the tab and the search its address carries', () => {
+    givenProductsInTheirCycles();
+    whenVisiting('/produits?etat=en-preparation&recherche=2001');
+
+    thenOnlyListed('2001');
+    thenAddressIs('?etat=en-preparation&recherche=2001');
+  });
+
+  it('should write the chosen tab into the address', () => {
+    givenProductsInTheirCycles();
+    whenVisitingReferential();
+    whenChoosingCycle('EN_PREPARATION');
+
+    thenAddressIs('?etat=en-preparation');
+  });
+
   it('should keep the products in preparation on their own tab', () => {
     givenProductsInTheirCycles();
     whenVisitingReferential();
@@ -143,6 +159,13 @@ const givenProductsInTheirCycles = (): void => {
     ...(enAtelier === undefined ? [] : [enAtelier]),
     ...(enPreparation === undefined ? [] : [{ ...enPreparation, id: 'element-2', reference: '2001' }]),
   ]).install();
+};
+const whenVisiting = (url: string): void => {
+  cy.viewport(1280, 900);
+  cy.visit(url);
+};
+const thenAddressIs = (search: string): void => {
+  cy.location('search').should('eq', search);
 };
 const whenChoosingCycle = (cycle: string): void => {
   cy.get(dataSelector(`elements-cycle-${cycle}`)).click();
