@@ -65,7 +65,7 @@ const whenSearching = (value: string): void => {
   cy.get(dataSelector('elements-search')).type(value);
 };
 const whenClearingSearch = (): void => {
-  cy.get(dataSelector('elements-no-results')).should('be.visible');
+  cy.get(dataSelector('elements-empty')).should('contain.text', 'Aucun produit ne correspond à cette recherche.');
   cy.get(dataSelector('elements-search')).clear();
 };
 const whenConsultingCost = (): void => {
