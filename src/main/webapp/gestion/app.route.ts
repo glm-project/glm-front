@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 import { anomaliesDePointageProvider } from './anomalies-de-pointage.provider';
-import { atelierProvider } from './atelier.provider';
 import { coutDeRevientProvider } from './cout-de-revient.provider';
 import { elementsDeFabricationProvider } from './elements-de-fabrication.provider';
 import { operateursProvider } from './operateurs.provider';
@@ -36,11 +35,6 @@ export const routes: Routes = [
       import('./contexts/supervision-atelier/infrastructure/primary/supervision-atelier/supervision-atelier').then(
         m => m.SupervisionAtelier,
       ),
-  },
-  {
-    path: 'atelier',
-    loadComponent: () => import('./contexts/atelier/infrastructure/primary/atelier/Atelier').then(m => m.Atelier),
-    providers: atelierProvider,
   },
   {
     path: 'produits',

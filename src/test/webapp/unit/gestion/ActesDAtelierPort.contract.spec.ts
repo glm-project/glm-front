@@ -26,11 +26,11 @@ const createAtelierHarness = (): ActesHarness => {
   return {
     port: TestBed.inject(ActesDAtelierPort),
     exists: element => {
-      atelier.photographies.set(element, { nom: 'MOULE-2026-000001', categorie: 'MOULE' });
+      atelier.elementsConnus = [...atelier.elementsConnus, element];
     },
     engaged: async element => {
       await atelier.mettreALAtelier(new ElementEngageId(element));
-      return atelier.liste.at(-1)?.suivi.value ?? '';
+      return atelier.suiviDe(element) ?? '';
     },
   };
 };
