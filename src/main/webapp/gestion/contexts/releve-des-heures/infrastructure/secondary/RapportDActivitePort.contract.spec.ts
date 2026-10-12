@@ -35,7 +35,7 @@ const restFixture = (periode: PeriodeDuRapport, tempsPointe = 'PT47H45M'): RestR
 });
 
 const resumeFixture = (tempsPointe = 'PT47H45M'): ResumeDuRapport =>
-  new ResumeDuRapport({ tempsPointe: new DureeTravaillee(tempsPointe), joursAvecPointage: 6, finsAutomatiques: 1 });
+  new ResumeDuRapport({ tempsPointe: new DureeTravaillee(tempsPointe), joursAvecPointage: 6, pointages: 23, finsAutomatiques: 1 });
 
 class RapportHttpBackendFixture implements HttpBackend {
   readonly resumes = new Map<string, RestResume>();
@@ -48,6 +48,15 @@ class RapportHttpBackendFixture implements HttpBackend {
 
   private async answer(request: HttpRequest<unknown>): Promise<HttpResponse<unknown> | HttpErrorResponse> {
     await new Promise(resolve => setTimeout(resolve));
+    if (request.url.endsWith('/export.pdf')) {
+      return new HttpResponse({
+        status: 200,
+        body: new Blob(['document']),
+        headers: new HttpHeaders({
+          'Content-Disposition': `attachment; filename="activite-lefevre-martin-S38-2026-${request.params.get('version') ?? ''}.pdf"`,
+        }),
+      });
+    }
     if (request.url.endsWith('/export.xlsx')) {
       return new HttpResponse({
         status: 200,
@@ -125,6 +134,15 @@ describe.each(adapters)('RapportDActivitePort contract, honoured by %s', (_adapt
     expect(await fichier.contenu.text()).toBe('classeur');
   });
 
+  it.each([
+    ['PDF_SYNTHESE', /-synthese\.pdf$/u],
+    ['PDF_DETAIL', /-detail\.pdf$/u],
+  ] as const)('should hand over the %s document of the requested period', async (format, nom) => {
+    const fichier = await harness.port.exporte(new OperateurReleveId(OPERATEUR), SEMAINE_38, format);
+
+    expect(fichier.nom).toMatch(nom);
+  });
+
   it('should reject a summary the server cannot give', async () => {
     const lecture = harness.port.resume(new OperateurReleveId(OPERATEUR), SEMAINE_38);
 
@@ -199,6 +217,19 @@ describe('Beyond the contract: HttpRapportDActivite', () => {
     expect(fichier.nom).toBe('activite-lefevre-martin-S38-2026.xlsx');
   });
 
+  it.each([
+    ['PDF_SYNTHESE', 'synthese'],
+    ['PDF_DETAIL', 'detail'],
+  ] as const)('should download the %s document of the requested month', async (format, version) => {
+    const result = port.exporte(new OperateurReleveId(OPERATEUR), SEPTEMBRE, format);
+
+    const request = await whenServerSendsTheDocument(`attachment; filename="activite-${version}.pdf"`);
+    const fichier = await result;
+
+    expect([request.request.params.get('mois'), request.request.params.get('version')]).toEqual(['9', version]);
+    expect(fichier.nom).toBe(`activite-${version}.pdf`);
+  });
+
   it('should reject a workbook sent without a name and report it once', async () => {
     const result = port.exporte(new OperateurReleveId(OPERATEUR), SEMAINE_38, 'EXCEL').catch((failure: unknown) => failure);
 
@@ -221,6 +252,13 @@ describe('Beyond the contract: HttpRapportDActivite', () => {
     await new Promise(resolve => setTimeout(resolve));
     const request = server.expectOne(candidate => candidate.url === `/api/syntheses-des-heures/${OPERATEUR}/export.xlsx`);
     request.flush(new Blob(['classeur']), { headers: disposition === undefined ? {} : { 'Content-Disposition': disposition } });
+    return request;
+  };
+
+  const whenServerSendsTheDocument = async (disposition: string): Promise<TestRequest> => {
+    await new Promise(resolve => setTimeout(resolve));
+    const request = server.expectOne(candidate => candidate.url === `/api/syntheses-des-heures/${OPERATEUR}/export.pdf`);
+    request.flush(new Blob(['document']), { headers: { 'Content-Disposition': disposition } });
     return request;
   };
 

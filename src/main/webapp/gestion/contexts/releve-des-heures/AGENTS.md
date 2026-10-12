@@ -72,7 +72,8 @@ Opérateurs l’ouvre depuis chaque ligne en ne lui passant que l’identifiant,
   `GET /api/syntheses-des-heures/{operateurId}/rapport`. Le temps pointé vient du serveur : une heure sur deux
   éléments y compte deux fois, comme dans le relevé. Un résumé d’une autre période que celle demandée est
   refusé et signalé une fois.
-- **Téléchargement** : `RapportDActivitePort.exporte` rend le fichier de la période affichée sous le nom donné
+- **Téléchargement** : Excel, PDF synthèse ou PDF détaillé (`FormatDuRapport`) ; le bouton du PDF détaillé cite le
+  nombre de pointages du résumé. `RapportDActivitePort.exporte` rend le fichier de la période affichée sous le nom donné
   par le serveur (`Content-Disposition`) ; `EnregistrementDeFichierPort` (noyau
   `gestion/shared/enregistrement-de-fichier`) le remet au navigateur. Un échec s’explique et laisse réessayer.
 - Vocabulaire à l’écran : « temps pointé », « pointées », jamais « heures travaillées » ni présence. Aucun

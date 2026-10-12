@@ -34,7 +34,7 @@ const SEMAINE_37 = PeriodeDuRapport.semaineContenant(new JourCalendaire('2026-09
 const SEPTEMBRE = PeriodeDuRapport.moisContenant(LE_17_SEPTEMBRE);
 
 const resumeFixture = (temps: string, jours: number, finsAutomatiques = 0): ResumeDuRapport =>
-  new ResumeDuRapport({ tempsPointe: new DureeTravaillee(temps), joursAvecPointage: jours, finsAutomatiques });
+  new ResumeDuRapport({ tempsPointe: new DureeTravaillee(temps), joursAvecPointage: jours, pointages: 23, finsAutomatiques });
 
 describe('RapportDActiviteDialog', () => {
   let fixture: ComponentFixture<DialogHostFixture>;
@@ -173,6 +173,47 @@ describe('RapportDActiviteDialog', () => {
     expect(button('rapport-export-excel').disabled).toBe(false);
   });
 
+  it('should offer the workbook and both documents, the detailed one with the number of clockings', async () => {
+    await whenOpening();
+
+    expect([text('rapport-export-excel'), text('rapport-export-pdf-synthese'), text('rapport-export-pdf-detail')]).toEqual([
+      'Excel · synthèse et tableau des pointages',
+      'PDF synthèse',
+      'PDF détaillé · avec le journal des 23 pointages',
+    ]);
+  });
+
+  it('should name a single clocking in the detailed document', async () => {
+    givenSummary(
+      SEMAINE_38,
+      new ResumeDuRapport({ tempsPointe: new DureeTravaillee('PT1H'), joursAvecPointage: 1, pointages: 1, finsAutomatiques: 0 }),
+    );
+
+    await whenOpening();
+
+    expect(text('rapport-export-pdf-detail')).toBe('PDF détaillé · avec le journal de 1 pointage');
+  });
+
+  it('should still offer the detailed document while the summary cannot be read', async () => {
+    givenSummaryFails();
+
+    await whenOpening();
+
+    expect(text('rapport-export-pdf-detail')).toBe('PDF détaillé · avec le journal des pointages');
+  });
+
+  it.each([
+    ['rapport-export-pdf-synthese', 'PDF_SYNTHESE', 'rapport-2026-09-14-synthese.pdf'],
+    ['rapport-export-pdf-detail', 'PDF_DETAIL', 'rapport-2026-09-14-detail.pdf'],
+  ] as const)('should save the document %s of the displayed week', async (bouton, format, nom) => {
+    await whenOpening();
+
+    await whenExporting(bouton);
+
+    expect(port.exports).toEqual([{ operateur: MARTIN, periode: SEMAINE_38, format }]);
+    expect(enregistrement.fichiers.map(fichier => fichier.nom)).toEqual([nom]);
+  });
+
   const givenExportIsPending = (deferred: DeferredFixture<FichierExporte>): void => {
     port.exportDiffere = deferred.promise;
   };
@@ -195,8 +236,8 @@ describe('RapportDActiviteDialog', () => {
     });
     await fixture.whenStable();
   };
-  const whenExporting = async (): Promise<void> => {
-    button('rapport-export-excel').click();
+  const whenExporting = async (bouton = 'rapport-export-excel'): Promise<void> => {
+    button(bouton).click();
     await new Promise(resolve => setTimeout(resolve));
     await fixture.whenStable();
   };

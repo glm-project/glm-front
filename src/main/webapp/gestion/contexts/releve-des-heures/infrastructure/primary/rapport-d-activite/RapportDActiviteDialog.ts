@@ -10,7 +10,13 @@ import { PeriodeDuRapport } from '../../../domain/rapport/PeriodeDuRapport';
 import { RapportDActivitePort } from '../../../domain/rapport/RapportDActivitePort';
 import { OperateurReleveId } from '../../../domain/releve/OperateurReleveId';
 import { jourCourant } from '../jourCourant';
-import { libelleFinsAutomatiques, libellePeriode, libelleResume } from './LibellesRapportDActivite';
+import { libelleExport, libelleFinsAutomatiques, libellePeriode, libelleResume } from './LibellesRapportDActivite';
+
+const BOUTONS_D_EXPORT: readonly { readonly format: FormatDuRapport; readonly selecteur: string }[] = [
+  { format: 'EXCEL', selecteur: 'rapport-export-excel' },
+  { format: 'PDF_SYNTHESE', selecteur: 'rapport-export-pdf-synthese' },
+  { format: 'PDF_DETAIL', selecteur: 'rapport-export-pdf-detail' },
+];
 
 export interface RapportDActiviteDialogData {
   readonly operateur: string;
@@ -40,8 +46,11 @@ export class RapportDActiviteDialog {
     params: () => this.periode(),
     loader: ({ params }) => this.port.resume(this.operateur, params),
   });
+  protected readonly resumeLu = computed(() => (this.resume.hasValue() ? this.resume.value() : undefined));
   protected readonly libelleResume = libelleResume;
   protected readonly libelleFinsAutomatiques = libelleFinsAutomatiques;
+  protected readonly libelleExport = libelleExport;
+  protected readonly boutonsDExport = BOUTONS_D_EXPORT;
 
   protected parSemaine(): void {
     this.periode.update(periode => periode.enSemaine(this.aujourdhui));
