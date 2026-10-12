@@ -7,6 +7,6 @@ export class CoutHoraire {
   }
 
   static erreur(value: number): string | undefined {
-    return Number.isFinite(value) && value > 0 ? undefined : 'Le coût horaire doit être un nombre strictement positif.';
+    return Number.isFinite(value) && value >= 0 ? undefined : 'Le coût horaire doit être un nombre positif ou nul.';
   }
 }

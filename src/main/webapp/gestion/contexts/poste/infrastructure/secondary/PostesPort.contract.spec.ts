@@ -224,6 +224,13 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     await thenWorkstationExists('Tour 1', 'tournage', 45.5);
   });
 
+  it('should create a labour-only workstation at zero hourly cost and reflect it in queries', async () => {
+    const resultat = await whenCreatingWorkstation('Établi 1', 'montage', 0);
+
+    thenCommandSucceeded(resultat);
+    await thenWorkstationExists('Établi 1', 'montage', 0);
+  });
+
   it('should create a workstation without hourly cost and reflect it in queries', async () => {
     const resultat = await whenCreatingWorkstation('Scie 1', 'sciage');
 

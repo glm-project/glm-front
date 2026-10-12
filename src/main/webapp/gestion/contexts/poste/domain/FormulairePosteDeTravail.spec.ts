@@ -93,6 +93,7 @@ describe('FormulairePosteDeTravail', () => {
     ['  ', undefined],
     ['45.5', 45.5],
     ['45,5', 45.5],
+    ['0', 0],
   ])('should produce a validated creation command from entries with hourly cost %s', (cout, attendu) => {
     const initial = FormulairePosteDeTravail.pourCreation();
     const formulaire = initial.avecLibelle('  Tour 1 ').choisirNature(tournageFixture).avecCoutHoraire(cout);
@@ -111,14 +112,14 @@ describe('FormulairePosteDeTravail', () => {
     });
   });
 
-  it.each(['0', '-0.01', 'abc', 'Infinity', '1e999'])('should report an invalid hourly cost without producing a command: %s', cout => {
+  it.each(['-0.01', 'abc', 'Infinity', '1e999'])('should report an invalid hourly cost without producing a command: %s', cout => {
     const formulaire = FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').choisirNature(tournageFixture).avecCoutHoraire(cout);
     const commande = formulaire.produireCommande();
 
     expect(formulaire.estValide()).toBe(false);
     expect(formulaire.erreurLibelle()).toBeUndefined();
     expect(formulaire.erreurNature()).toBeUndefined();
-    expect(formulaire.erreurCoutHoraire()).toBe('Le coût horaire doit être un nombre strictement positif.');
+    expect(formulaire.erreurCoutHoraire()).toBe('Le coût horaire doit être un nombre positif ou nul.');
     expect(commande.ok).toBe(false);
   });
 
