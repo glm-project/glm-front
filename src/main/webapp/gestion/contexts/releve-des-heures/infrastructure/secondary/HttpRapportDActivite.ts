@@ -15,6 +15,7 @@ type RestResume = components['schemas']['RestResumeDuRapportDActivite'];
 
 const ROUTE_RESUME = '/api/syntheses-des-heures/{operateurId}/rapport';
 const ROUTE_EXCEL = '/api/syntheses-des-heures/{operateurId}/export.xlsx';
+const ROUTE_PDF = '/api/syntheses-des-heures/{operateurId}/export.pdf';
 
 interface ParametresDePeriode {
   readonly annee: number;
@@ -37,6 +38,7 @@ const toResume = (lu: RestResume, periode: PeriodeDuRapport): ResumeDuRapport =>
   return new ResumeDuRapport({
     tempsPointe: new DureeTravaillee(lu.tempsPointe.valeur),
     joursAvecPointage: lu.joursAvecPointage,
+    pointages: lu.pointages,
     finsAutomatiques: lu.finsAutomatiques,
   });
 };
@@ -67,9 +69,12 @@ export class HttpRapportDActivite extends RapportDActivitePort {
   }
 
   private telecharge(operateur: OperateurReleveId, periode: PeriodeDuRapport, format: FormatDuRapport): Promise<DownloadedFile> {
-    const requete = { pathParams: { operateurId: operateur.value }, queryParams: parametresDe(periode) };
+    const pathParams = { operateurId: operateur.value };
+    const queryParams = parametresDe(periode);
     const telechargements: Record<FormatDuRapport, () => Promise<DownloadedFile>> = {
-      EXCEL: () => this.api.download(ROUTE_EXCEL, requete),
+      EXCEL: () => this.api.download(ROUTE_EXCEL, { pathParams, queryParams }),
+      PDF_SYNTHESE: () => this.api.download(ROUTE_PDF, { pathParams, queryParams: { ...queryParams, version: 'synthese' } }),
+      PDF_DETAIL: () => this.api.download(ROUTE_PDF, { pathParams, queryParams: { ...queryParams, version: 'detail' } }),
     };
     return telechargements[format]();
   }

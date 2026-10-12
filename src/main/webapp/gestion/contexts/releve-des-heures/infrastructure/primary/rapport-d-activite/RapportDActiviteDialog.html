@@ -89,16 +89,20 @@
       L’export n’a pas pu être généré. Vérifiez la connexion puis réessayez.
     </p>
     }
-    <button
-      mat-stroked-button
-      type="button"
-      class="w-full"
-      [disabled]="exportEnCours() !== undefined"
-      (click)="exporter('EXCEL')"
-      data-selector="rapport-export-excel"
-    >
-      {{ exportEnCours() === 'EXCEL' ? 'Préparation…' : 'Excel · synthèse et tableau des pointages' }}
-    </button>
+    <div class="grid gap-2">
+      @for (bouton of boutonsDExport; track bouton.format) {
+      <button
+        mat-stroked-button
+        type="button"
+        class="w-full"
+        [disabled]="exportEnCours() !== undefined"
+        (click)="exporter(bouton.format)"
+        [attr.data-selector]="bouton.selecteur"
+      >
+        {{ exportEnCours() === bouton.format ? 'Préparation…' : libelleExport(bouton.format, resumeLu()) }}
+      </button>
+      }
+    </div>
   </section>
 </mat-dialog-content>
 <mat-dialog-actions align="end">

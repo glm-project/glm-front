@@ -19,6 +19,8 @@ export interface DemandeDeResume {
 const cleDe = (operateur: OperateurReleveId, periode: PeriodeDuRapport): string =>
   `${operateur.value}|${periode.premierJour().value}|${periode.dernierJour().value}`;
 
+const EXTENSIONS: Record<FormatDuRapport, string> = { EXCEL: '.xlsx', PDF_SYNTHESE: '-synthese.pdf', PDF_DETAIL: '-detail.pdf' };
+
 const auTourSuivant = <T>(valeur: T): Promise<T> => new Promise(resolve => setTimeout(() => resolve(valeur)));
 
 export class RapportDActiviteFixture extends RapportDActivitePort {
@@ -51,6 +53,9 @@ export class RapportDActiviteFixture extends RapportDActivitePort {
     if (this.echecDExport !== undefined) {
       return Promise.reject(this.echecDExport);
     }
-    return this.exportDiffere ?? auTourSuivant({ nom: `rapport-${periode.premierJour().value}.xlsx`, contenu: new Blob(['classeur']) });
+    return (
+      this.exportDiffere
+      ?? auTourSuivant({ nom: `rapport-${periode.premierJour().value}${EXTENSIONS[format]}`, contenu: new Blob(['classeur']) })
+    );
   }
 }
