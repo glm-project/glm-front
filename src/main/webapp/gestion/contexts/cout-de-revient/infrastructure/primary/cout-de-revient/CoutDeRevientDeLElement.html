@@ -160,9 +160,9 @@
               <span data-selector="cout-non-conformite-duree">{{ libelles.duree(ligne.temps.nonConformite) }}</span>
             </td>
             <td class="colonne-duree" data-selector="cout-temps-cell">{{ libelles.duree(ligne.temps.total) }}</td>
-            <td class="colonne-montant" data-selector="cout-machine-cell">{{ libelles.montant(ligne.cout.machine) }}</td>
-            <td class="colonne-montant" data-selector="cout-main-d-oeuvre-cell">{{ libelles.montant(ligne.cout.mainDOeuvre) }}</td>
-            <td class="colonne-montant font-semibold" data-selector="cout-ligne-total-cell">{{ libelles.montant(ligne.cout.total) }}</td>
+            <td class="colonne-montant" data-selector="cout-machine-cell">{{ libelles.cellule(ligne.cout.machine) }}</td>
+            <td class="colonne-montant" data-selector="cout-main-d-oeuvre-cell">{{ libelles.cellule(ligne.cout.mainDOeuvre) }}</td>
+            <td class="colonne-montant font-semibold" data-selector="cout-ligne-total-cell">{{ libelles.cellule(ligne.cout.total) }}</td>
             <td class="colonne-detail">
               <button
                 type="button"
@@ -224,7 +224,7 @@
                         <span class="calcul" data-selector="cout-pointage-calcul-machine"
                           >{{ libelles.detail.calculMachine(pointage) }}</span
                         >
-                        <strong data-selector="cout-pointage-machine">{{ libelles.montant(pointage.cout.machine) }}</strong>
+                        <strong data-selector="cout-pointage-machine">{{ libelles.cellule(pointage.cout.machine) }}</strong>
                       </td>
                       <td class="nombre">
                         <span class="calcul">
@@ -238,10 +238,10 @@
                           >
                           }
                         </span>
-                        <strong data-selector="cout-pointage-main-d-oeuvre">{{ libelles.montant(pointage.cout.mainDOeuvre) }}</strong>
+                        <strong data-selector="cout-pointage-main-d-oeuvre">{{ libelles.cellule(pointage.cout.mainDOeuvre) }}</strong>
                       </td>
                       <td class="nombre">
-                        <strong data-selector="cout-pointage-total">{{ libelles.montant(pointage.cout.total) }}</strong>
+                        <strong data-selector="cout-pointage-total">{{ libelles.cellule(pointage.cout.total) }}</strong>
                       </td>
                     </tr>
                     @if (pointage.detailleSonPartage()) { @for (part of pointage.parts; track $index) {
@@ -266,9 +266,9 @@
                     <tr data-selector="cout-pointages-total">
                       <th scope="row" colspan="3">{{ libelles.detail.totalDeLaNature(ligne.nature?.value) }}</th>
                       <td class="nombre">{{ libelles.duree(ligne.temps.total) }}</td>
-                      <td class="nombre">{{ libelles.montant(ligne.cout.machine) }}</td>
-                      <td class="nombre">{{ libelles.montant(ligne.cout.mainDOeuvre) }}</td>
-                      <td class="nombre">{{ libelles.montant(ligne.cout.total) }}</td>
+                      <td class="nombre">{{ libelles.cellule(ligne.cout.machine) }}</td>
+                      <td class="nombre">{{ libelles.cellule(ligne.cout.mainDOeuvre) }}</td>
+                      <td class="nombre">{{ libelles.cellule(ligne.cout.total) }}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -285,9 +285,9 @@
             <td class="colonne-duree" data-selector="cout-total-travail">{{ libelles.duree(vue.rapport.temps.travail) }}</td>
             <td class="colonne-duree" data-selector="cout-total-non-conformite">{{ libelles.duree(vue.rapport.temps.nonConformite) }}</td>
             <td class="colonne-duree" data-selector="cout-total-temps">{{ libelles.duree(vue.rapport.temps.total) }}</td>
-            <td class="colonne-montant" data-selector="cout-total-machine">{{ libelles.montant(vue.rapport.cout.machine) }}</td>
-            <td class="colonne-montant" data-selector="cout-total-main-d-oeuvre">{{ libelles.montant(vue.rapport.cout.mainDOeuvre) }}</td>
-            <td class="colonne-montant" data-selector="cout-total-cout">{{ libelles.montant(vue.rapport.cout.total) }}</td>
+            <td class="colonne-montant" data-selector="cout-total-machine">{{ libelles.cellule(vue.rapport.cout.machine) }}</td>
+            <td class="colonne-montant" data-selector="cout-total-main-d-oeuvre">{{ libelles.cellule(vue.rapport.cout.mainDOeuvre) }}</td>
+            <td class="colonne-montant" data-selector="cout-total-cout">{{ libelles.cellule(vue.rapport.cout.total) }}</td>
             <td class="colonne-detail"></td>
           </tr>
         </tfoot>

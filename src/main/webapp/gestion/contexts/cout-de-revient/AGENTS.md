@@ -170,6 +170,10 @@ pour laquelle ils sont affichés séparément.
   viennent de la durée reçue, à la minute.
 - **Les montants s'affichent dans la monnaie du formateur, jamais avec un symbole en dur.** Le formatage
   vit dans `LibellesCoutDeRevient`, comme les dates et les durées.
+- **Un coût reçu à 0 € laisse sa cellule vide** (décision du 9 oct. 2026, glm-back#142) : machine, main
+  d'œuvre ou total, sur un pointage, une ligne de nature ou le pied du tableau, comme le PDF. Le calcul machine
+  d'un poste à 0 €/h ne s'affiche pas non plus. Un tarif absent garde sa mention « non valorisé ». L'indicateur
+  « Coût de revient » en tête d'écran garde « 0,00 € » : c'est la réponse, pas une cellule.
 - **Les instants s'affichent dans le fuseau du navigateur.** Les périodes du rapport sont des
   `java.time.Instant` sérialisés en UTC ; aucune configuration de ce front ne porte le fuseau de
   l'entreprise. Même limite connue et même arbitrage que `releve-des-heures`.
