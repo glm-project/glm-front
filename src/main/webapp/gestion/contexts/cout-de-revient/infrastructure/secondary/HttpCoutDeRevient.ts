@@ -4,13 +4,13 @@ import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary
 import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { PAGE_SIZE } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
+import { FichierExporte } from '@/gestion/shared/enregistrement-de-fichier/domain/FichierExporte';
 import { HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { CategorieDElementChiffre } from '../../domain/element/CategorieDElementChiffre';
 import { ElementChiffre } from '../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../domain/element/ElementChiffreId';
 import { ElementDisponible } from '../../domain/element/ElementDisponible';
-import { FichierExporte } from '../../domain/export/FichierExporte';
 import { FormatDExport } from '../../domain/export/FormatDExport';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';

@@ -126,6 +126,15 @@
                 <glm-icon name="clock" /> Temps opérationnel
               </a>
               <button
+                mat-button
+                type="button"
+                (click)="openRapport(operateur)"
+                [attr.aria-label]="'Rapport d’activité de ' + operateur.prenom.value + ' ' + operateur.nom.value"
+                data-selector="operateur-rapport"
+              >
+                Rapport d’activité
+              </button>
+              <button
                 mat-icon-button
                 (click)="openForm(operateur)"
                 [attr.aria-label]="'Modifier ' + operateur.prenom.value + ' ' + operateur.nom.value"

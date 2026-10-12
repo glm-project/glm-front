@@ -1,6 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { FichierExporte } from '@/gestion/shared/enregistrement-de-fichier/domain/FichierExporte';
 import { HttpBackend, HttpErrorResponse, HttpEvent, HttpHeaders, HttpRequest, HttpResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -11,7 +12,6 @@ import { CategorieDElementChiffre } from '../../domain/element/CategorieDElement
 import { ElementChiffre } from '../../domain/element/ElementChiffre';
 import { ElementChiffreId } from '../../domain/element/ElementChiffreId';
 import { ElementDisponible } from '../../domain/element/ElementDisponible';
-import { FichierExporte } from '../../domain/export/FichierExporte';
 import { FormatDExport } from '../../domain/export/FormatDExport';
 import { Cout } from '../../domain/montant/Cout';
 import { Montant } from '../../domain/montant/Montant';

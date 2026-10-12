@@ -1,5 +1,6 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Page } from '@/app/shared/pagination/domain/Page';
+import { EnregistrementDeFichierPort } from '@/gestion/shared/enregistrement-de-fichier/domain/EnregistrementDeFichierPort';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
@@ -7,6 +8,7 @@ import { provideRouter } from '@angular/router';
 import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { OperateursFixture } from '@test/unit/fixtures/gestion/operateur/OperateursFixture';
+import { RapportDActiviteFixture } from '@test/unit/fixtures/gestion/releve-des-heures/RapportDActiviteFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { firstValueFrom } from 'rxjs';
@@ -54,6 +56,8 @@ describe('Operateurs page', () => {
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: OperateursPort, useValue: port },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+        { provide: RapportDActiviteFixture.port, useClass: RapportDActiviteFixture },
+        { provide: EnregistrementDeFichierPort, useValue: { enregistre: () => undefined } },
       ],
     });
   });
@@ -209,6 +213,15 @@ describe('Operateurs page', () => {
     await whenClosingDialog(true);
 
     expect(texts('operateur-row')).toEqual([expect.stringContaining('Durand')]);
+  });
+
+  it('should open the activity report of the operator on its row', async () => {
+    givenOperateurs();
+    await whenOpening();
+
+    await whenClicking('operateur-rapport');
+
+    expect(text('rapport-operateur')).toBe('Jean Dupont');
   });
 
   it('should keep the operator when deletion is cancelled', async () => {

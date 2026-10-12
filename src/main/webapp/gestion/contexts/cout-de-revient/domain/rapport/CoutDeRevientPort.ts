@@ -1,6 +1,6 @@
+import { FichierExporte } from '@/gestion/shared/enregistrement-de-fichier/domain/FichierExporte';
 import { ElementChiffreId } from '../element/ElementChiffreId';
 import { ElementDisponible } from '../element/ElementDisponible';
-import { FichierExporte } from '../export/FichierExporte';
 import { FormatDExport } from '../export/FormatDExport';
 import { CoutDeRevient } from './CoutDeRevient';
 

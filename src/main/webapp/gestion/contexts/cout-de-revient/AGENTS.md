@@ -91,8 +91,8 @@ pour laquelle ils sont affichés séparément.
   rapport.
 - **FormatDExport** : le fichier demandé au serveur — `EXCEL`, `PDF_SYNTHESE` (une ligne par nature) ou
   `PDF_DETAIL` (avec, en plus, une ligne par pointage).
-- **FichierExporte** : un export reçu, son nom et son contenu, tels que le serveur les a produits.
-- **EnregistrementDeFichierPort** : port secondaire qui remet un fichier exporté au navigateur.
+- **FichierExporte** et **EnregistrementDeFichierPort** : le fichier reçu du serveur et sa remise au navigateur,
+  dans le noyau partagé `gestion/shared/enregistrement-de-fichier`.
 
 ## Responsabilités et invariants
 

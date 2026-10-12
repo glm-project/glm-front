@@ -1,9 +1,9 @@
 import { ElementChiffreId } from '@/gestion/contexts/cout-de-revient/domain/element/ElementChiffreId';
 import { ElementDisponible } from '@/gestion/contexts/cout-de-revient/domain/element/ElementDisponible';
-import { FichierExporte } from '@/gestion/contexts/cout-de-revient/domain/export/FichierExporte';
 import { FormatDExport } from '@/gestion/contexts/cout-de-revient/domain/export/FormatDExport';
 import { CoutDeRevient } from '@/gestion/contexts/cout-de-revient/domain/rapport/CoutDeRevient';
 import { CoutDeRevientPort } from '@/gestion/contexts/cout-de-revient/domain/rapport/CoutDeRevientPort';
+import { FichierExporte } from '@/gestion/shared/enregistrement-de-fichier/domain/FichierExporte';
 
 const auTourSuivant = <T>(valeur: T): Promise<T> => new Promise(resolve => setTimeout(() => resolve(valeur)));
 

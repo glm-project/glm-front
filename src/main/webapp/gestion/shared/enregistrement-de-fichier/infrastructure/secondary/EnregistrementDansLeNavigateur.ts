@@ -1,6 +1,6 @@
 import { DOCUMENT, inject, Injectable } from '@angular/core';
-import { EnregistrementDeFichierPort } from '../../domain/export/EnregistrementDeFichierPort';
-import { FichierExporte } from '../../domain/export/FichierExporte';
+import { EnregistrementDeFichierPort } from '../../domain/EnregistrementDeFichierPort';
+import { FichierExporte } from '../../domain/FichierExporte';
 
 @Injectable()
 export class EnregistrementDansLeNavigateur extends EnregistrementDeFichierPort {
