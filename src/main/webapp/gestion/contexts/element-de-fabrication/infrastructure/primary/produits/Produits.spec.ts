@@ -439,6 +439,87 @@ describe('Produits page', () => {
     expect(text('elements-action-refus')).toBe('Ce produit n’est plus à l’atelier. Actualisez la liste.');
   });
 
+  it('should announce where a product put into the workshop went', async () => {
+    givenProducts();
+    givenWorkshopAccepts('moule-1');
+    givenAddress({ etat: 'en-preparation' });
+    await whenOpening();
+
+    await whenClickingFirst('element-mise-a-l-atelier');
+
+    expect(text('elements-notification-texte')).toBe('1015 mis à l’atelier');
+    expect(text('elements-notification-voir')).toBe('Voir');
+  });
+
+  it('should show the product put into the workshop on its new tab', async () => {
+    givenProducts();
+    givenWorkshopAccepts('moule-1');
+    givenAddress({ etat: 'en-preparation' });
+    await whenOpening();
+    await whenClickingFirst('element-mise-a-l-atelier');
+
+    await whenClicking('elements-notification-voir');
+
+    expect(router.navigations.at(-1)?.queryParams).toEqual({ etat: 'en-atelier' });
+    expect(highlightedRows()).toEqual(['MOULE-2026-000001']);
+    expect(text('elements-notification')).toBe('');
+  });
+
+  it('should show a closed product among the closed ones', async () => {
+    givenProducts();
+    givenWorkshopCloses('moule-2');
+    await whenOpening();
+    await whenClickingFirst('element-cloture');
+    await whenConfirmingClosure();
+    const annonce = text('elements-notification-texte');
+
+    await whenClicking('elements-notification-voir');
+
+    expect(annonce).toBe('M-2 clôturé');
+    expect(pressedCycle()).toBe('Clôturés');
+    expect(highlightedRows()).toEqual(['MOULE-2026-000002']);
+  });
+
+  it('should show a reopened product back in the workshop', async () => {
+    givenProducts();
+    givenWorkshopReopens('moule-3');
+    givenAddress({ etat: 'clotures' });
+    await whenOpening();
+    await whenClickingFirst('element-reouverture');
+    const annonce = text('elements-notification-texte');
+
+    await whenClicking('elements-notification-voir');
+
+    expect(annonce).toBe('M-3 rouvert');
+    expect(pressedCycle()).toBe('En atelier');
+    expect(highlightedRows()).toEqual(['MOULE-2026-000003']);
+  });
+
+  it('should dismiss the announcement', async () => {
+    givenProducts();
+    givenWorkshopAccepts('moule-1');
+    givenAddress({ etat: 'en-preparation' });
+    await whenOpening();
+    await whenClickingFirst('element-mise-a-l-atelier');
+
+    await whenClicking('elements-notification-fermer');
+
+    expect(text('elements-notification')).toBe('');
+  });
+
+  it('should stop highlighting a product once another view is chosen', async () => {
+    givenProducts();
+    givenWorkshopAccepts('moule-1');
+    givenAddress({ etat: 'en-preparation' });
+    await whenOpening();
+    await whenClickingFirst('element-mise-a-l-atelier');
+    await whenClicking('elements-notification-voir');
+
+    await whenClicking('elements-categorie-MOULE');
+
+    expect(highlightedRows()).toEqual([]);
+  });
+
   it('should name the cost link by the product it opens', async () => {
     givenProducts();
 
@@ -855,6 +936,10 @@ describe('Produits page', () => {
       ?.textContent.trim() ?? '';
   const searchValue = (): string =>
     requiredFixture(document.querySelector<HTMLInputElement>(dataSelector('elements-search')), 'elements-search').value;
+  const highlightedRows = (): string[] =>
+    [...document.querySelectorAll('[data-selector="element-row"][aria-current="true"]')].map(
+      row => row.querySelector(dataSelector('element-nom-cell'))?.textContent.trim() ?? '',
+    );
   const counters = (): string[] => texts('elements-compteur');
   const headers = (): string[] => [...document.querySelectorAll('th')].map(header => header.textContent.trim());
   const creation = (): Element | null => document.querySelector(dataSelector('elements-new'));

@@ -103,7 +103,10 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   l'onglet courant et ses compteurs. « Clôturer » demande seulement une confirmation
   (`ConfirmationClotureDialog`), qui rappelle que le produit disparaît des écrans des opérateurs et reste
   réouvrable ; un refus ou une panne s'y affiche sans la fermer. « Rouvrir », sur Clôturés, agit sans
-  confirmation : il ne coûte rien à personne. Le bouton de la ligne se désactive le temps de l'acte ; un refus ou une
+  confirmation : il ne coûte rien à personne.
+- **Un acte réussi s'annonce** (« 1015 mis à l'atelier », « clôturé », « rouvert ») dans une annonce `role="status"`
+  dont « Voir » ouvre l'onglet d'arrivée et surligne la ligne (`aria-current`). Le surlignage tombe dès qu'une
+  autre vue est choisie ; l'annonce, au prochain acte ou à sa fermeture. Le bouton de la ligne se désactive le temps de l'acte ; un refus ou une
   panne s'affiche au-dessus du tableau et s'efface au prochain acte.
 - **L'écran ne propose pas de supprimer.** Le `DELETE` existe à l'API, mais le client parle de clôture, et
   supprimer un élément portant des temps détruirait des heures de paie. La sortie d'un élément est la

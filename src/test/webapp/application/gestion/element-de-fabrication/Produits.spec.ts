@@ -43,6 +43,16 @@ describe('Manufacturing element referential in gestion', () => {
     thenCountersAre(['0', '2', '0']);
   });
 
+  it('should lead from the announcement to the product on its new tab', () => {
+    givenProductsInTheirCycles().installActesDAtelier();
+    whenVisiting('/produits?etat=en-preparation');
+    whenPuttingFirstProductIntoTheWorkshop();
+    whenSeeingTheAnnouncedProduct();
+
+    thenAddressIs('?etat=en-atelier');
+    thenHighlighted('2001');
+  });
+
   it('should close a product in the workshop after confirmation and stay on its tab', () => {
     givenProductsInTheirCycles().installActesDAtelier();
     whenVisitingReferential();
@@ -214,6 +224,18 @@ const whenClosingFirstProduct = (): void => {
 };
 const thenWorkshopIsEmpty = (): void => {
   cy.get(dataSelector('elements-empty')).should('contain.text', 'Rien à l’atelier pour l’instant.');
+};
+const whenSeeingTheAnnouncedProduct = (): void => {
+  cy.get(dataSelector('elements-notification-texte')).should('have.text', '2001 mis à l’atelier');
+  cy.get(dataSelector('elements-notification-voir')).click();
+};
+const thenHighlighted = (reference: string): void => {
+  cy.get('[data-selector="element-row"][aria-current="true"]')
+    .should('have.length', 1)
+    .find(dataSelector('element-reference-cell'))
+    .invoke('text')
+    .invoke('trim')
+    .should('equal', reference);
 };
 const thenNoProductListed = (): void => {
   cy.get(dataSelector('elements-empty')).should('contain.text', 'Aucun produit en préparation');

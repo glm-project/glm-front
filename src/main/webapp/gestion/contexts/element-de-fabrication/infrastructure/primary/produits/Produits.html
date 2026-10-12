@@ -226,7 +226,13 @@
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="colonnes()"></tr>
-        <tr mat-row *matRowDef="let row; columns: colonnes()" data-selector="element-row"></tr>
+        <tr
+          mat-row
+          *matRowDef="let row; columns: colonnes()"
+          [class.surlignee]="estSurligne(row.produit)"
+          [attr.aria-current]="estSurligne(row.produit) ? 'true' : null"
+          data-selector="element-row"
+        ></tr>
       </table>
     </div>
     } @if (paginationVisible()) {
@@ -247,4 +253,22 @@
     </nav>
     }
   </section>
+
+  @if (annonce(); as annonceEnCours) {
+  <div role="status" class="annonce" data-selector="elements-notification">
+    <span data-selector="elements-notification-texte">{{ annonceEnCours.texte }}</span>
+    <button mat-button type="button" (click)="voir(annonceEnCours)" data-selector="elements-notification-voir">
+      {{ libelles.annonces.voir }}
+    </button>
+    <button
+      mat-icon-button
+      type="button"
+      (click)="fermerAnnonce()"
+      [attr.aria-label]="libelles.annonces.fermer"
+      data-selector="elements-notification-fermer"
+    >
+      <glm-icon name="x" />
+    </button>
+  </div>
+  }
 </main>

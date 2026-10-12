@@ -64,7 +64,7 @@ export class ElementsApiFixture {
       const { element } = request.body as { element: string };
       this.elements = this.elements.map(candidat =>
         candidat.id === element
-          ? { ...candidat, cycle: 'EN_ATELIER', etatDAtelier: 'EN_ATTENTE', misALAtelierLe: MIS_A_L_ATELIER_LE }
+          ? { ...candidat, cycle: 'EN_ATELIER', suivi: `suivi-${element}`, etatDAtelier: 'EN_ATTENTE', misALAtelierLe: MIS_A_L_ATELIER_LE }
           : candidat,
       );
       request.reply({ statusCode: 201, body: {} });

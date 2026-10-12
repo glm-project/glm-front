@@ -66,6 +66,12 @@ const ligneDe = (produit: ProduitDansSonCycle): LigneDeProduit => {
   }
 };
 
+interface Annonce {
+  readonly texte: string;
+  readonly cycle: CycleDuProduit;
+  readonly element: string;
+}
+
 interface EtatProduits {
   readonly categories: readonly CategorieDeProduit[];
   readonly sansCategorie: boolean;
@@ -129,6 +135,8 @@ export class Produits implements OnInit {
     return this.libelles.pagination.intervalle(premier + 1, premier + this.etat().produits.length, this.etat().total);
   });
   protected readonly acteEnCours = signal<string | undefined>(undefined);
+  protected readonly annonce = signal<Annonce | undefined>(undefined);
+  protected readonly surligne = signal<string | undefined>(undefined);
   protected readonly refusAction = signal<RefusDActeDAtelier | undefined>(undefined);
   protected readonly erreurAction = signal(false);
   protected readonly filtree = computed(() => this.filtre() !== undefined || this.recherche().trim() !== '');
@@ -175,11 +183,13 @@ export class Produits implements OnInit {
   }
 
   protected mettreALAtelier(produit: ProduitDansSonCycle): void {
-    this.errors.observe(this.agir(produit, () => this.actes.mettreALAtelier(produit.element.id)));
+    const annonce = this.annonceDe(produit, 'EN_ATELIER', this.libelles.annonces.misALAtelier);
+    this.errors.observe(this.agir(produit, () => this.actes.mettreALAtelier(produit.element.id), annonce));
   }
 
   protected rouvrir(produit: ProduitDansSonCycle, suivi: SuiviDuProduitId): void {
-    this.errors.observe(this.agir(produit, () => this.actes.rouvrir(suivi)));
+    const annonce = this.annonceDe(produit, 'EN_ATELIER', this.libelles.annonces.rouvert);
+    this.errors.observe(this.agir(produit, () => this.actes.rouvrir(suivi), annonce));
   }
 
   protected openCloture(produit: ProduitDansSonCycle, suivi: SuiviDuProduitId): void {
@@ -192,6 +202,7 @@ export class Produits implements OnInit {
     });
     dialogRef.afterClosed().subscribe(cloture => {
       if (cloture === true) {
+        this.annonce.set(this.annonceDe(produit, 'CLOTURE', this.libelles.annonces.cloture));
         void this.load(false);
       }
     });
@@ -222,13 +233,33 @@ export class Produits implements OnInit {
     });
   }
 
-  private async agir(produit: ProduitDansSonCycle, acte: () => Promise<Result<void, RefusDActeDAtelier>>): Promise<void> {
+  protected voir(annonce: Annonce): void {
+    this.annonce.set(undefined);
+    this.afficher({ cycle: annonce.cycle, page: 0 });
+    this.surligne.set(annonce.element);
+  }
+
+  protected fermerAnnonce(): void {
+    this.annonce.set(undefined);
+  }
+
+  protected estSurligne(produit: ProduitDansSonCycle): boolean {
+    return produit.element.id.value === this.surligne();
+  }
+
+  private annonceDe(produit: ProduitDansSonCycle, cycle: CycleDuProduit, texte: (numero: string) => string): Annonce {
+    return { texte: texte(produit.element.numero()), cycle, element: produit.element.id.value };
+  }
+
+  private async agir(produit: ProduitDansSonCycle, acte: () => Promise<Result<void, RefusDActeDAtelier>>, annonce: Annonce): Promise<void> {
+    this.annonce.set(undefined);
     this.refusAction.set(undefined);
     this.erreurAction.set(false);
     this.acteEnCours.set(produit.element.id.value);
     try {
       const resultat = await acte();
       if (resultat.ok) {
+        this.annonce.set(annonce);
         void this.load(false);
       } else {
         this.refusAction.set(resultat.error);
@@ -242,6 +273,7 @@ export class Produits implements OnInit {
   }
 
   private afficher(changements: Partial<CriteresDesProduits>, remplacer = false): void {
+    this.surligne.set(undefined);
     const actuelle = adresseDeLaRequete(this.requete());
     const suivante = adresseDeLaRequete(this.requete().avec(changements));
     if (JSON.stringify(suivante) === JSON.stringify(actuelle)) {

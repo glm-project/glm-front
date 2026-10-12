@@ -74,3 +74,25 @@ table {
   font-size: var(--text-body-sm);
   font-variant-numeric: tabular-nums;
 }
+.surlignee td {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+.annonce {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  border-radius: var(--radius-control);
+  background: var(--color-ink);
+  color: var(--color-surface);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-ink) 24%, transparent);
+  transform: translateX(-50%);
+}
+.annonce button {
+  color: inherit;
+}
