@@ -67,7 +67,19 @@
     />
     } @else if (resume.value(); as valeur) {
     <p class="mt-2 text-center text-body-sm text-ink-muted" data-selector="rapport-resume">{{ libelleResume(valeur) }}</p>
-    }
+    @if (libelleFinsAutomatiques(valeur); as alerte) {
+    <div role="note" class="mt-4 rounded border-l-4 border-warn bg-sunken px-3 py-2 text-body-sm" data-selector="rapport-fins-automatiques">
+      <p>{{ alerte }}</p>
+      <a
+        class="font-semibold text-accent underline"
+        routerLink="/anomalies"
+        [queryParams]="{ operateur: operateurId }"
+        mat-dialog-close
+        data-selector="rapport-anomalies"
+        >Régulariser dans Anomalies</a
+      >
+    </div>
+    } }
   </section>
 </mat-dialog-content>
 <mat-dialog-actions align="end">

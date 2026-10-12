@@ -33,6 +33,7 @@ const toResume = (lu: RestResume, periode: PeriodeDuRapport): ResumeDuRapport =>
   return new ResumeDuRapport({
     tempsPointe: new DureeTravaillee(lu.tempsPointe.valeur),
     joursAvecPointage: lu.joursAvecPointage,
+    finsAutomatiques: lu.finsAutomatiques,
   });
 };
 

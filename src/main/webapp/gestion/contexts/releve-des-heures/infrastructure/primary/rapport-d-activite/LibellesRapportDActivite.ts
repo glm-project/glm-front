@@ -15,3 +15,12 @@ export const libelleResume = (resume: ResumeDuRapport): string =>
   `${pluriel(resume.joursAvecPointage, 'jour', 'jours')} avec pointage · ${resume.tempsPointe.heures} h ${String(
     resume.tempsPointe.minutesRestantes,
   ).padStart(2, '0')} pointées`;
+
+export const libelleFinsAutomatiques = (resume: ResumeDuRapport): string | undefined => {
+  if (resume.finsAutomatiques === 0) {
+    return undefined;
+  }
+  return resume.finsAutomatiques > 1
+    ? `${resume.finsAutomatiques} pointages en fin automatique dans la période. Ils figurent dans le rapport avec la mention « fin automatique ».`
+    : '1 pointage en fin automatique dans la période. Il figure dans le rapport avec la mention « fin automatique ».';
+};

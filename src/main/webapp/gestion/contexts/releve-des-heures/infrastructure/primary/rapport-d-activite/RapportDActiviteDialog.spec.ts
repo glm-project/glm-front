@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
+import { provideRouter } from '@angular/router';
 import { RapportDActiviteFixture } from '@test/unit/fixtures/gestion/releve-des-heures/RapportDActiviteFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
@@ -21,8 +22,8 @@ const SEMAINE_38 = PeriodeDuRapport.semaineContenant(LE_17_SEPTEMBRE);
 const SEMAINE_37 = PeriodeDuRapport.semaineContenant(new JourCalendaire('2026-09-10'));
 const SEPTEMBRE = PeriodeDuRapport.moisContenant(LE_17_SEPTEMBRE);
 
-const resumeFixture = (temps: string, jours: number): ResumeDuRapport =>
-  new ResumeDuRapport({ tempsPointe: new DureeTravaillee(temps), joursAvecPointage: jours });
+const resumeFixture = (temps: string, jours: number, finsAutomatiques = 0): ResumeDuRapport =>
+  new ResumeDuRapport({ tempsPointe: new DureeTravaillee(temps), joursAvecPointage: jours, finsAutomatiques });
 
 describe('RapportDActiviteDialog', () => {
   let fixture: ComponentFixture<DialogHostFixture>;
@@ -35,6 +36,7 @@ describe('RapportDActiviteDialog', () => {
     port.seme(MARTIN, SEMAINE_38, resumeFixture('PT47H45M', 6));
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: RapportDActivitePort, useValue: port },
       ],
@@ -108,6 +110,24 @@ describe('RapportDActiviteDialog', () => {
     expect(text('rapport-resume')).toBe('6 jours avec pointage · 47 h 45 pointées');
   });
 
+  it('should not mention automatic ends when the period has none', async () => {
+    await whenOpening();
+
+    expect(present('rapport-fins-automatiques')).toBe(false);
+  });
+
+  it.each([
+    [1, '1 pointage en fin automatique dans la période. Il figure dans le rapport avec la mention « fin automatique ».'],
+    [3, '3 pointages en fin automatique dans la période. Ils figurent dans le rapport avec la mention « fin automatique ».'],
+  ])('should announce %s automatic ends and lead to the anomalies of the operator', async (finsAutomatiques, annonce) => {
+    givenSummary(SEMAINE_38, resumeFixture('PT47H45M', 6, finsAutomatiques));
+
+    await whenOpening();
+
+    expect(text('rapport-fins-automatiques')).toContain(annonce);
+    expect(lien('rapport-anomalies')).toBe('/anomalies?operateur=martin');
+  });
+
   const givenSummary = (periode: PeriodeDuRapport, resume: ResumeDuRapport): void => {
     port.seme(MARTIN, periode, resume);
   };
@@ -131,5 +151,8 @@ describe('RapportDActiviteDialog', () => {
   const button = (selector: string): HTMLButtonElement =>
     requiredFixture(document.querySelector<HTMLButtonElement>(dataSelector(selector)), selector);
   const pressed = (selector: string): string | null => button(selector).getAttribute('aria-pressed');
+  const present = (selector: string): boolean => document.querySelector(dataSelector(selector)) !== null;
+  const lien = (selector: string): string | null =>
+    requiredFixture(document.querySelector<HTMLAnchorElement>(dataSelector(selector)), selector).getAttribute('href');
   const text = (selector: string): string => document.querySelector(dataSelector(selector))?.textContent.trim() ?? '';
 });

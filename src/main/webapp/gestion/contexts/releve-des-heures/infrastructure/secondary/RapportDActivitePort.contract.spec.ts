@@ -35,7 +35,7 @@ const restFixture = (periode: PeriodeDuRapport, tempsPointe = 'PT47H45M'): RestR
 });
 
 const resumeFixture = (tempsPointe = 'PT47H45M'): ResumeDuRapport =>
-  new ResumeDuRapport({ tempsPointe: new DureeTravaillee(tempsPointe), joursAvecPointage: 6 });
+  new ResumeDuRapport({ tempsPointe: new DureeTravaillee(tempsPointe), joursAvecPointage: 6, finsAutomatiques: 1 });
 
 class RapportHttpBackendFixture implements HttpBackend {
   readonly resumes = new Map<string, RestResume>();
