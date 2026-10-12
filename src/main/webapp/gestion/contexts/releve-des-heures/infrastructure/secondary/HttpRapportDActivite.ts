@@ -1,8 +1,11 @@
 import { components } from '@/app/generated/schema';
-import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { ApiClient, DownloadedFile } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
+import { required } from '@/app/shared/api-client/infrastructure/secondary/required';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { FichierExporte } from '@/gestion/shared/enregistrement-de-fichier/domain/FichierExporte';
 import { inject, Injectable } from '@angular/core';
 import { DureeTravaillee } from '../../domain/duree/DureeTravaillee';
+import { FormatDuRapport } from '../../domain/rapport/FormatDuRapport';
 import { PeriodeDuRapport } from '../../domain/rapport/PeriodeDuRapport';
 import { RapportDActivitePort } from '../../domain/rapport/RapportDActivitePort';
 import { ResumeDuRapport } from '../../domain/rapport/ResumeDuRapport';
@@ -11,6 +14,7 @@ import { OperateurReleveId } from '../../domain/releve/OperateurReleveId';
 type RestResume = components['schemas']['RestResumeDuRapportDActivite'];
 
 const ROUTE_RESUME = '/api/syntheses-des-heures/{operateurId}/rapport';
+const ROUTE_EXCEL = '/api/syntheses-des-heures/{operateurId}/export.xlsx';
 
 interface ParametresDePeriode {
   readonly annee: number;
@@ -50,5 +54,23 @@ export class HttpRapportDActivite extends RapportDActivitePort {
       this.errors.handleError(failure);
       throw failure;
     }
+  }
+
+  override async exporte(operateur: OperateurReleveId, periode: PeriodeDuRapport, format: FormatDuRapport): Promise<FichierExporte> {
+    try {
+      const fichier = await this.telecharge(operateur, periode, format);
+      return { nom: required(fichier.filename, 'Content-Disposition.filename'), contenu: fichier.content };
+    } catch (failure) {
+      this.errors.handleError(failure);
+      throw failure;
+    }
+  }
+
+  private telecharge(operateur: OperateurReleveId, periode: PeriodeDuRapport, format: FormatDuRapport): Promise<DownloadedFile> {
+    const requete = { pathParams: { operateurId: operateur.value }, queryParams: parametresDe(periode) };
+    const telechargements: Record<FormatDuRapport, () => Promise<DownloadedFile>> = {
+      EXCEL: () => this.api.download(ROUTE_EXCEL, requete),
+    };
+    return telechargements[format]();
   }
 }

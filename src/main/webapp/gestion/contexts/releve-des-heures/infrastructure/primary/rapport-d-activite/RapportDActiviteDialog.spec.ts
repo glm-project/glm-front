@@ -1,7 +1,10 @@
+import { EnregistrementDeFichierPort } from '@/gestion/shared/enregistrement-de-fichier/domain/EnregistrementDeFichierPort';
+import { FichierExporte } from '@/gestion/shared/enregistrement-de-fichier/domain/FichierExporte';
 import { Component } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { provideRouter } from '@angular/router';
+import { DeferredFixture } from '@test/unit/fixtures/DeferredFixture';
 import { RapportDActiviteFixture } from '@test/unit/fixtures/gestion/releve-des-heures/RapportDActiviteFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
@@ -16,6 +19,14 @@ import { RapportDActiviteDialog, RapportDActiviteDialogData } from './RapportDAc
 @Component({ template: '' })
 class DialogHostFixture {}
 
+class EnregistrementFixture extends EnregistrementDeFichierPort {
+  readonly fichiers: FichierExporte[] = [];
+
+  override enregistre(fichier: FichierExporte): void {
+    this.fichiers.push(fichier);
+  }
+}
+
 const MARTIN = new OperateurReleveId('martin');
 const LE_17_SEPTEMBRE = new JourCalendaire('2026-09-17');
 const SEMAINE_38 = PeriodeDuRapport.semaineContenant(LE_17_SEPTEMBRE);
@@ -28,17 +39,20 @@ const resumeFixture = (temps: string, jours: number, finsAutomatiques = 0): Resu
 describe('RapportDActiviteDialog', () => {
   let fixture: ComponentFixture<DialogHostFixture>;
   let port: RapportDActiviteFixture;
+  let enregistrement: EnregistrementFixture;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 8, 17, 10, 0));
     port = new RapportDActiviteFixture();
+    enregistrement = new EnregistrementFixture();
     port.seme(MARTIN, SEMAINE_38, resumeFixture('PT47H45M', 6));
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: RapportDActivitePort, useValue: port },
+        { provide: EnregistrementDeFichierPort, useValue: enregistrement },
       ],
     });
     fixture = TestBed.createComponent(DialogHostFixture);
@@ -128,6 +142,43 @@ describe('RapportDActiviteDialog', () => {
     expect(lien('rapport-anomalies')).toBe('/anomalies?operateur=martin');
   });
 
+  it('should save the workbook of the displayed period', async () => {
+    givenSummary(SEPTEMBRE, resumeFixture('PT164H5M', 21));
+    await whenOpening();
+    await whenClicking('rapport-par-mois');
+
+    await whenExporting();
+
+    expect(port.exports).toEqual([{ operateur: MARTIN, periode: SEPTEMBRE, format: 'EXCEL' }]);
+    expect(enregistrement.fichiers.map(fichier => fichier.nom)).toEqual(['rapport-2026-09-01.xlsx']);
+  });
+
+  it('should show the workbook is being prepared and refuse another one meanwhile', async () => {
+    givenExportIsPending(new DeferredFixture<FichierExporte>());
+    await whenOpening();
+
+    await whenClicking('rapport-export-excel');
+
+    expect(text('rapport-export-excel')).toBe('Préparation…');
+    expect(button('rapport-export-excel').disabled).toBe(true);
+  });
+
+  it('should explain a failed workbook and leave it available again', async () => {
+    givenExportFails();
+    await whenOpening();
+
+    await whenExporting();
+
+    expect(text('rapport-export-echec')).toBe('L’export n’a pas pu être généré. Vérifiez la connexion puis réessayez.');
+    expect(button('rapport-export-excel').disabled).toBe(false);
+  });
+
+  const givenExportIsPending = (deferred: DeferredFixture<FichierExporte>): void => {
+    port.exportDiffere = deferred.promise;
+  };
+  const givenExportFails = (): void => {
+    port.echecDExport = new Error('Réseau indisponible');
+  };
   const givenSummary = (periode: PeriodeDuRapport, resume: ResumeDuRapport): void => {
     port.seme(MARTIN, periode, resume);
   };
@@ -142,6 +193,11 @@ describe('RapportDActiviteDialog', () => {
     TestBed.inject(MatDialog).open<RapportDActiviteDialog, RapportDActiviteDialogData>(RapportDActiviteDialog, {
       data: { operateur: 'martin', prenom: 'Martin', nom: 'Lefèvre' },
     });
+    await fixture.whenStable();
+  };
+  const whenExporting = async (): Promise<void> => {
+    button('rapport-export-excel').click();
+    await new Promise(resolve => setTimeout(resolve));
     await fixture.whenStable();
   };
   const whenClicking = async (selector: string): Promise<void> => {

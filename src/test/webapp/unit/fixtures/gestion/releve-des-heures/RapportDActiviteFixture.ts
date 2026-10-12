@@ -1,7 +1,15 @@
+import { FormatDuRapport } from '@/gestion/contexts/releve-des-heures/domain/rapport/FormatDuRapport';
 import { PeriodeDuRapport } from '@/gestion/contexts/releve-des-heures/domain/rapport/PeriodeDuRapport';
 import { RapportDActivitePort } from '@/gestion/contexts/releve-des-heures/domain/rapport/RapportDActivitePort';
 import { ResumeDuRapport } from '@/gestion/contexts/releve-des-heures/domain/rapport/ResumeDuRapport';
 import { OperateurReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/OperateurReleveId';
+import { FichierExporte } from '@/gestion/shared/enregistrement-de-fichier/domain/FichierExporte';
+
+export interface DemandeDExport {
+  readonly operateur: OperateurReleveId;
+  readonly periode: PeriodeDuRapport;
+  readonly format: FormatDuRapport;
+}
 
 export interface DemandeDeResume {
   readonly operateur: OperateurReleveId;
@@ -18,6 +26,9 @@ export class RapportDActiviteFixture extends RapportDActivitePort {
   readonly demandes: DemandeDeResume[] = [];
   private readonly resumes = new Map<string, ResumeDuRapport>();
   echec: Error | undefined;
+  readonly exports: DemandeDExport[] = [];
+  echecDExport: Error | undefined;
+  exportDiffere: Promise<FichierExporte> | undefined;
 
   seme(operateur: OperateurReleveId, periode: PeriodeDuRapport, resume: ResumeDuRapport): void {
     this.resumes.set(cleDe(operateur, periode), resume);
@@ -33,5 +44,13 @@ export class RapportDActiviteFixture extends RapportDActivitePort {
       return Promise.reject(new Error(`Aucun résumé semé pour ${cleDe(operateur, periode)}`));
     }
     return auTourSuivant(resume);
+  }
+
+  override exporte(operateur: OperateurReleveId, periode: PeriodeDuRapport, format: FormatDuRapport): Promise<FichierExporte> {
+    this.exports.push({ operateur, periode, format });
+    if (this.echecDExport !== undefined) {
+      return Promise.reject(this.echecDExport);
+    }
+    return this.exportDiffere ?? auTourSuivant({ nom: `rapport-${periode.premierJour().value}.xlsx`, contenu: new Blob(['classeur']) });
   }
 }

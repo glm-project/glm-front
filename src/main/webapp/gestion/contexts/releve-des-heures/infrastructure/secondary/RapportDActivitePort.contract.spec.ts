@@ -1,7 +1,7 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse, provideHttpClient } from '@angular/common/http';
+import { HttpBackend, HttpErrorResponse, HttpEvent, HttpHeaders, HttpRequest, HttpResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
@@ -48,6 +48,13 @@ class RapportHttpBackendFixture implements HttpBackend {
 
   private async answer(request: HttpRequest<unknown>): Promise<HttpResponse<unknown> | HttpErrorResponse> {
     await new Promise(resolve => setTimeout(resolve));
+    if (request.url.endsWith('/export.xlsx')) {
+      return new HttpResponse({
+        status: 200,
+        body: new Blob(['classeur']),
+        headers: new HttpHeaders({ 'Content-Disposition': 'attachment; filename="activite-lefevre-martin-S38-2026.xlsx"' }),
+      });
+    }
     const resume = this.resumes.get(`${request.params.get('semaine') ?? ''}|${request.params.get('mois') ?? ''}`);
     return resume === undefined ? new HttpErrorResponse({ status: 500 }) : new HttpResponse({ status: 200, body: resume });
   }
@@ -109,6 +116,13 @@ describe.each(adapters)('RapportDActivitePort contract, honoured by %s', (_adapt
     const resume = await harness.port.resume(new OperateurReleveId(OPERATEUR), periode);
 
     expect(resume).toEqual(resumeFixture(tempsPointe));
+  });
+
+  it('should hand over the workbook of the requested period under an Excel name', async () => {
+    const fichier = await harness.port.exporte(new OperateurReleveId(OPERATEUR), SEMAINE_38, 'EXCEL');
+
+    expect(fichier.nom).toMatch(/\.xlsx$/u);
+    expect(await fichier.contenu.text()).toBe('classeur');
   });
 
   it('should reject a summary the server cannot give', async () => {
@@ -174,6 +188,46 @@ describe('Beyond the contract: HttpRapportDActivite', () => {
     expect(await result).toBeInstanceOf(HttpErrorResponse);
     expect(errorHandler.errors).toHaveLength(1);
   });
+
+  it('should download the workbook of the requested week under the name the server gave it', async () => {
+    const result = port.exporte(new OperateurReleveId(OPERATEUR), SEMAINE_38, 'EXCEL');
+
+    const request = await whenServerSendsTheWorkbook('attachment; filename="activite-lefevre-martin-S38-2026.xlsx"');
+    const fichier = await result;
+
+    expect([request.request.params.get('annee'), request.request.params.get('semaine')]).toEqual(['2026', '38']);
+    expect(fichier.nom).toBe('activite-lefevre-martin-S38-2026.xlsx');
+  });
+
+  it('should reject a workbook sent without a name and report it once', async () => {
+    const result = port.exporte(new OperateurReleveId(OPERATEUR), SEMAINE_38, 'EXCEL').catch((failure: unknown) => failure);
+
+    await whenServerSendsTheWorkbook();
+
+    expect(await result).toEqual(new Error('Content-Disposition.filename manque dans la réponse du serveur'));
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  it('should report a failed workbook once and reject', async () => {
+    const result = port.exporte(new OperateurReleveId(OPERATEUR), SEPTEMBRE, 'EXCEL').catch((failure: unknown) => failure);
+
+    await whenServerFailsAt(`/api/syntheses-des-heures/${OPERATEUR}/export.xlsx`);
+
+    expect(await result).toBeInstanceOf(HttpErrorResponse);
+    expect(errorHandler.errors).toHaveLength(1);
+  });
+
+  const whenServerSendsTheWorkbook = async (disposition?: string): Promise<TestRequest> => {
+    await new Promise(resolve => setTimeout(resolve));
+    const request = server.expectOne(candidate => candidate.url === `/api/syntheses-des-heures/${OPERATEUR}/export.xlsx`);
+    request.flush(new Blob(['classeur']), { headers: disposition === undefined ? {} : { 'Content-Disposition': disposition } });
+    return request;
+  };
+
+  const whenServerFailsAt = async (route: string): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    server.expectOne(candidate => candidate.url === route).flush(new Blob(['{}']), { status: 500, statusText: 'Échec' });
+  };
 
   const whenServerAnswers = async (body: RestResume): Promise<TestRequest> => {
     await new Promise(resolve => setTimeout(resolve));

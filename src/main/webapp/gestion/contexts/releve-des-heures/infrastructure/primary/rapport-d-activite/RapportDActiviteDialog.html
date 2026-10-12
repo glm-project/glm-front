@@ -81,6 +81,25 @@
     </div>
     } }
   </section>
+
+  <section aria-labelledby="rapport-telecharger-label" data-selector="rapport-exports">
+    <p id="rapport-telecharger-label" class="mb-2 text-body-sm font-semibold text-ink-muted">Télécharger</p>
+    @if (echecDExport()) {
+    <p role="alert" class="mb-2 text-body-sm text-danger" data-selector="rapport-export-echec">
+      L’export n’a pas pu être généré. Vérifiez la connexion puis réessayez.
+    </p>
+    }
+    <button
+      mat-stroked-button
+      type="button"
+      class="w-full"
+      [disabled]="exportEnCours() !== undefined"
+      (click)="exporter('EXCEL')"
+      data-selector="rapport-export-excel"
+    >
+      {{ exportEnCours() === 'EXCEL' ? 'Préparation…' : 'Excel · synthèse et tableau des pointages' }}
+    </button>
+  </section>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button type="button" mat-dialog-close data-selector="rapport-fermer">Fermer</button>

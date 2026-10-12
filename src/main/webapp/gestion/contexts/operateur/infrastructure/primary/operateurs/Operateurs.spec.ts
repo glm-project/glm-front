@@ -1,5 +1,6 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Page } from '@/app/shared/pagination/domain/Page';
+import { EnregistrementDeFichierPort } from '@/gestion/shared/enregistrement-de-fichier/domain/EnregistrementDeFichierPort';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
@@ -56,6 +57,7 @@ describe('Operateurs page', () => {
         { provide: OperateursPort, useValue: port },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
         { provide: RapportDActiviteFixture.port, useClass: RapportDActiviteFixture },
+        { provide: EnregistrementDeFichierPort, useValue: { enregistre: () => undefined } },
       ],
     });
   });
