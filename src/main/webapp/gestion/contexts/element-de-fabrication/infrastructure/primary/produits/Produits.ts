@@ -15,6 +15,7 @@ import { CategoriesDeProduitPort } from '../../../domain/CategoriesDeProduitPort
 import { CompteursDesCycles } from '../../../domain/CompteursDesCycles';
 import { CycleDuProduit, CYCLES_DU_PRODUIT } from '../../../domain/CycleDuProduit';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
+import { ElementDeFabricationId } from '../../../domain/ElementDeFabricationId';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
 import { EtatDAtelier } from '../../../domain/EtatDAtelier';
 import { ProduitDansSonCycle } from '../../../domain/ProduitDansSonCycle';
@@ -210,8 +211,9 @@ export class Produits implements OnInit {
 
   protected openCreation(): void {
     const categories = this.etat().categories;
-    this.openForm({ element: null, categories, categorie: categories.find(categorie => this.estFiltree(categorie)) }, () => {
+    this.openForm({ element: null, categories, categorie: categories.find(categorie => this.estFiltree(categorie)) }, cree => {
       this.choisirCycle('EN_PREPARATION');
+      this.surligne.set(cree.value);
     });
   }
 
@@ -283,16 +285,16 @@ export class Produits implements OnInit {
     void this.router.navigate([], { relativeTo: this.route, queryParams: suivante, replaceUrl: remplacer });
   }
 
-  private openForm(data: ElementFormDialogData, apresEnregistrement: () => void): void {
-    const dialogRef = this.dialogs.open<ElementFormDialog, ElementFormDialogData, boolean>(ElementFormDialog, {
+  private openForm(data: ElementFormDialogData, apresEnregistrement: (element: ElementDeFabricationId) => void): void {
+    const dialogRef = this.dialogs.open<ElementFormDialog, ElementFormDialogData, ElementDeFabricationId | false>(ElementFormDialog, {
       data,
       viewContainerRef: this.viewContainerRef,
       width: '36rem',
       maxWidth: 'calc(100vw - 2rem)',
     });
-    dialogRef.afterClosed().subscribe(saved => {
-      if (saved === true) {
-        apresEnregistrement();
+    dialogRef.afterClosed().subscribe(enregistre => {
+      if (enregistre instanceof ElementDeFabricationId) {
+        apresEnregistrement(enregistre);
       }
     });
   }

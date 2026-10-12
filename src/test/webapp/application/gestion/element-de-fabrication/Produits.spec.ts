@@ -87,6 +87,15 @@ describe('Manufacturing element referential in gestion', () => {
     thenElementIsListed('1015', 'MOULE', 'Moule de capot');
   });
 
+  it('should highlight the created product among the products in preparation', () => {
+    givenReferential();
+    whenVisitingReferential();
+    whenCreating('elements-new', 'MOULE', '1015', 'Moule de capot');
+
+    thenAddressIs('?etat=en-preparation');
+    thenHighlighted('1015');
+  });
+
   it('should create an OF in the category chosen in the form', () => {
     givenReferential();
     whenVisitingReferential();

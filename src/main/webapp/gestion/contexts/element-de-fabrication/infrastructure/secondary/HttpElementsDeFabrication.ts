@@ -135,27 +135,28 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
     }
   }
 
-  override creer(commande: CommandeCreationElement): Promise<Result<void, RefusCreationElement>> {
-    return this.execute(
+  override async creer(commande: CommandeCreationElement): Promise<Result<ElementDeFabricationId, RefusCreationElement>> {
+    const resultat = await this.execute(
       this.api.write('/api/elements-de-fabrication', { body: { categorie: commande.categorie.value, ...toFiche(commande) } }),
       refusCreation,
     );
+    return resultat.ok ? ok(new ElementDeFabricationId(required(resultat.value.id, 'element.id'))) : resultat;
   }
 
-  override modifier(commande: CommandeModificationElement): Promise<Result<void, RefusModificationElement>> {
-    return this.execute(
+  override async modifier(commande: CommandeModificationElement): Promise<Result<void, RefusModificationElement>> {
+    const resultat = await this.execute(
       this.api.update('/api/elements-de-fabrication/{id}', { pathParams: { id: commande.id.value }, body: toFiche(commande) }),
       refusModification,
     );
+    return resultat.ok ? ok(undefined) : resultat;
   }
 
-  private async execute<Refus>(
-    operation: Promise<unknown>,
+  private async execute<Reponse, Refus>(
+    operation: Promise<Reponse>,
     translate: (urn: string | undefined) => Refus | undefined,
-  ): Promise<Result<void, Refus>> {
+  ): Promise<Result<Reponse, Refus>> {
     try {
-      await operation;
-      return ok(undefined);
+      return ok(await operation);
     } catch (failure) {
       const refus = translate(findApiErrorIn(failure)?.urn);
       if (refus === undefined) {

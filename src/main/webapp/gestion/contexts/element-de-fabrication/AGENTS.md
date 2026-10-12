@@ -98,7 +98,8 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   aucune lecture ne le prédit.
 - **Trois onglets exclusifs**, En préparation, En atelier — ouvert par défaut — et Clôturés, chacun avec ses
   colonnes et ses actions : « Mettre à l'atelier » en préparation, « Coût de revient » ensuite, « Modifier »
-  partout. Une création bascule sur En préparation, où le produit arrive.
+  partout. Une création bascule sur En préparation, où le produit arrive, et le surligne : `creer` rend
+  l'identifiant que le back attribue, et le formulaire se ferme avec lui.
 - **Un acte agit sur la ligne et laisse l'onglet en place** : pas de dialogue de sélection, la page relit
   l'onglet courant et ses compteurs. « Clôturer » demande seulement une confirmation
   (`ConfirmationClotureDialog`), qui rappelle que le produit disparaît des écrans des opérateurs et reste

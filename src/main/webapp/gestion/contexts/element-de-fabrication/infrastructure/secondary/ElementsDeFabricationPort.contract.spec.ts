@@ -381,7 +381,7 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
   ] as const)('should create an element %s and list it in preparation', async (_scenario, reference, libelle) => {
     const resultat = await whenCreating('MOULE', reference, libelle);
 
-    expect(resultat).toEqual({ ok: true, value: undefined });
+    expect(resultat).toEqual({ ok: true, value: new ElementDeFabricationId('created-element') });
     expect(await whenListing()).toEqual([
       { id: 'created-element', categorie: 'MOULE', nom: NOM_ATTRIBUE, reference, libelle, cycle: 'EN_PREPARATION' },
     ]);
@@ -390,7 +390,7 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
   it('should create an ordre de fabrication carrying its own category', async () => {
     const resultat = await whenCreating('OF', '1016', undefined);
 
-    expect(resultat).toEqual({ ok: true, value: undefined });
+    expect(resultat).toEqual({ ok: true, value: new ElementDeFabricationId('created-element') });
     expect(await whenListing()).toEqual([
       { id: 'created-element', categorie: 'OF', nom: NOM_ATTRIBUE, reference: '1016', libelle: undefined, cycle: 'EN_PREPARATION' },
     ]);
@@ -470,7 +470,7 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
     code: string,
     reference: string | undefined,
     libelle: string | undefined,
-  ): Promise<Result<void, RefusCreationElement>> =>
+  ): Promise<Result<ElementDeFabricationId, RefusCreationElement>> =>
     port.creer({
       kind: 'CREATION',
       categorie: new CategorieDeProduit(code),
@@ -633,9 +633,16 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
     expect(await result).toBeInstanceOf(HttpErrorResponse);
   });
 
+  it('should reject a created element the server did not identify', async () => {
+    const result = whenCommandStarts('creer').catch((failure: unknown) => failure);
+    await whenWriteAnswers(ROUTE, 201, { categorie: 'MOULE', nom: NOM_ATTRIBUE });
+
+    expect(await result).toEqual(new Error('element.id manque dans la réponse du serveur'));
+  });
+
   it('should send only the fields the manager filled in', async () => {
     const result = port.creer({ kind: 'CREATION', categorie: new CategorieDeProduit('OF'), reference: undefined, libelle: undefined });
-    const request = await whenWriteAnswers(ROUTE, 201, {});
+    const request = await whenWriteAnswers(ROUTE, 201, { id: 'created-element' });
 
     await result;
     expect(request.request.body).toEqual({ categorie: 'OF' });

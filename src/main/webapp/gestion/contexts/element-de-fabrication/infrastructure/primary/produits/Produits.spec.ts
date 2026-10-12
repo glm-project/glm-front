@@ -187,7 +187,7 @@ describe('Produits page', () => {
     await whenClicking('elements-new');
     port.produitsEnregistres = [creeFixture];
 
-    await whenClosingDialog(true);
+    await whenClosingDialog(creeFixture.element.id);
 
     expect(router.navigations).toEqual([]);
     expect(texts('element-nom-cell')).toEqual(['PIECE-2026-000001']);
@@ -759,17 +759,18 @@ describe('Produits page', () => {
     expect(fields()).toEqual(['element-reference', 'element-libelle']);
   });
 
-  it('should show a created product among the products in preparation', async () => {
+  it('should show and highlight a created product among the products in preparation', async () => {
     givenProducts();
     await whenOpening();
     await whenClicking('elements-new');
     port.produitsEnregistres = [creeFixture, ...port.produitsEnregistres];
 
-    await whenClosingDialog(true);
+    await whenClosingDialog(creeFixture.element.id);
 
     expect(pressedCycle()).toBe('En préparation');
     expect(lastRequest()).toEqual({ cycle: 'EN_PREPARATION', categorie: undefined, recherche: '', page: 0 });
     expect(texts('element-nom-cell')).toEqual(['PIECE-2026-000001', 'MOULE-2026-000001', 'OF-2026-000042']);
+    expect(highlightedRows()).toEqual(['PIECE-2026-000001']);
   });
 
   it('should stay on the current cycle when creation is cancelled', async () => {
@@ -791,7 +792,7 @@ describe('Produits page', () => {
       produitFixture(elementFixture('moule-2', 'MOULE', 'MOULE-2026-000002', 'M-20'), mouleEnCoursFixture.passage),
     ];
 
-    await whenClosingDialog(true);
+    await whenClosingDialog(new ElementDeFabricationId('moule-2'));
 
     expect(titre).toBe('Modifier M-2');
     expect(pressedCycle()).toBe('En atelier');
@@ -903,7 +904,7 @@ describe('Produits page', () => {
     await closed;
     await whenViewSettles();
   };
-  const whenClosingDialog = async (result: boolean): Promise<void> => {
+  const whenClosingDialog = async (result: unknown): Promise<void> => {
     const dialogs = TestBed.inject(MatDialog);
     const closed = firstValueFrom(dialogs.afterAllClosed);
     dialogs.openDialogs[dialogs.openDialogs.length - 1]?.close(result);

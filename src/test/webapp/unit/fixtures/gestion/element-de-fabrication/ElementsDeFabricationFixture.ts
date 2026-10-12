@@ -40,12 +40,12 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
   readonly requetes: RequeteProduits[] = [];
   readonly requetesDeCompteurs: RequeteProduits[] = [];
   readonly enregistrements: (CommandeCreationElement | CommandeModificationElement)[] = [];
-  creation: Result<void, RefusCreationElement> = ok(undefined);
+  creation: Result<ElementDeFabricationId, RefusCreationElement> = ok(new ElementDeFabricationId('created-element'));
   modification: Result<void, RefusModificationElement> = ok(undefined);
   lectureFailure: Error | undefined;
   ecritureFailure: Error | undefined;
   lectureDifferee: Promise<Page<ProduitDansSonCycle>> | undefined;
-  creationDifferee: Promise<Result<void, RefusCreationElement>> | undefined;
+  creationDifferee: Promise<Result<ElementDeFabricationId, RefusCreationElement>> | undefined;
   private lectureSignal: SignalFixture | undefined;
 
   signalLecture(): Promise<void> {
@@ -74,7 +74,7 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
     return Promise.resolve({ EN_PREPARATION: compter('EN_PREPARATION'), EN_ATELIER: compter('EN_ATELIER'), CLOTURE: compter('CLOTURE') });
   }
 
-  override async creer(commande: CommandeCreationElement): Promise<Result<void, RefusCreationElement>> {
+  override async creer(commande: CommandeCreationElement): Promise<Result<ElementDeFabricationId, RefusCreationElement>> {
     this.enregistrements.push(commande);
     const resultat = await this.answerEnregistrement(this.creationDifferee ?? Promise.resolve(this.creation));
     if (resultat.ok) {
@@ -110,7 +110,7 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
     return new ProduitDansSonCycle(element, produit.creeLe, produit.passage);
   }
 
-  private answerEnregistrement<Refus>(resultat: Promise<Result<void, Refus>>): Promise<Result<void, Refus>> {
+  private answerEnregistrement<Valeur, Refus>(resultat: Promise<Result<Valeur, Refus>>): Promise<Result<Valeur, Refus>> {
     if (this.ecritureFailure !== undefined) return Promise.reject(this.ecritureFailure);
     return resultat;
   }

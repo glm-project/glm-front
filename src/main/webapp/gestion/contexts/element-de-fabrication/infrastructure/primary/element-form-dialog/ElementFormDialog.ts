@@ -1,11 +1,12 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { Result } from '@/app/shared/result/domain/Result';
+import { ok, Result } from '@/app/shared/result/domain/Result';
 import { TextField } from '@/gestion/shared/design-system/infrastructure/primary/text-field/TextField';
 import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
+import { ElementDeFabricationId } from '../../../domain/ElementDeFabricationId';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
 import { CommandeElement, FormulaireElementDeFabrication, RefusDeCommande } from '../../../domain/FormulaireElementDeFabrication';
 import { LIBELLES_ELEMENTS_DE_FABRICATION, LIBELLES_FORMULAIRE_ELEMENT } from '../LibellesElementsDeFabrication';
@@ -34,7 +35,7 @@ const titrePour = (data: ElementFormDialogData): string =>
 })
 export class ElementFormDialog {
   private readonly data = inject<ElementFormDialogData>(MAT_DIALOG_DATA);
-  private readonly dialog = inject<MatDialogRef<ElementFormDialog, boolean>>(MatDialogRef);
+  private readonly dialog = inject<MatDialogRef<ElementFormDialog, ElementDeFabricationId | false>>(MatDialogRef);
   private readonly port = inject(ElementsDeFabricationPort);
   private readonly errors = inject(ErrorHandlerPort);
 
@@ -74,7 +75,7 @@ export class ElementFormDialog {
     try {
       const resultat = await this.execute(commande.value);
       if (resultat.ok) {
-        this.dialog.close(true);
+        this.dialog.close(resultat.value);
       } else {
         this.formulaire.update(formulaire => formulaire.avecRefus(resultat.error));
       }
@@ -87,7 +88,9 @@ export class ElementFormDialog {
     }
   }
 
-  private execute(commande: CommandeElement): Promise<Result<void, RefusDeCommande>> {
-    return commande.kind === 'MODIFICATION' ? this.port.modifier(commande) : this.port.creer(commande);
+  private async execute(commande: CommandeElement): Promise<Result<ElementDeFabricationId, RefusDeCommande>> {
+    if (commande.kind === 'CREATION') return this.port.creer(commande);
+    const resultat = await this.port.modifier(commande);
+    return resultat.ok ? ok(commande.id) : resultat;
   }
 }
