@@ -1,5 +1,4 @@
 import { dataSelector } from '../../../utils/DataSelector';
-import { AtelierApiFixture } from '../../../utils/gestion/atelier/AtelierApiFixture';
 import {
   coutDeRevientFixture,
   rapportAutomatiqueFixture,
@@ -282,7 +281,6 @@ describe('Navigation between cost reports', () => {
 
   it('should reload the collection after leaving the report and returning through history', () => {
     givenTwoDistinctReports();
-    givenAnAvailableWorkshop();
     whenVisitingTheFirstReport();
 
     whenLeavingAndReturningToTheReport();
@@ -319,9 +317,6 @@ describe('Navigation between cost reports', () => {
     thenTheReportWithoutWorkIsExplained();
   });
 
-  const givenAnAvailableWorkshop = (): void => {
-    new AtelierApiFixture().install();
-  };
   const givenAnUnlistedReport = (): void => {
     cy.intercept('GET', '/api/couts-de-revient/inconnu', {
       body: { ...coutDeRevientFixture(), element: { id: 'inconnu', nom: 'OF Hors liste', categorie: 'OF' } },
