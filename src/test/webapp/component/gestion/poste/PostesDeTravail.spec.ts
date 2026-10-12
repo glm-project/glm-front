@@ -36,6 +36,7 @@ describe('Workstation interactions and rendering', () => {
     whenOpeningCreation();
     whenReplacing('poste-libelle', 'Tour 1');
     whenPickingNature('tournage');
+    whenReplacing('poste-cout', '0');
     whenSubmittingInvalidEntries();
     whenTryingToDismissPendingSave();
     whenCompletingCreation(response);
@@ -69,7 +70,7 @@ describe('Workstation interactions and rendering', () => {
     thenDeletionIsRefused();
   });
 
-  it('should validate required and positive fields before writing', () => {
+  it('should validate required fields and a negative hourly cost before writing', () => {
     const api = givenReferential();
     whenVisitingSettings();
     whenOpeningCreation();
@@ -237,7 +238,8 @@ const thenDeletionIsRefused = (): void => {
 const thenValidationIsVisible = (api: PostesApiFixture): void => {
   cy.get(dataSelector('poste-libelle-error')).should('contain.text', 'obligatoire');
   cy.get(dataSelector('poste-nature-error')).should('contain.text', 'Choisissez une nature dans la liste.');
-  cy.get(dataSelector('poste-cout-error')).should('contain.text', 'strictement positif');
+  cy.get(dataSelector('poste-cout-error')).should('contain.text', 'positif ou nul');
+  cy.get(dataSelector('poste-cout')).should('have.attr', 'required');
   cy.wrap(api.writes).should('be.empty');
 };
 const thenReadFailureIsVisible = (): void => {

@@ -10,5 +10,5 @@ export interface CommandeModificationPoste {
   readonly libelle: LibellePoste;
   readonly nature: NatureDeTravail;
   readonly natureId: NatureDeTravailId;
-  readonly coutHoraire: CoutHoraire | undefined;
+  readonly coutHoraire: CoutHoraire;
 }

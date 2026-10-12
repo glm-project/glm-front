@@ -51,7 +51,7 @@ const toRequest = (
   prenom: commande.prenom.value,
   postes: commande.postes.map(poste => poste.value),
   ...(commande.identifiant === undefined ? {} : { identifiant: commande.identifiant.value }),
-  ...(commande.tauxHoraire === undefined ? {} : { tauxHoraire: commande.tauxHoraire.value }),
+  tauxHoraire: commande.tauxHoraire.value,
 });
 
 const refusCreation = (urn: string | undefined): RefusCreationOperateur | undefined => {

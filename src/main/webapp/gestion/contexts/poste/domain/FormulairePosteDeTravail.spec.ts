@@ -10,17 +10,8 @@ import { PosteDeTravailId } from './PosteDeTravailId';
 import { PosteIntrouvable } from './PosteIntrouvable';
 
 describe('FormulairePosteDeTravail', () => {
-  it.each([
-    [undefined, undefined],
-    [new CoutHoraire(45.5), 45.5],
-  ] as const)('should initialize editing from the workstation with cost %s', (coutHoraire, attendu) => {
-    const poste = new PosteDeTravail(new PosteDeTravailId('tour-1'), {
-      libelle: new LibellePoste('Tour 1'),
-      nature: new NatureDeTravail('tournage'),
-      natureId: new NatureDeTravailId('nature-tournage'),
-      coutHoraire,
-    });
-    const formulaire = FormulairePosteDeTravail.pourModification(poste);
+  it.each([0, 45.5])('should initialize editing from the workstation with cost %s', attendu => {
+    const formulaire = FormulairePosteDeTravail.pourModification(posteFixture(new CoutHoraire(attendu)));
 
     expect(formulaire.id?.value).toBe('tour-1');
     expect(formulaire.estValide()).toBe(true);
@@ -32,9 +23,17 @@ describe('FormulairePosteDeTravail', () => {
         libelle: { value: 'Tour 1' },
         nature: { value: 'tournage' },
         natureId: { value: 'nature-tournage' },
-        coutHoraire: attendu === undefined ? undefined : { value: attendu },
+        coutHoraire: { value: attendu },
       },
     });
+  });
+
+  it('should require an hourly cost to modify a workstation that has none', () => {
+    const formulaire = FormulairePosteDeTravail.pourModification(posteFixture(undefined));
+
+    expect(formulaire.saisie.coutHoraire).toBe('');
+    expect(formulaire.erreurCoutHoraire()).toBe('Le coût horaire est obligatoire.');
+    expect(formulaire.produireCommande().ok).toBe(false);
   });
 
   it('should attach the duplicate refusal to the label and prevent resubmission', () => {
@@ -89,10 +88,9 @@ describe('FormulairePosteDeTravail', () => {
   });
 
   it.each([
-    ['', undefined],
-    ['  ', undefined],
     ['45.5', 45.5],
     ['45,5', 45.5],
+    ['0', 0],
   ])('should produce a validated creation command from entries with hourly cost %s', (cout, attendu) => {
     const initial = FormulairePosteDeTravail.pourCreation();
     const formulaire = initial.avecLibelle('  Tour 1 ').choisirNature(tournageFixture).avecCoutHoraire(cout);
@@ -106,24 +104,31 @@ describe('FormulairePosteDeTravail', () => {
         libelle: { value: 'Tour 1' },
         nature: { value: 'tournage' },
         natureId: { value: 'nature-tournage' },
-        coutHoraire: attendu === undefined ? undefined : { value: attendu },
+        coutHoraire: { value: attendu },
       },
     });
   });
 
-  it.each(['0', '-0.01', 'abc', 'Infinity', '1e999'])('should report an invalid hourly cost without producing a command: %s', cout => {
+  it.each(['', '  '])('should require an hourly cost before producing a command: %j', cout => {
+    const formulaire = FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').choisirNature(tournageFixture).avecCoutHoraire(cout);
+
+    expect(formulaire.erreurCoutHoraire()).toBe('Le coût horaire est obligatoire.');
+    expect(formulaire.produireCommande().ok).toBe(false);
+  });
+
+  it.each(['-0.01', 'abc', 'Infinity', '1e999'])('should report an invalid hourly cost without producing a command: %s', cout => {
     const formulaire = FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').choisirNature(tournageFixture).avecCoutHoraire(cout);
     const commande = formulaire.produireCommande();
 
     expect(formulaire.estValide()).toBe(false);
     expect(formulaire.erreurLibelle()).toBeUndefined();
     expect(formulaire.erreurNature()).toBeUndefined();
-    expect(formulaire.erreurCoutHoraire()).toBe('Le coût horaire doit être un nombre strictement positif.');
+    expect(formulaire.erreurCoutHoraire()).toBe('Le coût horaire doit être un nombre positif ou nul.');
     expect(commande.ok).toBe(false);
   });
 
   it.each(['', 'a'.repeat(101)])('should refuse an invalid label %j', libelle => {
-    const formulaire = FormulairePosteDeTravail.pourCreation().avecLibelle(libelle).choisirNature(tournageFixture);
+    const formulaire = FormulairePosteDeTravail.pourCreation().avecLibelle(libelle).choisirNature(tournageFixture).avecCoutHoraire('45.5');
 
     expect(formulaire.estValide()).toBe(false);
     expect(formulaire.produireCommande().ok).toBe(false);
@@ -171,7 +176,7 @@ describe('FormulairePosteDeTravail', () => {
   });
 
   it('should start a creation on the nature given by the page', () => {
-    const formulaire = FormulairePosteDeTravail.pourCreation(tournageFixture).avecLibelle('Tour 1');
+    const formulaire = FormulairePosteDeTravail.pourCreation(tournageFixture).avecLibelle('Tour 1').avecCoutHoraire('0');
 
     expect(formulaire.saisie.nature).toBe('tournage');
     expect(formulaire.estValide()).toBe(true);
@@ -187,7 +192,7 @@ describe('FormulairePosteDeTravail', () => {
       error: {
         libelle: 'Le libellé est obligatoire et limité à 100 caractères.',
         nature: 'Choisissez une nature dans la liste.',
-        coutHoraire: undefined,
+        coutHoraire: 'Le coût horaire est obligatoire.',
         enregistrement: undefined,
       },
     });
@@ -197,4 +202,12 @@ describe('FormulairePosteDeTravail', () => {
 const tournageFixture = { id: new NatureDeTravailId('nature-tournage'), libelle: new NatureDeTravail('tournage') };
 
 const formulaireValideFixture = (): FormulairePosteDeTravail =>
-  FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').choisirNature(tournageFixture);
+  FormulairePosteDeTravail.pourCreation().avecLibelle('Tour 1').choisirNature(tournageFixture).avecCoutHoraire('45.5');
+
+const posteFixture = (coutHoraire: CoutHoraire | undefined): PosteDeTravail =>
+  new PosteDeTravail(new PosteDeTravailId('tour-1'), {
+    libelle: new LibellePoste('Tour 1'),
+    nature: new NatureDeTravail('tournage'),
+    natureId: new NatureDeTravailId('nature-tournage'),
+    coutHoraire,
+  });

@@ -24,7 +24,8 @@ const operateurFixture = new Operateur(new OperateurId('jean'), {
   natures: ['tournage'],
 });
 
-const formulaireValideFixture = (): FormulaireOperateur => FormulaireOperateur.pourCreation().avecNom('Dupont').avecPrenom('Jean');
+const formulaireValideFixture = (): FormulaireOperateur =>
+  FormulaireOperateur.pourCreation().avecNom('Dupont').avecPrenom('Jean').avecTauxHoraire('22');
 
 describe('FormulaireOperateur', () => {
   it('should start a declaration empty and refuse to produce a command', () => {
@@ -38,7 +39,7 @@ describe('FormulaireOperateur', () => {
         nom: 'Le nom est obligatoire et limité à 100 caractères.',
         prenom: 'Le prénom est obligatoire et limité à 100 caractères.',
         identifiant: undefined,
-        tauxHoraire: undefined,
+        tauxHoraire: 'Le taux horaire est obligatoire.',
         enregistrement: undefined,
       },
     });
@@ -51,7 +52,7 @@ describe('FormulaireOperateur', () => {
     expect(formulaire.id).toBe(operateurFixture.id);
   });
 
-  it('should restate an operator without payroll number nor hourly rate as empty entries', () => {
+  it('should restate an operator without payroll number nor hourly rate as empty entries and ask for the rate', () => {
     const sansOptions = new Operateur(new OperateurId('lea'), {
       nom: new NomOperateur('Martin'),
       prenom: new PrenomOperateur('Léa'),
@@ -65,9 +66,11 @@ describe('FormulaireOperateur', () => {
 
     expect(formulaire.saisie.identifiant).toBe('');
     expect(formulaire.saisie.tauxHoraire).toBe('');
+    expect(formulaire.erreurTauxHoraire()).toBe('Le taux horaire est obligatoire.');
+    expect(formulaire.produireCommande().ok).toBe(false);
   });
 
-  it('should produce a creation command carrying the optional entries', () => {
+  it('should produce a creation command carrying the payroll number, the hourly rate and the habilitations', () => {
     const formulaire = formulaireValideFixture().avecIdentifiant('049').avecTauxHoraire('22,5').avecPosteAjoute(tourFixture);
 
     expect(formulaire.produireCommande()).toEqual({
@@ -83,8 +86,8 @@ describe('FormulaireOperateur', () => {
     });
   });
 
-  it('should produce a creation command dropping the blank optional entries', () => {
-    const formulaire = formulaireValideFixture().avecIdentifiant('  ').avecTauxHoraire('  ');
+  it('should produce a creation command dropping a blank payroll number', () => {
+    const formulaire = formulaireValideFixture().avecIdentifiant('  ');
 
     expect(formulaire.produireCommande()).toEqual({
       ok: true,
@@ -93,7 +96,7 @@ describe('FormulaireOperateur', () => {
         nom: new NomOperateur('Dupont'),
         prenom: new PrenomOperateur('Jean'),
         identifiant: undefined,
-        tauxHoraire: undefined,
+        tauxHoraire: new TauxHoraire(22),
         postes: [],
       },
     });
@@ -231,6 +234,13 @@ describe('FormulaireOperateur', () => {
     const formulaire = formulaireValideFixture().avecTauxHoraire(taux);
 
     expect(formulaire.erreurTauxHoraire()).toBe('Le taux horaire doit être un nombre strictement positif.');
+  });
+
+  it.each(['', '  '])('should require an hourly rate before producing a command: %j', taux => {
+    const formulaire = formulaireValideFixture().avecTauxHoraire(taux);
+
+    expect(formulaire.erreurTauxHoraire()).toBe('Le taux horaire est obligatoire.');
+    expect(formulaire.produireCommande().ok).toBe(false);
   });
 
   it('should report a missing first name', () => {

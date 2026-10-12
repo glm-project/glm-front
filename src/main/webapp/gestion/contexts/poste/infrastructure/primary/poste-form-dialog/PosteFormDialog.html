@@ -1,7 +1,7 @@
 <h2 mat-dialog-title class="text-section" data-selector="poste-form-title">{{ titre }}</h2>
 <form novalidate (submit)="save($event)" data-selector="poste-form">
   <mat-dialog-content>
-    <p class="mb-6 text-body-sm text-ink-muted">Définissez le poste et le travail qui s’y effectue. Le coût horaire est facultatif.</p>
+    <p class="mb-6 text-body-sm text-ink-muted">Définissez le poste et le travail qui s’y effectue.</p>
     <fieldset [disabled]="enregistrement()" class="fields">
       <glm-text-field
         fieldId="poste-libelle"
@@ -55,8 +55,10 @@
         fieldId="poste-cout"
         name="coutHoraire"
         label="Coût horaire"
-        labelComplement="(€/h, facultatif)"
+        labelComplement="(€/h, obligatoire)"
+        [required]="true"
         inputMode="decimal"
+        help="Saisissez 0 pour un poste qui ne demande que de la main d’œuvre."
         [value]="formulaire().saisie.coutHoraire"
         [error]="soumis() ? formulaire().erreurCoutHoraire() : undefined"
         (valueChanged)="changeCoutHoraire($event)"

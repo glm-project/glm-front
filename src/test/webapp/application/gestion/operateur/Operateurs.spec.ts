@@ -33,15 +33,14 @@ describe('Operator referential in gestion', () => {
     thenOperateurIsListed('Nom 01', 'Poste 03', 'ponçage');
   });
 
-  it('should drop the optional payroll number and hourly rate left blank on revision', () => {
+  it('should drop the optional payroll number left blank on revision', () => {
     givenReferential(1);
     whenVisitingOperateurs();
     whenEditingFirstOperateur();
     whenReplacing('operateur-identifiant', '');
-    whenReplacing('operateur-taux', '');
     whenSavingRevision();
 
-    thenOptionalEntriesAreAbsent();
+    thenPayrollNumberIsAbsent();
   });
 
   it('should remove the confirmed operator and show the empty state', () => {
@@ -128,6 +127,7 @@ const whenCreatingWorkstationFromSettings = (libelle: string, nature: string): v
   whenReplacing('poste-libelle', libelle);
   cy.get(dataSelector('poste-nature')).type(nature.slice(0, 3));
   cy.get(dataSelector('poste-nature-option')).contains(nature).click();
+  whenReplacing('poste-cout', '0');
   cy.get(dataSelector('poste-save')).click();
   cy.wait('@posteCreate');
 };
@@ -198,12 +198,10 @@ const thenOperateurIsListed = (nom: string, poste: string, nature: string): void
 const thenPosteIsSuggested = (libelle: string): void => {
   cy.get(dataSelector('operateur-poste-option')).should('contain.text', libelle);
 };
-const thenOptionalEntriesAreAbsent = (): void => {
+const thenPayrollNumberIsAbsent = (): void => {
   cy.get(dataSelector('operateur-form')).should('not.exist');
   cy.get('@revision').should('not.have.property', 'identifiant');
-  cy.get('@revision').should('not.have.property', 'tauxHoraire');
   cy.get(dataSelector('operateur-identifiant-cell')).should('contain.text', 'Non renseigné');
-  cy.get(dataSelector('operateur-taux-cell')).should('contain.text', 'Non renseigné');
 };
 const thenOperateurReferentialIsEmpty = (): void => {
   cy.location('pathname').should('eq', '/operateurs');

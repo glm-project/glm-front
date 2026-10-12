@@ -32,6 +32,13 @@ const soudageFixture = new NatureGeree(new NatureDeTravailId('nature-soudage'), 
   utilisee: true,
   postes: 2,
 });
+const posteSansCoutFixture = (): PosteDeTravail =>
+  new PosteDeTravail(new PosteDeTravailId('tour-1'), {
+    libelle: new LibellePoste('Tour 1'),
+    nature: new NatureDeTravail('tournage'),
+    natureId: new NatureDeTravailId('nature-tournage'),
+    coutHoraire: undefined,
+  });
 
 @Component({ template: '' })
 class DialogHostFixture {}
@@ -73,6 +80,7 @@ describe('PosteFormDialog', () => {
 
     expect(text('poste-libelle-error')).toContain('Le libellé est obligatoire');
     expect(text('poste-nature-error')).toContain('Choisissez une nature dans la liste.');
+    expect(text('poste-cout-error')).toBe('Le coût horaire est obligatoire.');
     expect(port.enregistrements).toEqual([]);
     expect(closed).toEqual([]);
   });
@@ -80,7 +88,6 @@ describe('PosteFormDialog', () => {
   it('should create a workstation from the entered values and close after success', async () => {
     await whenOpening();
     await whenFillingValidEntries();
-    await whenEntering('poste-cout', '45,5');
     await whenSubmitting();
     await whenClosed();
 
@@ -174,7 +181,7 @@ describe('PosteFormDialog', () => {
     await whenOpening(poste);
     const initialCost = input('poste-cout').value;
     await whenEntering('poste-libelle', 'Tour 2');
-    await whenEntering('poste-cout', '');
+    await whenEntering('poste-cout', '0');
     await whenSubmitting();
     await whenClosed();
 
@@ -185,9 +192,20 @@ describe('PosteFormDialog', () => {
       libelle: new LibellePoste('Tour 2'),
       nature: new NatureDeTravail('tournage'),
       natureId: new NatureDeTravailId('nature-tournage'),
-      coutHoraire: undefined,
+      coutHoraire: new CoutHoraire(0),
     });
     expect(closed).toEqual([true]);
+  });
+
+  it('should ask for the hourly cost before modifying a workstation that has none', async () => {
+    await whenOpening(posteSansCoutFixture());
+    const initialCost = input('poste-cout').value;
+    await whenSubmitting();
+
+    expect(initialCost).toBe('');
+    expect(text('poste-cout-error')).toBe('Le coût horaire est obligatoire.');
+    expect(port.enregistrements).toEqual([]);
+    expect(closed).toEqual([]);
   });
 
   it('should show a duplicate label refusal until the manager changes the label', async () => {
@@ -206,14 +224,7 @@ describe('PosteFormDialog', () => {
 
   it('should display a missing workstation refusal without closing', async () => {
     givenWorkstationIsMissing();
-    await whenOpening(
-      new PosteDeTravail(new PosteDeTravailId('tour-1'), {
-        libelle: new LibellePoste('Tour 1'),
-        nature: new NatureDeTravail('tournage'),
-        natureId: new NatureDeTravailId('nature-tournage'),
-        coutHoraire: undefined,
-      }),
-    );
+    await whenOpening(posteSansCoutFixture());
     await whenFillingValidEntries();
     await whenSubmitting();
 
@@ -303,6 +314,7 @@ describe('PosteFormDialog', () => {
   const whenFillingValidEntries = async (): Promise<void> => {
     await whenEntering('poste-libelle', 'Tour 1');
     await whenChoosingNature('tour', 'tournage');
+    await whenEntering('poste-cout', '45,5');
   };
   const whenChoosingNature = async (filtre: string, libelle: string): Promise<void> => {
     await whenEntering('poste-nature', filtre);

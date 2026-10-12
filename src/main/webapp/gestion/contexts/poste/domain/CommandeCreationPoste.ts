@@ -8,5 +8,5 @@ export interface CommandeCreationPoste {
   readonly libelle: LibellePoste;
   readonly nature: NatureDeTravail;
   readonly natureId: NatureDeTravailId;
-  readonly coutHoraire: CoutHoraire | undefined;
+  readonly coutHoraire: CoutHoraire;
 }

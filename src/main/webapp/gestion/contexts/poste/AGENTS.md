@@ -10,7 +10,7 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 
 **Nature de travail** : métier ou type d'opération exercé sur ce poste (ex. « tournage », « soudage »), obligatoire et ne dépassant pas 50 caractères. Elle appartient au poste et qualifie le travail qui s'y effectue.
 
-**Coût horaire** : taux horaire appliqué aux pointages réalisés sur ce poste, destiné au calcul du coût de revient. Facultatif, et strictement positif lorsqu'il est renseigné.
+**Coût horaire** : taux horaire appliqué aux pointages réalisés sur ce poste, destiné au calcul du coût de revient. Exigé pour créer ou modifier un poste, positif ou nul : 0 pour un poste qui ne demande que de la main d'œuvre. Un poste existant sans coût horaire s'affiche normalement (« Non renseigné ») ; il faut seulement le renseigner pour modifier le poste.
 
 **Formulaire de poste** : modèle riche immutable encapsulant la saisie interactive d'un poste, la validation de ses invariants et l'affichage des refus du serveur.
 
@@ -20,7 +20,7 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 - **PosteDeTravailId** : Value Object représentant l'identifiant unique et immuable d'un poste.
 - **LibellePoste** : Value Object garantissant un libellé textuel non vide et borné à 100 caractères.
 - **NatureDeTravail** : Value Object garantissant un métier non vide et borné à 50 caractères, avec comparaison et correspondance insensible à la casse.
-- **CoutHoraire** : Value Object représentant une valeur monétaire horaire strictement positive.
+- **CoutHoraire** : Value Object représentant une valeur monétaire horaire positive ou nulle.
 - **CommandeCreationPoste** : commande encapsulant les attributs validés pour la création d'un nouveau poste (`libelle`, `nature`, `natureId`, `coutHoraire`) ; seul `natureId` part au serveur.
 - **CommandeModificationPoste** : commande encapsulant l'identifiant et les attributs validés pour la modification d'un poste existant (`id`, `libelle`, `nature`, `natureId`, `coutHoraire`).
 - **RequetePostes** : objet de requête paginée portant l'indice de page et le nombre d'éléments par page (`page`, `taille`).
