@@ -23,6 +23,7 @@ import { ReferenceDejaUtilisee } from '../../domain/ReferenceDejaUtilisee';
 import { RefusCreationElement } from '../../domain/RefusCreationElement';
 import { RefusModificationElement } from '../../domain/RefusModificationElement';
 import { RequeteProduits } from '../../domain/RequeteProduits';
+import { SuiviDuProduitId } from '../../domain/SuiviDuProduitId';
 import { HttpElementsDeFabrication } from './HttpElementsDeFabrication';
 
 type RestElement = components['schemas']['RestElementDeFabrication'];
@@ -54,6 +55,7 @@ const ofALAtelierFixture: ElementFixture = {
   nom: 'OF-2026-000042',
   dateDeCreation: CREE_LE,
   cycle: 'EN_ATELIER',
+  suivi: 'suivi-of-1',
   etatDAtelier: 'INTERROMPU',
   misALAtelierLe: MIS_A_L_ATELIER_LE,
 };
@@ -64,6 +66,7 @@ const moulesClotureFixture: ElementFixture = {
   reference: 'M-2',
   dateDeCreation: CREE_LE,
   cycle: 'CLOTURE',
+  suivi: 'suivi-moule-2',
   misALAtelierLe: MIS_A_L_ATELIER_LE,
   clotureLe: CLOTURE_LE,
   clotureePar: 'Claire',
@@ -224,10 +227,16 @@ const createHttpHarness = (): ElementsHarness => {
 const passageDe = (element: ElementFixture): ProduitDansSonCycle['passage'] => {
   switch (element.cycle) {
     case 'EN_ATELIER':
-      return { cycle: 'EN_ATELIER', etat: element.etatDAtelier ?? 'EN_ATTENTE', misALAtelierLe: new Date(MIS_A_L_ATELIER_LE) };
+      return {
+        cycle: 'EN_ATELIER',
+        suivi: new SuiviDuProduitId(element.suivi ?? ''),
+        etat: element.etatDAtelier ?? 'EN_ATTENTE',
+        misALAtelierLe: new Date(MIS_A_L_ATELIER_LE),
+      };
     case 'CLOTURE':
       return {
         cycle: 'CLOTURE',
+        suivi: new SuiviDuProduitId(element.suivi ?? ''),
         misALAtelierLe: new Date(MIS_A_L_ATELIER_LE),
         clotureLe: new Date(CLOTURE_LE),
         clotureePar: element.clotureePar ?? '',
@@ -292,7 +301,12 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
     const [produit] = (await whenReading('EN_ATELIER')).elements;
 
     expect(produit?.creeLe).toEqual(new Date(CREE_LE));
-    expect(produit?.passage).toEqual({ cycle: 'EN_ATELIER', etat: 'INTERROMPU', misALAtelierLe: new Date(MIS_A_L_ATELIER_LE) });
+    expect(produit?.passage).toEqual({
+      cycle: 'EN_ATELIER',
+      suivi: new SuiviDuProduitId('suivi-of-1'),
+      etat: 'INTERROMPU',
+      misALAtelierLe: new Date(MIS_A_L_ATELIER_LE),
+    });
   });
 
   it('should tell when and by whom a closed product was closed', async () => {
@@ -302,6 +316,7 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
 
     expect(produit?.passage).toEqual({
       cycle: 'CLOTURE',
+      suivi: new SuiviDuProduitId('suivi-moule-2'),
       misALAtelierLe: new Date(MIS_A_L_ATELIER_LE),
       clotureLe: new Date(CLOTURE_LE),
       clotureePar: 'Claire',
@@ -564,6 +579,8 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
     ['element.cycle', sans(preparationFixture, 'cycle')],
     ['element.dateDeCreation', sans(preparationFixture, 'dateDeCreation')],
     ['element.etatDAtelier', sans(atelierFixture, 'etatDAtelier')],
+    ['element.suivi', sans(atelierFixture, 'suivi')],
+    ['element.suivi', sans(clotureFixture, 'suivi')],
     ['element.misALAtelierLe', sans(atelierFixture, 'misALAtelierLe')],
     ['element.misALAtelierLe', sans(clotureFixture, 'misALAtelierLe')],
     ['element.clotureLe', sans(clotureFixture, 'clotureLe')],

@@ -7,6 +7,7 @@ type ElementEnregistre = RestElement & { id: string; categorie: string; nom: str
 
 const CREE_LE = '2026-10-01T08:00:00Z';
 const MIS_A_L_ATELIER_LE = '2026-10-02T08:00:00Z';
+const CLOTURE_LE = '2026-10-05T16:00:00Z';
 
 const sansCasse = (texte: string | undefined): string => (texte ?? '').toLocaleLowerCase('fr-FR');
 
@@ -58,7 +59,7 @@ export class ElementsApiFixture {
     this.installModification();
   }
 
-  installMiseALAtelier(): void {
+  installActesDAtelier(): void {
     cy.intercept('POST', '/api/atelier/suivis', request => {
       const { element } = request.body as { element: string };
       this.elements = this.elements.map(candidat =>
@@ -68,6 +69,13 @@ export class ElementsApiFixture {
       );
       request.reply({ statusCode: 201, body: {} });
     }).as('miseALAtelier');
+    cy.intercept('PUT', '/api/atelier/suivis/*/cloture', request => {
+      const suivi = request.url.split('/').slice(-2)[0];
+      this.elements = this.elements.map(candidat =>
+        candidat.suivi === suivi ? { ...candidat, cycle: 'CLOTURE', clotureLe: CLOTURE_LE, clotureePar: 'Claire' } : candidat,
+      );
+      request.reply({ statusCode: 204 });
+    }).as('cloture');
   }
 
   private installCompteurs(): void {

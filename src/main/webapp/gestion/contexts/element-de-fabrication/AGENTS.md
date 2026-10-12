@@ -57,9 +57,12 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   qu'une autre catégorie est choisie.
 - **ElementsDeFabricationPort** : port secondaire exposant la lecture d'un cycle, page par page, la création
   et la modification, les écritures rendant un `Result<T, Refus>`.
+- **SuiviDuProduitId** : Value Object du passage à l'atelier d'un produit, lu avec lui en atelier et une fois
+  clôturé. C'est lui que visent la clôture et la réouverture ; il n'apparaît jamais à l'écran.
 - **ActesDAtelierPort** : port secondaire des actes d'atelier faits depuis la page. `mettreALAtelier` rend
   `ProduitDejaALAtelier` (le back refuse `element-deja-engage`, y compris pour un produit clôturé : un produit ne
-  passe qu'une fois à l'atelier) ou `ElementDeFabricationIntrouvable`.
+  passe qu'une fois à l'atelier) ou `ProduitIntrouvable` ; `cloturer` rend `PassageIntrouvable`. Ces refus
+  héritent de `RefusDActeDAtelier`, qui déclare `code` et `message` une seule fois pour l'écran.
 - **FormulaireCategorieDeProduit** : modèle de la déclaration d'une catégorie. Il met la saisie en
   majuscules, vérifie le motif (`^[A-Z]{1,10}$`, porté par `CategorieDeProduit.erreur`) et garde le refus
   `CategorieDejaExistante` sur le champ tant que le même code est saisi.
@@ -97,7 +100,9 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   colonnes et ses actions : « Mettre à l'atelier » en préparation, « Coût de revient » ensuite, « Modifier »
   partout. Une création bascule sur En préparation, où le produit arrive.
 - **Un acte agit sur la ligne et laisse l'onglet en place** : pas de dialogue de sélection, la page relit
-  l'onglet courant et ses compteurs. Le bouton de la ligne se désactive le temps de l'acte ; un refus ou une
+  l'onglet courant et ses compteurs. « Clôturer » demande seulement une confirmation
+  (`ConfirmationClotureDialog`), qui rappelle que le produit disparaît des écrans des opérateurs et reste
+  réouvrable ; un refus ou une panne s'y affiche sans la fermer. Le bouton de la ligne se désactive le temps de l'acte ; un refus ou une
   panne s'affiche au-dessus du tableau et s'efface au prochain acte.
 - **L'écran ne propose pas de supprimer.** Le `DELETE` existe à l'API, mais le client parle de clôture, et
   supprimer un élément portant des temps détruirait des heures de paie. La sortie d'un élément est la

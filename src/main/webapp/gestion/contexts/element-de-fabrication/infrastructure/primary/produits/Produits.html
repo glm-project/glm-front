@@ -192,6 +192,16 @@
               >
                 {{ libelles.coutDeRevient }}
               </a>
+              } @if (ligne.suivi; as suivi) {
+              <button
+                mat-button
+                type="button"
+                (click)="openCloture(ligne.produit, suivi)"
+                [attr.aria-label]="libelles.clotureDe(ligne.produit.element.numero())"
+                data-selector="element-cloture"
+              >
+                {{ libelles.cloturer }}
+              </button>
               }
               <button
                 mat-icon-button

@@ -25,6 +25,7 @@ import { NomDElement } from '../../../domain/NomDElement';
 import { PassageALAtelier, ProduitDansSonCycle } from '../../../domain/ProduitDansSonCycle';
 import { ReferenceDElement } from '../../../domain/ReferenceDElement';
 import { RefusDActeDAtelier } from '../../../domain/RefusDActeDAtelier';
+import { SuiviDuProduitId } from '../../../domain/SuiviDuProduitId';
 import { Produits } from './Produits';
 
 const CREE_LE = new Date('2026-10-01T11:00:00Z');
@@ -48,16 +49,19 @@ const moulePrepareFixture = produitFixture(elementFixture('moule-1', 'MOULE', 'M
 const ofPrepareFixture = produitFixture(elementFixture('of-1', 'OF', 'OF-2026-000042'), { cycle: 'EN_PREPARATION' });
 const mouleEnCoursFixture = produitFixture(elementFixture('moule-2', 'MOULE', 'MOULE-2026-000002', 'M-2'), {
   cycle: 'EN_ATELIER',
+  suivi: new SuiviDuProduitId('suivi-moule-2'),
   etat: 'EN_COURS',
   misALAtelierLe: MIS_A_L_ATELIER_LE,
 });
 const ofInterrompuFixture = produitFixture(elementFixture('of-2', 'OF', 'OF-2026-000043'), {
   cycle: 'EN_ATELIER',
+  suivi: new SuiviDuProduitId('suivi-of-2'),
   etat: 'INTERROMPU',
   misALAtelierLe: MIS_A_L_ATELIER_LE,
 });
 const mouleClotureFixture = produitFixture(elementFixture('moule-3', 'MOULE', 'MOULE-2026-000003', 'M-3'), {
   cycle: 'CLOTURE',
+  suivi: new SuiviDuProduitId('suivi-moule-3'),
   misALAtelierLe: MIS_A_L_ATELIER_LE,
   clotureLe: CLOTURE_LE,
   clotureePar: 'Claire',
@@ -300,7 +304,7 @@ describe('Produits page', () => {
 
     await whenClickingFirst('element-mise-a-l-atelier');
 
-    expect(text('elements-action-refus')).toBe('Cet élément n’existe plus. Actualisez la liste.');
+    expect(text('elements-action-refus')).toBe('Ce produit n’existe plus. Actualisez la liste.');
   });
 
   it('should report a technical failure of the workshop and keep the products', async () => {
@@ -356,6 +360,49 @@ describe('Produits page', () => {
     },
   );
 
+  it('should offer to close each product in the workshop', async () => {
+    givenProducts();
+
+    await whenOpening();
+
+    expect(labels('element-cloture')).toEqual(['Clôturer M-2', 'Clôturer OF-2026-000043']);
+  });
+
+  it('should ask to confirm the closure of the chosen product', async () => {
+    givenProducts();
+    await whenOpening();
+
+    await whenClickingFirst('element-cloture');
+
+    expect(text('element-cloture-description')).toContain('M-2 disparaîtra des écrans des opérateurs');
+  });
+
+  it('should close a product and stay on the products in the workshop', async () => {
+    givenProducts();
+    givenWorkshopCloses('moule-2');
+    await whenOpening();
+    await whenClickingFirst('element-cloture');
+
+    await whenConfirmingClosure();
+
+    expect(actes.clotures).toEqual(['suivi-moule-2']);
+    expect(pressedCycle()).toBe('En atelier');
+    expect(texts('element-nom-cell')).toEqual(['OF-2026-000043']);
+    expect(counters()).toEqual(['2', '1', '2']);
+  });
+
+  it('should leave the products in the workshop untouched when the closure is cancelled', async () => {
+    givenProducts();
+    await whenOpening();
+    await whenClickingFirst('element-cloture');
+    const lectures = port.requetes.length;
+
+    await whenClosingDialog(false);
+
+    expect(actes.clotures).toEqual([]);
+    expect(port.requetes).toHaveLength(lectures);
+  });
+
   it('should name the cost link by the product it opens', async () => {
     givenProducts();
 
@@ -369,7 +416,7 @@ describe('Produits page', () => {
 
     await whenOpening();
 
-    expect(actionsCount()).toEqual([1, 1]);
+    expect(actionsOfFirstRow()).toEqual(['Voir le coût de revient de M-2', 'Clôturer M-2', 'Modifier M-2']);
   });
 
   it('should send the search to the server and read its first page', async () => {
@@ -642,7 +689,28 @@ describe('Produits page', () => {
     actes.apresMiseALAtelier = () => {
       port.produitsEnregistres = port.produitsEnregistres.map(produit =>
         produit.element.id.value === element
-          ? produitFixture(produit.element, { cycle: 'EN_ATELIER', etat: 'EN_ATTENTE', misALAtelierLe: MIS_A_L_ATELIER_LE })
+          ? produitFixture(produit.element, {
+              cycle: 'EN_ATELIER',
+              suivi: new SuiviDuProduitId(`suivi-${element}`),
+              etat: 'EN_ATTENTE',
+              misALAtelierLe: MIS_A_L_ATELIER_LE,
+            })
+          : produit,
+      );
+    };
+  };
+  const givenWorkshopCloses = (element: string): void => {
+    actes.suivisOuverts = [`suivi-${element}`];
+    actes.apresCloture = () => {
+      port.produitsEnregistres = port.produitsEnregistres.map(produit =>
+        produit.element.id.value === element
+          ? produitFixture(produit.element, {
+              cycle: 'CLOTURE',
+              suivi: new SuiviDuProduitId(`suivi-${element}`),
+              misALAtelierLe: MIS_A_L_ATELIER_LE,
+              clotureLe: CLOTURE_LE,
+              clotureePar: 'Claire',
+            })
           : produit,
       );
     };
@@ -663,6 +731,7 @@ describe('Produits page', () => {
     port.produitsEnregistres = Array.from({ length: count }, (_, index) =>
       produitFixture(elementFixture(String(index + 1), 'MOULE', `PRD-2026-${String(index + 1).padStart(6, '0')}`), {
         cycle: 'EN_ATELIER',
+        suivi: new SuiviDuProduitId(`suivi-${String(index + 1)}`),
         etat: 'EN_ATTENTE',
         misALAtelierLe: MIS_A_L_ATELIER_LE,
       }),
@@ -693,6 +762,13 @@ describe('Produits page', () => {
   };
   const whenClickingFirst = async (selector: string): Promise<void> => {
     requiredFixture([...document.querySelectorAll<HTMLButtonElement>(dataSelector(selector))][0], selector).click();
+    await whenViewSettles();
+  };
+  const whenConfirmingClosure = async (): Promise<void> => {
+    const dialogs = TestBed.inject(MatDialog);
+    const closed = firstValueFrom(dialogs.afterAllClosed);
+    requiredFixture(document.querySelector<HTMLButtonElement>(dataSelector('element-cloture-confirm')), 'element-cloture-confirm').click();
+    await closed;
     await whenViewSettles();
   };
   const whenClosingDialog = async (result: boolean): Promise<void> => {
@@ -737,8 +813,10 @@ describe('Produits page', () => {
   const categoryChosen = (): string => categorySelect().value;
   const fields = (): (string | null)[] =>
     [...document.querySelectorAll('glm-element-form-dialog input')].map(field => field.getAttribute('data-selector'));
-  const actionsCount = (): number[] =>
-    [...document.querySelectorAll(dataSelector('element-row'))].map(row => row.querySelectorAll('button, a').length - 1);
+  const actionsOfFirstRow = (): (string | null)[] =>
+    [...(document.querySelector(dataSelector('element-row'))?.querySelectorAll('button, a') ?? [])].map(action =>
+      action.getAttribute('aria-label'),
+    );
   const hrefs = (selector: string): string[] =>
     [...document.querySelectorAll(dataSelector(selector))].map(element => element.getAttribute('href') ?? '');
   const labels = (selector: string): (string | null)[] =>

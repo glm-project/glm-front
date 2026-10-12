@@ -35,12 +35,21 @@ describe('Manufacturing element referential in gestion', () => {
   });
 
   it('should put a product into the workshop from its row and keep the products in preparation shown', () => {
-    givenProductsInTheirCycles().installMiseALAtelier();
+    givenProductsInTheirCycles().installActesDAtelier();
     whenVisiting('/produits?etat=en-preparation');
     whenPuttingFirstProductIntoTheWorkshop();
 
     thenNoProductListed();
     thenCountersAre(['0', '2', '0']);
+  });
+
+  it('should close a product in the workshop after confirmation and stay on its tab', () => {
+    givenProductsInTheirCycles().installActesDAtelier();
+    whenVisitingReferential();
+    whenClosingFirstProduct();
+
+    thenWorkshopIsEmpty();
+    thenCountersAre(['1', '0', '1']);
   });
 
   it('should keep the products in preparation on their own tab', () => {
@@ -174,6 +183,14 @@ const givenProductsInTheirCycles = (): ElementsApiFixture => {
 const whenPuttingFirstProductIntoTheWorkshop = (): void => {
   cy.get(dataSelector('element-mise-a-l-atelier')).first().click();
   cy.wait('@miseALAtelier');
+};
+const whenClosingFirstProduct = (): void => {
+  cy.get(dataSelector('element-cloture')).first().click();
+  cy.get(dataSelector('element-cloture-confirm')).click();
+  cy.wait('@cloture');
+};
+const thenWorkshopIsEmpty = (): void => {
+  cy.get(dataSelector('elements-empty')).should('contain.text', 'Rien à l’atelier pour l’instant.');
 };
 const thenNoProductListed = (): void => {
   cy.get(dataSelector('elements-empty')).should('contain.text', 'Aucun produit en préparation');

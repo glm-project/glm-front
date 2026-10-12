@@ -24,6 +24,7 @@ import { ReferenceDejaUtilisee } from '../../domain/ReferenceDejaUtilisee';
 import { RefusCreationElement } from '../../domain/RefusCreationElement';
 import { RefusModificationElement } from '../../domain/RefusModificationElement';
 import { RequeteProduits } from '../../domain/RequeteProduits';
+import { SuiviDuProduitId } from '../../domain/SuiviDuProduitId';
 
 type RestElement = components['schemas']['RestElementDeFabrication'];
 
@@ -43,6 +44,8 @@ const toElement = (element: RestElement): ElementDeFabrication =>
 
 const instant = (value: string | undefined, champ: string): Date => new Date(required(value, champ));
 
+const suiviDe = (element: RestElement): SuiviDuProduitId => new SuiviDuProduitId(required(element.suivi, 'element.suivi'));
+
 const toPassage = (element: RestElement): PassageALAtelier => {
   switch (required(element.cycle, 'element.cycle')) {
     case 'EN_PREPARATION':
@@ -50,12 +53,14 @@ const toPassage = (element: RestElement): PassageALAtelier => {
     case 'EN_ATELIER':
       return {
         cycle: 'EN_ATELIER',
+        suivi: suiviDe(element),
         etat: required(element.etatDAtelier, 'element.etatDAtelier'),
         misALAtelierLe: instant(element.misALAtelierLe, 'element.misALAtelierLe'),
       };
     case 'CLOTURE':
       return {
         cycle: 'CLOTURE',
+        suivi: suiviDe(element),
         misALAtelierLe: instant(element.misALAtelierLe, 'element.misALAtelierLe'),
         clotureLe: instant(element.clotureLe, 'element.clotureLe'),
         clotureePar: required(element.clotureePar, 'element.clotureePar'),

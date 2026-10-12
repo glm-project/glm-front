@@ -1,4 +1,4 @@
-import { ElementDeFabricationIntrouvable } from './ElementDeFabricationIntrouvable';
-import { ProduitDejaALAtelier } from './ProduitDejaALAtelier';
-
-export type RefusDActeDAtelier = ProduitDejaALAtelier | ElementDeFabricationIntrouvable;
+export abstract class RefusDActeDAtelier {
+  abstract readonly code: string;
+  abstract readonly message: string;
+}

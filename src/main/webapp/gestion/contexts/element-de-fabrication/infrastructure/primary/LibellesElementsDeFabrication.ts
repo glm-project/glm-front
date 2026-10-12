@@ -40,6 +40,8 @@ export const LIBELLES_ELEMENTS_DE_FABRICATION = {
   modification: (numero: string): string => `Modifier ${numero}`,
   miseALAtelier: 'Mettre à l’atelier',
   miseALAtelierDe: (numero: string): string => `Mettre ${numero} à l’atelier`,
+  cloturer: 'Clôturer',
+  clotureDe: (numero: string): string => `Clôturer ${numero}`,
   coutDeRevient: 'Coût de revient',
   coutDeRevientDe: (numero: string): string => `Voir le coût de revient de ${numero}`,
   etats: ETATS,
@@ -121,4 +123,14 @@ export const LIBELLES_FORMULAIRE_ELEMENT = {
   annuler: 'Annuler',
   enregistrer: 'Enregistrer',
   enregistrement: 'Enregistrement…',
+} as const;
+
+export const LIBELLES_CLOTURE = {
+  titre: 'Clôturer le produit ?',
+  description: (numero: string): string =>
+    `${numero} disparaîtra des écrans des opérateurs, qui ne pourront plus pointer dessus. Vous pourrez le rouvrir à tout moment.`,
+  erreurTechnique: 'La clôture a échoué. Vérifiez la connexion puis réessayez.',
+  annuler: 'Annuler',
+  confirmer: 'Clôturer',
+  encours: 'Clôture…',
 } as const;

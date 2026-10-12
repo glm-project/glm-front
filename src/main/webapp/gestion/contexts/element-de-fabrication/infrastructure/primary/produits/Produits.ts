@@ -20,7 +20,9 @@ import { EtatDAtelier } from '../../../domain/EtatDAtelier';
 import { ProduitDansSonCycle } from '../../../domain/ProduitDansSonCycle';
 import { RefusDActeDAtelier } from '../../../domain/RefusDActeDAtelier';
 import { CriteresDesProduits, TAILLE_DES_PAGES } from '../../../domain/RequeteProduits';
+import { SuiviDuProduitId } from '../../../domain/SuiviDuProduitId';
 import { CategoriesDeProduitDialog } from '../categories-de-produit-dialog/CategoriesDeProduitDialog';
+import { ConfirmationClotureDialog, ConfirmationClotureDialogData } from '../confirmation-cloture-dialog/ConfirmationClotureDialog';
 import { ElementFormDialog, ElementFormDialogData } from '../element-form-dialog/ElementFormDialog';
 import { LIBELLES_CATEGORIES_DE_PRODUIT, LIBELLES_ELEMENTS_DE_FABRICATION } from '../LibellesElementsDeFabrication';
 import { adresseDeLaRequete, requeteDeLAdresse } from './AdresseDesProduits';
@@ -28,6 +30,7 @@ import { adresseDeLaRequete, requeteDeLAdresse } from './AdresseDesProduits';
 interface LigneDeProduit {
   readonly produit: ProduitDansSonCycle;
   readonly creeLe: string;
+  readonly suivi?: SuiviDuProduitId;
   readonly etat?: EtatDAtelier;
   readonly etatLibelle?: string;
   readonly misALAtelierLe?: string;
@@ -45,6 +48,7 @@ const ligneDe = (produit: ProduitDansSonCycle): LigneDeProduit => {
       return {
         produit,
         creeLe,
+        suivi: passage.suivi,
         etat: passage.etat,
         etatLibelle: LIBELLES_ELEMENTS_DE_FABRICATION.etats[passage.etat],
         misALAtelierLe: formatInstantNumericDateTime(passage.misALAtelierLe),
@@ -170,6 +174,21 @@ export class Produits implements OnInit {
 
   protected mettreALAtelier(produit: ProduitDansSonCycle): void {
     this.errors.observe(this.agir(produit, () => this.actes.mettreALAtelier(produit.element.id)));
+  }
+
+  protected openCloture(produit: ProduitDansSonCycle, suivi: SuiviDuProduitId): void {
+    const data: ConfirmationClotureDialogData = { numero: produit.element.numero(), suivi };
+    const dialogRef = this.dialogs.open<ConfirmationClotureDialog, ConfirmationClotureDialogData, boolean>(ConfirmationClotureDialog, {
+      data,
+      viewContainerRef: this.viewContainerRef,
+      width: '32rem',
+      maxWidth: 'calc(100vw - 2rem)',
+    });
+    dialogRef.afterClosed().subscribe(cloture => {
+      if (cloture === true) {
+        void this.load(false);
+      }
+    });
   }
 
   protected openCreation(): void {
