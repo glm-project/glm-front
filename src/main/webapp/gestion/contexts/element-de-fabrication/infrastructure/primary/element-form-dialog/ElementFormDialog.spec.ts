@@ -23,6 +23,8 @@ import { ElementFormDialog, ElementFormDialogData } from './ElementFormDialog';
 @Component({ template: '' })
 class DialogHostFixture {}
 
+const CREE_FIXTURE = new ElementDeFabricationId('created-element');
+
 const mouleFixture = new ElementDeFabrication(new ElementDeFabricationId('moule-1'), {
   categorie: new CategorieDeProduit('MOULE'),
   nom: new NomDElement('PRD-2026-000001'),
@@ -36,9 +38,9 @@ describe('ElementFormDialog', () => {
   let fixture: ComponentFixture<DialogHostFixture>;
   let port: ElementsDeFabricationFixture;
   let errors: ErrorHandlerFixture;
-  let dialog: MatDialogRef<ElementFormDialog, boolean>;
-  let closed: (boolean | undefined)[];
-  let fermeture: Promise<boolean | undefined>;
+  let dialog: MatDialogRef<ElementFormDialog, ElementDeFabricationId | false>;
+  let closed: (ElementDeFabricationId | false | undefined)[];
+  let fermeture: Promise<ElementDeFabricationId | false | undefined>;
   beforeEach(() => {
     port = new ElementsDeFabricationFixture();
     errors = new ErrorHandlerFixture();
@@ -92,7 +94,7 @@ describe('ElementFormDialog', () => {
     expect(port.enregistrements).toEqual([
       { kind: 'CREATION', categorie: new CategorieDeProduit('MOULE'), reference: undefined, libelle: undefined },
     ]);
-    expect(closed).toEqual([true]);
+    expect(closed).toEqual([CREE_FIXTURE]);
   });
 
   it('should create an element reduced to its produced number', async () => {
@@ -103,7 +105,7 @@ describe('ElementFormDialog', () => {
     expect(port.enregistrements).toEqual([
       { kind: 'CREATION', categorie: new CategorieDeProduit('MOULE'), reference: undefined, libelle: undefined },
     ]);
-    expect(closed).toEqual([true]);
+    expect(closed).toEqual([CREE_FIXTURE]);
   });
 
   it('should create an ordre de fabrication from the entered company number and label', async () => {
@@ -121,7 +123,7 @@ describe('ElementFormDialog', () => {
         libelle: new LibelleDElement('Reprise du capot'),
       },
     ]);
-    expect(closed).toEqual([true]);
+    expect(closed).toEqual([CREE_FIXTURE]);
   });
 
   it('should display an oversized company number and keep the dialog open', async () => {
@@ -176,7 +178,7 @@ describe('ElementFormDialog', () => {
     expect(port.enregistrements).toEqual([
       { kind: 'MODIFICATION', id: new ElementDeFabricationId('moule-1'), reference: new ReferenceDElement('1016'), libelle: undefined },
     ]);
-    expect(closed).toEqual([true]);
+    expect(closed).toEqual([new ElementDeFabricationId('moule-1')]);
   });
 
   it('should display a vanished element refusal without closing', async () => {
@@ -199,18 +201,18 @@ describe('ElementFormDialog', () => {
   });
 
   it('should prevent duplicate submission while saving', async () => {
-    const deferred = new DeferredFixture<Result<void, ReferenceDejaUtilisee>>();
+    const deferred = new DeferredFixture<Result<ElementDeFabricationId, ReferenceDejaUtilisee>>();
     givenSavingIsPending(deferred);
     await whenOpeningCreation('MOULE');
     await whenSubmitting();
     const busy = button('element-save').disabled;
     await whenSubmitting();
-    deferred.resolve(ok(undefined));
+    deferred.resolve(ok(CREE_FIXTURE));
     await whenClosed();
 
     expect(busy).toBe(true);
     expect(port.enregistrements).toHaveLength(1);
-    expect(closed).toEqual([true]);
+    expect(closed).toEqual([CREE_FIXTURE]);
   });
 
   it('should cancel without writing', async () => {
@@ -231,7 +233,7 @@ describe('ElementFormDialog', () => {
   const givenSavingFails = (): void => {
     port.ecritureFailure = new Error('Network down');
   };
-  const givenSavingIsPending = (deferred: DeferredFixture<Result<void, ReferenceDejaUtilisee>>): void => {
+  const givenSavingIsPending = (deferred: DeferredFixture<Result<ElementDeFabricationId, ReferenceDejaUtilisee>>): void => {
     port.creationDifferee = deferred.promise;
   };
 
@@ -241,7 +243,9 @@ describe('ElementFormDialog', () => {
     whenOpening({ element: null, categories: categoriesFixture, categorie: undefined });
   const whenOpeningModification = (element: ElementDeFabrication): Promise<void> => whenOpening({ element });
   const whenOpening = async (data: ElementFormDialogData): Promise<void> => {
-    dialog = TestBed.inject(MatDialog).open<ElementFormDialog, ElementFormDialogData, boolean>(ElementFormDialog, { data });
+    dialog = TestBed.inject(MatDialog).open<ElementFormDialog, ElementFormDialogData, ElementDeFabricationId | false>(ElementFormDialog, {
+      data,
+    });
     fermeture = firstValueFrom(dialog.afterClosed());
     dialog.afterClosed().subscribe(result => closed.push(result));
     await fixture.whenStable();

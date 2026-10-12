@@ -155,8 +155,8 @@ export const LIBELLES_COUT_DE_REVIENT = {
   elementCourant: 'Élément courant',
   rechercherElement: 'Rechercher un élément',
   choisirElement: 'Choisir un élément',
-  retour: 'Atelier',
-  retourAria: 'Revenir à l’atelier',
+  retour: 'Produits',
+  retourAria: 'Revenir aux produits en atelier',
   sousTitre:
     'Le temps passé sur cet élément et ce qu’il a coûté, par nature d’opération. Le rapport est recalculé à chaque lecture ; seules les activités terminées, y compris automatiquement, sont comptabilisées. Les activités en cours sont exclues du temps, du coût et du partage humain.',
 

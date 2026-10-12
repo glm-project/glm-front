@@ -23,12 +23,12 @@ describe('Cost of manufacture of an element at the workshop', () => {
     thenTheElementReportIsVisible();
   });
 
-  it('should return to the workshop from a report carrying only excluded current activities', () => {
+  it('should return to the products in the workshop from a report carrying only excluded current activities', () => {
     givenCurrentWorkshopReport();
     whenVisitingTheReportOf('element-1');
     whenGoingBackFromTheCurrentReport();
 
-    thenWorkshopIsVisible();
+    thenTheProductsInTheWorkshopAreVisible();
   });
 
   it('should display the new report after retrying a failed element reading', () => {
@@ -63,13 +63,13 @@ describe('Cost of manufacture of an element at the workshop', () => {
     thenTheReportIsDisplayed();
   });
 
-  it('should come back to the workshop from the report', () => {
+  it('should come back to the products in the workshop from the report', () => {
     givenWorkshopAndReports();
     whenVisitingWorkshop();
     whenOpeningTheCostOfTheFirstElement();
     whenGoingBackToTheWorkshop();
 
-    thenWorkshopIsVisible();
+    thenTheProductsInTheWorkshopAreVisible();
   });
 
   it('should read the report a shared address names', () => {
@@ -98,6 +98,7 @@ describe('Cost of manufacture of an element at the workshop', () => {
 
   const givenWorkshopAndReports = (): void => {
     atelier.install();
+    elements.install();
     cout.install();
   };
 
@@ -171,8 +172,10 @@ describe('Cost of manufacture of an element at the workshop', () => {
     cy.wrap(cout.lectures).should('deep.include', element);
   };
 
-  const thenWorkshopIsVisible = (): void => {
-    cy.get(dataSelector('atelier-row')).should('have.length', 2);
+  const thenTheProductsInTheWorkshopAreVisible = (): void => {
+    cy.location('pathname').should('eq', '/produits');
+    cy.location('search').should('eq', '?etat=en-atelier');
+    cy.get(dataSelector('element-row')).should('have.length', 2);
   };
 
   const thenTheUnknownElementIsExplained = (): void => {

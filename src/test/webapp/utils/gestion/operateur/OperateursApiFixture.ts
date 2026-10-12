@@ -139,7 +139,7 @@ export class OperateursApiFixture {
       postes,
       natures: naturesDe(postes),
       ...(commande.identifiant === undefined || commande.identifiant === '' ? {} : { identifiant: commande.identifiant }),
-      ...(commande.tauxHoraire === undefined ? {} : { tauxHoraire: commande.tauxHoraire }),
+      tauxHoraire: commande.tauxHoraire,
     };
   }
 }

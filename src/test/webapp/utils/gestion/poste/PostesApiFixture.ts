@@ -52,7 +52,7 @@ export class PostesApiFixture {
       libelle: commande.libelle,
       nature: libelle,
       natureId,
-      ...(commande.coutHoraire === undefined ? {} : { coutHoraire: commande.coutHoraire }),
+      coutHoraire: commande.coutHoraire,
     };
   }
 
