@@ -510,6 +510,29 @@ describe('Cout de revient component', () => {
     expect([texte('cout-total-temps'), texte('cout-total-cout')]).toEqual(['3 h 30', '200,00 €']);
   });
 
+  it('should leave empty the cost cells received at zero, on a line and in the totals of the report', async () => {
+    const lignes = [ligneFixture({ machine: 0, mainDOeuvre: 40 })];
+    givenNouveauRapport(rapportFixture(lignes, 'OF', { cout: new Cout(new Montant(0), new Montant(40), new Montant(40)) }));
+
+    await whenEcranAffiche();
+
+    expect([texte('cout-machine-cell'), texte('cout-main-d-oeuvre-cell'), texte('cout-ligne-total-cell')]).toEqual([
+      '',
+      '40,00 €',
+      '40,00 €',
+    ]);
+    expect([texte('cout-total-machine'), texte('cout-total-main-d-oeuvre'), texte('cout-total-cout')]).toEqual(['', '40,00 €', '40,00 €']);
+  });
+
+  it('should keep the cost indicator of a report that costs nothing at zero euros', async () => {
+    const cout = new Cout(new Montant(0), new Montant(0), new Montant(0));
+    givenNouveauRapport(rapportFixture([ligneFixture({ machine: 0, mainDOeuvre: 0 })], 'OF', { cout }));
+
+    await whenEcranAffiche();
+
+    expect([texte('cout-total'), texte('cout-ligne-total-cell')]).toEqual(['0,00 €', '']);
+  });
+
   it('should keep the dated detail of a row closed until it is asked for', async () => {
     givenRapport([ligneFixture()]);
 
@@ -544,11 +567,17 @@ describe('Cout de revient component', () => {
     ]);
   });
 
-  it('should show the divisor of each share of a clocking, the shared ones apart', async () => {
+  it('should show the divisor of the shares of a clocking only where the operator ran several work stations', async () => {
     await givenDetailDe([pointageFixture()]);
 
-    expect(textes('cout-pointage-diviseur')).toEqual(['÷1', '÷2', '÷1']);
+    expect(textes('cout-pointage-diviseur')).toEqual(['÷2']);
     expect(diviseursPartages()).toEqual(['÷2']);
+  });
+
+  it('should show no divisor for a clocking run alone from start to finish', async () => {
+    await givenDetailDe([pointageSeulFixture()]);
+
+    expect(present('cout-pointage-diviseur')).toBe(false);
   });
 
   it('should justify each share with what else the operator ran and its calculation', async () => {
@@ -560,7 +589,7 @@ describe('Cout de revient component', () => {
       '↳ 10:30 → 11:30 · seul poste occupé',
     ]);
     expect(textes('cout-part-duree')).toEqual(['1 h 30', '1 h 30', '1 h 00']);
-    expect(textes('cout-part-calcul')).toEqual(['35,00 × 1,50 ÷ 1 = 52,50 €', '35,00 × 1,50 ÷ 2 = 26,25 €', '35,00 × 1,00 ÷ 1 = 35,00 €']);
+    expect(textes('cout-part-calcul')).toEqual(['35,00 × 1,50 = 52,50 €', '35,00 × 1,50 ÷ 2 = 26,25 €', '35,00 × 1,00 = 35,00 €']);
   });
 
   it('should not detail the shares of a clocking run alone from start to finish', async () => {
@@ -589,6 +618,25 @@ describe('Cout de revient component', () => {
     await givenDetailDe([pointageSeulFixture({ poste })]);
 
     expect([texte('cout-pointage-poste'), texte('cout-pointage-calcul-machine')]).toEqual([nom, calcul]);
+  });
+
+  it('should show neither the machine calculation nor the machine cost of a work station at zero euros an hour', async () => {
+    const cout = new Cout(new Montant(0), new Montant(140), new Montant(140));
+    await givenDetailDe([pointageSeulFixture({ coutHoraire: new Montant(0), cout })]);
+
+    expect([texte('cout-pointage-calcul-machine'), texte('cout-pointage-machine'), texte('cout-pointage-total')]).toEqual([
+      '',
+      '',
+      '140,00 €',
+    ]);
+  });
+
+  it('should leave empty the zero machine total of the clockings of a row', async () => {
+    givenRapport([ligneFixture({ machine: 0 }, { pointages: [pointageSeulFixture()] })]);
+    await whenEcranAffiche();
+    await whenDetailDeplie();
+
+    expect(cellulesDe('cout-pointages-total')).toEqual(['Total Fraisage', '2 h 00', '', '40,00 €', '40,00 €']);
   });
 
   it('should say a work station carries no hourly cost', async () => {

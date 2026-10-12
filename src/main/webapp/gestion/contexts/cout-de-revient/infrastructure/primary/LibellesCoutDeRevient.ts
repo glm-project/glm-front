@@ -32,6 +32,8 @@ const formatDuree = (duree: DureePassee): string => `${duree.heures} h ${String(
 
 const formatMontant = (montant: Montant): string => EUROS.format(montant.euros);
 
+const celluleDeMontant = (montant: Montant): string => (montant.euros === 0 ? '' : formatMontant(montant));
+
 const memeJour = (debut: InstantDeTravail, fin: InstantDeTravail): boolean => localCalendarDay(debut.value) === localCalendarDay(fin.value);
 
 const borne = (instant: InstantDeTravail): string => `${formatInstantShortDayMonth(instant.value)} ${formatInstantTime(instant.value)}`;
@@ -74,7 +76,8 @@ const calculDePart = (pointage: PointageDeCout, part: PartDePointage): string =>
   if (pointage.tauxHoraire === undefined) {
     return 'Opérateur non valorisé';
   }
-  return `${DECIMALES.format(pointage.tauxHoraire.euros)} × ${heuresDecimales(part)} ÷ ${part.diviseur} = ${formatMontant(part.mainDOeuvre)}`;
+  const division = part.estPartagee() ? ` ÷ ${part.diviseur}` : '';
+  return `${DECIMALES.format(pointage.tauxHoraire.euros)} × ${heuresDecimales(part)}${division} = ${formatMontant(part.mainDOeuvre)}`;
 };
 
 const calculMachine = (pointage: PointageDeCout): string => {
@@ -83,6 +86,9 @@ const calculMachine = (pointage: PointageDeCout): string => {
   }
   if (pointage.coutHoraire === undefined) {
     return 'Poste non valorisé';
+  }
+  if (pointage.coutHoraire.euros === 0) {
+    return '';
   }
   return `${tarif(pointage.coutHoraire)} × ${formatDuree(pointage.duree)}`;
 };
@@ -234,6 +240,7 @@ export const LIBELLES_COUT_DE_REVIENT = {
 
   identite: (categorie: CategorieDElementChiffre, nom: string): string => `${categorie.value} · ${nom}`,
   montant: formatMontant,
+  cellule: celluleDeMontant,
   duree: formatDuree,
   nature: (nature: string | undefined): string => nature ?? SANS_POSTE,
 
