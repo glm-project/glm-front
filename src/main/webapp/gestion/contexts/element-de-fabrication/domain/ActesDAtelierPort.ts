@@ -6,4 +6,5 @@ import { SuiviDuProduitId } from './SuiviDuProduitId';
 export abstract class ActesDAtelierPort {
   abstract mettreALAtelier(element: ElementDeFabricationId): Promise<Result<void, RefusDActeDAtelier>>;
   abstract cloturer(suivi: SuiviDuProduitId): Promise<Result<void, RefusDActeDAtelier>>;
+  abstract rouvrir(suivi: SuiviDuProduitId): Promise<Result<void, RefusDActeDAtelier>>;
 }

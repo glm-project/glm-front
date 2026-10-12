@@ -42,6 +42,8 @@ export const LIBELLES_ELEMENTS_DE_FABRICATION = {
   miseALAtelierDe: (numero: string): string => `Mettre ${numero} à l’atelier`,
   cloturer: 'Clôturer',
   clotureDe: (numero: string): string => `Clôturer ${numero}`,
+  rouvrir: 'Rouvrir',
+  reouvertureDe: (numero: string): string => `Rouvrir ${numero}`,
   coutDeRevient: 'Coût de revient',
   coutDeRevientDe: (numero: string): string => `Voir le coût de revient de ${numero}`,
   etats: ETATS,

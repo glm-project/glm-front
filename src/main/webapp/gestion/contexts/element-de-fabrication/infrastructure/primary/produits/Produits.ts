@@ -30,7 +30,8 @@ import { adresseDeLaRequete, requeteDeLAdresse } from './AdresseDesProduits';
 interface LigneDeProduit {
   readonly produit: ProduitDansSonCycle;
   readonly creeLe: string;
-  readonly suivi?: SuiviDuProduitId;
+  readonly aCloturer?: SuiviDuProduitId;
+  readonly aRouvrir?: SuiviDuProduitId;
   readonly etat?: EtatDAtelier;
   readonly etatLibelle?: string;
   readonly misALAtelierLe?: string;
@@ -48,7 +49,7 @@ const ligneDe = (produit: ProduitDansSonCycle): LigneDeProduit => {
       return {
         produit,
         creeLe,
-        suivi: passage.suivi,
+        aCloturer: passage.suivi,
         etat: passage.etat,
         etatLibelle: LIBELLES_ELEMENTS_DE_FABRICATION.etats[passage.etat],
         misALAtelierLe: formatInstantNumericDateTime(passage.misALAtelierLe),
@@ -57,6 +58,7 @@ const ligneDe = (produit: ProduitDansSonCycle): LigneDeProduit => {
       return {
         produit,
         creeLe,
+        aRouvrir: passage.suivi,
         misALAtelierLe: formatInstantNumericDateTime(passage.misALAtelierLe),
         clotureLe: formatInstantNumericDateTime(passage.clotureLe),
         clotureePar: LIBELLES_ELEMENTS_DE_FABRICATION.par(passage.clotureePar),
@@ -174,6 +176,10 @@ export class Produits implements OnInit {
 
   protected mettreALAtelier(produit: ProduitDansSonCycle): void {
     this.errors.observe(this.agir(produit, () => this.actes.mettreALAtelier(produit.element.id)));
+  }
+
+  protected rouvrir(produit: ProduitDansSonCycle, suivi: SuiviDuProduitId): void {
+    this.errors.observe(this.agir(produit, () => this.actes.rouvrir(suivi)));
   }
 
   protected openCloture(produit: ProduitDansSonCycle, suivi: SuiviDuProduitId): void {

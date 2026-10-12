@@ -15,6 +15,9 @@ export class ActesDAtelierFixture extends ActesDAtelierPort {
   readonly clotures: string[] = [];
   clotureDifferee: Promise<Result<void, RefusDActeDAtelier>> | undefined;
   apresCloture: () => void = () => undefined;
+  suivisClotures: readonly string[] = [];
+  readonly reouvertures: string[] = [];
+  apresReouverture: () => void = () => undefined;
   ecritureFailure: Error | undefined;
   miseALAtelierDifferee: Promise<Result<void, RefusDActeDAtelier>> | undefined;
   apresMiseALAtelier: () => void = () => undefined;
@@ -36,7 +39,18 @@ export class ActesDAtelierFixture extends ActesDAtelierPort {
     if (this.clotureDifferee !== undefined) return this.clotureDifferee;
     if (!this.suivisOuverts.includes(suivi.value)) return err(new PassageIntrouvable());
     this.suivisOuverts = this.suivisOuverts.filter(ouvert => ouvert !== suivi.value);
+    this.suivisClotures = [...this.suivisClotures, suivi.value];
     this.apresCloture();
+    return ok(undefined);
+  }
+
+  override async rouvrir(suivi: SuiviDuProduitId): Promise<Result<void, RefusDActeDAtelier>> {
+    this.reouvertures.push(suivi.value);
+    if (this.ecritureFailure !== undefined) return Promise.reject(this.ecritureFailure);
+    if (!this.suivisClotures.includes(suivi.value)) return err(new PassageIntrouvable());
+    this.suivisClotures = this.suivisClotures.filter(clos => clos !== suivi.value);
+    this.suivisOuverts = [...this.suivisOuverts, suivi.value];
+    this.apresReouverture();
     return ok(undefined);
   }
 }

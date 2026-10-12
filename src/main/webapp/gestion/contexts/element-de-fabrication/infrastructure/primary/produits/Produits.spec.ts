@@ -403,6 +403,42 @@ describe('Produits page', () => {
     expect(port.requetes).toHaveLength(lectures);
   });
 
+  it('should offer to reopen each closed product, and only them', async () => {
+    givenProducts();
+    await whenOpening();
+    const enAtelier = labels('element-reouverture');
+
+    await whenChoosingCycle('CLOTURE');
+
+    expect(enAtelier).toEqual([]);
+    expect(labels('element-reouverture')).toEqual(['Rouvrir M-3']);
+    expect(labels('element-cloture')).toEqual([]);
+  });
+
+  it('should reopen a product without confirmation and stay on the closed products', async () => {
+    givenProducts();
+    givenWorkshopReopens('moule-3');
+    givenAddress({ etat: 'clotures' });
+    await whenOpening();
+
+    await whenClickingFirst('element-reouverture');
+
+    expect(actes.reouvertures).toEqual(['suivi-moule-3']);
+    expect(pressedCycle()).toBe('Clôturés');
+    expect(text('elements-empty')).toBe('Aucun produit clôturé.');
+    expect(counters()).toEqual(['2', '3', '0']);
+  });
+
+  it('should tell why a product could not be reopened', async () => {
+    givenProducts();
+    givenAddress({ etat: 'clotures' });
+    await whenOpening();
+
+    await whenClickingFirst('element-reouverture');
+
+    expect(text('elements-action-refus')).toBe('Ce produit n’est plus à l’atelier. Actualisez la liste.');
+  });
+
   it('should name the cost link by the product it opens', async () => {
     givenProducts();
 
@@ -710,6 +746,21 @@ describe('Produits page', () => {
               misALAtelierLe: MIS_A_L_ATELIER_LE,
               clotureLe: CLOTURE_LE,
               clotureePar: 'Claire',
+            })
+          : produit,
+      );
+    };
+  };
+  const givenWorkshopReopens = (element: string): void => {
+    actes.suivisClotures = [`suivi-${element}`];
+    actes.apresReouverture = () => {
+      port.produitsEnregistres = port.produitsEnregistres.map(produit =>
+        produit.element.id.value === element
+          ? produitFixture(produit.element, {
+              cycle: 'EN_ATELIER',
+              suivi: new SuiviDuProduitId(`suivi-${element}`),
+              etat: 'EN_ATTENTE',
+              misALAtelierLe: MIS_A_L_ATELIER_LE,
             })
           : produit,
       );

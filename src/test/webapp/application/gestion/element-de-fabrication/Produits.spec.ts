@@ -52,6 +52,15 @@ describe('Manufacturing element referential in gestion', () => {
     thenCountersAre(['1', '0', '1']);
   });
 
+  it('should reopen a closed product from its row and stay on the closed products', () => {
+    givenClosedProduct().installActesDAtelier();
+    whenVisiting('/produits?etat=clotures');
+    whenReopeningFirstProduct();
+
+    thenNoClosedProduct();
+    thenCountersAre(['0', '1', '0']);
+  });
+
   it('should keep the products in preparation on their own tab', () => {
     givenProductsInTheirCycles();
     whenVisitingReferential();
@@ -183,6 +192,20 @@ const givenProductsInTheirCycles = (): ElementsApiFixture => {
 const whenPuttingFirstProductIntoTheWorkshop = (): void => {
   cy.get(dataSelector('element-mise-a-l-atelier')).first().click();
   cy.wait('@miseALAtelier');
+};
+const givenClosedProduct = (): ElementsApiFixture => {
+  const api = new ElementsApiFixture(
+    elementsFixture(1).map(element => ({ ...element, cycle: 'CLOTURE', clotureLe: '2026-10-05T16:00:00Z', clotureePar: 'Claire' })),
+  );
+  api.install();
+  return api;
+};
+const whenReopeningFirstProduct = (): void => {
+  cy.get(dataSelector('element-reouverture')).first().click();
+  cy.wait('@reouverture');
+};
+const thenNoClosedProduct = (): void => {
+  cy.get(dataSelector('elements-empty')).should('contain.text', 'Aucun produit clôturé.');
 };
 const whenClosingFirstProduct = (): void => {
   cy.get(dataSelector('element-cloture')).first().click();

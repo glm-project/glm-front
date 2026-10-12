@@ -90,7 +90,7 @@ l'expression.
 - `element-de-fabrication` possède le référentiel et ses règles de saisie. **Ce contexte ne l'importe pas** : il
   lit `/api/elements-de-fabrication` par son propre port, avec sa propre vue minimale.
 - La page Produits fait ses actes d'atelier par `TypeScriptActesDAtelier`, l'adaptateur primaire que ce contexte
-  lui expose : mettre à l'atelier et clôturer. Il prend et rend des valeurs simples — l'identifiant de l'élément
+  lui expose : mettre à l'atelier, clôturer et rouvrir. Il prend et rend des valeurs simples — l'identifiant de l'élément
   ou du suivi, puis le code du refus ou rien — pour que l'appelant n'importe aucun modèle d'ici.
 - `cout-de-revient` chiffre ce que la fabrication d'un élément a coûté. **Ce contexte ne l'importe pas** : le
   lien est un `routerLink` vers `/couts-de-revient/<id>`, posé sur chaque ligne parce qu'un coût de revient

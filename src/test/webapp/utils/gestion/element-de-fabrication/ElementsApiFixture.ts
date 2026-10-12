@@ -76,6 +76,15 @@ export class ElementsApiFixture {
       );
       request.reply({ statusCode: 204 });
     }).as('cloture');
+    cy.intercept('DELETE', '/api/atelier/suivis/*/cloture', request => {
+      const suivi = request.url.split('/').slice(-2)[0];
+      this.elements = this.elements.map(candidat =>
+        candidat.suivi === suivi
+          ? { ...sans(candidat, ['clotureLe', 'clotureePar']), cycle: 'EN_ATELIER', etatDAtelier: 'EN_ATTENTE' }
+          : candidat,
+      );
+      request.reply({ statusCode: 204 });
+    }).as('reouverture');
   }
 
   private installCompteurs(): void {
@@ -188,12 +197,14 @@ export class ElementsApiFixture {
   }
 }
 
-const sansFiche = (element: ElementEnregistre): ElementEnregistre => ({
+const sans = (element: ElementEnregistre, champs: readonly string[]): ElementEnregistre => ({
   id: element.id,
   categorie: element.categorie,
   nom: element.nom,
-  ...Object.fromEntries(Object.entries(element).filter(([cle]) => !['reference', 'description'].includes(cle))),
+  ...Object.fromEntries(Object.entries(element).filter(([cle]) => !champs.includes(cle))),
 });
+
+const sansFiche = (element: ElementEnregistre): ElementEnregistre => sans(element, ['reference', 'description']);
 
 const corpsDe = (element: ElementEnregistre): RestElement => ({ ...element });
 

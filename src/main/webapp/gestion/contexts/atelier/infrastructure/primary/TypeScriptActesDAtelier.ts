@@ -20,4 +20,9 @@ export class TypeScriptActesDAtelier {
     const resultat = await this.atelier.cloturer(new SuiviId(suivi));
     return resultat.ok ? undefined : resultat.error.code;
   }
+
+  async rouvrir(suivi: string): Promise<RefusSurLePassage | undefined> {
+    const resultat = await this.atelier.rouvrir(new SuiviId(suivi));
+    return resultat.ok ? undefined : resultat.error.code;
+  }
 }

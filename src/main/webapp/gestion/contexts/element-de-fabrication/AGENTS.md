@@ -61,7 +61,7 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   clôturé. C'est lui que visent la clôture et la réouverture ; il n'apparaît jamais à l'écran.
 - **ActesDAtelierPort** : port secondaire des actes d'atelier faits depuis la page. `mettreALAtelier` rend
   `ProduitDejaALAtelier` (le back refuse `element-deja-engage`, y compris pour un produit clôturé : un produit ne
-  passe qu'une fois à l'atelier) ou `ProduitIntrouvable` ; `cloturer` rend `PassageIntrouvable`. Ces refus
+  passe qu'une fois à l'atelier) ou `ProduitIntrouvable` ; `cloturer` et `rouvrir` rendent `PassageIntrouvable`. Ces refus
   héritent de `RefusDActeDAtelier`, qui déclare `code` et `message` une seule fois pour l'écran.
 - **FormulaireCategorieDeProduit** : modèle de la déclaration d'une catégorie. Il met la saisie en
   majuscules, vérifie le motif (`^[A-Z]{1,10}$`, porté par `CategorieDeProduit.erreur`) et garde le refus
@@ -102,7 +102,8 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
 - **Un acte agit sur la ligne et laisse l'onglet en place** : pas de dialogue de sélection, la page relit
   l'onglet courant et ses compteurs. « Clôturer » demande seulement une confirmation
   (`ConfirmationClotureDialog`), qui rappelle que le produit disparaît des écrans des opérateurs et reste
-  réouvrable ; un refus ou une panne s'y affiche sans la fermer. Le bouton de la ligne se désactive le temps de l'acte ; un refus ou une
+  réouvrable ; un refus ou une panne s'y affiche sans la fermer. « Rouvrir », sur Clôturés, agit sans
+  confirmation : il ne coûte rien à personne. Le bouton de la ligne se désactive le temps de l'acte ; un refus ou une
   panne s'affiche au-dessus du tableau et s'efface au prochain acte.
 - **L'écran ne propose pas de supprimer.** Le `DELETE` existe à l'API, mais le client parle de clôture, et
   supprimer un élément portant des temps détruirait des heures de paie. La sortie d'un élément est la

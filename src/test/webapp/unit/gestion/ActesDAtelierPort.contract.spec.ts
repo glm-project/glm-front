@@ -99,4 +99,20 @@ describe.each(adapters)('ActesDAtelierPort contract, honoured by %s', (_adapter,
 
     expect(resultat).toEqual({ ok: false, error: new PassageIntrouvable() });
   });
+
+  it('should reopen the closed passage of a product', async () => {
+    harness.exists('moule-1');
+    const suivi = new SuiviDuProduitId(await harness.engaged('moule-1'));
+    await harness.port.cloturer(suivi);
+
+    const resultat = await harness.port.rouvrir(suivi);
+
+    expect(resultat).toEqual({ ok: true, value: undefined });
+  });
+
+  it('should refuse to reopen a passage that no longer exists', async () => {
+    const resultat = await harness.port.rouvrir(new SuiviDuProduitId('disparu'));
+
+    expect(resultat).toEqual({ ok: false, error: new PassageIntrouvable() });
+  });
 });

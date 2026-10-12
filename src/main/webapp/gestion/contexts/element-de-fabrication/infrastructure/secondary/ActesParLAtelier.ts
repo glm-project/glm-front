@@ -38,4 +38,8 @@ export class ActesParLAtelier extends ActesDAtelierPort {
   override async cloturer(suivi: SuiviDuProduitId): Promise<Result<void, RefusDActeDAtelier>> {
     return resultatDe(await this.atelier.cloturer(suivi.value), REFUS_SUR_LE_PASSAGE);
   }
+
+  override async rouvrir(suivi: SuiviDuProduitId): Promise<Result<void, RefusDActeDAtelier>> {
+    return resultatDe(await this.atelier.rouvrir(suivi.value), REFUS_SUR_LE_PASSAGE);
+  }
 }
