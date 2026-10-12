@@ -16,6 +16,20 @@
     </div>
   </header>
 
+  <nav class="onglets mb-4" [attr.aria-label]="libelles.cyclesAria" data-selector="elements-cycles">
+    @for (cycleOffert of cycles; track cycleOffert) {
+    <button
+      type="button"
+      class="onglet"
+      [attr.aria-pressed]="cycleOffert === cycle()"
+      (click)="choisirCycle(cycleOffert)"
+      [attr.data-selector]="'elements-cycle-' + cycleOffert"
+    >
+      {{ libelles.cycles[cycleOffert] }}
+    </button>
+    }
+  </nav>
+
   <section class="mb-4 flex flex-wrap items-end gap-3" aria-label="Recherche dans le référentiel">
     <label class="gestion-recherche">
       <span class="text-body-sm font-semibold text-ink-muted">{{ libelles.recherche }}</span>
@@ -72,80 +86,107 @@
         {{ libellesCategories.titre }}
       </button>
     </div>
-    } @else if (etat().totalElementsCount === 0) {
-    <div class="px-6 py-16 text-center" data-selector="elements-empty">
-      <h2 class="text-section">{{ libelles.vide }}</h2>
-      <p class="mx-auto mb-6 mt-2 max-w-lg text-body text-ink-muted">{{ libelles.videDetails }}</p>
-      <button mat-flat-button type="button" (click)="openCreation()" data-selector="elements-empty-create">
-        <glm-icon name="plus" /> {{ libelles.creation }}
-      </button>
-    </div>
-    } @else if (resultats().length === 0) {
-    <p role="status" class="px-6 py-12 text-center text-body text-ink-muted" data-selector="elements-no-results">
-      {{ libelles.aucunResultat }}
+    } @else if (etat().total === 0) {
+    <p role="status" class="px-6 py-12 text-center text-body text-ink-muted" data-selector="elements-empty">
+      {{ filtree() ? libelles.aucunResultat : libelles.vides[cycle()] }}
     </p>
     } @else {
     <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
-      <table mat-table [dataSource]="affiches()" [attr.aria-label]="libelles.tableau">
+      <table mat-table [dataSource]="lignes()" [attr.aria-label]="libelles.tableaux[cycle()]" data-selector="elements-table">
         <ng-container matColumnDef="categorie">
           <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.categorie }}</th>
-          <td mat-cell *matCellDef="let element">
-            <span class="gestion-type" data-selector="element-categorie-cell">{{ element.categorie.value }}</span>
+          <td mat-cell *matCellDef="let ligne">
+            <span class="gestion-type" data-selector="element-categorie-cell">{{ ligne.produit.element.categorie.value }}</span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="nom">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.nom }}</th>
+          <td mat-cell *matCellDef="let ligne" class="text-ink-muted" data-selector="element-nom-cell">
+            {{ ligne.produit.element.nom.value }}
           </td>
         </ng-container>
         <ng-container matColumnDef="reference">
           <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.reference }}</th>
           <td
             mat-cell
-            *matCellDef="let element"
-            [class.font-semibold]="element.reference !== undefined"
-            [class.text-ink-muted]="element.reference === undefined"
+            *matCellDef="let ligne"
+            [class.font-semibold]="ligne.produit.element.reference !== undefined"
+            [class.text-ink-muted]="ligne.produit.element.reference === undefined"
             data-selector="element-reference-cell"
           >
-            {{ element.reference?.value ?? libelles.sansValeur }}
+            {{ ligne.produit.element.reference?.value ?? libelles.sansValeur }}
           </td>
-        </ng-container>
-        <ng-container matColumnDef="nom">
-          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.nom }}</th>
-          <td mat-cell *matCellDef="let element" class="text-ink-muted" data-selector="element-nom-cell">{{ element.nom.value }}</td>
         </ng-container>
         <ng-container matColumnDef="libelle">
           <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.libelle }}</th>
           <td
             mat-cell
-            *matCellDef="let element"
-            [class.text-ink-muted]="element.libelle === undefined"
-            [title]="element.libelle?.value ?? ''"
+            *matCellDef="let ligne"
+            [class.text-ink-muted]="ligne.produit.element.libelle === undefined"
+            [title]="ligne.produit.element.libelle?.value ?? ''"
             data-selector="element-libelle-cell"
           >
-            {{ element.libelle?.value ?? libelles.sansValeur }}
+            {{ ligne.produit.element.libelle?.value ?? libelles.sansValeur }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="creeLe">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.creeLe }}</th>
+          <td mat-cell *matCellDef="let ligne" data-selector="element-cree-le-cell">{{ ligne.creeLe }}</td>
+        </ng-container>
+        <ng-container matColumnDef="etat">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.etat }}</th>
+          <td mat-cell *matCellDef="let ligne">
+            <span class="gestion-etat" data-selector="element-etat-cell"
+              ><span
+                class="gestion-pastille"
+                [class.bg-ok]="ligne.etat === 'EN_COURS'"
+                [class.bg-warn]="ligne.etat === 'INTERROMPU'"
+                [class.bg-border-strong]="ligne.etat === 'EN_ATTENTE'"
+                aria-hidden="true"
+              ></span
+              >{{ ligne.etatLibelle }}</span
+            >
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="misALAtelierLe">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.misALAtelierLe }}</th>
+          <td mat-cell *matCellDef="let ligne" data-selector="element-mis-a-l-atelier-le-cell">{{ ligne.misALAtelierLe }}</td>
+        </ng-container>
+        <ng-container matColumnDef="clotureLe">
+          <th mat-header-cell *matHeaderCellDef scope="col">{{ libelles.colonnes.clotureLe }}</th>
+          <td mat-cell *matCellDef="let ligne" data-selector="element-cloture-le-cell">
+            <span class="block" data-selector="element-cloture-le">{{ ligne.clotureLe }}</span>
+            <span class="block text-body-sm text-ink-muted" data-selector="element-cloturee-par">{{ ligne.clotureePar }}</span>
           </td>
         </ng-container>
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef scope="col"><span class="sr-only">{{ libelles.colonnes.actions }}</span></th>
-          <td mat-cell *matCellDef="let element">
+          <td mat-cell *matCellDef="let ligne">
             <div class="gestion-actions">
+              @if (cycle() === 'EN_PREPARATION') {
               <a
                 mat-button
                 [routerLink]="['/atelier']"
-                [queryParams]="{ element: identifiantDe(element) }"
-                [attr.aria-label]="libelles.miseALAtelierDe(element.numero())"
+                [queryParams]="{ element: identifiantDe(ligne.produit) }"
+                [attr.aria-label]="libelles.miseALAtelierDe(ligne.produit.element.numero())"
                 data-selector="element-mise-a-l-atelier"
               >
                 {{ libelles.miseALAtelier }}
               </a>
+              } @else {
               <a
                 mat-button
-                [routerLink]="['/couts-de-revient', identifiantDe(element)]"
-                [attr.aria-label]="libelles.coutDeRevientDe(element.numero())"
+                [routerLink]="['/couts-de-revient', identifiantDe(ligne.produit)]"
+                [attr.aria-label]="libelles.coutDeRevientDe(ligne.produit.element.numero())"
                 data-selector="element-cout-de-revient"
               >
                 {{ libelles.coutDeRevient }}
               </a>
+              }
               <button
                 mat-icon-button
-                (click)="openModification(element)"
-                [attr.aria-label]="libelles.modification(element.numero())"
+                (click)="openModification(ligne.produit.element)"
+                [attr.aria-label]="libelles.modification(ligne.produit.element.numero())"
                 data-selector="element-edit"
               >
                 <glm-icon name="pencil" />
@@ -153,22 +194,26 @@
             </div>
           </td>
         </ng-container>
-        <tr mat-header-row *matHeaderRowDef="colonnes"></tr>
-        <tr mat-row *matRowDef="let row; columns: colonnes" data-selector="element-row"></tr>
+        <tr mat-header-row *matHeaderRowDef="colonnes()"></tr>
+        <tr mat-row *matRowDef="let row; columns: colonnes()" data-selector="element-row"></tr>
       </table>
     </div>
+    } @if (paginationVisible()) {
+    <nav class="pagination" [attr.aria-label]="libelles.pagination.aria" data-selector="elements-pagination">
+      <span class="text-body-sm text-ink-muted" data-selector="elements-pagination-intervalle">{{ intervalle() }}</span>
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="pagePrecedente()"
+        [disabled]="premierePage()"
+        data-selector="elements-page-precedente"
+      >
+        <glm-icon name="chevronLeft" /> {{ libelles.pagination.precedente }}
+      </button>
+      <button mat-stroked-button type="button" (click)="pageSuivante()" [disabled]="dernierePage()" data-selector="elements-page-suivante">
+        {{ libelles.pagination.suivante }} <glm-icon name="chevronRight" />
+      </button>
+    </nav>
     }
-
-    <mat-paginator
-      [length]="resultats().length"
-      [pageIndex]="etat().page"
-      [pageSize]="etat().taille"
-      [pageSizeOptions]="[10, 20, 50]"
-      [disabled]="etat().chargement || etat().echec"
-      showFirstLastButtons
-      (page)="changePage($event)"
-      [attr.aria-label]="libelles.pagination.aria"
-      data-selector="elements-pagination"
-    />
   </section>
 </main>

@@ -3,13 +3,22 @@ type RestElement = components['schemas']['RestElementDeFabrication'];
 type Creation = components['schemas']['RestCreationElementDeFabrication'];
 type Modification = components['schemas']['RestModificationElementDeFabrication'];
 
-interface ElementEnregistre {
-  id: string;
-  categorie: string;
-  nom: string;
-  reference?: string;
-  description?: string;
-}
+type ElementEnregistre = RestElement & { id: string; categorie: string; nom: string };
+
+const CREE_LE = '2026-10-01T08:00:00Z';
+const MIS_A_L_ATELIER_LE = '2026-10-02T08:00:00Z';
+
+const sansCasse = (texte: string | undefined): string => (texte ?? '').toLocaleLowerCase('fr-FR');
+
+const accepte = (query: Record<string, string | number>, cle: string, valeur: string | undefined): boolean =>
+  !(cle in query) || String(query[cle]) === valeur;
+
+const trouve = (element: ElementEnregistre, query: Record<string, string | number>): boolean =>
+  !('recherche' in query)
+  || [element.nom, element.reference, element.description].some(texte => sansCasse(texte).includes(sansCasse(String(query['recherche']))));
+
+const correspond = (element: ElementEnregistre, query: Record<string, string | number>): boolean =>
+  accepte(query, 'cycle', element.cycle) && accepte(query, 'categorie', element.categorie) && trouve(element, query);
 
 const ROUTE = '/api/elements-de-fabrication';
 const CATEGORIES = '/api/categories-de-produit';
@@ -36,11 +45,12 @@ export class ElementsApiFixture {
       }
       const page = Number(request.query['page'] ?? 0);
       const size = Number(request.query['size'] ?? 20);
+      const trouves = this.elements.filter(element => correspond(element, request.query));
       request.reply({
-        content: this.elements.slice(page * size, (page + 1) * size).map(corpsDe),
+        content: trouves.slice(page * size, (page + 1) * size).map(corpsDe),
         currentPage: page,
         pageSize: size,
-        totalElementsCount: this.elements.length,
+        totalElementsCount: trouves.length,
       });
     }).as('elementsRead');
     this.installCreation();
@@ -118,10 +128,12 @@ export class ElementsApiFixture {
         id: 'created-element',
         nom: 'PRD-2026-000009',
         categorie: commande.categorie ?? 'MOULE',
+        dateDeCreation: CREE_LE,
+        cycle: 'EN_PREPARATION',
         ...(commande.reference === undefined ? {} : { reference: commande.reference }),
         ...(commande.description === undefined ? {} : { description: commande.description }),
       };
-      this.elements.push(element);
+      this.elements.unshift(element);
       request.reply({ statusCode: 201, body: corpsDe(element) });
     }).as('elementCreate');
   }
@@ -135,9 +147,7 @@ export class ElementsApiFixture {
         request.reply({ statusCode: 409, body: { type: `${URN}reference-deja-utilisee` } });
         return;
       }
-      this.elements = this.elements.map(element =>
-        element.id === id ? { id: element.id, categorie: element.categorie, nom: element.nom, ...commande } : element,
-      );
+      this.elements = this.elements.map(element => (element.id === id ? { ...sansFiche(element), ...commande } : element));
       request.reply({ statusCode: 200, body: this.elements.filter(element => element.id === id).map(corpsDe)[0] });
     }).as('elementUpdate');
   }
@@ -150,15 +160,29 @@ export class ElementsApiFixture {
   }
 }
 
+const sansFiche = (element: ElementEnregistre): ElementEnregistre => ({
+  id: element.id,
+  categorie: element.categorie,
+  nom: element.nom,
+  ...Object.fromEntries(Object.entries(element).filter(([cle]) => !['reference', 'description'].includes(cle))),
+});
+
 const corpsDe = (element: ElementEnregistre): RestElement => ({ ...element });
 
 const numeroteSur6 = (rang: number): string => ('000000' + String(rang)).slice(-6);
 
-export const elementsFixture = (nombre: number): ElementEnregistre[] =>
+const passageDuFixture = (cycle: 'EN_PREPARATION' | 'EN_ATELIER', rang: number): Partial<RestElement> =>
+  cycle === 'EN_PREPARATION'
+    ? { cycle }
+    : { cycle, etatDAtelier: 'EN_COURS', misALAtelierLe: MIS_A_L_ATELIER_LE, suivi: 'suivi-' + String(rang) };
+
+export const elementsFixture = (nombre: number, cycle: 'EN_PREPARATION' | 'EN_ATELIER' = 'EN_ATELIER'): ElementEnregistre[] =>
   Array.from({ length: nombre }, (_, index) => ({
     id: 'element-' + String(index + 1),
     categorie: index % 2 === 0 ? 'MOULE' : 'OF',
     nom: 'PRD-2026-' + numeroteSur6(index + 1),
     reference: String(1015 + index),
     description: 'Moule ' + String(index + 1),
+    dateDeCreation: CREE_LE,
+    ...passageDuFixture(cycle, index + 1),
   }));

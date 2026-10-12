@@ -5,7 +5,6 @@ import { required } from '@/app/shared/api-client/infrastructure/secondary/requi
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { Page } from '@/app/shared/pagination/domain/Page';
 import { buildPageFrom } from '@/app/shared/pagination/infrastructure/secondary/buildPageFrom';
-import { collectAllPages } from '@/app/shared/pagination/infrastructure/secondary/collectAllPages';
 import { err, ok, Result } from '@/app/shared/result/domain/Result';
 import { inject, Injectable } from '@angular/core';
 import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
@@ -18,16 +17,14 @@ import { ElementDeFabricationIntrouvable } from '../../domain/ElementDeFabricati
 import { ElementsDeFabricationPort } from '../../domain/ElementsDeFabricationPort';
 import { LibelleDElement } from '../../domain/LibelleDElement';
 import { NomDElement } from '../../domain/NomDElement';
+import { PassageALAtelier, ProduitDansSonCycle } from '../../domain/ProduitDansSonCycle';
 import { ReferenceDElement } from '../../domain/ReferenceDElement';
 import { ReferenceDejaUtilisee } from '../../domain/ReferenceDejaUtilisee';
-import { ReferentielDesProduits } from '../../domain/ReferentielDesProduits';
 import { RefusCreationElement } from '../../domain/RefusCreationElement';
 import { RefusModificationElement } from '../../domain/RefusModificationElement';
-import { RequeteElements } from '../../domain/RequeteElements';
+import { RequeteProduits } from '../../domain/RequeteProduits';
 
 type RestElement = components['schemas']['RestElementDeFabrication'];
-
-const PERIODE_DEPUIS_TOUJOURS = { debut: '1970-01-01T00:00:00Z', fin: '2999-12-31T23:59:59Z' };
 
 const toReference = (reference: string | undefined): ReferenceDElement | undefined =>
   reference === undefined ? undefined : new ReferenceDElement(reference);
@@ -42,6 +39,31 @@ const toElement = (element: RestElement): ElementDeFabrication =>
     reference: toReference(element.reference),
     libelle: toLibelle(element.description),
   });
+
+const instant = (value: string | undefined, champ: string): Date => new Date(required(value, champ));
+
+const toPassage = (element: RestElement): PassageALAtelier => {
+  switch (required(element.cycle, 'element.cycle')) {
+    case 'EN_PREPARATION':
+      return { cycle: 'EN_PREPARATION' };
+    case 'EN_ATELIER':
+      return {
+        cycle: 'EN_ATELIER',
+        etat: required(element.etatDAtelier, 'element.etatDAtelier'),
+        misALAtelierLe: instant(element.misALAtelierLe, 'element.misALAtelierLe'),
+      };
+    case 'CLOTURE':
+      return {
+        cycle: 'CLOTURE',
+        misALAtelierLe: instant(element.misALAtelierLe, 'element.misALAtelierLe'),
+        clotureLe: instant(element.clotureLe, 'element.clotureLe'),
+        clotureePar: required(element.clotureePar, 'element.clotureePar'),
+      };
+  }
+};
+
+const toProduit = (element: RestElement): ProduitDansSonCycle =>
+  new ProduitDansSonCycle(toElement(element), instant(element.dateDeCreation, 'element.dateDeCreation'), toPassage(element));
 
 const toFiche = (
   commande: CommandeCreationElement | CommandeModificationElement,
@@ -77,35 +99,23 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
   private readonly api = inject(ApiClient);
   private readonly errors = inject(ErrorHandlerPort);
 
-  override async referentiel(): Promise<ReferentielDesProduits> {
+  override async produits(requete: RequeteProduits): Promise<Page<ProduitDansSonCycle>> {
     try {
-      const [categories, elements] = await Promise.all([
-        collectAllPages(
-          (page, size) => this.categories(page, size),
-          categorie => categorie.value,
-        ),
-        collectAllPages(
-          (page, size) => this.elements(new RequeteElements(page, size)),
-          entry => entry.id.value,
-        ),
-      ]);
-      return new ReferentielDesProduits(categories, elements);
+      const recherche = requete.rechercheSaisie();
+      const response = await this.api.read('/api/elements-de-fabrication', {
+        queryParams: {
+          cycle: requete.cycle,
+          ...(requete.categorie === undefined ? {} : { categorie: requete.categorie.value }),
+          ...(recherche === undefined ? {} : { recherche }),
+          page: requete.page,
+          size: requete.taille,
+        },
+      });
+      return buildPageFrom(response, toProduit, requete);
     } catch (failure) {
       this.errors.handleError(failure);
       throw failure;
     }
-  }
-
-  override async elements(requete: RequeteElements): Promise<Page<ElementDeFabrication>> {
-    const response = await this.api.read('/api/elements-de-fabrication', {
-      queryParams: { ...PERIODE_DEPUIS_TOUJOURS, page: requete.page, size: requete.taille },
-    });
-    return buildPageFrom(response, toElement, requete);
-  }
-
-  private async categories(page: number, taille: number): Promise<Page<CategorieDeProduit>> {
-    const response = await this.api.read('/api/categories-de-produit', { queryParams: { page, size: taille } });
-    return buildPageFrom(response, categorie => new CategorieDeProduit(categorie.code), { page, taille });
   }
 
   override creer(commande: CommandeCreationElement): Promise<Result<void, RefusCreationElement>> {

@@ -11,10 +11,25 @@ describe('Manufacturing element referential in gestion', () => {
     thenReferentialIsVisible();
   });
 
+  it('should open on the products in the workshop', () => {
+    givenProductsInTheirCycles();
+    whenVisitingReferential();
+
+    thenOnlyListed('1015');
+  });
+
+  it('should keep the products in preparation on their own tab', () => {
+    givenProductsInTheirCycles();
+    whenVisitingReferential();
+    whenChoosingCycle('EN_PREPARATION');
+
+    thenOnlyListed('2001');
+  });
+
   it('should create the first moule and list it with its screen words', () => {
     givenReferential();
     whenVisitingReferential();
-    whenCreating('elements-empty-create', 'MOULE', '1015', 'Moule de capot');
+    whenCreating('elements-new', 'MOULE', '1015', 'Moule de capot');
 
     thenElementIsListed('1015', 'MOULE', 'Moule de capot');
   });
@@ -22,7 +37,7 @@ describe('Manufacturing element referential in gestion', () => {
   it('should create an OF in the category chosen in the form', () => {
     givenReferential();
     whenVisitingReferential();
-    whenCreating('elements-empty-create', 'OF', '1016', 'Reprise du capot');
+    whenCreating('elements-new', 'OF', '1016', 'Reprise du capot');
 
     thenElementIsListed('1016', 'OF', 'Reprise du capot');
   });
@@ -30,7 +45,7 @@ describe('Manufacturing element referential in gestion', () => {
   it('should create an element reduced to its produced number', () => {
     const api = givenReferential();
     whenVisitingReferential();
-    whenOpeningCreation('elements-empty-create');
+    whenOpeningCreation('elements-new');
     whenChoosingCategory('MOULE');
     whenSaving();
 
@@ -47,8 +62,9 @@ describe('Manufacturing element referential in gestion', () => {
   });
 
   it('should modify an element and remove its label', () => {
-    givenReferential(1);
+    givenProductsInPreparation(1);
     whenVisitingReferential();
+    whenChoosingCycle('EN_PREPARATION');
     whenEditingFirstElement();
     whenReplacing('element-reference', '1099');
     whenReplacing('element-libelle', '');
@@ -116,6 +132,23 @@ const givenReferential = (nombre = 0): ElementsApiFixture => {
   const api = new ElementsApiFixture(elementsFixture(nombre));
   api.install();
   return api;
+};
+const givenProductsInPreparation = (nombre: number): void => {
+  new ElementsApiFixture(elementsFixture(nombre, 'EN_PREPARATION')).install();
+};
+const givenProductsInTheirCycles = (): void => {
+  const [enAtelier] = elementsFixture(1);
+  const [enPreparation] = elementsFixture(1, 'EN_PREPARATION');
+  new ElementsApiFixture([
+    ...(enAtelier === undefined ? [] : [enAtelier]),
+    ...(enPreparation === undefined ? [] : [{ ...enPreparation, id: 'element-2', reference: '2001' }]),
+  ]).install();
+};
+const whenChoosingCycle = (cycle: string): void => {
+  cy.get(dataSelector(`elements-cycle-${cycle}`)).click();
+};
+const thenOnlyListed = (reference: string): void => {
+  cy.get(dataSelector('element-reference-cell')).should('have.length', 1).invoke('text').invoke('trim').should('equal', reference);
 };
 const whenDeclaringCategory = (code: string): void => {
   cy.get(dataSelector('elements-categories')).click();
@@ -206,12 +239,12 @@ const whenEditingFirstElement = (): void => {
 };
 const whenGoingToNextPage = (): void => {
   cy.wait('@elementsRead');
-  cy.get(dataSelector('elements-pagination')).find('button[aria-label="Page suivante"]').click();
+  cy.get(dataSelector('elements-page-suivante')).click();
 };
 const thenReferentialIsVisible = (): void => {
   cy.location('pathname').should('eq', '/produits');
   cy.get(dataSelector('elements-page')).should('be.visible');
-  cy.get(dataSelector('elements-empty')).should('contain.text', 'Aucun produit');
+  cy.get(dataSelector('elements-empty')).should('contain.text', 'Rien à l’atelier pour l’instant.');
 };
 const thenElementIsListed = (reference: string, categorie: string, libelle: string): void => {
   cy.get(dataSelector('element-form')).should('not.exist');
@@ -224,5 +257,5 @@ const thenElementWithoutFicheIsListed = (api: ElementsApiFixture): void => {
 const thenLastPageShowsTheRemainingElement = (): void => {
   cy.get(dataSelector('element-row')).should('have.length', 1);
   cy.get(dataSelector('elements-pagination')).should('contain.text', '21–21 sur 21');
-  cy.get('@elementsRead').its('request.query').should('deep.include', { debut: '1970-01-01T00:00:00Z', fin: '2999-12-31T23:59:59Z' });
+  cy.get('@elementsRead').its('request.query').should('deep.include', { cycle: 'EN_ATELIER', page: '1' }).and('not.have.property', 'debut');
 };

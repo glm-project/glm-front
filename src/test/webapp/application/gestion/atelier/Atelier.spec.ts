@@ -77,7 +77,7 @@ describe('Putting moules and OF at the workshop from gestion', () => {
 });
 
 const givenWorkshop = (engages: number, engageables: number): AtelierApiFixture => {
-  const referentiel = new ElementsApiFixture(elementsFixture(Math.max(engages, engageables)));
+  const referentiel = new ElementsApiFixture(elementsFixture(Math.max(engages, engageables), 'EN_PREPARATION'));
   referentiel.install();
   const api = new AtelierApiFixture(suivisFixture(engages));
   api.engageables = engageablesFixture(Math.max(engages, engageables));
@@ -93,6 +93,7 @@ const whenVisitingWorkshop = (): void => {
 const whenVisitingReferential = (): void => {
   cy.viewport(1280, 900);
   cy.visit('/produits');
+  cy.get(dataSelector('elements-cycle-EN_PREPARATION')).click();
   cy.wait('@elementsRead');
 };
 const whenOpeningFromTheMenu = (): void => {

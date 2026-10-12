@@ -2,8 +2,8 @@
 
 Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des éléments de fabrication —
 les produits, rangés dans les catégories que l'entreprise déclare — que le dirigeant ou son assistante
-créent et tiennent à jour, bien avant qu'un élément soit mis à l'atelier. L'écran s'appelle « Produits »
-(`/produits`).
+créent et tiennent à jour, et les montre là où ils en sont de leur cycle : en préparation, en atelier ou
+clôturés. L'écran s'appelle « Produits » (`/produits`).
 
 ## Langage
 
@@ -24,6 +24,9 @@ identifiant stable et jamais nul, il reste visible en second rang et sert de rep
 **Libellé** : le texte libre d'une ligne qui rend reconnaissable un élément sans référence. Il porte le
 champ `description` de l'API ; le mot « description » n'apparaît jamais à l'écran.
 
+**Cycle** : où en est un produit, lu sur son suivi d'atelier par le back. `EN_PREPARATION` (aucun suivi),
+`EN_ATELIER` (suivi ouvert) ou `CLOTURE`. Un produit n'est que dans un cycle à la fois.
+
 ## Modèle de domaine
 
 - **ElementDeFabrication** : agrégat racine portant son identifiant, sa catégorie, son nom, sa référence
@@ -40,16 +43,20 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   validés.
 - **CommandeModificationElement** : commande de modification, portant l'identifiant et les attributs
   facultatifs validés. La catégorie n'y figure pas : elle ne se change pas.
-- **RequeteElements** : objet de requête paginée (`page`, `taille`).
-- **ReferentielDesProduits** : acquisition complète de l'écran — les catégories déclarées, dans l'ordre
-  choisi par l'entreprise, et tous les éléments. `estSansCategorie()` dit qu'aucun produit ne peut encore
-  être créé.
+- **CycleDuProduit** : union des trois cycles, `CYCLES_DU_PRODUIT` dans l'ordre de la vie d'un produit et
+  `CYCLE_PAR_DEFAUT` (`EN_ATELIER`).
+- **EtatDAtelier** : `EN_ATTENTE`, `EN_COURS` ou `INTERROMPU`, déduit par le back pour un produit en atelier.
+- **ProduitDansSonCycle** : un élément lu dans son cycle, avec sa date de création et son passage à l'atelier
+  (`PassageALAtelier`) : rien en préparation, l'état et la mise à l'atelier en atelier, la mise à l'atelier,
+  la clôture et son auteur une fois clôturé.
+- **RequeteProduits** : objet de requête d'un onglet — cycle, catégorie éventuelle, recherche, page — lu
+  vingt par vingt. `rechercheSaisie()` n'envoie pas une recherche blanche.
 - **FormulaireElementDeFabrication** : modèle riche d'interaction pour la création et la modification, qui
   valide les saisies, exige une catégorie choisie parmi celles proposées à la création, produit la commande
   adéquate, efface le refus de doublon dès que la référence est modifiée et le refus `CategorieInconnue` dès
   qu'une autre catégorie est choisie.
-- **ElementsDeFabricationPort** : port secondaire exposant la consultation paginée, la création et la
-  modification, les écritures rendant un `Result<T, Refus>`.
+- **ElementsDeFabricationPort** : port secondaire exposant la lecture d'un cycle, page par page, la création
+  et la modification, les écritures rendant un `Result<T, Refus>`.
 - **FormulaireCategorieDeProduit** : modèle de la déclaration d'une catégorie. Il met la saisie en
   majuscules, vérifie le motif (`^[A-Z]{1,10}$`, porté par `CategorieDeProduit.erreur`) et garde le refus
   `CategorieDejaExistante` sur le champ tant que le même code est saisi.
@@ -83,6 +90,9 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   des catégories ; sans catégorie, l'écran invite à en déclarer une et ne propose aucune création.
 - Le formulaire n'annonce pas le nom qui sera donné : le compteur du back n'avance qu'à la création et
   aucune lecture ne le prédit.
+- **Trois onglets exclusifs**, En préparation, En atelier — ouvert par défaut — et Clôturés, chacun avec ses
+  colonnes et ses actions : « Mettre à l'atelier » en préparation, « Coût de revient » ensuite, « Modifier »
+  partout. Une création bascule sur En préparation, où le produit arrive.
 - **L'écran ne propose pas de supprimer.** Le `DELETE` existe à l'API, mais le client parle de clôture, et
   supprimer un élément portant des temps détruirait des heures de paie. La sortie d'un élément est la
   clôture de son suivi d'atelier, qui appartient à un autre contexte.
@@ -90,38 +100,34 @@ champ `description` de l'API ; le mot « description » n'apparaît jamais à l'
   l'état sans catégorie. Une catégorie se déclare et ne se renomme jamais : son code préfixe le nom des
   produits, et l'overlay le rappelle. La déclaration s'ouvre sur place, par « Nouvelle catégorie » en bas de la
   liste : Entrée déclare, Échap ou Annuler referme le champ sans fermer l'overlay. À sa fermeture, la page relit
-  son référentiel.
+  ses catégories et l'onglet courant.
 - Ce contexte ne dépend d'aucun contexte de `pupitre` et ne partage aucun modèle métier avec lui.
 
 ## Relations de contexte
 
 - `app/shared/result` : `Result<T, E>` pour les retours d'écriture.
 - `app/shared/pagination` : `Page<T>` pour la consultation paginée.
-- L'atelier engage un élément existant ; ce contexte ignore les suivis, les états et les temps.
+- L'atelier engage un élément existant. Ce contexte lit le cycle et l'état que le back en déduit, sans
+  jamais les recalculer ; il ignore les temps.
 - `cout-de-revient` chiffre ce que la fabrication d'un élément a coûté. **Ce contexte ne l'importe pas** :
-  le lien est un `routerLink` vers `/couts-de-revient/<id>`, posé sur chaque ligne sans condition. Le
-  référentiel ne porte aucun statut d'atelier et ne peut donc pas savoir si l'élément a déjà été engagé ;
-  c'est l'écran de coût de revient qui dit qu'aucun temps n'a été pointé, et cette réponse-là vaut mieux
-  qu'un lien absent sans explication.
+  le lien est un `routerLink` vers `/couts-de-revient/<id>`, posé sur les produits en atelier et clôturés.
+  Un produit en préparation n'a encore aucun temps : le lien n'y mènerait qu'à une page vide.
 
 ## Règles locales
 
-- **Le référentiel ne porte aucune période.** `GET /api/elements-de-fabrication` exige pourtant `debut` et
-  `fin`, qui filtrent la date de création. L'adapter secondaire absorbe ce piège en demandant toute
-  l'amplitude ; aucun filtre de période n'atteint l'écran. C'est le suivi d'atelier qui porte des dates,
-  pas l'élément.
+- **Aucune période de création n'est envoyée.** `debut` et `fin` sont facultatifs depuis glm-back#150 :
+  l'écran ne filtre pas sur la création.
 - Tous les mots affichés vivent dans `LibellesElementsDeFabrication`. Aucun mot en dur dans un template : le
   jour où une deuxième entreprise cliente entre, un seul fichier change. La catégorie fait exception : son code
   s'affiche tel quel.
 - Pour les formulaires et la validation des saisies, appliquer l'[ADR 0036](../../../../../../documentation/adr/0036-rich-domain-models-for-form-interactions.md) :
   la saisie et ses invariants sont portés par un modèle de domaine riche, sans `ReactiveFormsModule`.
 
-## Recherche du référentiel
+## Lecture par onglet
 
-Le port fournit `referentiel()` comme acquisition complète pour la recherche de l'écran : les catégories
-de `GET /api/categories-de-produit` et les éléments, lus en parallèle. Le secondaire parcourt les pages de
-chaque collection avec la taille commune et refuse les échos de page, tailles, totaux, troncatures et
-doublons incohérents. Il signale une panne une seule fois et ne présente jamais une collection partielle
-comme résultat complet. La page cherche sans casse ni accents, puis pagine localement les résultats.
-Une nouvelle recherche ou un changement de catégorie repart de la première page. Actualiser et les écritures
-réussies relisent toute la collection ; une réponse obsolète ne remplace pas une lecture récente.
+Chaque onglet lit son cycle au serveur, vingt produits par page : le cycle, la catégorie choisie et la
+recherche partent en paramètres, et le serveur trie chaque cycle par son dernier événement. Changer d'onglet,
+de catégorie ou de recherche repart de la première page. Les boutons de page ne s'affichent qu'au-delà d'une
+page, sauf sur Clôturés, liste qui ne fait que grandir et qui situe toujours ses produits (« 1–20 sur N »).
+Les catégories se lisent à l'ouverture, à « Actualiser » et à la fermeture de l'overlay. Une réponse obsolète
+ne remplace pas une lecture récente.
