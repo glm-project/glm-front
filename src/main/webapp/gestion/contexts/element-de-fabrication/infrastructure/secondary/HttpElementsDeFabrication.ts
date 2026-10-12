@@ -11,6 +11,7 @@ import { CategorieDeProduit } from '../../domain/CategorieDeProduit';
 import { CategorieInconnue } from '../../domain/CategorieInconnue';
 import { CommandeCreationElement } from '../../domain/CommandeCreationElement';
 import { CommandeModificationElement } from '../../domain/CommandeModificationElement';
+import { CompteursDesCycles } from '../../domain/CompteursDesCycles';
 import { ElementDeFabrication } from '../../domain/ElementDeFabrication';
 import { ElementDeFabricationId } from '../../domain/ElementDeFabricationId';
 import { ElementDeFabricationIntrouvable } from '../../domain/ElementDeFabricationIntrouvable';
@@ -65,6 +66,14 @@ const toPassage = (element: RestElement): PassageALAtelier => {
 const toProduit = (element: RestElement): ProduitDansSonCycle =>
   new ProduitDansSonCycle(toElement(element), instant(element.dateDeCreation, 'element.dateDeCreation'), toPassage(element));
 
+const filtresDe = (requete: RequeteProduits): { categorie?: string; recherche?: string } => {
+  const recherche = requete.rechercheSaisie();
+  return {
+    ...(requete.categorie === undefined ? {} : { categorie: requete.categorie.value }),
+    ...(recherche === undefined ? {} : { recherche }),
+  };
+};
+
 const toFiche = (
   commande: CommandeCreationElement | CommandeModificationElement,
 ): components['schemas']['RestModificationElementDeFabrication'] => ({
@@ -101,17 +110,20 @@ export class HttpElementsDeFabrication extends ElementsDeFabricationPort {
 
   override async produits(requete: RequeteProduits): Promise<Page<ProduitDansSonCycle>> {
     try {
-      const recherche = requete.rechercheSaisie();
       const response = await this.api.read('/api/elements-de-fabrication', {
-        queryParams: {
-          cycle: requete.cycle,
-          ...(requete.categorie === undefined ? {} : { categorie: requete.categorie.value }),
-          ...(recherche === undefined ? {} : { recherche }),
-          page: requete.page,
-          size: requete.taille,
-        },
+        queryParams: { cycle: requete.cycle, ...filtresDe(requete), page: requete.page, size: requete.taille },
       });
       return buildPageFrom(response, toProduit, requete);
+    } catch (failure) {
+      this.errors.handleError(failure);
+      throw failure;
+    }
+  }
+
+  override async compteurs(requete: RequeteProduits): Promise<CompteursDesCycles> {
+    try {
+      const compteurs = await this.api.read('/api/elements-de-fabrication/compteurs', { queryParams: filtresDe(requete) });
+      return { EN_PREPARATION: compteurs.enPreparation, EN_ATELIER: compteurs.enAtelier, CLOTURE: compteurs.clotures };
     } catch (failure) {
       this.errors.handleError(failure);
       throw failure;

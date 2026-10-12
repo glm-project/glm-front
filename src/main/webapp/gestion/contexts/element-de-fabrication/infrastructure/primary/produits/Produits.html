@@ -25,7 +25,10 @@
       (click)="choisirCycle(cycleOffert)"
       [attr.data-selector]="'elements-cycle-' + cycleOffert"
     >
-      {{ libelles.cycles[cycleOffert] }}
+      <span data-selector="elements-cycle-libelle">{{ libelles.cycles[cycleOffert] }}</span>
+      @if (etat().compteurs; as compteurs) {
+      <span class="compteur" data-selector="elements-compteur">{{ compteurs[cycleOffert] }}</span>
+      }
     </button>
     }
   </nav>

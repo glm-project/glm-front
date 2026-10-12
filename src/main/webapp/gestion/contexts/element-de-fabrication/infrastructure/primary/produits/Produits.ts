@@ -8,6 +8,7 @@ import { MatTableModule } from '@angular/material/table';
 import { RouterLink } from '@angular/router';
 import { CategorieDeProduit } from '../../../domain/CategorieDeProduit';
 import { CategoriesDeProduitPort } from '../../../domain/CategoriesDeProduitPort';
+import { CompteursDesCycles } from '../../../domain/CompteursDesCycles';
 import { CYCLE_PAR_DEFAUT, CycleDuProduit, CYCLES_DU_PRODUIT } from '../../../domain/CycleDuProduit';
 import { ElementDeFabrication } from '../../../domain/ElementDeFabrication';
 import { ElementsDeFabricationPort } from '../../../domain/ElementsDeFabricationPort';
@@ -58,6 +59,7 @@ interface EtatProduits {
   readonly sansCategorie: boolean;
   readonly produits: readonly ProduitDansSonCycle[];
   readonly total: number;
+  readonly compteurs: CompteursDesCycles | undefined;
   readonly chargement: boolean;
   readonly echec: boolean;
 }
@@ -89,6 +91,7 @@ export class Produits implements OnInit {
     sansCategorie: false,
     produits: [],
     total: 0,
+    compteurs: undefined,
     chargement: false,
     echec: false,
   });
@@ -204,13 +207,18 @@ export class Produits implements OnInit {
         recherche: this.recherche(),
         page: this.page(),
       });
-      const [categories, page] = await Promise.all([this.categoriesSi(avecCategories), this.port.produits(requete)]);
+      const [categories, page, compteurs] = await Promise.all([
+        this.categoriesSi(avecCategories),
+        this.port.produits(requete),
+        this.port.compteurs(requete),
+      ]);
       if (lecture === this.lecture) {
         this.etat.update(etat => ({
           ...etat,
           ...(categories === undefined ? {} : { categories, sansCategorie: categories.length === 0 }),
           produits: page.elements,
           total: page.totalCount,
+          compteurs,
         }));
       }
     } catch {

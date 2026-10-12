@@ -99,7 +99,25 @@ describe('Produits page', () => {
   it('should offer the three cycles in the order of a product life', async () => {
     await whenOpening();
 
-    expect(buttonsIn('elements-cycles')).toEqual(['En préparation', 'En atelier', 'Clôturés']);
+    expect(texts('elements-cycle-libelle')).toEqual(['En préparation', 'En atelier', 'Clôturés']);
+  });
+
+  it('should count the products of each cycle on its tab', async () => {
+    givenProducts();
+
+    await whenOpening();
+
+    expect(counters()).toEqual(['2', '2', '1']);
+  });
+
+  it('should count the products matching the search on each tab', async () => {
+    givenProducts();
+    await whenOpening();
+
+    await whenSearching('capot');
+
+    expect(requiredFixture(port.requetesDeCompteurs.at(-1), 'compteurs').recherche).toBe('capot');
+    expect(counters()).toEqual(['1', '0', '0']);
   });
 
   it.each([
@@ -530,7 +548,10 @@ describe('Produits page', () => {
   const buttonsIn = (selector: string): string[] =>
     Array.from(document.querySelector(dataSelector(selector))?.querySelectorAll('button') ?? [], element => element.textContent.trim());
   const pressedCycle = (): string =>
-    document.querySelector('[data-selector="elements-cycles"] [aria-pressed="true"]')?.textContent.trim() ?? '';
+    document
+      .querySelector('[data-selector="elements-cycles"] [aria-pressed="true"] [data-selector="elements-cycle-libelle"]')
+      ?.textContent.trim() ?? '';
+  const counters = (): string[] => texts('elements-compteur');
   const headers = (): string[] => [...document.querySelectorAll('th')].map(header => header.textContent.trim());
   const creation = (): Element | null => document.querySelector(dataSelector('elements-new'));
   const categorySelect = (): HTMLSelectElement =>

@@ -2,6 +2,7 @@ import { Page } from '@/app/shared/pagination/domain/Page';
 import { ok, Result } from '@/app/shared/result/domain/Result';
 import { CommandeCreationElement } from '@/gestion/contexts/element-de-fabrication/domain/CommandeCreationElement';
 import { CommandeModificationElement } from '@/gestion/contexts/element-de-fabrication/domain/CommandeModificationElement';
+import { CompteursDesCycles } from '@/gestion/contexts/element-de-fabrication/domain/CompteursDesCycles';
 import { ElementDeFabrication } from '@/gestion/contexts/element-de-fabrication/domain/ElementDeFabrication';
 import { ElementDeFabricationId } from '@/gestion/contexts/element-de-fabrication/domain/ElementDeFabricationId';
 import { ElementsDeFabricationPort } from '@/gestion/contexts/element-de-fabrication/domain/ElementsDeFabricationPort';
@@ -24,16 +25,20 @@ const textesDe = (element: ElementDeFabrication): string[] => [
   element.libelle?.value ?? '',
 ];
 
-const correspond = (produit: ProduitDansSonCycle, requete: RequeteProduits): boolean => {
+const filtre = (produit: ProduitDansSonCycle, requete: RequeteProduits): boolean => {
   const recherche = requete.rechercheSaisie();
   const dansLaCategorie = requete.categorie === undefined || produit.element.categorie.estLaMeme(requete.categorie);
   const trouve = recherche === undefined || textesDe(produit.element).some(texte => sansCasse(texte).includes(sansCasse(recherche)));
-  return produit.passage.cycle === requete.cycle && dansLaCategorie && trouve;
+  return dansLaCategorie && trouve;
 };
+
+const correspond = (produit: ProduitDansSonCycle, requete: RequeteProduits): boolean =>
+  produit.passage.cycle === requete.cycle && filtre(produit, requete);
 
 export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
   produitsEnregistres: readonly ProduitDansSonCycle[] = [];
   readonly requetes: RequeteProduits[] = [];
+  readonly requetesDeCompteurs: RequeteProduits[] = [];
   readonly enregistrements: (CommandeCreationElement | CommandeModificationElement)[] = [];
   creation: Result<void, RefusCreationElement> = ok(undefined);
   modification: Result<void, RefusModificationElement> = ok(undefined);
@@ -58,6 +63,15 @@ export class ElementsDeFabricationFixture extends ElementsDeFabricationPort {
       this.lectureDifferee
       ?? Promise.resolve(new Page(trouves.slice(requete.page * requete.taille, (requete.page + 1) * requete.taille), trouves.length))
     );
+  }
+
+  override compteurs(requete: RequeteProduits): Promise<CompteursDesCycles> {
+    this.requetesDeCompteurs.push(requete);
+    if (this.lectureFailure !== undefined) return Promise.reject(this.lectureFailure);
+    const filtres = this.produitsEnregistres.filter(produit => filtre(produit, requete));
+    const compter = (cycle: ProduitDansSonCycle['passage']['cycle']): number =>
+      filtres.filter(produit => produit.passage.cycle === cycle).length;
+    return Promise.resolve({ EN_PREPARATION: compter('EN_PREPARATION'), EN_ATELIER: compter('EN_ATELIER'), CLOTURE: compter('CLOTURE') });
   }
 
   override async creer(commande: CommandeCreationElement): Promise<Result<void, RefusCreationElement>> {

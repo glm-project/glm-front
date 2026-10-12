@@ -119,19 +119,37 @@ class ElementsHttpBackendFixture implements HttpBackend {
   }
 
   private handleGet(pathname: string, searchParams: URLSearchParams): HttpResponse<unknown> | HttpErrorResponse {
-    if (pathname !== ROUTE) {
-      return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
+    switch (pathname) {
+      case ROUTE:
+        return this.page(searchParams);
+      case `${ROUTE}/compteurs`:
+        return this.compteurs(searchParams);
+      default:
+        return new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
     }
+  }
+
+  private filtres(searchParams: URLSearchParams): ElementFixture[] {
+    const categorie = searchParams.get('categorie');
+    return this.elements.filter(
+      element => (categorie === null || element.categorie === categorie) && trouve(element, searchParams.get('recherche')),
+    );
+  }
+
+  private page(searchParams: URLSearchParams): HttpResponse<unknown> {
     const page = Number(searchParams.get('page') ?? '0');
     const size = Number(searchParams.get('size') ?? '20');
-    const categorie = searchParams.get('categorie');
-    const trouves = this.elements.filter(
-      element =>
-        (searchParams.get('cycle') ?? undefined) === element.cycle
-        && (categorie === null || element.categorie === categorie)
-        && trouve(element, searchParams.get('recherche')),
-    );
+    const trouves = this.filtres(searchParams).filter(element => (searchParams.get('cycle') ?? undefined) === element.cycle);
     return pageOf(trouves, page, size);
+  }
+
+  private compteurs(searchParams: URLSearchParams): HttpResponse<unknown> {
+    const trouves = this.filtres(searchParams);
+    const compter = (cycle: string): number => trouves.filter(element => element.cycle === cycle).length;
+    return new HttpResponse({
+      status: 200,
+      body: { enPreparation: compter('EN_PREPARATION'), enAtelier: compter('EN_ATELIER'), clotures: compter('CLOTURE') },
+    });
   }
 
   private handlePost(pathname: string, body: CorpsDeFiche & { categorie: string }): HttpResponse<unknown> | HttpErrorResponse {
@@ -317,6 +335,22 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
     expect(page.elements.map(produit => produit.element.id.value)).toEqual(['e-20', 'e-21', 'e-22', 'e-23', 'e-24']);
   });
 
+  it('should count the products of each cycle', async () => {
+    givenReferential([mouleFixture, ofALAtelierFixture, moulesClotureFixture, { ...ofALAtelierFixture, id: 'of-3' }]);
+
+    const compteurs = await whenCounting();
+
+    expect(compteurs).toEqual({ EN_PREPARATION: 1, EN_ATELIER: 2, CLOTURE: 1 });
+  });
+
+  it('should count only the products of the category and the search', async () => {
+    givenReferential([mouleFixture, ofALAtelierFixture, moulesClotureFixture]);
+
+    const compteurs = await whenCounting('MOULE', 'capot');
+
+    expect(compteurs).toEqual({ EN_PREPARATION: 1, EN_ATELIER: 0, CLOTURE: 0 });
+  });
+
   it('should return an empty page for an empty cycle', async () => {
     givenReferential([]);
 
@@ -402,6 +436,16 @@ describe.each(adapters)('ElementsDeFabricationPort contract, honoured by %s', (_
       }),
     );
 
+  const whenCounting = (categorie?: string, recherche = '') =>
+    port.compteurs(
+      new RequeteProduits({
+        cycle: 'EN_ATELIER',
+        categorie: categorie === undefined ? undefined : new CategorieDeProduit(categorie),
+        recherche,
+        page: 0,
+      }),
+    );
+
   const whenListing = async (): Promise<ProjectionElement[]> => {
     const page = await whenReading('EN_PREPARATION');
     return page.elements.map(projeter);
@@ -480,6 +524,26 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
 
     await result;
     expect(parametres(request)).toEqual({ cycle: 'EN_ATELIER', page: '0', size: '20' });
+  });
+
+  it('should count with the category and the search only', async () => {
+    const result = port.compteurs(
+      new RequeteProduits({ cycle: 'CLOTURE', categorie: new CategorieDeProduit('OF'), recherche: 'capot', page: 3 }),
+    );
+    const request = await whenCountersAnswer();
+
+    await result;
+    expect(parametres(request)).toEqual({ categorie: 'OF', recherche: 'capot' });
+  });
+
+  it('should report a failed count once and reject', async () => {
+    const result = port
+      .compteurs(new RequeteProduits({ cycle: 'EN_ATELIER', categorie: undefined, recherche: '', page: 0 }))
+      .catch((failure: unknown) => failure);
+    await whenCountersFail();
+
+    expect(await result).toBeInstanceOf(HttpErrorResponse);
+    expect(errorHandler.errors).toHaveLength(1);
   });
 
   it('should report a technical read failure to ErrorHandlerPort and reject', async () => {
@@ -589,6 +653,18 @@ describe('Beyond the contract: HttpElementsDeFabrication', () => {
   const whenReadFails = async (): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));
     server.expectOne(candidate => candidate.method === 'GET' && candidate.url === ROUTE).flush({}, { status: 500, statusText: 'Failure' });
+  };
+
+  const whenCountersAnswer = async (): Promise<TestRequest> => {
+    await new Promise(resolve => setTimeout(resolve));
+    const request = server.expectOne(candidate => candidate.url === `${ROUTE}/compteurs`);
+    request.flush({ enPreparation: 0, enAtelier: 0, clotures: 0 });
+    return request;
+  };
+
+  const whenCountersFail = async (): Promise<void> => {
+    await new Promise(resolve => setTimeout(resolve));
+    server.expectOne(candidate => candidate.url === `${ROUTE}/compteurs`).flush({}, { status: 500, statusText: 'Failure' });
   };
 
   const parametres = (request: TestRequest): Record<string, string | null> =>

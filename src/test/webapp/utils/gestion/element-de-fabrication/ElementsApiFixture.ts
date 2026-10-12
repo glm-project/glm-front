@@ -53,8 +53,16 @@ export class ElementsApiFixture {
         totalElementsCount: trouves.length,
       });
     }).as('elementsRead');
+    this.installCompteurs();
     this.installCreation();
     this.installModification();
+  }
+
+  private installCompteurs(): void {
+    cy.intercept({ method: 'GET', pathname: `${ROUTE}/compteurs` }, request => {
+      const compter = (cycle: string): number => this.elements.filter(element => correspond(element, { ...request.query, cycle })).length;
+      request.reply({ enPreparation: compter('EN_PREPARATION'), enAtelier: compter('EN_ATELIER'), clotures: compter('CLOTURE') });
+    }).as('compteursRead');
   }
 
   private installCategories(): void {
