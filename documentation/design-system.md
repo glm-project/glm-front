@@ -16,8 +16,8 @@ and hatching; never let its border alone signal an NC, since it reaches only 1.9
 
 Typography has six levels: `display`, `title`, `section`, `body`, `body-sm` and `label`. Use their Tailwind
 utilities rather than assembling a seventh size/weight combination. Touch targets use `spacing-touch`
-(44 px) and `spacing-touch-lg` (52 px); keep them in pixels because the physical target does not scale with
-reading distance.
+(44 px), `spacing-touch-lg` (52 px) and `spacing-touch-xl` (64 px), the size of the pupitre's pointage gestures
+held under a finger; keep them in pixels because the physical target does not scale with reading distance.
 
 `@theme static` is required. Tailwind scans templates, not stylesheets, while Material and component CSS read
 tokens through `var()`. Static publication keeps every role available even when no utility currently names it.
