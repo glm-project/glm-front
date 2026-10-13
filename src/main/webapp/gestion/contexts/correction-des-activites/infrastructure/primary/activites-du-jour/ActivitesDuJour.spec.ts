@@ -11,6 +11,7 @@ import {
   tourFixture,
 } from '@test/unit/fixtures/gestion/correction-des-activites/JourneeACorrigerFixture';
 import { dataSelector } from '@test/utils/DataSelector';
+import { ActiviteTerminee } from '../../../domain/journee/ActiviteDeLaJournee';
 import { ActivitesDuJour } from './ActivitesDuJour';
 
 const SUIVIS = [
@@ -79,6 +80,7 @@ describe('Activities of the day', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({ providers: [{ provide: ComponentFixtureAutoDetect, useValue: true }, provideRouter([])] });
+    shown = TestBed.createComponent(ActivitesDuJour);
   });
 
   it('should list the activities in chronological order with their hours, element, workstation, type and duration', async () => {
@@ -185,14 +187,51 @@ describe('Activities of the day', () => {
     expect(texts('activites-vide')).toEqual(['Aucune activité ce jour']);
   });
 
+  it.each([
+    { cas: 'finished normally', activite: matin, nom: 'Retirer l’activité OF 24-131, 08:00 → 09:30' },
+    { cas: 'ended automatically', activite: finAutomatique, nom: 'Retirer l’activité OF 24-131, 18:30 → 21:45' },
+  ])('should offer to remove an activity $cas, named by its element and its hours', async ({ activite, nom }) => {
+    await whenShowingTheDay([activite]);
+
+    expect(labels('activite-retirer')).toEqual([nom]);
+  });
+
+  it('should offer no removal for an activity in progress nor for an activity whose suivi is closed', async () => {
+    await whenShowingTheDay([enCoursDepuis14h, suiviCloture]);
+
+    expect(labels('activite-retirer')).toEqual([]);
+  });
+
+  it('should ask to remove the activity whose button is pressed', async () => {
+    const demandes = givenTheRemovalsAsked();
+    await whenShowingTheDay([matin, soir]);
+
+    whenPressingTheRemovalOfTheSecondActivity();
+
+    expect(demandes.map(demande => demande.id.value)).toEqual(['soir']);
+  });
+
+  const givenTheRemovalsAsked = (): ActiviteTerminee[] => {
+    const demandes: ActiviteTerminee[] = [];
+    shown.componentInstance.retraitDemande.subscribe(activite => demandes.push(activite));
+    return demandes;
+  };
+
+  const whenPressingTheRemovalOfTheSecondActivity = (): void => {
+    const boutons = (shown.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(dataSelector('activite-retirer'));
+    boutons[1]?.click();
+  };
+
   const whenShowingTheDay = async (activites: readonly ActiviteSemee[], jour = 5): Promise<void> => {
-    shown = TestBed.createComponent(ActivitesDuJour);
     shown.componentRef.setInput('journee', journeeFixture({ jour, suivis: SUIVIS, activites }));
     await shown.whenStable();
   };
 
   const hrefs = (selector: string): (string | null)[] =>
     [...(shown.nativeElement as HTMLElement).querySelectorAll(dataSelector(selector))].map(element => element.getAttribute('href'));
+
+  const labels = (selector: string): (string | null)[] =>
+    [...(shown.nativeElement as HTMLElement).querySelectorAll(dataSelector(selector))].map(element => element.getAttribute('aria-label'));
 
   const texts = (selector: string): string[] =>
     [...(shown.nativeElement as HTMLElement).querySelectorAll(dataSelector(selector))].map(element =>

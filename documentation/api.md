@@ -135,6 +135,13 @@ same command; 201 and 200 are both successes. The refusals the context translate
 `date-de-survenue-future` (400), `operateur-non-habilite` (409), `operateur-introuvable` and
 `poste-de-travail-introuvable` (404); `saisie-concurrente` is not a refusal but a request to reread the dossier.
 
+The removal of an activity by the gestionnaire is `POST /api/atelier/suivis/{id}/activites/{activite}/retrait` with
+`{ id }`, under the same identifier rule; 201 and 200 are both successes. `saisie-concurrente`,
+`suivi-d-atelier-introuvable`, `activite-visee-introuvable` and `evenement-posterieur-a-la-cloture` mean the day read is no
+longer the server's, and resolve as `JOURNEE_CHANGEE` (reread, start over). `activite-en-cours` and any unknown code stay
+technical failures: the screen never offers the removal of an activity in progress. No removal refusal has a motif the
+gestionnaire could correct.
+
 `GesteReplayPolicy` owns the single `saisie-concurrente` retry. The transport
 normalizes the workshop motif but keeps the original diagnostic code. A concurrent refusal triggers a reread
 of the affected aggregate and one identical retry with the original UUID and business timestamp.

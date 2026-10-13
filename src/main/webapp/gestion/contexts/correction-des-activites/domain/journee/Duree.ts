@@ -31,6 +31,17 @@ export class Duree {
   }
 
   plus(autre: Duree): Duree {
-    return new Duree(`PT${(this.millisecondes + autre.millisecondes) / MILLISECONDES_PAR_SECONDE}S`);
+    return Duree.deMillisecondes(this.millisecondes + autre.millisecondes);
+  }
+
+  moins(autre: Duree): Duree {
+    if (autre.millisecondes > this.millisecondes) {
+      throw new Error('Une durée ne peut pas être retranchée d’une durée plus courte.');
+    }
+    return Duree.deMillisecondes(this.millisecondes - autre.millisecondes);
+  }
+
+  private static deMillisecondes(millisecondes: number): Duree {
+    return new Duree(`PT${millisecondes / MILLISECONDES_PAR_SECONDE}S`);
   }
 }

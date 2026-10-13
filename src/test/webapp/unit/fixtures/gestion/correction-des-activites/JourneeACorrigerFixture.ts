@@ -1,4 +1,4 @@
-import { ActiviteDeLaJournee } from '@/gestion/contexts/correction-des-activites/domain/journee/ActiviteDeLaJournee';
+import { ActiviteDeLaJournee, ActiviteTerminee } from '@/gestion/contexts/correction-des-activites/domain/journee/ActiviteDeLaJournee';
 import { ActiviteDeLaJourneeId } from '@/gestion/contexts/correction-des-activites/domain/journee/ActiviteDeLaJourneeId';
 import { BornesDuJour } from '@/gestion/contexts/correction-des-activites/domain/journee/BornesDuJour';
 import { CategorieDActivite } from '@/gestion/contexts/correction-des-activites/domain/journee/CategorieDActivite';
@@ -119,6 +119,22 @@ export const journeeFixture = (semis: JourneeSemee): JourneeACorriger => {
     ),
     choix: new ChoixDAjout({ suivis: suivisPresents, postes: semis.postes ?? [] }),
   });
+};
+
+export const activiteDeLaJournee = (journee: JourneeACorriger, id: string): ActiviteDeLaJournee => {
+  const activite = journee.activites.find(candidate => candidate.id.value === id);
+  if (activite === undefined) {
+    throw new Error(`Activité ${id} non semée`);
+  }
+  return activite;
+};
+
+export const activiteTerminee = (journee: JourneeACorriger, id: string): ActiviteTerminee => {
+  const activite = activiteDeLaJournee(journee, id);
+  if (!activite.estTerminee()) {
+    throw new Error(`Activité ${id} non terminée`);
+  }
+  return activite;
 };
 
 const auTourSuivant = <T>(valeur: T): Promise<T> => new Promise(resolve => setTimeout(() => resolve(valeur)));

@@ -6,6 +6,7 @@ import { ChoixDAjout } from './ChoixDAjout';
 import { Duree } from './Duree';
 import { ElementDeLaJournee } from './ElementDeLaJournee';
 import { ElementDeLaJourneeId } from './ElementDeLaJourneeId';
+import { EtatDActivite } from './EtatDActivite';
 import { InstantDeLaJournee } from './InstantDeLaJournee';
 import { JourACorriger } from './JourACorriger';
 import { JourneeACorriger } from './JourneeACorriger';
@@ -44,7 +45,7 @@ const suivisPresents = (): SuivisPresents =>
     }),
   ]);
 
-const activite = (suivi: string, element: ElementDeLaJournee): ActiviteDeLaJournee =>
+const activite = (suivi: string, element: ElementDeLaJournee, etat: EtatDActivite = { kind: 'EN_COURS' }): ActiviteDeLaJournee =>
   new ActiviteDeLaJournee({
     id: new ActiviteDeLaJourneeId(`debut-${suivi}`),
     suivi: new SuiviDAtelierId(suivi),
@@ -52,9 +53,15 @@ const activite = (suivi: string, element: ElementDeLaJournee): ActiviteDeLaJourn
     poste: undefined,
     categorie: 'TRAVAIL',
     debut: instant('2026-10-05T09:00:00+02:00'),
-    etat: { kind: 'EN_COURS' },
+    etat,
     autresJours: [],
   });
+
+const terminee = (kind: 'TERMINEE' | 'TERMINEE_AUTOMATIQUEMENT'): EtatDActivite => ({
+  kind,
+  fin: instant('2026-10-05T10:00:00+02:00'),
+  dureeSurLeJour: new Duree('PT1H'),
+});
 
 const journeeDesActivites = (activites: readonly ActiviteDeLaJournee[]): JourneeACorriger =>
   new JourneeACorriger({
@@ -89,5 +96,26 @@ describe('JourneeACorriger', () => {
     const ouverte = activite('suivi-1', elementDe('1'));
 
     expect(journeeDesActivites([ouverte]).clotureDe(ouverte)).toBeUndefined();
+  });
+
+  it.each([
+    { cas: 'finished normally, or by a regularised end', kind: 'TERMINEE' },
+    { cas: 'finished automatically', kind: 'TERMINEE_AUTOMATIQUEMENT' },
+  ] as const)('should be correctable when the activity is $cas and its suivi is open', ({ kind }) => {
+    const ouverte = activite('suivi-1', elementDe('1'), terminee(kind));
+
+    expect(journeeDesActivites([ouverte]).estCorrigeable(ouverte)).toBe(true);
+  });
+
+  it('should not be correctable while the activity is in progress', () => {
+    const enCours = activite('suivi-1', elementDe('1'));
+
+    expect(journeeDesActivites([enCours]).estCorrigeable(enCours)).toBe(false);
+  });
+
+  it('should not be correctable once the suivi of the activity is closed', () => {
+    const fermee = activite('suivi-2', elementDe('2'), terminee('TERMINEE'));
+
+    expect(journeeDesActivites([fermee]).estCorrigeable(fermee)).toBe(false);
   });
 });

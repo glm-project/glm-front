@@ -53,8 +53,13 @@ et rejette la lecture. Les types générés restent dans `HttpJourneeACorriger`.
   tronque à la minute, sur le total et non sur chaque portion.
 - Le numéro d'un élément est sa référence, à défaut son nom ; sa désignation est sa description.
 
-Le domaine ne porte que ce que la page lit : `corrigeable`, la recherche d'une activité par son identifiant et la fin du
-lendemain arrivent avec les corrections qui les consomment (ADR 0037).
+Le domaine ne porte que ce que la page lit ou ce que consomment les corrections livrées : la recherche d'une activité
+par son identifiant et la fin du lendemain arrivent avec les corrections qui les consomment (ADR 0037).
+
+- `JourneeACorriger.estCorrigeable(activite)` décide « corrigeable » : activité terminée (`TERMINEE`, qui dit aussi la fin
+  régularisée, ou `TERMINEE_AUTOMATIQUEMENT`) dont le suivi n'est pas clôturé (`clotureDe`). C'est un prédicat de type :
+  il rend une `ActiviteTerminee`, dont l'état porte la fin et la portion du jour, ce qui évite de tester `EN_COURS` à chaque
+  usage. `ActiviteDeLaJournee.estACheval()` dit qu'une portion est comptée un autre jour.
 
 ## Restitution de la page
 
@@ -75,6 +80,40 @@ borne vers le passé. Le jour affiché n'est lu que dans l'adresse.
   (`dureeTotale`) et des liens « début le … » ou « fin le … » vers l'autre jour, pris dans les portions reçues (`jourDuDebut`,
   `jourDeLaFin`). « en cours » sans durée, « fin automatique », « Clôturé le lundi 5 à 11:00 » pour un suivi clôturé. Une
   activité en cours depuis la veille nomme son jour de début (« depuis lundi 5 à 22:00 », comme la frise) ; le back ne lui
-  envoie aucune portion, donc aucun lien « début le … ». Les boutons de correction et « Ajouter une activité » viennent avec
-  les lots qui les câblent : aucun bouton inerte.
+  envoie aucune portion, donc aucun lien « début le … ». Chaque activité corrigeable porte le bouton-icône « Retirer l'activité OF 24-131, 18:30 → 21:45 » (nom construit
+  du numéro de l'élément et des horaires, par `LibellesCorrectionDesActivites`). Les boutons « Changer le poste » et
+  « Ajouter une activité » viennent avec les lots qui les câblent : aucun bouton inerte.
 - Tous les mots affichés sont dans `LibellesCorrectionDesActivites.ts` ; les jours et les heures passent par `DateFormats`.
+
+## Corrections
+
+Une correction est une commande sur un seul suivi, envoyée par `CorrectionsPort` et résolue en `ResultatDeCorrection` :
+`ENREGISTREE`, `JOURNEE_CHANGEE`, ou `REFUS { motif }` quand la correction a des motifs qu'un gestionnaire peut corriger.
+Le type du résultat prend le type des motifs : le retrait n'en a aucun, donc aucun `REFUS` n'existe pour lui.
+
+- **Saisie.** `SaisieDeRetrait.pour(precedente, activite, nouvelIdentifiant)` lie l'identifiant au contenu : la même activité
+  garde l'identifiant de la saisie précédente (un renvoi après une réponse perdue est la même commande), une autre reçoit
+  un identifiant neuf.
+- **Coordinateur.** `CorrectionDUneActivite` (fourni par la page, donc partagé avec le dialogue ouvert depuis elle) envoie,
+  n'envoie rien tant qu'un envoi est en vol (double clic), et passe à `A_RELIRE { issue }` après `ENREGISTREE` ou
+  `JOURNEE_CHANGEE` en oubliant la saisie : le même contenu renvoyé plus tard reçoit un nouvel identifiant, car ces
+  corrections se défont. Après un échec technique (`ECHEC`) la saisie reste, et le renvoi garde son identifiant. Il ne
+  relit pas : la page détient la lecture. L'état « refusée » arrive avec la première correction qui a des motifs.
+- **Effet sur les journées.** `EffetSurLesJournees.duRetrait(journee, activite)` rend le jour affiché, durée
+  opérationnelle avant → après (moins la portion du jour), et chaque autre jour touché avec la portion retirée, reçue du
+  serveur. Il ne découpe jamais une activité existante.
+- **Retrait.** Le bouton de la liste demande à la page (`retraitDemande`) d'ouvrir `RetraitDeLActivite`, un `MatDialog`
+  avec `ConfirmationContent` : titre « Retirer l'activité de 18:30 à 21:45 ? » (« du lundi 5, 20:30, au mardi 6, 04:00 ? »
+  à cheval), l'activité et sa durée totale, une ligne d'effet par jour, « Le retrait vaut pour toute l'activité : le mardi 6
+  perd aussi 3 h 30. » quand elle déborde, « Garder l'activité » et « Retirer l'activité ». Le dialogue ne se ferme pas
+  pendant un envoi. Il se ferme avec l'issue ; la page, qui n'utilise aucun `effect()`, relit alors sa ressource et affiche
+  « Activité retirée » ou « La journée a changé, recommencez ». Le message disparaît au changement de jour (`linkedSignal`
+  sur l'adresse).
+- **Relecture.** Seul le premier chargement (ou la reprise d'une panne sans valeur) affiche « Chargement… » : pendant la
+  relecture d'après une correction, la frise, la liste et l'identité restent à l'écran (`aria-busy`), de sorte qu'un
+  panneau ouvert ne soit jamais détruit. La zone `role="status"` reste dans la page ; chaque annonce y est un nouvel
+  élément (clé = numéro d'annonce), donc une annonce identique à la précédente est de nouveau lue. Après une issue, le
+  focus va à ce message (`tabindex="-1"`), cible stable que la relecture ne détruit pas.
+- **Adaptateur.** `HttpCorrections.retirer` traduit les codes du back en `ENREGISTREE` ou `JOURNEE_CHANGEE`, ou signale
+  une fois la panne par `ErrorHandlerPort` et la rejette ; la liste des codes et leur issue sont dans
+  [`api.md`](../../../../../../documentation/api.md). Le retrait ne vérifie aucune habilitation.

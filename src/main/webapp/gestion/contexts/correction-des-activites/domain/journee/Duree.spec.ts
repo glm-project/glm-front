@@ -20,4 +20,12 @@ describe('Duree', () => {
   it('should add durations exactly, seconds included', () => {
     expect(new Duree('PT1H59M30S').plus(new Duree('PT3H30M45S'))).toEqual(new Duree('PT5H30M15S'));
   });
+
+  it('should subtract durations exactly, seconds included', () => {
+    expect(new Duree('PT5H30M15S').moins(new Duree('PT3H30M45S'))).toEqual(new Duree('PT1H59M30S'));
+  });
+
+  it('should refuse a subtraction that leaves less than nothing', () => {
+    expect(() => new Duree('PT1H').moins(new Duree('PT1H1S'))).toThrow('Une durée ne peut pas être retranchée d’une durée plus courte.');
+  });
 });

@@ -136,6 +136,52 @@ describe('Correction of the day of an operator in gestion', () => {
     thenTheClosingIsSaidWithoutAnyButton();
   });
 
+  it('should send nothing and keep the activity when the manager keeps it after being asked to confirm', () => {
+    givenTheDayAndItsRemoval(lundi([matin, nuitDuLundiAuMardi], 'PT3H30M'), lundi([matin], 'PT1H30M'));
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToRemoveTheActivityOfTheNight();
+    whenKeepingTheActivity();
+
+    thenNothingWasSentAndTheActivityIsKept();
+  });
+
+  it('should show what removing costs before it is confirmed', () => {
+    givenTheDay(lundi([matin, nuitDuLundiAuMardi], 'PT3H30M'));
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToRemoveTheActivityOfTheNight();
+
+    thenTheRemovalIsExplainedDayByDay();
+  });
+
+  it('should send the removal once, read the day again and say the activity was removed', () => {
+    givenTheDayAndItsRemoval(lundi([matin, soirNonConforme], 'PT4H45M'), lundi([matin], 'PT1H30M'));
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToRemoveTheActivityOfTheEvening();
+    whenConfirmingTheRemovalWithADoubleClick();
+
+    thenOneRemovalWasSentAndTheDayIsReadAgainWithoutTheActivity();
+  });
+
+  it('should read the day again and ask to start over when the day changed meanwhile', () => {
+    givenTheDayAndItsRemoval(lundi([matin, soirNonConforme], 'PT4H45M'), lundi([matin], 'PT1H30M'));
+    givenTheDayChangedMeanwhile();
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToRemoveTheActivityOfTheEvening();
+    whenConfirmingTheRemovalWithADoubleClick();
+
+    thenTheDayIsReadAgainAndTheManagerIsAskedToStartOver();
+  });
+
+  it('should keep the day on screen while it is read again, and move the focus to the message', () => {
+    givenTheDayAndItsRemoval(lundi([matin, soirNonConforme], 'PT4H45M'), lundi([matin], 'PT1H30M'));
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenTheNextReadsAreHeld();
+    whenAskingToRemoveTheActivityOfTheEvening();
+    whenConfirmingTheRemoval();
+
+    thenTheDayStaysOnScreenWhileItIsReadAgainAndTheFocusIsOnTheMessage();
+  });
+
   const enCoursDepuisMidi = activiteRecue({
     id: 'en-cours',
     suivi: 'suivi-1',
@@ -185,6 +231,14 @@ describe('Correction of the day of an operator in gestion', () => {
     journees.operateurInconnu = true;
     journees.install();
   };
+  const givenTheDayAndItsRemoval = (avant: ReturnType<typeof lundi>, apres: ReturnType<typeof lundi>): void => {
+    givenTheDay(avant);
+    journees.apresLeRetrait(apres);
+    journees.installRetrait();
+  };
+  const givenTheDayChangedMeanwhile = (): void => {
+    journees.journeeChangee = true;
+  };
   const givenAFailingRead = (): void => {
     journees.failRead = true;
     journees.install();
@@ -213,6 +267,27 @@ describe('Correction of the day of an operator in gestion', () => {
       journees.seed(journee);
     });
     cy.get(dataSelector('corriger-retry')).click();
+  };
+  const whenAskingToRemoveTheActivityOfTheNight = (): void => {
+    cy.get(dataSelector('activite-retirer')).eq(1).click();
+  };
+  const whenAskingToRemoveTheActivityOfTheEvening = (): void => {
+    cy.get(dataSelector('activite-retirer')).eq(1).click();
+  };
+  const whenKeepingTheActivity = (): void => {
+    cy.get(dataSelector('retrait-cancel')).click();
+  };
+  const whenTheNextReadsAreHeld = (): void => {
+    cy.get(dataSelector('activite-horaires')).should('have.length', 2);
+    cy.then(() => {
+      journees.retenirLesLecturesSuivantes();
+    });
+  };
+  const whenConfirmingTheRemoval = (): void => {
+    cy.get(dataSelector('retrait-confirm')).click();
+  };
+  const whenConfirmingTheRemovalWithADoubleClick = (): void => {
+    cy.get(dataSelector('retrait-confirm')).dblclick();
   };
   const whenOpeningTheNextDay = (): void => {
     cy.get(dataSelector('corriger-suivant')).click();
@@ -247,6 +322,53 @@ describe('Correction of the day of an operator in gestion', () => {
     cy.get(dataSelector('activite-duree')).then(durees => {
       expect([...durees].map(element => element.textContent?.trim())).to.deep.equal(['1 h 30', '3 h 15']);
     });
+  };
+  const thenNothingWasSentAndTheActivityIsKept = (): void => {
+    cy.get(dataSelector('retrait-confirm')).should('not.exist');
+    cy.get(dataSelector('activite-horaires')).should('have.length', 2);
+    cy.get(dataSelector('corriger-annonce')).should('not.exist');
+    cy.get('@retraitWrite.all').should('have.length', 0);
+  };
+  const thenTheRemovalIsExplainedDayByDay = (): void => {
+    cy.get(dataSelector('retrait-title')).should('have.text', 'Retirer l’activité du lundi 5, 22:00, au mardi 6, 03:30 ?');
+    cy.get(dataSelector('retrait-effet-libelle')).then(libelles => {
+      expect([...libelles].map(element => element.textContent?.trim())).to.deep.equal(['Opérationnel du lundi 5', 'mardi 6']);
+    });
+    cy.get(dataSelector('retrait-effet-valeur')).then(valeurs => {
+      expect([...valeurs].map(element => element.textContent?.trim())).to.deep.equal(['3 h 30 → 1 h 30', '− 3 h 30']);
+    });
+    cy.get(dataSelector('retrait-debordement')).should(
+      'have.text',
+      'Le retrait vaut pour toute l’activité : le mardi 6 perd aussi 3 h 30.',
+    );
+  };
+  const thenOneRemovalWasSentAndTheDayIsReadAgainWithoutTheActivity = (): void => {
+    cy.get(dataSelector('corriger-annonce')).should('have.text', 'Activité retirée');
+    cy.get('@retraitWrite.all').should('have.length', 1);
+    cy.get('@retraitWrite')
+      .its('request.url')
+      .should('match', /\/api\/atelier\/suivis\/suivi-1\/activites\/soir\/retrait$/);
+    cy.get('@retraitWrite')
+      .its('request.body.id')
+      .should('match', /^[0-9a-f-]{36}$/);
+    cy.get('@journeeRead.all').should('have.length', 2);
+    cy.get(dataSelector('retrait-confirm')).should('not.exist');
+    cy.get(dataSelector('activite-horaires')).should('have.length', 1);
+    cy.get(dataSelector('frise-operationnel')).should('contain.text', 'Opérationnel : 1 h 30');
+  };
+  const thenTheDayStaysOnScreenWhileItIsReadAgainAndTheFocusIsOnTheMessage = (): void => {
+    cy.get(dataSelector('corriger-annonce')).should('have.text', 'Activité retirée');
+    cy.get(dataSelector('corriger-chargement')).should('not.exist');
+    cy.get(dataSelector('activite-horaires')).should('have.length', 2);
+    cy.get(dataSelector('frise-operationnel')).should('contain.text', 'Opérationnel : 4 h 45');
+    cy.get(dataSelector('corriger-identite')).should('have.text', 'Hugo LEROY');
+    cy.focused().should('have.attr', 'data-selector', 'corriger-annonce');
+  };
+  const thenTheDayIsReadAgainAndTheManagerIsAskedToStartOver = (): void => {
+    cy.get(dataSelector('corriger-annonce')).should('have.text', 'La journée a changé, recommencez');
+    cy.get('@journeeRead.all').should('have.length', 2);
+    cy.get(dataSelector('retrait-confirm')).should('not.exist');
+    cy.get(dataSelector('activite-horaires')).should('have.length', 1);
   };
   const thenTheDayOfTheSixthIsShown = (): void => {
     cy.location('pathname').should('eq', '/operateurs/op-1/journees/2026-10-06');

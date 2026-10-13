@@ -1,10 +1,24 @@
 import { localCalendarDay } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
-import { Component, computed, inject, resource } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  linkedSignal,
+  resource,
+  viewChild,
+  ViewContainerRef,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
+import { CorrectionDUneActivite, IssueDeCorrection } from '../../../application/CorrectionDUneActivite';
+import { ActiviteTerminee } from '../../../domain/journee/ActiviteDeLaJournee';
 import { JourACorriger } from '../../../domain/journee/JourACorriger';
 import { JourneeACorriger } from '../../../domain/journee/JourneeACorriger';
 import { JourneeACorrigerPort } from '../../../domain/journee/JourneeACorrigerPort';
@@ -12,6 +26,7 @@ import { OperateurDeLaJourneeId } from '../../../domain/journee/OperateurDeLaJou
 import { ActivitesDuJour } from '../activites-du-jour/ActivitesDuJour';
 import { FriseDuJour } from '../frise-du-jour/FriseDuJour';
 import { LIBELLES_CORRECTION_DES_ACTIVITES } from '../LibellesCorrectionDesActivites';
+import { DonneesDuRetrait, RetraitDeLActivite } from '../retrait-de-l-activite/RetraitDeLActivite';
 
 export type EtatDeLaPage =
   | { readonly kind: 'ADRESSE_INVALIDE' }
@@ -19,6 +34,11 @@ export type EtatDeLaPage =
   | { readonly kind: 'ERREUR' }
   | { readonly kind: 'OPERATEUR_INTROUVABLE' }
   | { readonly kind: 'SUCCES'; readonly journee: JourneeACorriger };
+
+interface AnnonceDeCorrection {
+  readonly texte: string;
+  readonly numero: number;
+}
 
 interface AdresseDeLaJournee {
   readonly operateur: OperateurDeLaJourneeId;
@@ -39,12 +59,18 @@ const operateurDe = (chemin: ParamMap): string => {
   imports: [ActivitesDuJour, ErrorMessage, FriseDuJour, Icon, MatButtonModule, RouterLink],
   templateUrl: './CorrigerLaJourneePage.html',
   styleUrl: './CorrigerLaJourneePage.css',
+  providers: [CorrectionDUneActivite],
 })
 export class CorrigerLaJourneePage {
   protected readonly libelles = LIBELLES_CORRECTION_DES_ACTIVITES.page;
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly dialogs = inject(MatDialog);
+  private readonly viewContainerRef = inject(ViewContainerRef);
+  private readonly injector = inject(Injector);
+  private readonly message = viewChild<ElementRef<HTMLElement>>('message');
+  private numeroDAnnonce = 0;
   private readonly port = inject(JourneeACorrigerPort);
   private readonly aujourdhui = new JourACorriger(localCalendarDay(new Date()));
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
@@ -61,16 +87,32 @@ export class CorrigerLaJourneePage {
     loader: ({ params }) => this.lire(params.adresse, params.operateur),
   });
 
+  private readonly annonce = linkedSignal<AdresseDeLaJournee | undefined, AnnonceDeCorrection | undefined>({
+    source: this.adresse,
+    computation: () => undefined,
+  });
+
+  protected readonly annonces = computed(() => {
+    const annonce = this.annonce();
+    return annonce === undefined ? [] : [annonce];
+  });
+
+  protected readonly relecture = computed(() => this.lecture.status() === 'reloading');
+
   protected readonly entete = computed(() => {
     const jour = this.adresse()?.jour;
     return jour === undefined ? undefined : { jour, precedent: jour.precedent(), suivant: jour.suivant(this.aujourdhui) };
   });
 
+  private readonly enPremierChargement = computed(
+    () => this.lecture.status() === 'loading' || (this.lecture.status() === 'reloading' && !this.lecture.hasValue()),
+  );
+
   protected readonly etat = computed<EtatDeLaPage>(() => {
     if (this.adresse() === undefined) {
       return { kind: 'ADRESSE_INVALIDE' };
     }
-    if (this.lecture.isLoading()) {
+    if (this.enPremierChargement()) {
       return { kind: 'CHARGEMENT' };
     }
     if (this.lecture.status() === 'error') {
@@ -92,6 +134,28 @@ export class CorrigerLaJourneePage {
 
   protected reload(): void {
     this.lecture.reload();
+  }
+
+  protected retirer(journee: JourneeACorriger, activite: ActiviteTerminee): void {
+    const donnees: DonneesDuRetrait = { journee, activite };
+    const dialogue = this.dialogs.open<RetraitDeLActivite, DonneesDuRetrait, IssueDeCorrection>(RetraitDeLActivite, {
+      data: donnees,
+      viewContainerRef: this.viewContainerRef,
+      width: '32rem',
+      maxWidth: 'calc(100vw - 2rem)',
+    });
+    dialogue.afterClosed().subscribe(issue => {
+      if (issue !== undefined) {
+        this.relire(LIBELLES_CORRECTION_DES_ACTIVITES.retrait.annonce[issue]);
+      }
+    });
+  }
+
+  private relire(texte: string): void {
+    this.numeroDAnnonce += 1;
+    this.annonce.set({ texte, numero: this.numeroDAnnonce });
+    this.lecture.reload();
+    afterNextRender(() => this.message()?.nativeElement.focus(), { injector: this.injector });
   }
 
   private async lire(adresse: AdresseDeLaJournee | undefined, operateur: string): Promise<JourneeACorriger | undefined> {

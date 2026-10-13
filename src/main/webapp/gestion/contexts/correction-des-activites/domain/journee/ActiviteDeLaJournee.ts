@@ -21,6 +21,10 @@ export interface FicheDActiviteDeLaJournee {
   readonly autresJours: readonly PortionDeJour[];
 }
 
+export type EtatTermine = Exclude<EtatDActivite, { readonly kind: 'EN_COURS' }>;
+
+export type ActiviteTerminee = ActiviteDeLaJournee & { readonly etat: EtatTermine };
+
 const finitAvantDeCommencer = (fiche: FicheDActiviteDeLaJournee): boolean =>
   fiche.etat.kind !== 'EN_COURS' && fiche.etat.fin.estAvant(fiche.debut);
 
@@ -54,6 +58,14 @@ export class ActiviteDeLaJournee {
     this.autresJours = [...fiche.autresJours];
   }
 
+  estTerminee(): this is ActiviteTerminee {
+    return this.etat.kind !== 'EN_COURS';
+  }
+
+  estACheval(): boolean {
+    return this.autresJours.length > 0;
+  }
+
   debutAvantLeJour(bornes: BornesDuJour): InstantDeLaJournee | undefined {
     return this.debut.estAvant(bornes.debut) ? this.debut : undefined;
   }
@@ -81,6 +93,8 @@ export class ActiviteDeLaJournee {
     return leDernier(this.joursComptes().filter(compte => compte.estApres(jour)));
   }
 
+  dureeTotale(this: ActiviteTerminee): Duree;
+  dureeTotale(): Duree | undefined;
   dureeTotale(): Duree | undefined {
     if (this.etat.kind === 'EN_COURS') {
       return undefined;

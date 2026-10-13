@@ -4,7 +4,8 @@ import {
   formatInstantTime,
   formatInstantWeekdayDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
-import { ActiviteDeLaJournee } from '../../domain/journee/ActiviteDeLaJournee';
+import { IssueDeCorrection } from '../../application/CorrectionDUneActivite';
+import { ActiviteDeLaJournee, ActiviteTerminee } from '../../domain/journee/ActiviteDeLaJournee';
 import { BornesDuJour } from '../../domain/journee/BornesDuJour';
 import { CategorieDActivite } from '../../domain/journee/CategorieDActivite';
 import { Duree } from '../../domain/journee/Duree';
@@ -21,6 +22,8 @@ const FIN_AUTOMATIQUE = 'fin automatique';
 const heure = (instant: InstantDeLaJournee): string => formatInstantTime(instant.value);
 
 const jourEtHeure = (instant: InstantDeLaJournee): string => `${formatInstantWeekdayDay(instant.value)} à ${heure(instant)}`;
+
+const jourEtHeureSeparees = (instant: InstantDeLaJournee): string => `${formatInstantWeekdayDay(instant.value)}, ${heure(instant)}`;
 
 const duree = (valeur: Duree): string => {
   const minutes = Math.floor(valeur.millisecondes / MILLISECONDES_PAR_MINUTE);
@@ -46,6 +49,14 @@ const etatDe = (activite: ActiviteDeLaJournee): string | undefined => {
     case 'TERMINEE':
       return undefined;
   }
+};
+
+const perteSurUnAutreJour = ({ jour, retire }: { readonly jour: JourACorriger; readonly retire: Duree }): string =>
+  `le ${formatCalendarDayLong(jour.value)} perd aussi ${duree(retire)}`;
+
+const ANNONCES_DU_RETRAIT: Record<IssueDeCorrection, string> = {
+  ENREGISTREE: 'Activité retirée',
+  JOURNEE_CHANGEE: 'La journée a changé, recommencez',
 };
 
 const TYPES: Record<CategorieDActivite, string> = { TRAVAIL: 'Travail', NON_CONFORMITE: 'Non-conformité' };
@@ -107,4 +118,23 @@ export const LIBELLES_CORRECTION_DES_ACTIVITES = {
   debutLe: (jour: JourACorriger): string => `début le ${formatCalendarDayLong(jour.value)}`,
   finLe: (jour: JourACorriger): string => `fin le ${formatCalendarDayLong(jour.value)}`,
   type: (categorie: CategorieDActivite): string => TYPES[categorie],
+  retrait: {
+    bouton: (activite: ActiviteDeLaJournee, bornes: BornesDuJour): string =>
+      `Retirer l’activité ${nomDeLElement(activite.element)}, ${horaires(activite, bornes)}`,
+    titre: (activite: ActiviteTerminee): string =>
+      activite.estACheval()
+        ? `Retirer l’activité du ${jourEtHeureSeparees(activite.debut)}, au ${jourEtHeureSeparees(activite.etat.fin)} ?`
+        : `Retirer l’activité de ${heure(activite.debut)} à ${heure(activite.etat.fin)} ?`,
+    garder: 'Garder l’activité',
+    retirer: 'Retirer l’activité',
+    enCours: 'Retrait en cours…',
+    echec: 'Le retrait n’a pas abouti. Vérifiez la connexion puis réessayez.',
+    operationnelDuJour: (jour: JourACorriger): string => `Opérationnel du ${formatCalendarDayLong(jour.value)}`,
+    avantApres: (avant: Duree, apres: Duree): string => `${duree(avant)} → ${duree(apres)}`,
+    autreJour: (jour: JourACorriger): string => formatCalendarDayLong(jour.value),
+    retire: (retire: Duree): string => `− ${duree(retire)}`,
+    debordement: (jours: readonly { readonly jour: JourACorriger; readonly retire: Duree }[]): string =>
+      `Le retrait vaut pour toute l’activité : ${jours.map(perteSurUnAutreJour).join(' et ')}.`,
+    annonce: ANNONCES_DU_RETRAIT,
+  },
 } as const;

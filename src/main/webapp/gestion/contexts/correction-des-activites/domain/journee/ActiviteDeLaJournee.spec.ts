@@ -183,4 +183,12 @@ describe('ActiviteDeLaJournee on the day displayed', () => {
   it('should last nothing yet while it is in progress', () => {
     expect(activiteDuJour('2026-10-05T22:00:00+02:00', EN_COURS).dureeTotale()).toBeUndefined();
   });
+
+  it('should straddle two days when a portion is counted on another day', () => {
+    expect(lundiSoir().estACheval()).toBe(true);
+  });
+
+  it('should not straddle two days when it is contained in the day', () => {
+    expect(activiteDuJour('2026-10-05T09:00:00+02:00', termineeLe('2026-10-05T10:00:00+02:00')).estACheval()).toBe(false);
+  });
 });

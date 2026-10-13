@@ -40,6 +40,19 @@
         <span class="text-label text-ink-muted" data-selector="activite-total">{{ total }}</span>
         }
       </span>
+      @if (ligne.retrait; as retrait) {
+      <span class="actions">
+        <button
+          mat-icon-button
+          type="button"
+          [attr.aria-label]="retrait.nom"
+          (click)="retraitDemande.emit(retrait.activite)"
+          data-selector="activite-retirer"
+        >
+          <glm-icon name="trash2" />
+        </button>
+      </span>
+      }
     </li>
     }
   </ol>

@@ -4,7 +4,7 @@
 
 .activite {
   display: grid;
-  grid-template-columns: 9rem minmax(0, 1.2fr) minmax(0, 1fr) 9rem 11rem;
+  grid-template-columns: 9rem minmax(0, 1.2fr) minmax(0, 1fr) 9rem 11rem 3rem;
   align-items: center;
   gap: 0.75rem;
   min-height: 4rem;
@@ -60,8 +60,13 @@
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .activite > :last-child {
+  .activite > :nth-child(5) {
     grid-column: 1 / -1;
     align-items: flex-start;
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+    justify-self: end;
   }
 }

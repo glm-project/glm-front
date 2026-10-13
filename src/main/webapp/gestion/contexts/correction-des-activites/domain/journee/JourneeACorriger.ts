@@ -1,4 +1,4 @@
-import { ActiviteDeLaJournee } from './ActiviteDeLaJournee';
+import { ActiviteDeLaJournee, ActiviteTerminee } from './ActiviteDeLaJournee';
 import { BornesDuJour } from './BornesDuJour';
 import { ChoixDAjout } from './ChoixDAjout';
 import { Duree } from './Duree';
@@ -48,5 +48,9 @@ export class JourneeACorriger {
 
   clotureDe(activite: ActiviteDeLaJournee): InstantDeLaJournee | undefined {
     return this.clotures.get(activite.id.value);
+  }
+
+  estCorrigeable(activite: ActiviteDeLaJournee): activite is ActiviteTerminee {
+    return activite.estTerminee() && this.clotureDe(activite) === undefined;
   }
 }

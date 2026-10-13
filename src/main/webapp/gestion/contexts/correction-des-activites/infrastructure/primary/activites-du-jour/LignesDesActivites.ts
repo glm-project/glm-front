@@ -1,4 +1,4 @@
-import { ActiviteDeLaJournee } from '../../../domain/journee/ActiviteDeLaJournee';
+import { ActiviteDeLaJournee, ActiviteTerminee } from '../../../domain/journee/ActiviteDeLaJournee';
 import { CategorieDActivite } from '../../../domain/journee/CategorieDActivite';
 import { JourACorriger } from '../../../domain/journee/JourACorriger';
 import { JourneeACorriger } from '../../../domain/journee/JourneeACorriger';
@@ -27,6 +27,12 @@ export interface LigneDActivite {
   readonly finAilleurs: LienVersUnJour | undefined;
   readonly etat: string | undefined;
   readonly cloture: string | undefined;
+  readonly retrait: RetraitDUneActivite | undefined;
+}
+
+export interface RetraitDUneActivite {
+  readonly activite: ActiviteTerminee;
+  readonly nom: string;
 }
 
 const STYLES_DE_TYPE: Record<CategorieDActivite, StyleDeType> = { TRAVAIL: 'travail', NON_CONFORMITE: 'nc' };
@@ -39,13 +45,16 @@ const lienVers = (jour: JourACorriger | undefined, libelle: (jour: JourACorriger
 
 const totalSurPlusieursJours = (activite: ActiviteDeLaJournee): string | undefined => {
   const total = activite.dureeTotale();
-  return activite.autresJours.length === 0 || total === undefined ? undefined : LIBELLES.surLeTotal(total);
+  return !activite.estACheval() || total === undefined ? undefined : LIBELLES.surLeTotal(total);
 };
 
 const clotureDeLActivite = (activite: ActiviteDeLaJournee, journee: JourneeACorriger): string | undefined => {
   const clotureLe = journee.clotureDe(activite);
   return clotureLe === undefined || activite.etat.kind === 'EN_COURS' ? undefined : LIBELLES.clotureLe(clotureLe);
 };
+
+const retraitDeLActivite = (activite: ActiviteDeLaJournee, journee: JourneeACorriger): RetraitDUneActivite | undefined =>
+  journee.estCorrigeable(activite) ? { activite, nom: LIBELLES.retrait.bouton(activite, journee.bornes) } : undefined;
 
 const ligneDActivite = (activite: ActiviteDeLaJournee, journee: JourneeACorriger): LigneDActivite => ({
   cle: activite.id.value,
@@ -61,6 +70,7 @@ const ligneDActivite = (activite: ActiviteDeLaJournee, journee: JourneeACorriger
   finAilleurs: lienVers(activite.jourDeLaFin(journee.jour), LIBELLES.finLe),
   etat: LIBELLES.etatDe(activite),
   cloture: clotureDeLActivite(activite, journee),
+  retrait: retraitDeLActivite(activite, journee),
 });
 
 const chronologique = (une: ActiviteDeLaJournee, autre: ActiviteDeLaJournee): number => (une.debut.estAvant(autre.debut) ? -1 : 1);

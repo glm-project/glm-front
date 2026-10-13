@@ -1,7 +1,9 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { CorrectionsFixture } from '@test/unit/fixtures/gestion/correction-des-activites/CorrectionsFixture';
 import {
   elementFixture,
   instantLocal,
@@ -11,8 +13,9 @@ import {
   tourFixture,
 } from '@test/unit/fixtures/gestion/correction-des-activites/JourneeACorrigerFixture';
 import { dataSelector } from '@test/utils/DataSelector';
-import { BehaviorSubject, EMPTY } from 'rxjs';
+import { BehaviorSubject, EMPTY, firstValueFrom } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CorrectionsPort } from '../../../domain/correction/CorrectionsPort';
 import { JourneeACorrigerPort } from '../../../domain/journee/JourneeACorrigerPort';
 import { CorrigerLaJourneePage } from './CorrigerLaJourneePage';
 
@@ -70,6 +73,7 @@ const mardi = journeeFixture({ jour: 6, suivis: SUIVIS, operationnelle: 'PT0S', 
 
 describe('Page to correct the day of an operator', () => {
   let port: JourneeACorrigerFixture;
+  let corrections: CorrectionsFixture;
   let route: RouteFixture;
   let router: RouterFixture;
   let shown: ComponentFixture<CorrigerLaJourneePage>;
@@ -78,6 +82,7 @@ describe('Page to correct the day of an operator', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 6, 10, 0));
     port = new JourneeACorrigerFixture();
+    corrections = new CorrectionsFixture();
     port.journees.set('2026-10-05', lundi);
     port.journees.set('2026-10-06', mardi);
     route = new RouteFixture();
@@ -86,6 +91,7 @@ describe('Page to correct the day of an operator', () => {
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: JourneeACorrigerPort, useValue: port },
+        { provide: CorrectionsPort, useValue: corrections },
         { provide: ActivatedRoute, useValue: route },
         { provide: Router, useValue: router },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
@@ -93,7 +99,11 @@ describe('Page to correct the day of an operator', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    const dialogs = TestBed.inject(MatDialog);
+    const fermeture = firstValueFrom(dialogs.afterAllClosed);
+    dialogs.closeAll();
+    await fermeture;
     shown.destroy();
     vi.useRealTimers();
   });
@@ -204,6 +214,87 @@ describe('Page to correct the day of an operator', () => {
     expect(port.lectures.map(lecture => lecture.jour)).toEqual(['2026-10-05', '2026-10-06']);
     expect(text('corriger-jour')).toBe('mardi 6 octobre 2026');
   });
+
+  it('should confirm before removing and send nothing when the manager keeps the activity', async () => {
+    await whenOpeningThePage();
+
+    await whenAskingToRemoveTheActivity();
+    await whenKeepingTheActivity();
+
+    expect(corrections.retraits).toEqual([]);
+    expect(port.lectures).toHaveLength(1);
+    expect(texts('corriger-annonce')).toEqual([]);
+  });
+
+  it('should read the day again and say the activity was removed once the removal is recorded', async () => {
+    await whenOpeningThePage();
+
+    await whenRemovingTheActivity();
+
+    expect(corrections.retraits.map(saisie => saisie.activite.value)).toEqual(['soir']);
+    expect(port.lectures).toHaveLength(2);
+    expect(text('corriger-annonce')).toBe('Activité retirée');
+  });
+
+  it('should read the day again and ask to start over when the day changed meanwhile', async () => {
+    corrections.repondre({ kind: 'JOURNEE_CHANGEE' });
+    await whenOpeningThePage();
+
+    await whenRemovingTheActivity();
+
+    expect(port.lectures).toHaveLength(2);
+    expect(text('corriger-annonce')).toBe('La journée a changé, recommencez');
+  });
+
+  it('should drop the message when the address names another day', async () => {
+    await whenOpeningThePage();
+    await whenRemovingTheActivity();
+
+    await whenTheAddressNames('2026-10-06');
+
+    expect(texts('corriger-annonce')).toEqual([]);
+  });
+
+  it('should move the focus to the message once the activity is removed', async () => {
+    await whenOpeningThePage();
+
+    await whenRemovingTheActivity();
+
+    expect(document.activeElement).toBe(all('corriger-annonce')[0]);
+  });
+
+  it('should announce again a message identical to the previous one', async () => {
+    await whenOpeningThePage();
+    await whenRemovingTheActivity();
+    const premiere = all('corriger-annonce')[0];
+
+    await whenRemovingTheActivity();
+
+    expect(all('corriger-annonce')).toHaveLength(1);
+    expect(all('corriger-annonce')[0]).not.toBe(premiere);
+    expect(text('corriger-annonce')).toBe('Activité retirée');
+  });
+
+  const whenAskingToRemoveTheActivity = async (): Promise<void> => {
+    all('activite-retirer')[0]?.click();
+    await shown.whenStable();
+  };
+
+  const whenKeepingTheActivity = async (): Promise<void> => {
+    await whenClickingInTheDialog('retrait-cancel');
+  };
+
+  const whenRemovingTheActivity = async (): Promise<void> => {
+    await whenAskingToRemoveTheActivity();
+    await whenClickingInTheDialog('retrait-confirm');
+  };
+
+  const whenClickingInTheDialog = async (selector: string): Promise<void> => {
+    const fermeture = firstValueFrom(TestBed.inject(MatDialog).afterAllClosed);
+    document.querySelector<HTMLElement>(dataSelector(selector))?.click();
+    await fermeture;
+    await shown.whenStable();
+  };
 
   const whenRetryingOnceTheServerRecovers = async (): Promise<void> => {
     port.echec = undefined;

@@ -7,6 +7,8 @@ type RestPoste = components['schemas']['RestPosteDeLaJournee'];
 type RestSuiviPresent = components['schemas']['RestSuiviPresent'];
 
 const JOURNEE = '/api/atelier/operateurs/*/journees/*';
+const RETRAIT = '/api/atelier/suivis/*/activites/*/retrait';
+const SAISIE_CONCURRENTE = 'urn:glm:erreur:atelier:saisie-concurrente';
 const OPERATEUR_INTROUVABLE = 'urn:glm:erreur:atelier:operateur-introuvable';
 const MOIS_D_OCTOBRE = 9;
 
@@ -61,7 +63,18 @@ export const journeeRecue = (
 export class JourneeApiFixture {
   failRead = false;
   operateurInconnu = false;
+  journeeChangee = false;
   private readonly journees = new Map<string, RestJournee>();
+  private journeeApresLeRetrait: RestJournee | undefined;
+  private lectureLibre: Promise<void> = Promise.resolve();
+
+  retenirLesLecturesSuivantes(): void {
+    this.lectureLibre = new Promise(() => undefined);
+  }
+
+  apresLeRetrait(journee: RestJournee): void {
+    this.journeeApresLeRetrait = journee;
+  }
 
   seed(journee: RestJournee): void {
     this.journees.set(journee.jour, journee);
@@ -70,8 +83,23 @@ export class JourneeApiFixture {
   install(): void {
     cy.intercept({ method: 'GET', pathname: JOURNEE }, request => {
       const jour = new URL(request.url).pathname.split('/').slice(-1)[0] ?? '';
-      request.reply(this.reponse(jour));
+      return this.lectureLibre.then(() => {
+        request.reply(this.reponse(jour));
+      });
     }).as('journeeRead');
+  }
+
+  installRetrait(): void {
+    cy.intercept({ method: 'POST', pathname: RETRAIT }, request => {
+      if (this.journeeApresLeRetrait !== undefined) {
+        this.seed(this.journeeApresLeRetrait);
+      }
+      if (this.journeeChangee) {
+        request.reply({ statusCode: 409, body: { type: SAISIE_CONCURRENTE } });
+        return;
+      }
+      request.reply({ statusCode: 201, body: {} });
+    }).as('retraitWrite');
   }
 
   private reponse(jour: string): { statusCode?: number; body: RestJournee | { type?: string } } {
