@@ -20,6 +20,32 @@ describe('Pupitre layout in a browser', () => {
     thenBothTargetsFitTheirTile(['moule-1', 'of-1']);
   });
 
+  it('should keep the code field height when the first digit is typed', () => {
+    givenThePupitre(1024, 768);
+    givenTheHeightOf('code');
+
+    whenTyping('0');
+
+    thenHeightStays('code');
+    thenCaptureTheScreen('tablet-keypad');
+  });
+
+  it('should give both targets of a free tile the same size', () => {
+    givenThePupitre(1024, 768);
+
+    whenDesignatingJean();
+
+    thenBothTargetsHaveTheSameSize('of-1');
+  });
+
+  it('should keep the global commands as tall as the tile targets', () => {
+    givenThePupitre(1024, 768);
+
+    whenDesignatingJean();
+
+    thenControlsAreAtLeast(['pause', 'resume', 'stop-all', 'show-mes-pointages'], 64);
+  });
+
   it('should keep the keypad controls within a short landscape screen', () => {
     givenThePupitre(1024, 600);
 
@@ -57,6 +83,10 @@ const whenDesignatingJean = (): void => {
   cy.get(dataSelector('pointage')).should('be.visible');
 };
 
+const whenTyping = (digit: string): void => {
+  cy.get(dataSelector(`digit-${digit}`)).click();
+};
+
 const whenOpeningWorkstationChoice = (): void => {
   longPressFixture(cy.get(dataSelector('tile-of-1')).find(dataSelector('primary-target')));
   cy.get(dataSelector('workstation-dialog')).should('be.visible');
@@ -73,9 +103,46 @@ const thenBothTargetsFitTheirTile = (tileIds: readonly string[]): void => {
         expect(targetBounds.left, `${tileId} ${selector} left edge`).to.be.at.least(bounds.left);
         expect(targetBounds.right, `${tileId} ${selector} right edge`).to.be.at.most(bounds.right);
         expect(targetBounds.width, `${tileId} ${selector} touch width`).to.be.at.least(44);
-        expect(targetBounds.height, `${tileId} ${selector} touch height`).to.be.at.least(52);
+        expect(targetBounds.height, `${tileId} ${selector} touch height`).to.be.at.least(64);
         expect(target.scrollWidth, `${tileId} ${selector} full label`).to.be.at.most(target.clientWidth);
       }
+    });
+  }
+};
+
+const heightOf = (element: HTMLElement | undefined, selector: string): number =>
+  requiredFixture(element, selector).getBoundingClientRect().height;
+
+const givenTheHeightOf = (selector: string): void => {
+  cy.get(dataSelector(selector))
+    .then(elements => heightOf(elements[0], selector))
+    .as(`${selector}-height`);
+};
+
+const thenHeightStays = (selector: string): void => {
+  cy.get<number>(`@${selector}-height`).then(expectedHeight => {
+    cy.get(dataSelector(selector)).should(elements => {
+      expect(heightOf(elements[0], selector), `${selector} height`).to.equal(expectedHeight);
+    });
+  });
+};
+
+const thenBothTargetsHaveTheSameSize = (tileId: string): void => {
+  cy.get(dataSelector(`tile-${tileId}`)).should(tiles => {
+    const tile = requiredFixture(tiles[0], tileId);
+    const boundsOf = (selector: string): DOMRect =>
+      requiredFixture(tile.querySelector<HTMLElement>(dataSelector(selector)), selector).getBoundingClientRect();
+    const primary = boundsOf('primary-target');
+    const secondary = boundsOf('secondary-target');
+    expect(secondary.height, `${tileId} targets height`).to.equal(primary.height);
+    expect(secondary.width, `${tileId} targets width`).to.be.closeTo(primary.width, 1);
+  });
+};
+
+const thenControlsAreAtLeast = (selectors: readonly string[], height: number): void => {
+  for (const selector of selectors) {
+    cy.get(dataSelector(selector)).should(elements => {
+      expect(heightOf(elements[0], selector), `${selector} height`).to.be.at.least(height);
     });
   }
 };

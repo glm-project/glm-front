@@ -5,6 +5,8 @@
 `Accepted` le 9 octobre 2026, avec le ticket [#254](https://github.com/glm-project/glm-front/issues/254) et la règle de
 réception du backend.
 
+- `Amended by 0055`: les gestes composés du pupitre disparaissent ; une tuile active n'envoie plus que des `FIN`, et
+  changer la catégorie d'une activité demande d'arrêter puis d'ouvrir à nouveau.
 - `Amends 0047`: les séquences en conflit, l'activité visée, la distinction ouverture / transition / fin, les durées et
   coûts « à résoudre », les totaux incomplets, la correction et l'annulation par le gestionnaire, et la durée de 13 h
   écrite en dur ne tiennent plus. Il reste de 0047 la comptabilisation des seules activités terminées, la fin
@@ -69,8 +71,8 @@ Un `DEBUT` ou une `NON_CONFORMITE` sur un suivi clôturé reste refusé en 409 `
 est écrit dans une table d'audit que personne ne lit à l'écran et répond 409 `pointage-ignore` ; le renvoi d'un
 identifiant déjà accepté répond 200.
 
-**Gestes composés du pupitre.** Un appui qui change la catégorie d'une activité envoie deux pointages à la même heure,
-la `FIN` d'abord : NC pendant un travail envoie `FIN` puis `NON_CONFORMITE`, « FIN NC » `FIN` puis
+**Gestes composés du pupitre** (retirés par 0055). Un appui qui change la catégorie d'une activité envoie deux pointages
+à la même heure, la `FIN` d'abord : NC pendant un travail envoie `FIN` puis `NON_CONFORMITE`, « FIN NC » `FIN` puis
 `DEBUT`. PAUSE envoie une `FIN` par activité, REPRENDRE une ouverture par activité suspendue, TOUT ARRÊTER ne change pas.
 
 **Le pupitre suit la même règle, sans la décider.** La projection locale applique `FIN` et ouverture comme le serveur, y

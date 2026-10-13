@@ -70,12 +70,19 @@ describe('Pointage screen in a browser', () => {
     thenTheNonConformityMarkerIsYellowWithInkText('of-1');
   });
 
-  it('should mark in yellow a tile whose work is turned into non conformity', () => {
+  it('should offer only the stop target on a tile at work', () => {
     givenThePointageScreen();
     givenTheTileAtWork('of-1');
-    whenHoldingTileTarget('of-1', 'secondary-target');
 
-    thenTheNonConformityMarkerIsYellowWithInkText('of-1');
+    thenTheTileOffersOnlyTheStopTarget('of-1');
+  });
+
+  it('should offer only the stop target on a nonconforming tile', () => {
+    givenThePointageScreen();
+    whenHoldingTileTarget('of-1', 'secondary-target');
+    whenChoosingWorkstation('tour');
+
+    thenTheTileOffersOnlyTheStopTarget('of-1');
   });
 
   it('should use scrolling as a safety valve for an extreme workshop volume', () => {
@@ -84,6 +91,14 @@ describe('Pointage screen in a browser', () => {
     thenTheGridCanScrollWithoutHidingTiles();
   });
 
+  const thenTheTileOffersOnlyTheStopTarget = (id: string): void => {
+    cy.get(dataSelector(`tile-${id}`))
+      .find(dataSelector('primary-target'))
+      .should('contain.text', 'ARRÊTER');
+    cy.get(dataSelector(`tile-${id}`))
+      .find(dataSelector('secondary-target'))
+      .should('not.exist');
+  };
   const givenThePointageScreen = (search = ''): void => {
     cy.visit(`/${search}`);
     cy.get(dataSelector('digit-0')).click();

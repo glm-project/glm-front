@@ -34,27 +34,29 @@
       <span class="text-body-sm text-ink-muted" data-selector="duration">{{ labels.duree(element.dureeMs()) }}</span>
       }
     </div>
-    <div class="flex gap-1 p-2">
+    <div class="grid auto-cols-fr grid-flow-col gap-1 p-2">
       <button
         type="button"
         [disabled]="!gestesDisponibles() || busy().has(element.id)"
         [glmLongPress]="confirmationPressMs"
         (longPressed)="press(element, 'PRINCIPALE')"
-        class="hold-target min-h-touch-lg flex-1 rounded border border-border-strong bg-surface px-2 text-section text-ink disabled:opacity-50"
+        class="hold-target h-touch-xl rounded border border-border-strong bg-surface px-2 text-body text-ink disabled:opacity-50"
         data-selector="primary-target"
       >
         {{ labels.actionPrincipale(element) }}
       </button>
+      @if (!element.isActive()) {
       <button
         type="button"
         [disabled]="!gestesDisponibles() || busy().has(element.id)"
         [glmLongPress]="confirmationPressMs"
         (longPressed)="press(element, 'SECONDAIRE')"
-        class="hold-target min-h-touch-lg rounded border-2 border-nc bg-surface px-3 text-section text-ink disabled:opacity-50"
+        class="hold-target h-touch-xl rounded border-2 border-nc bg-surface px-2 text-body text-ink disabled:opacity-50"
         data-selector="secondary-target"
       >
-        {{ labels.actionSecondaire(element) }}
+        {{ labels.nonConformite }}
       </button>
+      }
     </div>
   </article>
 </ng-template>
@@ -65,7 +67,7 @@
     [disabled]="!gestesDisponibles() || !commandesGlobales().permet('PAUSE')"
     [glmLongPress]="confirmationPressMs"
     (longPressed)="pauseRequested.emit()"
-    class="hold-target min-h-touch-lg flex-1 rounded bg-warn text-section text-on-accent disabled:opacity-50"
+    class="hold-target min-h-touch-xl flex-1 rounded bg-warn text-section text-on-accent disabled:opacity-50"
     data-selector="pause"
   >
     {{ labels.pause }}
@@ -75,7 +77,7 @@
     [disabled]="!gestesDisponibles() || !commandesGlobales().permet('REPRENDRE')"
     [glmLongPress]="confirmationPressMs"
     (longPressed)="repriseRequested.emit()"
-    class="hold-target min-h-touch-lg flex-1 rounded border-2 border-warn bg-surface text-section text-warn disabled:opacity-50"
+    class="hold-target min-h-touch-xl flex-1 rounded border-2 border-warn bg-surface text-section text-warn disabled:opacity-50"
     data-selector="resume"
   >
     {{ labels.reprise }}
@@ -85,7 +87,7 @@
     [disabled]="!gestesDisponibles() || !commandesGlobales().permet('TOUT_ARRETER')"
     [glmLongPress]="confirmationPressMs"
     (longPressed)="arretTotalRequested.emit()"
-    class="hold-target min-h-touch-lg flex-1 rounded border-2 border-danger bg-surface text-section text-danger disabled:opacity-50"
+    class="hold-target min-h-touch-xl flex-1 rounded border-2 border-danger bg-surface text-section text-danger disabled:opacity-50"
     data-selector="stop-all"
   >
     {{ labels.arretTotal }}
@@ -96,7 +98,7 @@
       [disabled]="!connected()"
       [attr.aria-describedby]="connected() ? null : 'mes-pointages-indisponible'"
       (click)="mesPointagesRequested.emit()"
-      class="min-h-touch-lg rounded border-2 border-accent bg-surface text-section text-accent disabled:border-border-strong disabled:bg-sunken disabled:text-ink-muted"
+      class="min-h-touch-xl rounded border-2 border-accent bg-surface text-section text-accent disabled:border-border-strong disabled:bg-sunken disabled:text-ink-muted"
       data-selector="show-mes-pointages"
     >
       {{ labels.mesPointages }}

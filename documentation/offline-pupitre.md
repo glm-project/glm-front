@@ -228,9 +228,10 @@ opening. A capture initiated before the deadline keeps its occurrence through de
 An activity belongs to a key, operator and workstation within an element, and a key holds at most one activity. A FIN
 closes the activity of its key; an opening on a key that is still busy has no local effect, as the server ignores it.
 An expired activity frees its key: an opening whose time reaches the deadline replaces it, locally as on the server,
-which counts the expired activity as finished. A tile press that changes the category of an activity composes two
-pointages with the same timestamp, the FIN first: NC during a work sends a FIN then a `NON_CONFORMITE`, and FIN NC
-(the secondary target of a tile in non-conformity) a FIN then a `DEBUT`. The pupitre never relaunches an activity.
+which counts the expired activity as finished. A tile whose element holds an activity of the
+designated operator, at work or in non-conformity, offers a single STOP target that sends one FIN per activity; no
+press changes the category of an activity, the operator stops then opens again
+([ADR 0055](adr/0055-stop-before-changing-the-category-of-an-activity.md)). The pupitre never relaunches an activity.
 
 A pointage the server judges incompatible with its key answers 409 `pointage-ignore`. The gesture stays refused in the
 journal ([ADR 0049](adr/0049-forget-integrated-gestures-at-reference-activation.md)), its optimistic effect disappears

@@ -271,7 +271,7 @@ describe('AtelierCoordinator', () => {
     await thenQueueHasUniqueStableIdentities();
   });
 
-  it('should send the finish of the work before the non conformity, both at the same time', async () => {
+  it('should only send the finish of the work when the secondary target is asked during work', async () => {
     await givenWorkStartedOffline();
     givenAuthorizedAccess();
     whenBusinessTimeBecomes('2026-09-05T08:00:01Z');
@@ -279,27 +279,10 @@ describe('AtelierCoordinator', () => {
     await whenPointingAt('piece', 'SECONDAIRE');
     await whenSynchronizing();
 
-    thenTheServerReceived(['DEBUT@2026-09-05T08:00:00.000Z', 'FIN@2026-09-05T08:00:01.000Z', 'NON_CONFORMITE@2026-09-05T08:00:01.000Z']);
+    thenTheServerReceived(['DEBUT@2026-09-05T08:00:00.000Z', 'FIN@2026-09-05T08:00:01.000Z']);
   });
 
-  it('should send the finish of the non conformity before the work, both at the same time', async () => {
-    await givenNonConformityReportedDuringWork();
-    givenAuthorizedAccess();
-    whenBusinessTimeBecomes('2026-09-05T08:00:02Z');
-
-    await whenPointingAt('piece', 'SECONDAIRE');
-    await whenSynchronizing();
-
-    thenTheServerReceived([
-      'DEBUT@2026-09-05T08:00:00.000Z',
-      'FIN@2026-09-05T08:00:01.000Z',
-      'NON_CONFORMITE@2026-09-05T08:00:01.000Z',
-      'FIN@2026-09-05T08:00:02.000Z',
-      'DEBUT@2026-09-05T08:00:02.000Z',
-    ]);
-  });
-
-  it('should retain two simultaneous tile captures in acquisition order and stop the activity the second one left open', async () => {
+  it('should retain a tile capture and a global stop in acquisition order, the stop finishing the activity the tile left open', async () => {
     await givenTwoActiveWorkstations();
     givenSequentialGestureIdentities();
     const storage = givenDelayedLocalWrite();
@@ -307,12 +290,10 @@ describe('AtelierCoordinator', () => {
     const finishing = whenPointingAt('piece-tour', 'PRINCIPALE');
     await whenCaptureHasReachedStorage(storage);
     whenBusinessTimeBecomes('2026-09-05T08:00:01Z');
-    const secondaire = whenPointingAt('piece-fraiseuse', 'SECONDAIRE');
-    whenBusinessTimeBecomes('2026-09-05T08:00:02Z');
     const stopping = whenStoppingEverything();
     const beforeRelease = await readQueuedGestures();
-    whenBusinessTimeBecomes('2026-09-05T08:00:03Z');
-    await whenReleasingLocalWrite(storage, finishing, secondaire, stopping);
+    whenBusinessTimeBecomes('2026-09-05T08:00:02Z');
+    await whenReleasingLocalWrite(storage, finishing, stopping);
     const gestures = await readQueuedGestures();
 
     expect(beforeRelease).toEqual([]);
@@ -330,24 +311,6 @@ describe('AtelierCoordinator', () => {
         nature: 'POINTAGE',
         id: futureIdentityRootFixture,
         dateDeSurvenue: '2026-09-05T08:00:01.000Z',
-        operateurId: 'jean',
-        suiviId: 'piece-fraiseuse',
-        posteId: 'fraiseuse',
-        type: 'FIN',
-      },
-      {
-        nature: 'POINTAGE',
-        id: '33333333-3333-4333-8333-333333333333',
-        dateDeSurvenue: '2026-09-05T08:00:01.000Z',
-        operateurId: 'jean',
-        suiviId: 'piece-fraiseuse',
-        posteId: 'fraiseuse',
-        type: 'NON_CONFORMITE',
-      },
-      {
-        nature: 'POINTAGE',
-        id: '44444444-4444-4444-8444-444444444444',
-        dateDeSurvenue: '2026-09-05T08:00:02.000Z',
         operateurId: 'jean',
         suiviId: 'piece-fraiseuse',
         posteId: 'fraiseuse',
@@ -532,19 +495,19 @@ describe('AtelierCoordinator', () => {
     await thenPendingGesturesAre(['DEBUT:piece-tour:tour']);
   });
 
-  it('should keep projecting a pending non conformity on the reference activity once its published opening is forgotten', async () => {
+  it('should keep projecting a pending finish on the reference activity once its published opening is forgotten', async () => {
     await givenAnOpenWindow();
     await whenStarting();
     givenAuthorizedAccess();
     givenServerReferenceHoldingTheActivityOpenedBy(await firstQueuedGesture());
     givenServerFailures(undefined, new Error('reseau coupe'));
-    givenNonConformityIsReportedDuringReferenceRefresh();
+    givenAStopIsAskedDuringReferenceRefresh();
 
     await whenSynchronizing();
 
-    await thenQueueHas(2);
-    await thenPendingGesturesAre(['FIN:piece:tour', 'NON_CONFORMITE:piece:tour']);
-    thenActivityIs('NON_CONFORMITE');
+    await thenQueueHas(1);
+    await thenPendingGesturesAre(['FIN:piece:tour']);
+    thenNoActivity();
   });
 
   it('should clear the current refusal as soon as a new business intent starts', async () => {
@@ -1440,11 +1403,6 @@ describe('AtelierCoordinator', () => {
     await givenCachedReference(twoActiveWorkstationsReference());
     await givenAnOpenWindow();
   };
-  const givenNonConformityReportedDuringWork = async (): Promise<void> => {
-    await givenWorkStartedOffline();
-    whenBusinessTimeBecomes('2026-09-05T08:00:01Z');
-    await whenPointingAt('piece', 'SECONDAIRE');
-  };
   const givenWorkStartedOffline = async (): Promise<void> => {
     await givenAnOpenWindow();
     await whenStarting();
@@ -1548,10 +1506,10 @@ describe('AtelierCoordinator', () => {
       ],
     };
   };
-  const givenNonConformityIsReportedDuringReferenceRefresh = (): void => {
+  const givenAStopIsAskedDuringReferenceRefresh = (): void => {
     serveur.afterReference = () => {
       serveur.afterReference = undefined;
-      void whenPointingAt('piece', 'SECONDAIRE');
+      void whenPointingAt('piece', 'PRINCIPALE');
     };
   };
   const givenTheNextPublicationAcknowledgement = (): Promise<void> => journal.waitForNextAcknowledgement();

@@ -24,17 +24,6 @@ describe('LibellesAtelier', () => {
     expect(LIBELLES_POINTAGE.actionPrincipale(inactiveElement)).toBe('DÉMARRER');
   });
 
-  it('should expose secondary action labels depending on non-conformity status', () => {
-    const conformingElement = new ElementDePointage('e1', NumeroDElement.assigned('OF-1'), { categorie: 'TRAVAIL', dureeMs: 10_000 });
-    const nonConformingElement = new ElementDePointage('e2', NumeroDElement.assigned('OF-2'), {
-      categorie: 'NON_CONFORMITE',
-      dureeMs: 10_000,
-    });
-
-    expect(LIBELLES_POINTAGE.actionSecondaire(conformingElement)).toBe('NC');
-    expect(LIBELLES_POINTAGE.actionSecondaire(nonConformingElement)).toBe('FIN NC');
-  });
-
   it('should format header operator code and pause label', () => {
     expect(LIBELLES_ENTETE_PUPITRE.code('049')).toBe('Code 049');
     expect(LIBELLES_ENTETE_PUPITRE.enLigne).toBe('En ligne');
