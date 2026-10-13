@@ -1,18 +1,30 @@
-import { CorrectionsPort, ResultatDeCorrection } from '@/gestion/contexts/correction-des-activites/domain/correction/CorrectionsPort';
+import {
+  CorrectionsPort,
+  MotifDeChangementDePoste,
+  ResultatDeCorrection,
+} from '@/gestion/contexts/correction-des-activites/domain/correction/CorrectionsPort';
+import { SaisieDeChangementDePoste } from '@/gestion/contexts/correction-des-activites/domain/correction/SaisieDeChangementDePoste';
 import { SaisieDeRetrait } from '@/gestion/contexts/correction-des-activites/domain/correction/SaisieDeRetrait';
 
 const realSetTimeout = setTimeout;
 
 export type ReponseDeCorrection = ResultatDeCorrection | Error;
+export type ReponseDeChangementDePoste = ResultatDeCorrection<MotifDeChangementDePoste> | Error;
 
 export class CorrectionsFixture extends CorrectionsPort {
   readonly retraits: SaisieDeRetrait[] = [];
-  private readonly reponses: ReponseDeCorrection[] = [];
+  readonly changements: SaisieDeChangementDePoste[] = [];
+  private readonly reponsesAuxRetraits: ReponseDeCorrection[] = [];
+  private readonly reponsesAuxChangements: ReponseDeChangementDePoste[] = [];
   private arrivee: (() => void) | undefined;
   private liberation: (() => void) | undefined;
 
   repondre(...reponses: ReponseDeCorrection[]): void {
-    this.reponses.push(...reponses);
+    this.reponsesAuxRetraits.push(...reponses);
+  }
+
+  repondreAuChangement(...reponses: ReponseDeChangementDePoste[]): void {
+    this.reponsesAuxChangements.push(...reponses);
   }
 
   retenir(): Promise<void> {
@@ -27,7 +39,15 @@ export class CorrectionsFixture extends CorrectionsPort {
 
   override retirer(saisie: SaisieDeRetrait): Promise<ResultatDeCorrection> {
     this.retraits.push(saisie);
-    const reponse = this.reponses.shift() ?? { kind: 'ENREGISTREE' };
+    return this.repondreA(this.reponsesAuxRetraits.shift() ?? { kind: 'ENREGISTREE' });
+  }
+
+  override changerDePoste(saisie: SaisieDeChangementDePoste): Promise<ResultatDeCorrection<MotifDeChangementDePoste>> {
+    this.changements.push(saisie);
+    return this.repondreA(this.reponsesAuxChangements.shift() ?? { kind: 'ENREGISTREE' });
+  }
+
+  private repondreA<R>(reponse: R | Error): Promise<R> {
     this.arrivee?.();
     return new Promise((resolve, reject) => {
       const repondre = (): void => {

@@ -19,6 +19,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { CorrectionDUneActivite, IssueDeCorrection } from '../../../application/CorrectionDUneActivite';
 import { ActiviteTerminee } from '../../../domain/journee/ActiviteDeLaJournee';
+import { ActiviteDeLaJourneeId } from '../../../domain/journee/ActiviteDeLaJourneeId';
 import { JourACorriger } from '../../../domain/journee/JourACorriger';
 import { JourneeACorriger } from '../../../domain/journee/JourneeACorriger';
 import { JourneeACorrigerPort } from '../../../domain/journee/JourneeACorrigerPort';
@@ -26,6 +27,7 @@ import { OperateurDeLaJourneeId } from '../../../domain/journee/OperateurDeLaJou
 import { ActivitesDuJour } from '../activites-du-jour/ActivitesDuJour';
 import { FriseDuJour } from '../frise-du-jour/FriseDuJour';
 import { LIBELLES_CORRECTION_DES_ACTIVITES } from '../LibellesCorrectionDesActivites';
+import { PanneauDeChangementDePoste } from '../panneau-de-changement-de-poste/PanneauDeChangementDePoste';
 import { DonneesDuRetrait, RetraitDeLActivite } from '../retrait-de-l-activite/RetraitDeLActivite';
 
 export type EtatDeLaPage =
@@ -56,7 +58,7 @@ const operateurDe = (chemin: ParamMap): string => {
 @Component({
   selector: 'glm-corriger-la-journee',
   host: { 'data-selector': 'corriger-page' },
-  imports: [ActivitesDuJour, ErrorMessage, FriseDuJour, Icon, MatButtonModule, RouterLink],
+  imports: [ActivitesDuJour, ErrorMessage, FriseDuJour, Icon, MatButtonModule, PanneauDeChangementDePoste, RouterLink],
   templateUrl: './CorrigerLaJourneePage.html',
   styleUrl: './CorrigerLaJourneePage.css',
   providers: [CorrectionDUneActivite],
@@ -72,6 +74,7 @@ export class CorrigerLaJourneePage {
   private readonly message = viewChild<ElementRef<HTMLElement>>('message');
   private numeroDAnnonce = 0;
   private readonly port = inject(JourneeACorrigerPort);
+  private readonly correction = inject(CorrectionDUneActivite);
   private readonly aujourdhui = new JourACorriger(localCalendarDay(new Date()));
   private readonly chemin = toSignal(this.route.paramMap, { requireSync: true });
 
@@ -92,11 +95,17 @@ export class CorrigerLaJourneePage {
     computation: () => undefined,
   });
 
+  private readonly activiteEnChangement = linkedSignal<AdresseDeLaJournee | undefined, ActiviteDeLaJourneeId | undefined>({
+    source: this.adresse,
+    computation: () => undefined,
+  });
+
   protected readonly annonces = computed(() => {
     const annonce = this.annonce();
     return annonce === undefined ? [] : [annonce];
   });
 
+  protected readonly envoiEnCours = computed(() => this.correction.etat().kind === 'EN_COURS');
   protected readonly relecture = computed(() => this.lecture.status() === 'reloading');
 
   protected readonly entete = computed(() => {
@@ -136,6 +145,27 @@ export class CorrigerLaJourneePage {
     this.lecture.reload();
   }
 
+  protected panneauDe(journee: JourneeACorriger): { readonly journee: JourneeACorriger; readonly activite: ActiviteTerminee } | undefined {
+    const identifiant = this.activiteEnChangement();
+    const activite = identifiant === undefined ? undefined : journee.activiteCorrigeable(identifiant);
+    return activite === undefined ? undefined : { journee, activite };
+  }
+
+  protected ouvrirLeChangementDePoste(activite: ActiviteTerminee): void {
+    this.activiteEnChangement.set(activite.id);
+  }
+
+  protected abandonnerLeChangementDePoste(activite: ActiviteTerminee, liste: ActivitesDuJour): void {
+    this.activiteEnChangement.set(undefined);
+    this.rendreLeFocusAuBoutonDe(activite, liste);
+  }
+
+  protected changementDePosteCorrige(activite: ActiviteTerminee, issue: IssueDeCorrection, liste: ActivitesDuJour): void {
+    this.activiteEnChangement.set(undefined);
+    this.relire(LIBELLES_CORRECTION_DES_ACTIVITES.changement.annonce[issue]);
+    this.rendreLeFocusAuBoutonDe(activite, liste);
+  }
+
   protected retirer(journee: JourneeACorriger, activite: ActiviteTerminee): void {
     const donnees: DonneesDuRetrait = { journee, activite };
     const dialogue = this.dialogs.open<RetraitDeLActivite, DonneesDuRetrait, IssueDeCorrection>(RetraitDeLActivite, {
@@ -146,16 +176,36 @@ export class CorrigerLaJourneePage {
     });
     dialogue.afterClosed().subscribe(issue => {
       if (issue !== undefined) {
+        this.fermerLeChangementDeLActiviteRetiree(activite);
         this.relire(LIBELLES_CORRECTION_DES_ACTIVITES.retrait.annonce[issue]);
+        this.donnerLeFocusAuMessage();
       }
     });
+  }
+
+  private fermerLeChangementDeLActiviteRetiree(activite: ActiviteTerminee): void {
+    if (this.activiteEnChangement()?.value === activite.id.value) {
+      this.activiteEnChangement.set(undefined);
+    }
   }
 
   private relire(texte: string): void {
     this.numeroDAnnonce += 1;
     this.annonce.set({ texte, numero: this.numeroDAnnonce });
     this.lecture.reload();
+  }
+
+  private donnerLeFocusAuMessage(): void {
     afterNextRender(() => this.message()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  private rendreLeFocusAuBoutonDe(activite: ActiviteTerminee, liste: ActivitesDuJour): void {
+    afterNextRender(
+      () => {
+        liste.donnerLeFocusAuChangementDePoste(activite.id);
+      },
+      { injector: this.injector },
+    );
   }
 
   private async lire(adresse: AdresseDeLaJournee | undefined, operateur: string): Promise<JourneeACorriger | undefined> {

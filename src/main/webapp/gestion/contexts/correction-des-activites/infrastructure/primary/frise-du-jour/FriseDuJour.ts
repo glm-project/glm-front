@@ -1,4 +1,5 @@
 import { Component, computed, input } from '@angular/core';
+import { ActiviteDeLaJournee } from '../../../domain/journee/ActiviteDeLaJournee';
 import { JourneeACorriger } from '../../../domain/journee/JourneeACorriger';
 import { LIBELLES_CORRECTION_DES_ACTIVITES } from '../LibellesCorrectionDesActivites';
 import { friseDuJour } from './ProjectionDeLaFrise';
@@ -10,6 +11,7 @@ import { friseDuJour } from './ProjectionDeLaFrise';
 })
 export class FriseDuJour {
   readonly journee = input.required<JourneeACorriger>();
+  readonly selection = input<ActiviteDeLaJournee>();
   protected readonly libelles = LIBELLES_CORRECTION_DES_ACTIVITES.frise;
   protected readonly frise = computed(() => friseDuJour(this.journee()));
 }

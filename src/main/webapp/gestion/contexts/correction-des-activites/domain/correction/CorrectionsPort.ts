@@ -1,4 +1,7 @@
+import { SaisieDeChangementDePoste } from './SaisieDeChangementDePoste';
 import { SaisieDeRetrait } from './SaisieDeRetrait';
+
+export type MotifDeChangementDePoste = 'CHEVAUCHEMENT';
 
 export type ResultatDeCorrection<Motif = never> =
   | { readonly kind: 'ENREGISTREE' }
@@ -7,4 +10,5 @@ export type ResultatDeCorrection<Motif = never> =
 
 export abstract class CorrectionsPort {
   abstract retirer(saisie: SaisieDeRetrait): Promise<ResultatDeCorrection>;
+  abstract changerDePoste(saisie: SaisieDeChangementDePoste): Promise<ResultatDeCorrection<MotifDeChangementDePoste>>;
 }

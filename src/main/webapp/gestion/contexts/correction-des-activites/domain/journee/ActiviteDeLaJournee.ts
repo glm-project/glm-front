@@ -62,6 +62,10 @@ export class ActiviteDeLaJournee {
     return this.etat.kind !== 'EN_COURS';
   }
 
+  estSurLePoste(poste: PosteDeLaJournee): boolean {
+    return this.poste?.id.value === poste.id.value;
+  }
+
   estACheval(): boolean {
     return this.autresJours.length > 0;
   }

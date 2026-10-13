@@ -5,6 +5,7 @@ import {
   formatInstantWeekdayDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { IssueDeCorrection } from '../../application/CorrectionDUneActivite';
+import { MotifDeChangementDePoste } from '../../domain/correction/CorrectionsPort';
 import { ActiviteDeLaJournee, ActiviteTerminee } from '../../domain/journee/ActiviteDeLaJournee';
 import { BornesDuJour } from '../../domain/journee/BornesDuJour';
 import { CategorieDActivite } from '../../domain/journee/CategorieDActivite';
@@ -12,6 +13,7 @@ import { Duree } from '../../domain/journee/Duree';
 import { ElementDeLaJournee } from '../../domain/journee/ElementDeLaJournee';
 import { InstantDeLaJournee } from '../../domain/journee/InstantDeLaJournee';
 import { JourACorriger } from '../../domain/journee/JourACorriger';
+import { PosteDeLaJournee } from '../../domain/journee/PosteDeLaJournee';
 
 const MINUTES_PAR_HEURE = 60;
 const MILLISECONDES_PAR_MINUTE = 60_000;
@@ -53,6 +55,17 @@ const etatDe = (activite: ActiviteDeLaJournee): string | undefined => {
 
 const perteSurUnAutreJour = ({ jour, retire }: { readonly jour: JourACorriger; readonly retire: Duree }): string =>
   `le ${formatCalendarDayLong(jour.value)} perd aussi ${duree(retire)}`;
+
+const nomDuPoste = (poste: PosteDeLaJournee): string => `${poste.libelle} · ${poste.nature}`;
+
+const REFUS_DU_CHANGEMENT_DE_POSTE: Record<MotifDeChangementDePoste, string> = {
+  CHEVAUCHEMENT: 'Une autre activité de cet élément se chevauche déjà sur ce poste.',
+};
+
+const ANNONCES_DU_CHANGEMENT_DE_POSTE: Record<IssueDeCorrection, string> = {
+  ENREGISTREE: 'Poste modifié',
+  JOURNEE_CHANGEE: 'La journée a changé, recommencez',
+};
 
 const ANNONCES_DU_RETRAIT: Record<IssueDeCorrection, string> = {
   ENREGISTREE: 'Activité retirée',
@@ -118,6 +131,27 @@ export const LIBELLES_CORRECTION_DES_ACTIVITES = {
   debutLe: (jour: JourACorriger): string => `début le ${formatCalendarDayLong(jour.value)}`,
   finLe: (jour: JourACorriger): string => `fin le ${formatCalendarDayLong(jour.value)}`,
   type: (categorie: CategorieDActivite): string => TYPES[categorie],
+  changement: {
+    bouton: (activite: ActiviteDeLaJournee, bornes: BornesDuJour): string =>
+      `Changer le poste de l’activité ${nomDeLElement(activite.element)}, ${horaires(activite, bornes)}`,
+    titre: 'Changer le poste',
+    horaires: (activite: ActiviteTerminee): string =>
+      activite.estACheval()
+        ? `Du ${jourEtHeureSeparees(activite.debut)}, au ${jourEtHeureSeparees(activite.etat.fin)}`
+        : `${heure(activite.debut)} → ${heure(activite.etat.fin)}`,
+    poste: 'Poste',
+    nomDuPoste,
+    etait: (poste: PosteDeLaJournee | undefined): string => `Était : ${poste === undefined ? SANS_POSTE : nomDuPoste(poste)}`,
+    aucunAutrePoste: 'Aucun autre poste habilité pour cet opérateur.',
+    effet: 'Effet sur les journées',
+    tempsInchange: 'Le temps ne change pas',
+    enregistrer: 'Enregistrer',
+    enregistrement: 'Enregistrement…',
+    abandonner: 'Abandonner',
+    refus: REFUS_DU_CHANGEMENT_DE_POSTE,
+    echec: 'Le changement de poste n’a pas abouti. Vérifiez la connexion puis réessayez.',
+    annonce: ANNONCES_DU_CHANGEMENT_DE_POSTE,
+  },
   retrait: {
     bouton: (activite: ActiviteDeLaJournee, bornes: BornesDuJour): string =>
       `Retirer l’activité ${nomDeLElement(activite.element)}, ${horaires(activite, bornes)}`,

@@ -1,10 +1,12 @@
 import { ActiviteDeLaJournee, ActiviteTerminee } from './ActiviteDeLaJournee';
+import { ActiviteDeLaJourneeId } from './ActiviteDeLaJourneeId';
 import { BornesDuJour } from './BornesDuJour';
 import { ChoixDAjout } from './ChoixDAjout';
 import { Duree } from './Duree';
 import { InstantDeLaJournee } from './InstantDeLaJournee';
 import { JourACorriger } from './JourACorriger';
 import { OperateurDeLaJournee } from './OperateurDeLaJournee';
+import { PosteDeLaJournee } from './PosteDeLaJournee';
 import { SuiviPresent } from './SuiviPresent';
 
 export interface ContenuDeLaJournee {
@@ -48,6 +50,14 @@ export class JourneeACorriger {
 
   clotureDe(activite: ActiviteDeLaJournee): InstantDeLaJournee | undefined {
     return this.clotures.get(activite.id.value);
+  }
+
+  postesPourChanger(activite: ActiviteDeLaJournee): readonly PosteDeLaJournee[] {
+    return this.choix.postes.filter(poste => !activite.estSurLePoste(poste));
+  }
+
+  activiteCorrigeable(id: ActiviteDeLaJourneeId): ActiviteTerminee | undefined {
+    return this.activites.find((activite): activite is ActiviteTerminee => activite.id.value === id.value && this.estCorrigeable(activite));
   }
 
   estCorrigeable(activite: ActiviteDeLaJournee): activite is ActiviteTerminee {

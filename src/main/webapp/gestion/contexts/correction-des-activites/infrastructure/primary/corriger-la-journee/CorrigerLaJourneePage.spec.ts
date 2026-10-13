@@ -6,6 +6,7 @@ import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { CorrectionsFixture } from '@test/unit/fixtures/gestion/correction-des-activites/CorrectionsFixture';
 import {
   elementFixture,
+  fraiseuseFixture,
   instantLocal,
   JourneeACorrigerFixture,
   journeeFixture,
@@ -17,6 +18,8 @@ import { BehaviorSubject, EMPTY, firstValueFrom } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CorrectionsPort } from '../../../domain/correction/CorrectionsPort';
 import { JourneeACorrigerPort } from '../../../domain/journee/JourneeACorrigerPort';
+import { PosteDeLaJournee } from '../../../domain/journee/PosteDeLaJournee';
+import { PosteDeLaJourneeId } from '../../../domain/journee/PosteDeLaJourneeId';
 import { CorrigerLaJourneePage } from './CorrigerLaJourneePage';
 
 class RouteFixture {
@@ -69,6 +72,48 @@ const lundi = journeeFixture({
   ],
 });
 
+const perceuseFixture = new PosteDeLaJournee(new PosteDeLaJourneeId('poste-perce'), 'Perceuse 1', 'Perçage');
+
+const matinSurLeTour = {
+  id: 'matin',
+  suivi: 'suivi-1',
+  poste: tourFixture,
+  debut: instantLocal(5, 8),
+  etat: terminee(instantLocal(5, 9, 30), 'PT1H30M'),
+};
+
+const soirSurLeTour = {
+  id: 'soir',
+  suivi: 'suivi-1',
+  poste: tourFixture,
+  debut: instantLocal(5, 18, 30),
+  etat: terminee(instantLocal(5, 21, 45), 'PT3H15M'),
+};
+
+const lundiAvecDesPostes = journeeFixture({
+  jour: 5,
+  suivis: SUIVIS,
+  operationnelle: 'PT4H45M',
+  activites: [matinSurLeTour, soirSurLeTour],
+  postes: [tourFixture, fraiseuseFixture],
+});
+
+const lundiAvecTroisPostes = journeeFixture({
+  jour: 5,
+  suivis: SUIVIS,
+  operationnelle: 'PT4H45M',
+  activites: [matinSurLeTour, soirSurLeTour],
+  postes: [tourFixture, fraiseuseFixture, perceuseFixture],
+});
+
+const lundiSansLeSoir = journeeFixture({
+  jour: 5,
+  suivis: SUIVIS,
+  operationnelle: 'PT1H30M',
+  activites: [matinSurLeTour],
+  postes: [tourFixture, fraiseuseFixture],
+});
+
 const mardi = journeeFixture({ jour: 6, suivis: SUIVIS, operationnelle: 'PT0S', activites: [] });
 
 describe('Page to correct the day of an operator', () => {
@@ -100,6 +145,7 @@ describe('Page to correct the day of an operator', () => {
   });
 
   afterEach(async () => {
+    corrections.liberer();
     const dialogs = TestBed.inject(MatDialog);
     const fermeture = firstValueFrom(dialogs.afterAllClosed);
     dialogs.closeAll();
@@ -274,6 +320,214 @@ describe('Page to correct the day of an operator', () => {
     expect(all('corriger-annonce')[0]).not.toBe(premiere);
     expect(text('corriger-annonce')).toBe('Activité retirée');
   });
+
+  it('should open the panel to change the workstation beside the day, which stays on screen, and mark the activity', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    expect(text('changement-titre')).toBe('Changer le poste');
+    expect(texts('activite-horaires')).toEqual(['08:00 → 09:30', '18:30 → 21:45']);
+    expect(texts('frise-operationnel')).toEqual(['Opérationnel : 4 h 45']);
+    expect(currents('activite')).toEqual([null, 'true']);
+  });
+
+  it('should close the panel and give the focus back to its button when the manager abandons', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    await whenAbandoningTheChange();
+
+    expect(texts('changement-titre')).toEqual([]);
+    expect(corrections.changements).toEqual([]);
+    expect(document.activeElement).toBe(all('activite-changer-poste')[1]);
+  });
+
+  it('should close the panel, read the day again and say the workstation was changed once the change is recorded', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    await whenSavingTheChange();
+
+    expect(corrections.changements.map(saisie => [saisie.activite.value, saisie.poste.value])).toEqual([['soir', 'poste-fraise']]);
+    expect(texts('changement-titre')).toEqual([]);
+    expect(port.lectures).toHaveLength(2);
+    expect(text('corriger-annonce')).toBe('Poste modifié');
+    expect(document.activeElement).toBe(all('activite-changer-poste')[1]);
+  });
+
+  it('should close the panel, read the day again and ask to start over when the day changed meanwhile', async () => {
+    corrections.repondreAuChangement({ kind: 'JOURNEE_CHANGEE' });
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    await whenSavingTheChange();
+
+    expect(texts('changement-titre')).toEqual([]);
+    expect(port.lectures).toHaveLength(2);
+    expect(text('corriger-annonce')).toBe('La journée a changé, recommencez');
+  });
+
+  it('should keep the panel open and explain the refusal when the new workstation overlaps another activity', async () => {
+    corrections.repondreAuChangement({ kind: 'REFUS', motif: 'CHEVAUCHEMENT' });
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    await whenSavingTheChange();
+
+    expect(texts('changement-refus')).toEqual(['Une autre activité de cet élément se chevauche déjà sur ce poste.']);
+    expect(port.lectures).toHaveLength(1);
+    expect(texts('corriger-annonce')).toEqual([]);
+  });
+
+  it('should drop the panel when the address names another day', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    await whenTheAddressNames('2026-10-06');
+
+    expect(texts('changement-titre')).toEqual([]);
+  });
+
+  it('should close the panel opened on an activity when that activity is removed', async () => {
+    port.journees.set('2026-10-05', lundiAvecDesPostes);
+    await whenOpeningThePage();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    await whenRemovingTheSecondActivity();
+
+    expect(texts('changement-titre')).toEqual([]);
+  });
+
+  it('should keep the panel opened on another activity when an activity is removed', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    await whenRemovingTheFirstActivity();
+
+    expect(texts('changement-titre')).toEqual(['Changer le poste']);
+  });
+
+  it('should close the panel when the activity it was opened on is no longer correctable once the day is read again', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    await whenTheDayIsReadAgainWithoutTheActivityAfterRemovingTheFirstOne();
+
+    expect(texts('changement-titre')).toEqual([]);
+  });
+
+  it('should drop the panel while the day cannot be read after an activity is removed', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    await whenTheDayCannotBeReadAfterRemovingTheFirstActivity();
+
+    expect(texts('changement-titre')).toEqual([]);
+    expect(texts('corriger-erreur')).toHaveLength(1);
+  });
+
+  const whenTheDayCannotBeReadAfterRemovingTheFirstActivity = async (): Promise<void> => {
+    port.echec = new Error('lecture impossible');
+    await whenRemovingTheFirstActivity();
+  };
+
+  it('should not carry the refusal, the choice nor the focus of a panel over to the panel opened on another activity', async () => {
+    corrections.repondreAuChangement({ kind: 'REFUS', motif: 'CHEVAUCHEMENT' });
+    await whenOpeningThePageOnADayWithThreeWorkstations();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+    await whenChoosingTheLastWorkstation();
+    await whenSavingTheChange();
+
+    await whenAskingToChangeTheWorkstationOfTheFirstActivity();
+
+    expect(texts('changement-refus')).toEqual([]);
+    expect(chosenWorkstation()).toBe('poste-fraise');
+    expect(document.activeElement).toBe(all('changement-poste')[0]);
+  });
+
+  it('should forbid every correction while a change of workstation is being sent', async () => {
+    const arrivee = corrections.retenir();
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    whenSavingTheChangeWithoutWaiting();
+    await arrivee;
+    await shown.whenStable();
+
+    expect(disabledStates('activite-changer-poste')).toEqual([true, true]);
+    expect(disabledStates('activite-retirer')).toEqual([true, true]);
+  });
+
+  const whenOpeningThePageOnADayWithThreeWorkstations = async (): Promise<void> => {
+    port.journees.set('2026-10-05', lundiAvecTroisPostes);
+    await whenOpeningThePage();
+  };
+
+  const whenChoosingTheLastWorkstation = async (): Promise<void> => {
+    const champ = all('changement-poste')[0] as HTMLSelectElement;
+    champ.value = 'poste-perce';
+    champ.dispatchEvent(new Event('change'));
+    await shown.whenStable();
+  };
+
+  const whenAskingToChangeTheWorkstationOfTheFirstActivity = async (): Promise<void> => {
+    all('activite-changer-poste')[0]?.click();
+    await shown.whenStable();
+  };
+
+  const whenSavingTheChangeWithoutWaiting = (): void => {
+    all('changement-enregistrer')[0]?.click();
+  };
+
+  const chosenWorkstation = (): string => (all('changement-poste')[0] as HTMLSelectElement).value;
+
+  const disabledStates = (selector: string): boolean[] => all(selector).map(element => (element as HTMLButtonElement).disabled);
+
+  const whenOpeningThePageOnADayWithWorkstations = async (): Promise<void> => {
+    port.journees.set('2026-10-05', lundiAvecDesPostes);
+    await whenOpeningThePage();
+  };
+
+  const whenAskingToChangeTheWorkstationOfTheSecondActivity = async (): Promise<void> => {
+    all('activite-changer-poste')[1]?.click();
+    await shown.whenStable();
+  };
+
+  const whenAbandoningTheChange = async (): Promise<void> => {
+    all('changement-abandonner')[0]?.click();
+    await shown.whenStable();
+  };
+
+  const whenSavingTheChange = async (): Promise<void> => {
+    all('changement-enregistrer')[0]?.click();
+    await new Promise(resolve => setTimeout(resolve));
+    await shown.whenStable();
+    await new Promise(resolve => setTimeout(resolve));
+    await shown.whenStable();
+  };
+
+  const whenRemovingTheFirstActivity = async (): Promise<void> => {
+    await whenAskingToRemoveTheActivityNumber(0);
+    await whenClickingInTheDialog('retrait-confirm');
+  };
+
+  const whenRemovingTheSecondActivity = async (): Promise<void> => {
+    await whenAskingToRemoveTheActivityNumber(1);
+    await whenClickingInTheDialog('retrait-confirm');
+  };
+
+  const whenTheDayIsReadAgainWithoutTheActivityAfterRemovingTheFirstOne = async (): Promise<void> => {
+    port.journees.set('2026-10-05', lundiSansLeSoir);
+    await whenRemovingTheFirstActivity();
+  };
+
+  const whenAskingToRemoveTheActivityNumber = async (numero: number): Promise<void> => {
+    all('activite-retirer')[numero]?.click();
+    await shown.whenStable();
+  };
+
+  const currents = (selector: string): (string | null)[] => all(selector).map(element => element.getAttribute('aria-current'));
 
   const whenAskingToRemoveTheActivity = async (): Promise<void> => {
     all('activite-retirer')[0]?.click();

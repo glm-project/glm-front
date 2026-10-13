@@ -1,0 +1,62 @@
+<aside class="gestion-carte" aria-labelledby="changement-titre" data-selector="changement-panneau">
+  <div class="border-b border-border px-5 py-4">
+    <h2 id="changement-titre" class="text-section" data-selector="changement-titre">{{ libelles.titre }}</h2>
+  </div>
+  <div class="flex flex-col gap-5 p-5">
+    <div>
+      <p class="font-semibold" data-selector="changement-element">
+        {{ activite().element.categorie.value }} {{ activite().element.numero() }}
+      </p>
+      @if (activite().element.description; as designation) {
+      <p class="text-body-sm text-ink-muted" data-selector="changement-designation">{{ designation }}</p>
+      }
+      <p class="text-body-sm tabular-nums text-ink-muted" data-selector="changement-horaires">{{ libelles.horaires(activite()) }}</p>
+    </div>
+    @if (choisi(); as choix) {
+    <div>
+      <label for="changement-poste" class="field-label">{{ libelles.poste }}</label>
+      <select
+        id="changement-poste"
+        class="field-input"
+        [disabled]="enCours()"
+        aria-describedby="changement-etait"
+        (change)="choisir($any($event.target).value)"
+        data-selector="changement-poste"
+      >
+        @if (activite().poste; as actuel) {
+        <option [value]="actuel.id.value" disabled>{{ libelles.nomDuPoste(actuel) }}</option>
+        } @for (poste of postes(); track poste.id.value) {
+        <option [value]="poste.id.value" [selected]="poste.id.value === choix.id.value">{{ libelles.nomDuPoste(poste) }}</option>
+        }
+      </select>
+      <p id="changement-etait" class="mt-2 text-body-sm text-ink-muted" data-selector="changement-etait">
+        {{ libelles.etait(activite().poste) }}
+      </p>
+    </div>
+    } @else {
+    <div>
+      <p data-selector="changement-aucun-poste">{{ libelles.aucunAutrePoste }}</p>
+      <p class="mt-2 text-body-sm text-ink-muted" data-selector="changement-etait">{{ libelles.etait(activite().poste) }}</p>
+    </div>
+    }
+    <div class="rounded-control border border-border bg-sunken p-3.5">
+      <p class="text-label uppercase text-ink-muted">{{ libelles.effet }}</p>
+      <p class="mt-2 text-body-sm" data-selector="changement-effet">{{ libelles.tempsInchange }}</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      @if (choisi(); as poste) {
+      <button mat-flat-button type="button" [disabled]="enCours()" (click)="enregistrer(poste)" data-selector="changement-enregistrer">
+        {{ enCours() ? libelles.enregistrement : libelles.enregistrer }}
+      </button>
+      }
+      <button #abandonner mat-button type="button" [disabled]="enCours()" (click)="abandon.emit()" data-selector="changement-abandonner">
+        {{ libelles.abandonner }}
+      </button>
+    </div>
+    @if (refus(); as motif) {
+    <p role="alert" class="text-body-sm text-danger" data-selector="changement-refus">{{ libelles.refus[motif] }}</p>
+    } @if (echec()) {
+    <p role="alert" class="text-body-sm text-danger" data-selector="changement-echec">{{ libelles.echec }}</p>
+    }
+  </div>
+</aside>

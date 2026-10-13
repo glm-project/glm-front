@@ -63,10 +63,27 @@
     retrySelector="corriger-retry"
     (retryRequested)="reload()"
   />
-  } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') {
-  <div class="flex flex-col gap-6" [attr.aria-busy]="relecture()">
-    <glm-frise-du-jour [journee]="vue.journee" />
-    <glm-activites-du-jour [journee]="vue.journee" (retraitDemande)="retirer(vue.journee, $event)" />
+  } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') { @let panneau = panneauDe(vue.journee);
+  <div class="grille" [class.grille-avec-panneau]="panneau !== undefined" [attr.aria-busy]="relecture()">
+    <div class="flex min-w-0 flex-col gap-6">
+      <glm-frise-du-jour [journee]="vue.journee" [selection]="panneau?.activite" />
+      <glm-activites-du-jour
+        #liste
+        [journee]="vue.journee"
+        [selection]="panneau?.activite?.id"
+        [envoiEnCours]="envoiEnCours()"
+        (retraitDemande)="retirer(vue.journee, $event)"
+        (changementDePosteDemande)="ouvrirLeChangementDePoste($event)"
+      />
+    </div>
+    @for (ouvert of panneau ? [panneau] : []; track ouvert.activite.id.value) {
+    <glm-panneau-de-changement-de-poste
+      [journee]="ouvert.journee"
+      [activite]="ouvert.activite"
+      (abandon)="abandonnerLeChangementDePoste(ouvert.activite, liste)"
+      (corrigee)="changementDePosteCorrige(ouvert.activite, $event, liste)"
+    />
+    }
   </div>
   } }
 </main>

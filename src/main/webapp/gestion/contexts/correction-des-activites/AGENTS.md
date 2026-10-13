@@ -53,9 +53,13 @@ et rejette la lecture. Les types générés restent dans `HttpJourneeACorriger`.
   tronque à la minute, sur le total et non sur chaque portion.
 - Le numéro d'un élément est sa référence, à défaut son nom ; sa désignation est sa description.
 
-Le domaine ne porte que ce que la page lit ou ce que consomment les corrections livrées : la recherche d'une activité
-par son identifiant et la fin du lendemain arrivent avec les corrections qui les consomment (ADR 0037).
+Le domaine ne porte que ce que la page lit ou ce que consomment les corrections livrées : la fin du lendemain arrive avec
+l'ajout qui la consomme (ADR 0037).
 
+- `JourneeACorriger.postesPourChanger(activite)` rend les postes habilités de l'opérateur sauf le poste actuel de l'activité
+  (tous les postes habilités pour une activité sans poste). `activiteCorrigeable(id)` retrouve une activité corrigeable
+  par son identifiant : la page s'en sert pour savoir si le panneau ouvert a encore une activité à corriger après une
+  relecture.
 - `JourneeACorriger.estCorrigeable(activite)` décide « corrigeable » : activité terminée (`TERMINEE`, qui dit aussi la fin
   régularisée, ou `TERMINEE_AUTOMATIQUEMENT`) dont le suivi n'est pas clôturé (`clotureDe`). C'est un prédicat de type :
   il rend une `ActiviteTerminee`, dont l'état porte la fin et la portion du jour, ce qui évite de tester `EN_COURS` à chaque
@@ -81,24 +85,27 @@ borne vers le passé. Le jour affiché n'est lu que dans l'adresse.
   `jourDeLaFin`). « en cours » sans durée, « fin automatique », « Clôturé le lundi 5 à 11:00 » pour un suivi clôturé. Une
   activité en cours depuis la veille nomme son jour de début (« depuis lundi 5 à 22:00 », comme la frise) ; le back ne lui
   envoie aucune portion, donc aucun lien « début le … ». Chaque activité corrigeable porte le bouton-icône « Retirer l'activité OF 24-131, 18:30 → 21:45 » (nom construit
-  du numéro de l'élément et des horaires, par `LibellesCorrectionDesActivites`). Les boutons « Changer le poste » et
-  « Ajouter une activité » viennent avec les lots qui les câblent : aucun bouton inerte.
+  du numéro de l'élément et des horaires, par `LibellesCorrectionDesActivites`). Elle porte aussi le bouton-icône « Changer le poste de l'activité OF 24-131, 18:30 → 21:45 » (même nommage) ;
+  « Ajouter une activité » vient avec le lot qui le câble : aucun bouton inerte.
 - Tous les mots affichés sont dans `LibellesCorrectionDesActivites.ts` ; les jours et les heures passent par `DateFormats`.
 
 ## Corrections
 
 Une correction est une commande sur un seul suivi, envoyée par `CorrectionsPort` et résolue en `ResultatDeCorrection` :
 `ENREGISTREE`, `JOURNEE_CHANGEE`, ou `REFUS { motif }` quand la correction a des motifs qu'un gestionnaire peut corriger.
-Le type du résultat prend le type des motifs : le retrait n'en a aucun, donc aucun `REFUS` n'existe pour lui.
+Le type du résultat prend le type des motifs : le retrait n'en a aucun, donc aucun `REFUS` n'existe pour lui ; le changement
+de poste n'a que `CHEVAUCHEMENT`.
 
-- **Saisie.** `SaisieDeRetrait.pour(precedente, activite, nouvelIdentifiant)` lie l'identifiant au contenu : la même activité
+- **Saisie.** `SaisieDeRetrait.pour(precedente, activite, nouvelIdentifiant)` et `SaisieDeChangementDePoste.pour(precedente, activite, poste, nouvelIdentifiant)` lient l'identifiant au contenu : la même activité
   garde l'identifiant de la saisie précédente (un renvoi après une réponse perdue est la même commande), une autre reçoit
   un identifiant neuf.
 - **Coordinateur.** `CorrectionDUneActivite` (fourni par la page, donc partagé avec le dialogue ouvert depuis elle) envoie,
   n'envoie rien tant qu'un envoi est en vol (double clic), et passe à `A_RELIRE { issue }` après `ENREGISTREE` ou
   `JOURNEE_CHANGEE` en oubliant la saisie : le même contenu renvoyé plus tard reçoit un nouvel identifiant, car ces
   corrections se défont. Après un échec technique (`ECHEC`) la saisie reste, et le renvoi garde son identifiant. Il ne
-  relit pas : la page détient la lecture. L'état « refusée » arrive avec la première correction qui a des motifs.
+  relit pas : la page détient la lecture. Après un refus (`REFUSEE { motif }`) la saisie reste aussi : le renvoi garde son identifiant. Le retrait et le changement
+  de poste gardent chacun leur saisie.
+- **Effet sur les journées d'un changement de poste.** Aucun calcul : le panneau dit « Le temps ne change pas ».
 - **Effet sur les journées.** `EffetSurLesJournees.duRetrait(journee, activite)` rend le jour affiché, durée
   opérationnelle avant → après (moins la portion du jour), et chaque autre jour touché avec la portion retirée, reçue du
   serveur. Il ne découpe jamais une activité existante.
@@ -109,11 +116,30 @@ Le type du résultat prend le type des motifs : le retrait n'en a aucun, donc au
   pendant un envoi. Il se ferme avec l'issue ; la page, qui n'utilise aucun `effect()`, relit alors sa ressource et affiche
   « Activité retirée » ou « La journée a changé, recommencez ». Le message disparaît au changement de jour (`linkedSignal`
   sur l'adresse).
+- **Panneau de changement de poste.** Un `<aside>` non modal dans la grille de la page, à côté de la frise et de la liste,
+  qui restent visibles et actives (il passe sous le contenu en largeur étroite). Il rappelle l'activité (élément,
+  désignation, horaires ou « Du lundi 5, 22:00, au mardi 6, 03:30 »), propose un seul champ « Poste » (les postes
+  habilités avec leur nature, le poste actuel affiché mais désactivé, « Était : … »), dit « Le temps ne change pas » et
+  n'a pas de « Enregistrer » quand aucun autre poste n'est habilité. Un refus s'affiche sous les boutons, la saisie
+  est conservée, le message du serveur n'est jamais montré. L'état du panneau est éphémère (jamais dans l'adresse) : la
+  page ne retient que l'identifiant de l'activité, le retrouve dans la journée lue (`activiteCorrigeable`) et le panneau
+  disparaît avec elle ; un changement de jour, un retrait de cette activité ou une activité devenue incorrigeable
+  le ferment. Un seul panneau à la fois (les lots suivants). L'instance du panneau est liée à l'activité (`@for` suivi
+  par identifiant) : ouvrir le panneau d'une autre activité en crée un neuf, sans refus, choix ni focus hérités. Tant
+  qu'un envoi est en vol (`CorrectionDUneActivite.etat` à `EN_COURS`), les boutons de correction de la liste sont
+  désactivés (`envoiEnCours`) : on ne peut ni ouvrir un autre panneau ni demander un retrait, et le résultat d'un envoi
+  retombe toujours sur le panneau qui l'a fait. Le focus va au champ à l'ouverture et revient au bouton d'origine à la
+  fermeture, avant la fin de la relecture (le bouton garde son nœud pendant la relecture). L'activité choisie est marquée
+  (`aria-current`) dans la liste et sur sa seule barre de la frise. Quand le panneau disparaît sans résultat (Abandonner,
+  changement de jour, retrait de l'activité, autre panneau), il appelle `abandonnerLeChangementDePoste()` : la saisie est
+  oubliée, car une réponse perdue ou un refus ne doit pas faire rejouer un ancien identifiant après une correction faite
+  ailleurs. La saisie d'un retrait, elle, survit à la fermeture du panneau.
 - **Relecture.** Seul le premier chargement (ou la reprise d'une panne sans valeur) affiche « Chargement… » : pendant la
   relecture d'après une correction, la frise, la liste et l'identité restent à l'écran (`aria-busy`), de sorte qu'un
   panneau ouvert ne soit jamais détruit. La zone `role="status"` reste dans la page ; chaque annonce y est un nouvel
   élément (clé = numéro d'annonce), donc une annonce identique à la précédente est de nouveau lue. Après une issue, le
   focus va à ce message (`tabindex="-1"`), cible stable que la relecture ne détruit pas.
-- **Adaptateur.** `HttpCorrections.retirer` traduit les codes du back en `ENREGISTREE` ou `JOURNEE_CHANGEE`, ou signale
-  une fois la panne par `ErrorHandlerPort` et la rejette ; la liste des codes et leur issue sont dans
+- **Adaptateur.** `HttpCorrections.retirer` et `changerDePoste` traduisent les codes du back en `ENREGISTREE`,
+  `JOURNEE_CHANGEE` ou, pour le changement de poste, `REFUS { CHEVAUCHEMENT }`, ou signalent une fois la panne par
+  `ErrorHandlerPort` et la rejettent ; la liste des codes et leur issue sont dans
   [`api.md`](../../../../../../documentation/api.md). Le retrait ne vérifie aucune habilitation.

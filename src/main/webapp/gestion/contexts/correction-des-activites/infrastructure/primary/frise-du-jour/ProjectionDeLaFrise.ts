@@ -16,6 +16,7 @@ const LIBELLES = LIBELLES_CORRECTION_DES_ACTIVITES;
 export type StyleDeBarre = 'travail' | 'nc' | 'en-cours';
 
 export interface BarreDeFrise {
+  readonly activite: string;
   readonly style: StyleDeBarre;
   readonly gauche: number;
   readonly largeur: number | undefined;
@@ -113,6 +114,7 @@ const styleDe = (activite: ActiviteDeLaJournee): StyleDeBarre => (enCours(activi
 const barreDe = (portion: Portion, axe: AxeDuJour, bornes: BornesDuJour): BarreDeFrise => {
   const gauche = axe.pourcentDe(portion.debut);
   return {
+    activite: portion.activite.id.value,
     style: styleDe(portion.activite),
     gauche,
     largeur: enCours(portion.activite) ? undefined : axe.pourcentDe(portion.fin) - gauche,

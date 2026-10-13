@@ -12,6 +12,7 @@ import {
 } from '@test/unit/fixtures/gestion/correction-des-activites/JourneeACorrigerFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { ActiviteTerminee } from '../../../domain/journee/ActiviteDeLaJournee';
+import { ActiviteDeLaJourneeId } from '../../../domain/journee/ActiviteDeLaJourneeId';
 import { ActivitesDuJour } from './ActivitesDuJour';
 
 const SUIVIS = [
@@ -210,6 +211,90 @@ describe('Activities of the day', () => {
 
     expect(demandes.map(demande => demande.id.value)).toEqual(['soir']);
   });
+
+  it.each([
+    { cas: 'finished normally', activite: matin, nom: 'Changer le poste de l’activité OF 24-131, 08:00 → 09:30' },
+    { cas: 'ended automatically', activite: finAutomatique, nom: 'Changer le poste de l’activité OF 24-131, 18:30 → 21:45' },
+  ])('should offer to change the workstation of an activity $cas, named by its element and its hours', async ({ activite, nom }) => {
+    await whenShowingTheDay([activite]);
+
+    expect(labels('activite-changer-poste')).toEqual([nom]);
+  });
+
+  it('should offer no change of workstation for an activity in progress nor for an activity whose suivi is closed', async () => {
+    await whenShowingTheDay([enCoursDepuis14h, suiviCloture]);
+
+    expect(labels('activite-changer-poste')).toEqual([]);
+  });
+
+  it('should ask to change the workstation of the activity whose button is pressed', async () => {
+    const demandes = givenTheChangesOfWorkstationAsked();
+    await whenShowingTheDay([matin, soir]);
+
+    whenPressingTheChangeOfWorkstationOfTheSecondActivity();
+
+    expect(demandes.map(demande => demande.id.value)).toEqual(['soir']);
+  });
+
+  it('should mark the selected activity as the current one in the list', async () => {
+    await whenShowingTheDayWithTheSelection([matin, soir], 'soir');
+
+    expect(currents('activite')).toEqual([null, 'true']);
+  });
+
+  it('should give the focus back to the button that changes the workstation of an activity', async () => {
+    await whenShowingTheDay([matin, soir]);
+
+    shown.componentInstance.donnerLeFocusAuChangementDePoste(new ActiviteDeLaJourneeId('soir'));
+
+    expect(document.activeElement).toBe(all('activite-changer-poste')[1]);
+  });
+
+  it('should give the focus to nothing when the activity offers no change of workstation', async () => {
+    await whenShowingTheDay([enCoursDepuis14h]);
+
+    shown.componentInstance.donnerLeFocusAuChangementDePoste(new ActiviteDeLaJourneeId('en-cours'));
+
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it('should forbid every correction while one is being sent', async () => {
+    shown.componentRef.setInput('envoiEnCours', true);
+    await whenShowingTheDay([matin, soir]);
+
+    expect(disabledStates('activite-changer-poste')).toEqual([true, true]);
+    expect(disabledStates('activite-retirer')).toEqual([true, true]);
+  });
+
+  it('should allow the corrections when none is being sent', async () => {
+    await whenShowingTheDay([matin, soir]);
+
+    expect(disabledStates('activite-changer-poste')).toEqual([false, false]);
+    expect(disabledStates('activite-retirer')).toEqual([false, false]);
+  });
+
+  const disabledStates = (selector: string): boolean[] => all(selector).map(element => (element as HTMLButtonElement).disabled);
+
+  const givenTheChangesOfWorkstationAsked = (): ActiviteTerminee[] => {
+    const demandes: ActiviteTerminee[] = [];
+    shown.componentInstance.changementDePosteDemande.subscribe(activite => demandes.push(activite));
+    return demandes;
+  };
+
+  const whenPressingTheChangeOfWorkstationOfTheSecondActivity = (): void => {
+    all('activite-changer-poste')[1]?.click();
+  };
+
+  const whenShowingTheDayWithTheSelection = async (activites: readonly ActiviteSemee[], selection: string): Promise<void> => {
+    shown.componentRef.setInput('selection', new ActiviteDeLaJourneeId(selection));
+    await whenShowingTheDay(activites);
+  };
+
+  const all = (selector: string): HTMLElement[] => [
+    ...(shown.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector(selector)),
+  ];
+
+  const currents = (selector: string): (string | null)[] => all(selector).map(element => element.getAttribute('aria-current'));
 
   const givenTheRemovalsAsked = (): ActiviteTerminee[] => {
     const demandes: ActiviteTerminee[] = [];

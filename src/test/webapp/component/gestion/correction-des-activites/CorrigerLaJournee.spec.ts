@@ -182,6 +182,53 @@ describe('Correction of the day of an operator in gestion', () => {
     thenTheDayStaysOnScreenWhileItIsReadAgainAndTheFocusIsOnTheMessage();
   });
 
+  it('should offer the workstations the operator is allowed on to change the workstation of an activity', () => {
+    givenTheDayAndItsChange(lundi(), lundi());
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToChangeTheWorkstationOfTheMorning();
+
+    thenTheWorkstationsAllowedAreOfferedBesideTheDay();
+  });
+
+  it('should say there is nothing to save when the operator is allowed on the current workstation only', () => {
+    givenTheDay({ ...lundi(), choix: { ...lundi().choix, postes: [tourRecu] } });
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToChangeTheWorkstationOfTheMorning();
+
+    thenThereIsNoOtherWorkstationAndNothingToSave();
+  });
+
+  it('should send the change of workstation once, read the day again and say the workstation was changed', () => {
+    givenTheDayAndItsChange(lundi(), lundi([matinSurLaFraiseuse, soirNonConforme]));
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToChangeTheWorkstationOfTheMorning();
+    whenSavingTheChangeWithADoubleClick();
+
+    thenOneChangeWasSentAndTheDayIsReadAgainWithTheNewWorkstation();
+  });
+
+  it('should explain the refusal under the buttons and keep the entry when the new workstation overlaps another activity', () => {
+    givenTheDayAndItsChange(lundi(), lundi());
+    givenTheNewWorkstationOverlaps();
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToChangeTheWorkstationOfTheMorning();
+    whenSavingTheChange();
+
+    thenTheOverlapIsExplainedAndTheEntryKept();
+  });
+
+  it('should read the day again and ask to start over when the day changed meanwhile the change of workstation', () => {
+    givenTheDayAndItsChange(lundi(), lundi([matinSurLaFraiseuse, soirNonConforme]));
+    givenTheDayChangedMeanwhile();
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToChangeTheWorkstationOfTheMorning();
+    whenSavingTheChange();
+
+    thenTheChangeIsClosedAndTheDayIsReadAgainWithTheMessageToStartOver();
+  });
+
+  const matinSurLaFraiseuse = { ...matin, poste: fraiseuseRecue };
+
   const enCoursDepuisMidi = activiteRecue({
     id: 'en-cours',
     suivi: 'suivi-1',
@@ -233,11 +280,19 @@ describe('Correction of the day of an operator in gestion', () => {
   };
   const givenTheDayAndItsRemoval = (avant: ReturnType<typeof lundi>, apres: ReturnType<typeof lundi>): void => {
     givenTheDay(avant);
-    journees.apresLeRetrait(apres);
+    journees.apresLaCorrection(apres);
     journees.installRetrait();
   };
   const givenTheDayChangedMeanwhile = (): void => {
     journees.journeeChangee = true;
+  };
+  const givenTheDayAndItsChange = (avant: ReturnType<typeof lundi>, apres: ReturnType<typeof lundi>): void => {
+    givenTheDay(avant);
+    journees.apresLaCorrection(apres);
+    journees.installChangementDePoste();
+  };
+  const givenTheNewWorkstationOverlaps = (): void => {
+    journees.chevauchement = true;
   };
   const givenAFailingRead = (): void => {
     journees.failRead = true;
@@ -288,6 +343,15 @@ describe('Correction of the day of an operator in gestion', () => {
   };
   const whenConfirmingTheRemovalWithADoubleClick = (): void => {
     cy.get(dataSelector('retrait-confirm')).dblclick();
+  };
+  const whenAskingToChangeTheWorkstationOfTheMorning = (): void => {
+    cy.get(dataSelector('activite-changer-poste')).first().click();
+  };
+  const whenSavingTheChange = (): void => {
+    cy.get(dataSelector('changement-enregistrer')).click();
+  };
+  const whenSavingTheChangeWithADoubleClick = (): void => {
+    cy.get(dataSelector('changement-enregistrer')).dblclick();
   };
   const whenOpeningTheNextDay = (): void => {
     cy.get(dataSelector('corriger-suivant')).click();
@@ -369,6 +433,58 @@ describe('Correction of the day of an operator in gestion', () => {
     cy.get('@journeeRead.all').should('have.length', 2);
     cy.get(dataSelector('retrait-confirm')).should('not.exist');
     cy.get(dataSelector('activite-horaires')).should('have.length', 1);
+  };
+  const thenTheWorkstationsAllowedAreOfferedBesideTheDay = (): void => {
+    cy.get(dataSelector('changement-titre')).should('have.text', 'Changer le poste');
+    cy.get('option').then(options => {
+      expect([...options].map(option => option.textContent.trim())).to.deep.equal(['Tour CN 1 · Tournage', 'Fraiseuse 1 · Fraisage']);
+      expect([...options].map(option => option.disabled)).to.deep.equal([true, false]);
+    });
+    cy.get(dataSelector('changement-etait')).should($element => {
+      expect($element.text().trim()).to.equal('Était : Tour CN 1 · Tournage');
+    });
+    cy.get(dataSelector('changement-effet')).should($element => {
+      expect($element.text().trim()).to.equal('Le temps ne change pas');
+    });
+    cy.focused().should('have.attr', 'data-selector', 'changement-poste');
+    cy.get(dataSelector('frise-operationnel')).should('be.visible');
+    cy.get(dataSelector('activite-horaires')).should('have.length', 2);
+    cy.get(dataSelector('activite')).first().should('have.attr', 'aria-current', 'true');
+  };
+  const thenThereIsNoOtherWorkstationAndNothingToSave = (): void => {
+    cy.get(dataSelector('changement-aucun-poste')).should($element => {
+      expect($element.text().trim()).to.equal('Aucun autre poste habilité pour cet opérateur.');
+    });
+    cy.get(dataSelector('changement-enregistrer')).should('not.exist');
+    cy.get(dataSelector('changement-abandonner')).should('be.visible');
+  };
+  const thenOneChangeWasSentAndTheDayIsReadAgainWithTheNewWorkstation = (): void => {
+    cy.get(dataSelector('corriger-annonce')).should('have.text', 'Poste modifié');
+    cy.get('@changementWrite.all').should('have.length', 1);
+    cy.get('@changementWrite')
+      .its('request.url')
+      .should('match', /\/api\/atelier\/suivis\/suivi-1\/activites\/matin\/poste$/);
+    cy.get('@changementWrite').its('request.body.poste').should('equal', 'poste-fraise');
+    cy.get('@changementWrite')
+      .its('request.body.id')
+      .should('match', /^[0-9a-f-]{36}$/);
+    cy.get('@journeeRead.all').should('have.length', 2);
+    cy.get(dataSelector('changement-titre')).should('not.exist');
+    cy.get(dataSelector('activite-poste')).first().should('have.text', 'Fraiseuse 1');
+    cy.focused().should('have.attr', 'data-selector', 'activite-changer-poste');
+  };
+  const thenTheOverlapIsExplainedAndTheEntryKept = (): void => {
+    cy.get(dataSelector('changement-refus')).should($element => {
+      expect($element.text().trim()).to.equal('Une autre activité de cet élément se chevauche déjà sur ce poste.');
+    });
+    cy.get(dataSelector('changement-poste')).should('have.value', 'poste-fraise');
+    cy.get('@journeeRead.all').should('have.length', 1);
+    cy.get(dataSelector('corriger-annonce')).should('not.exist');
+  };
+  const thenTheChangeIsClosedAndTheDayIsReadAgainWithTheMessageToStartOver = (): void => {
+    cy.get(dataSelector('corriger-annonce')).should('have.text', 'La journée a changé, recommencez');
+    cy.get(dataSelector('changement-titre')).should('not.exist');
+    cy.get('@journeeRead.all').should('have.length', 2);
   };
   const thenTheDayOfTheSixthIsShown = (): void => {
     cy.location('pathname').should('eq', '/operateurs/op-1/journees/2026-10-06');

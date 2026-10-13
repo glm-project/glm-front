@@ -8,6 +8,8 @@ type RestSuiviPresent = components['schemas']['RestSuiviPresent'];
 
 const JOURNEE = '/api/atelier/operateurs/*/journees/*';
 const RETRAIT = '/api/atelier/suivis/*/activites/*/retrait';
+const CHANGEMENT_DE_POSTE = '/api/atelier/suivis/*/activites/*/poste';
+const CHEVAUCHEMENT = 'urn:glm:erreur:atelier:chevauchement';
 const SAISIE_CONCURRENTE = 'urn:glm:erreur:atelier:saisie-concurrente';
 const OPERATEUR_INTROUVABLE = 'urn:glm:erreur:atelier:operateur-introuvable';
 const MOIS_D_OCTOBRE = 9;
@@ -64,16 +66,17 @@ export class JourneeApiFixture {
   failRead = false;
   operateurInconnu = false;
   journeeChangee = false;
+  chevauchement = false;
   private readonly journees = new Map<string, RestJournee>();
-  private journeeApresLeRetrait: RestJournee | undefined;
+  private journeeApresLaCorrection: RestJournee | undefined;
   private lectureLibre: Promise<void> = Promise.resolve();
 
   retenirLesLecturesSuivantes(): void {
     this.lectureLibre = new Promise(() => undefined);
   }
 
-  apresLeRetrait(journee: RestJournee): void {
-    this.journeeApresLeRetrait = journee;
+  apresLaCorrection(journee: RestJournee): void {
+    this.journeeApresLaCorrection = journee;
   }
 
   seed(journee: RestJournee): void {
@@ -91,8 +94,8 @@ export class JourneeApiFixture {
 
   installRetrait(): void {
     cy.intercept({ method: 'POST', pathname: RETRAIT }, request => {
-      if (this.journeeApresLeRetrait !== undefined) {
-        this.seed(this.journeeApresLeRetrait);
+      if (this.journeeApresLaCorrection !== undefined) {
+        this.seed(this.journeeApresLaCorrection);
       }
       if (this.journeeChangee) {
         request.reply({ statusCode: 409, body: { type: SAISIE_CONCURRENTE } });
@@ -100,6 +103,23 @@ export class JourneeApiFixture {
       }
       request.reply({ statusCode: 201, body: {} });
     }).as('retraitWrite');
+  }
+
+  installChangementDePoste(): void {
+    cy.intercept({ method: 'POST', pathname: CHANGEMENT_DE_POSTE }, request => {
+      if (this.chevauchement) {
+        request.reply({ statusCode: 409, body: { type: CHEVAUCHEMENT } });
+        return;
+      }
+      if (this.journeeApresLaCorrection !== undefined) {
+        this.seed(this.journeeApresLaCorrection);
+      }
+      if (this.journeeChangee) {
+        request.reply({ statusCode: 409, body: { type: SAISIE_CONCURRENTE } });
+        return;
+      }
+      request.reply({ statusCode: 201, body: {} });
+    }).as('changementWrite');
   }
 
   private reponse(jour: string): { statusCode?: number; body: RestJournee | { type?: string } } {

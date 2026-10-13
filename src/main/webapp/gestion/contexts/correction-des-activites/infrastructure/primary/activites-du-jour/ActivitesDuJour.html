@@ -7,7 +7,7 @@
   } @else {
   <ol>
     @for (ligne of lignes(); track ligne.cle) {
-    <li class="activite" data-selector="activite">
+    <li class="activite" data-selector="activite" [attr.aria-current]="ligne.cle === selection()?.value ? 'true' : null">
       <span class="flex flex-col items-start">
         <span class="font-semibold tabular-nums" data-selector="activite-horaires">{{ ligne.horaires }}</span>
         @if (ligne.debutAilleurs; as lien) {
@@ -40,13 +40,26 @@
         <span class="text-label text-ink-muted" data-selector="activite-total">{{ total }}</span>
         }
       </span>
-      @if (ligne.retrait; as retrait) {
+      @if (ligne.corrections; as corrections) {
       <span class="actions">
+        <button
+          #changerLePoste
+          mat-icon-button
+          type="button"
+          [disabled]="envoiEnCours()"
+          [attr.aria-label]="corrections.changementDePoste.nom"
+          [attr.data-activite]="ligne.cle"
+          (click)="changementDePosteDemande.emit(corrections.changementDePoste.activite)"
+          data-selector="activite-changer-poste"
+        >
+          <glm-icon name="pencil" />
+        </button>
         <button
           mat-icon-button
           type="button"
-          [attr.aria-label]="retrait.nom"
-          (click)="retraitDemande.emit(retrait.activite)"
+          [disabled]="envoiEnCours()"
+          [attr.aria-label]="corrections.retrait.nom"
+          (click)="retraitDemande.emit(corrections.retrait.activite)"
           data-selector="activite-retirer"
         >
           <glm-icon name="trash2" />

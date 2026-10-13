@@ -27,10 +27,15 @@ export interface LigneDActivite {
   readonly finAilleurs: LienVersUnJour | undefined;
   readonly etat: string | undefined;
   readonly cloture: string | undefined;
-  readonly retrait: RetraitDUneActivite | undefined;
+  readonly corrections: CorrectionsProposees | undefined;
 }
 
-export interface RetraitDUneActivite {
+export interface CorrectionsProposees {
+  readonly retrait: CorrectionProposee;
+  readonly changementDePoste: CorrectionProposee;
+}
+
+export interface CorrectionProposee {
   readonly activite: ActiviteTerminee;
   readonly nom: string;
 }
@@ -53,8 +58,13 @@ const clotureDeLActivite = (activite: ActiviteDeLaJournee, journee: JourneeACorr
   return clotureLe === undefined || activite.etat.kind === 'EN_COURS' ? undefined : LIBELLES.clotureLe(clotureLe);
 };
 
-const retraitDeLActivite = (activite: ActiviteDeLaJournee, journee: JourneeACorriger): RetraitDUneActivite | undefined =>
-  journee.estCorrigeable(activite) ? { activite, nom: LIBELLES.retrait.bouton(activite, journee.bornes) } : undefined;
+const correctionsDeLActivite = (activite: ActiviteDeLaJournee, journee: JourneeACorriger): CorrectionsProposees | undefined =>
+  journee.estCorrigeable(activite)
+    ? {
+        retrait: { activite, nom: LIBELLES.retrait.bouton(activite, journee.bornes) },
+        changementDePoste: { activite, nom: LIBELLES.changement.bouton(activite, journee.bornes) },
+      }
+    : undefined;
 
 const ligneDActivite = (activite: ActiviteDeLaJournee, journee: JourneeACorriger): LigneDActivite => ({
   cle: activite.id.value,
@@ -70,7 +80,7 @@ const ligneDActivite = (activite: ActiviteDeLaJournee, journee: JourneeACorriger
   finAilleurs: lienVers(activite.jourDeLaFin(journee.jour), LIBELLES.finLe),
   etat: LIBELLES.etatDe(activite),
   cloture: clotureDeLActivite(activite, journee),
-  retrait: retraitDeLActivite(activite, journee),
+  corrections: correctionsDeLActivite(activite, journee),
 });
 
 const chronologique = (une: ActiviteDeLaJournee, autre: ActiviteDeLaJournee): number => (une.debut.estAvant(autre.debut) ? -1 : 1);

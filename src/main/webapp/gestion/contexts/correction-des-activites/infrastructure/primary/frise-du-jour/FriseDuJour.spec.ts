@@ -1,5 +1,6 @@
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import {
+  activiteDeLaJournee,
   ActiviteSemee,
   elementFixture,
   enCours,
@@ -137,6 +138,23 @@ describe('Frise of the day', () => {
 
     expect(texts('frise-vide')).toEqual(['Aucune activité ce jour']);
   });
+
+  it('should mark the bar of the selected activity only, even when another activity shares its line', async () => {
+    const activites = [travail('a', [8, 0], [10, 0]), travail('b', [11, 0], [12, 0]), travail('c', [13, 0], [14, 0], fraiseuseFixture)];
+    await whenShowingTheDaySelecting(activites, 'b');
+
+    expect(currents('frise-barre')).toEqual([null, 'true', null]);
+  });
+
+  const currents = (selector: string): (string | null)[] => all(selector).map(element => element.getAttribute('aria-current'));
+
+  const whenShowingTheDaySelecting = async (activites: readonly ActiviteSemee[], selection: string): Promise<void> => {
+    const journee = journeeFixture({ jour: 5, suivis: SUIVIS, activites });
+    shown = TestBed.createComponent(FriseDuJour);
+    shown.componentRef.setInput('journee', journee);
+    shown.componentRef.setInput('selection', activiteDeLaJournee(journee, selection));
+    await shown.whenStable();
+  };
 
   const whenShowingTheDay = async (jour: number, activites: readonly ActiviteSemee[], operationnelle = 'PT0S'): Promise<void> => {
     shown = TestBed.createComponent(FriseDuJour);

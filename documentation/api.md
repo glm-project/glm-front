@@ -142,6 +142,13 @@ longer the server's, and resolve as `JOURNEE_CHANGEE` (reread, start over). `act
 technical failures: the screen never offers the removal of an activity in progress. No removal refusal has a motif the
 gestionnaire could correct.
 
+The change of workstation of an activity is `POST /api/atelier/suivis/{id}/activites/{activite}/poste` with `{ id, poste }`,
+under the same rule (201 and 200 succeed). `chevauchement` is the one refusal the gestionnaire can correct
+(`REFUS { CHEVAUCHEMENT }`, entry kept, wording rendered by the context). Everything the removal reads as a change of the
+day does so here too, with `poste-de-travail-introuvable`, `operateur-non-habilite` and `meme-poste`: the screen offers only
+the workstations the operator is allowed on, other than the current one, so they only follow a change since the read.
+`activite-en-cours` and any unknown code stay technical failures.
+
 `GesteReplayPolicy` owns the single `saisie-concurrente` retry. The transport
 normalizes the workshop motif but keeps the original diagnostic code. A concurrent refusal triggers a reread
 of the affected aggregate and one identical retry with the original UUID and business timestamp.

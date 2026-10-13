@@ -32,6 +32,7 @@
             [style.width.%]="barre.largeur"
             [title]="barre.enonce"
             data-selector="frise-barre"
+            [attr.aria-current]="barre.activite === selection()?.id.value ? 'true' : null"
             [attr.data-style]="barre.style"
             [attr.data-automatique]="barre.automatique"
             [attr.data-coupee-au-debut]="barre.coupeeAuDebut"
