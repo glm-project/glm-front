@@ -147,3 +147,6 @@ something stays, with a status that says what died.
   le serveur juge chaque pointage sur l'état de sa clé (opérateur, suivi, poste) et ignore ce qui ne s'accorde pas ;
   trois pointages au pupitre, gestes composés FIN puis ouverture, durée maximale reçue du référentiel, une seule
   anomalie pour le gestionnaire (la fin automatique) et plus de conflit nulle part ; il remplace les conflits de 0047
+- [0055 — Arrêter avant de changer la catégorie d'une activité](0055-stop-before-changing-the-category-of-an-activity.md) —
+  une tuile active n'offre que la cible ARRÊTER et le domaine ne compose plus FIN puis ouverture ; il amende les gestes
+  composés de 0054

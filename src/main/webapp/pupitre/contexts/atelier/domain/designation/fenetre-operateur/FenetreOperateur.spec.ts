@@ -365,42 +365,22 @@ describe('FenetreOperateur', () => {
     thenPointageTypesAre(fin, ['FIN']);
   });
 
-  it('should finish the work then open a non conformity on the same workstation when non conformity is asked during work', () => {
-    const nonConformite = whenDeciding('moule-1015', 'SECONDAIRE');
+  it('should only finish the work on its workstation when the secondary target is asked during work', () => {
+    const arret = whenDeciding('moule-1015', 'SECONDAIRE');
 
-    const gestes = captureGestures(nonConformite);
+    const gestes = captureGestures(arret);
 
-    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE']);
-    thenTypesAndWorkstationsAre(nonConformite, [
-      ['FIN', 'tour'],
-      ['NON_CONFORMITE', 'tour'],
-    ]);
+    thenGesturesAre(gestes, ['POINTAGE']);
+    thenTypesAndWorkstationsAre(arret, [['FIN', 'tour']]);
   });
 
-  it('should finish then open a non conformity on each workstation in turn when several works are running', () => {
-    const deuxTravaux = givenAWindowWithActivities({ 'of-204': [travailAuTourFixture, travailALaFraiseuseFixture] });
+  it('should only finish every activity on its workstation when the secondary target is asked on a non conforming element', () => {
+    const arret = whenDeciding('of-204', 'SECONDAIRE');
 
-    const nonConformites = whenDecidingWith(deuxTravaux, 'of-204', 'SECONDAIRE');
-
-    thenTypesAndWorkstationsAre(nonConformites, [
-      ['FIN', 'tour'],
-      ['NON_CONFORMITE', 'tour'],
-      ['FIN', 'fraiseuse'],
-      ['NON_CONFORMITE', 'fraiseuse'],
-    ]);
-  });
-
-  it('should finish then reopen as work each non conformity on its workstation, leaving the work untouched, when the secondary target is asked on a started element', () => {
-    const retourAuTravail = whenDeciding('of-204', 'SECONDAIRE');
-
-    const gestes = captureGestures(retourAuTravail);
-
-    thenGesturesAre(gestes, ['POINTAGE', 'POINTAGE', 'POINTAGE', 'POINTAGE']);
-    thenTypesAndWorkstationsAre(retourAuTravail, [
+    thenTypesAndWorkstationsAre(arret, [
       ['FIN', undefined],
-      ['DEBUT', undefined],
+      ['FIN', 'tour'],
       ['FIN', 'fraiseuse'],
-      ['DEBUT', 'fraiseuse'],
     ]);
   });
 
@@ -565,7 +545,7 @@ describe('FenetreOperateur', () => {
 
   it('should keep a refusal born in an earlier operator window silent', () => {
     const previousGesture = requiredFixture(
-      pointagesOf(fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z')).decision)[0],
+      pointagesOf(fenetre.afterDeciding('moule-1015', 'PRINCIPALE', identifyFixture, Date.parse('2026-09-05T09:00:00Z')).decision)[0],
       'previous pointage',
     );
     const journalWithPreviousRefusal: JournalDuPupitre = {
@@ -586,7 +566,7 @@ describe('FenetreOperateur', () => {
   });
 
   it('should not restore an earlier batch context when its local acceptance completes after a newer intent', () => {
-    const earlier = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
+    const earlier = fenetre.afterDeciding('moule-1015', 'PRINCIPALE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
     const acceptance = earlier.fenetre.prepareAcceptance(gesturesOf(earlier.decision));
     const newerIntent = earlier.fenetre.afterIntendingGesture();
     const acceptedAfterNewerIntent = acceptance.applyTo(newerIntent);
@@ -639,7 +619,7 @@ describe('FenetreOperateur', () => {
   });
 
   it('should expose the latest refusal born in this window when reconciling its company', () => {
-    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'PRINCIPALE'));
     const refused = givenTheDecisionWasRefused(gestures);
 
     whenReconciling(refused);
@@ -648,7 +628,7 @@ describe('FenetreOperateur', () => {
   });
 
   it('should expose the last shown refusal of a lot when several pointages were refused for the closed element', () => {
-    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+    const gestures = givenAcceptedDecision(whenDecidingTheStopOfTwoWorks());
 
     whenReconciling(givenTheGesturesWereRefusedForClosureInOrder(gestures, ['Premier refus.', 'Dernier refus.']));
 
@@ -658,7 +638,7 @@ describe('FenetreOperateur', () => {
   it.each<MotifFixture>([POINTAGE_IGNORE, NON_HABILITE])(
     'should never expose the %s refusal, only the closed element refusal is shown',
     motif => {
-      const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+      const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'PRINCIPALE'));
 
       whenReconciling(givenTheGesturesWereRefusedWith(gestures, [motif, motif]));
 
@@ -667,7 +647,7 @@ describe('FenetreOperateur', () => {
   );
 
   it('should never expose a refusal whose reason the adapter did not recognize', () => {
-    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'PRINCIPALE'));
 
     whenReconciling(givenTheGesturesWereRefusedWithoutReason(gestures));
 
@@ -680,7 +660,7 @@ describe('FenetreOperateur', () => {
     ['not authorized then closed', [NON_HABILITE, SUIVI_CLOTURE]],
     ['closed then not authorized', [SUIVI_CLOTURE, NON_HABILITE]],
   ])('should expose the closed element refusal of a lot whose other pointage was %s', (_order, motifs) => {
-    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+    const gestures = givenAcceptedDecision(whenDecidingTheStopOfTwoWorks());
 
     whenReconciling(givenTheGesturesWereRefusedWith(gestures, motifs));
 
@@ -688,7 +668,7 @@ describe('FenetreOperateur', () => {
   });
 
   it('should stop exposing a refusal as soon as another intent starts', () => {
-    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'SECONDAIRE'));
+    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'PRINCIPALE'));
     whenReconciling(givenTheDecisionWasRefused(gestures));
 
     whenDeciding('of-1015', 'PRINCIPALE');
@@ -698,10 +678,10 @@ describe('FenetreOperateur', () => {
 
   it('should preserve an earlier window while recognizing a refusal reconciled before durable acceptance', () => {
     const previous = fenetre;
-    const secondaire = fenetre.afterDeciding('moule-1015', 'SECONDAIRE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
-    const refused = givenTheDecisionWasRefused(gesturesOf(secondaire.decision).capture());
+    const arret = fenetre.afterDeciding('moule-1015', 'PRINCIPALE', identifyFixture, Date.parse('2026-09-05T09:00:00Z'));
+    const refused = givenTheDecisionWasRefused(gesturesOf(arret.decision).capture());
 
-    const reconciled = secondaire.fenetre.afterReconciling(Entreprise.of('entreprise-a'), refused);
+    const reconciled = arret.fenetre.afterReconciling(Entreprise.of('entreprise-a'), refused);
 
     expect(previous.refusal()).toBeUndefined();
     expect(reconciled.refusal()).toEqual({
@@ -730,7 +710,7 @@ describe('FenetreOperateur', () => {
   });
 
   it('should retain accepted and refused gestures already reconciled without adding pending duplicates', () => {
-    const gestures = gesturesOf(whenDeciding('moule-1015', 'SECONDAIRE')).capture();
+    const gestures = gesturesOf(whenDecidingTheStopOfTwoWorks()).capture();
     const reconciled = {
       ...structuredClone(vueFixture),
       evenements: gestures.map((geste, index) =>
@@ -750,7 +730,7 @@ describe('FenetreOperateur', () => {
   });
 
   it('should retain the pointed element number when a refusal arrives after that element disappeared', () => {
-    const capture = whenDeciding('moule-1015', 'SECONDAIRE');
+    const capture = whenDeciding('moule-1015', 'PRINCIPALE');
     const gestures = givenAcceptedDecision(capture);
     const refused = givenTheDecisionWasRefusedAfterTheElementDisappeared(gestures, 'moule-1015');
 
@@ -1172,6 +1152,10 @@ describe('FenetreOperateur', () => {
     cible: 'PRINCIPALE' | 'SECONDAIRE',
     posteId: string,
   ): LotDeGestesDAtelier => owner.afterChoosingPoste(suiviId, cible, posteId, identifyFixture, Date.parse('2026-09-05T09:00:00Z')).decision;
+  const whenDecidingTheStopOfTwoWorks = (): DecisionDePointage => {
+    fenetre = givenAWindowWithActivities({ 'moule-1015': [travailAuTourFixture, travailALaFraiseuseFixture] });
+    return whenDeciding('moule-1015', 'PRINCIPALE');
+  };
   const givenAcceptedDecision = (decision: DecisionDePointage): readonly GesteDePointage[] => {
     if (decision.kind !== 'GESTES') throw new Error('Expected gestures fixture.');
     const gestures = decision.capture();

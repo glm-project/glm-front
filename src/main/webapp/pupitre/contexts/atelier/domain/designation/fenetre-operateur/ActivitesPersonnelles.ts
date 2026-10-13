@@ -1,5 +1,4 @@
-import { ActiviteDuPupitre, SuiviDuPupitre, TypeDePointage, TypeDOuverture } from '../../journal-du-pupitre/JournalDuPupitre';
-import { CibleDePointage } from './DecisionDePointage';
+import { ActiviteDuPupitre, SuiviDuPupitre, TypeDePointage } from '../../journal-du-pupitre/JournalDuPupitre';
 import { OperateurDesigne } from './OperateurDesigne';
 import { LotDePointagesDemandes, PointageDemande } from './PointageDemande';
 import { ActiviteDePointage } from './VueDePointage';
@@ -46,22 +45,10 @@ export class ActivitesPersonnelles {
     };
   }
 
-  decide(cible: CibleDePointage): DecisionDesActivites {
+  decide(): DecisionDesActivites {
     if (this.etat.kind === 'INACTIF') return this.etat;
     const activites = [this.etat.premiere, ...this.etat.suivantes];
-    return { kind: 'ACTIF', pointages: this.pointagesPour(cible, activites) };
-  }
-
-  private pointagesPour(cible: CibleDePointage, activites: readonly ActiviteDuPupitre[]): LotDePointagesDemandes {
-    if (cible === 'PRINCIPALE') return activites.map(activite => this.pointage('FIN', activite));
-    const nonConformes = activites.filter(activite => activite.categorie === 'NON_CONFORMITE');
-    return nonConformes.length > 0
-      ? this.finsSuiviesDUneOuverture('DEBUT', nonConformes)
-      : this.finsSuiviesDUneOuverture('NON_CONFORMITE', activites);
-  }
-
-  private finsSuiviesDUneOuverture(ouverture: TypeDOuverture, activites: readonly ActiviteDuPupitre[]): LotDePointagesDemandes {
-    return activites.flatMap(activite => [this.pointage('FIN', activite), this.pointage(ouverture, activite)]);
+    return { kind: 'ACTIF', pointages: activites.map(activite => this.pointage('FIN', activite)) };
   }
 
   private hasNonConformity(activites: readonly SuiviDuPupitre['activites'][number][]): boolean {

@@ -79,7 +79,7 @@ describe('Pointage screen', () => {
 
   it.each(['primary-target', 'secondary-target'])('should declare no tile intention on a brief tap of its %s', async target => {
     await whenRendering();
-    whenTapping('moule-1015', target);
+    whenTapping('of-generated', target);
     whenTimePasses(5_000);
 
     thenIntentionsAre([]);
@@ -184,11 +184,11 @@ describe('Pointage screen', () => {
 
   it('should declare a single tile intention when both targets of a tile are held together', async () => {
     await whenRendering();
-    whenPressingDown('moule-1015', 'primary-target');
-    whenPressingDown('moule-1015', 'secondary-target');
+    whenPressingDown('of-generated', 'primary-target');
+    whenPressingDown('of-generated', 'secondary-target');
     whenTimePasses(1_000);
 
-    thenIntentionsAre([{ suiviId: 'moule-1015', cible: 'PRINCIPALE' }]);
+    thenIntentionsAre([{ suiviId: 'of-generated', cible: 'PRINCIPALE' }]);
   });
 
   it('should choose a single workstation when two choices are held together', async () => {
@@ -234,14 +234,22 @@ describe('Pointage screen', () => {
     thenOnlyThePressedTileIsBusy();
   });
 
+  it('should offer only the stop target on a started or non conforming tile, and both targets on a free tile', async () => {
+    await whenRendering();
+
+    thenTargetsOfTileAre('moule-1015', ['ARRÊTER']);
+    thenTargetsOfTileAre('of-204', ['ARRÊTER']);
+    thenTargetsOfTileAre('of-generated', ['DÉMARRER', 'NC']);
+  });
+
   it('should ignore a second target press and release the tile after acceptance', async () => {
     await whenRendering();
-    whenHolding('moule-1015', 'primary-target');
+    whenHolding('of-generated', 'primary-target');
     await whenRendering();
-    whenHolding('moule-1015', 'secondary-target');
+    whenHolding('of-generated', 'secondary-target');
     await whenCaptureSucceeds();
 
-    thenIntentionsAre([{ suiviId: 'moule-1015', cible: 'PRINCIPALE' }]);
+    thenIntentionsAre([{ suiviId: 'of-generated', cible: 'PRINCIPALE' }]);
     thenEveryTileIsAvailable();
   });
 
@@ -475,9 +483,12 @@ describe('Pointage screen', () => {
     Array.from(root().querySelectorAll(dataSelector('pointage-zone-titre')), heading => heading.textContent.trim());
   const thenThePersonalPointageViewIsRendered = (): void => {
     expect(zoneHeadings()).toEqual(['MOULE', 'OF']);
-    expect(requiredElement(root().querySelector(dataSelector('tile-of-204')), 'NC tile').textContent).toContain('FIN NC');
+    expect(requiredElement(root().querySelector(dataSelector('tile-of-204')), 'NC tile').textContent).toContain('ARRÊTER');
     expect(requiredElement(root().querySelector(dataSelector('tile-moule-1015')), 'active tile').textContent).toContain('depuis 2 h 14');
     expect(requiredElement(root().querySelector(dataSelector('tile-of-generated')), 'inactive tile').textContent).toContain('DÉMARRER');
+  };
+  const thenTargetsOfTileAre = (suiviId: string, labels: readonly string[]): void => {
+    expect(targetsFor(suiviId).map(target => target.textContent.trim())).toEqual(labels);
   };
   const thenNoZoneIsRendered = (): void => {
     expect(zoneHeadings()).toEqual([]);

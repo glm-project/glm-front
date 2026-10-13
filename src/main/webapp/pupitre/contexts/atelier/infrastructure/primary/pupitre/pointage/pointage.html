@@ -45,6 +45,7 @@
       >
         {{ labels.actionPrincipale(element) }}
       </button>
+      @if (!element.isActive()) {
       <button
         type="button"
         [disabled]="!gestesDisponibles() || busy().has(element.id)"
@@ -53,8 +54,9 @@
         class="hold-target h-touch-xl flex-1 rounded border-2 border-nc bg-surface px-2 text-section text-ink disabled:opacity-50"
         data-selector="secondary-target"
       >
-        {{ labels.actionSecondaire(element) }}
+        {{ labels.nonConformite }}
       </button>
+      }
     </div>
   </article>
 </ng-template>
