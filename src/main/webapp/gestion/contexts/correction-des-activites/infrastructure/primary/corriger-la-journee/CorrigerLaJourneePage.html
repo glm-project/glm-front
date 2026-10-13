@@ -64,14 +64,16 @@
     (retryRequested)="reload()"
   />
   } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') { @let panneau = panneauDe(vue.journee);
-  <div class="grille" [class.grille-avec-panneau]="panneau !== undefined" [attr.aria-busy]="relecture()">
+  <div class="grille" [class.grille-avec-panneau]="panneau !== undefined || ajout() !== undefined" [attr.aria-busy]="relecture()">
     <div class="flex min-w-0 flex-col gap-6">
-      <glm-frise-du-jour [journee]="vue.journee" [selection]="panneau?.activite" />
+      <glm-frise-du-jour [journee]="vue.journee" [selection]="panneau?.activite" [ajout]="ajout()" />
       <glm-activites-du-jour
         #liste
         [journee]="vue.journee"
         [selection]="panneau?.activite?.id"
         [envoiEnCours]="envoiEnCours()"
+        [ajoutOuvert]="ajout() !== undefined"
+        (ajoutDemande)="ouvrirLAjout(vue.journee)"
         (retraitDemande)="retirer(vue.journee, $event)"
         (changementDePosteDemande)="ouvrirLeChangementDePoste($event)"
       />
@@ -82,6 +84,14 @@
       [activite]="ouvert.activite"
       (abandon)="abandonnerLeChangementDePoste(ouvert.activite, liste)"
       (corrigee)="changementDePosteCorrige(ouvert.activite, $event, liste)"
+    />
+    } @if (ajout(); as ouvert) {
+    <glm-panneau-d-ajout
+      [journee]="vue.journee"
+      [ajout]="ouvert"
+      (ajoutChange)="ajout.set($event)"
+      (abandon)="abandonnerLAjout(liste)"
+      (corrigee)="ajoutCorrige($event, liste)"
     />
     }
   </div>

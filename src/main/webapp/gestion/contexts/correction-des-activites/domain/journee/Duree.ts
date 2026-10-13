@@ -1,3 +1,5 @@
+import { InstantDeLaJournee } from './InstantDeLaJournee';
+
 const FORMAT = /^PT(?=\d)(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/;
 const MILLISECONDES_PAR_SECONDE = 1000;
 const MILLISECONDES_PAR_MINUTE = 60 * MILLISECONDES_PAR_SECONDE;
@@ -28,6 +30,10 @@ export class Duree {
       throw new Error(`La durée « ${value} » reçue du serveur n’est pas une durée.`);
     }
     this.millisecondes = millisecondesDe(composantes);
+  }
+
+  static entre(debut: InstantDeLaJournee, fin: InstantDeLaJournee): Duree {
+    return Duree.deMillisecondes(fin.value.getTime() - debut.value.getTime());
   }
 
   plus(autre: Duree): Duree {

@@ -9,7 +9,9 @@ type RestSuiviPresent = components['schemas']['RestSuiviPresent'];
 const JOURNEE = '/api/atelier/operateurs/*/journees/*';
 const RETRAIT = '/api/atelier/suivis/*/activites/*/retrait';
 const CHANGEMENT_DE_POSTE = '/api/atelier/suivis/*/activites/*/poste';
+const AJOUT = '/api/atelier/suivis/*/activites';
 const CHEVAUCHEMENT = 'urn:glm:erreur:atelier:chevauchement';
+const DATE_DE_SURVENUE_FUTURE = 'urn:glm:erreur:atelier:date-de-survenue-future';
 const SAISIE_CONCURRENTE = 'urn:glm:erreur:atelier:saisie-concurrente';
 const OPERATEUR_INTROUVABLE = 'urn:glm:erreur:atelier:operateur-introuvable';
 const MOIS_D_OCTOBRE = 9;
@@ -67,6 +69,7 @@ export class JourneeApiFixture {
   operateurInconnu = false;
   journeeChangee = false;
   chevauchement = false;
+  finFuture = false;
   private readonly journees = new Map<string, RestJournee>();
   private journeeApresLaCorrection: RestJournee | undefined;
   private lectureLibre: Promise<void> = Promise.resolve();
@@ -120,6 +123,27 @@ export class JourneeApiFixture {
       }
       request.reply({ statusCode: 201, body: {} });
     }).as('changementWrite');
+  }
+
+  installAjout(): void {
+    cy.intercept({ method: 'POST', pathname: AJOUT }, request => {
+      if (this.chevauchement) {
+        request.reply({ statusCode: 409, body: { type: CHEVAUCHEMENT } });
+        return;
+      }
+      if (this.finFuture) {
+        request.reply({ statusCode: 400, body: { type: DATE_DE_SURVENUE_FUTURE } });
+        return;
+      }
+      if (this.journeeApresLaCorrection !== undefined) {
+        this.seed(this.journeeApresLaCorrection);
+      }
+      if (this.journeeChangee) {
+        request.reply({ statusCode: 409, body: { type: SAISIE_CONCURRENTE } });
+        return;
+      }
+      request.reply({ statusCode: 201, body: {} });
+    }).as('ajoutWrite');
   }
 
   private reponse(jour: string): { statusCode?: number; body: RestJournee | { type?: string } } {

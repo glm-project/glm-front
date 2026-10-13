@@ -1,6 +1,17 @@
 <section class="gestion-carte" aria-labelledby="activites-titre">
-  <div class="px-5 py-4">
+  <div class="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
     <h2 id="activites-titre" class="text-section" data-selector="activites-titre">{{ libelles.titre(lignes().length) }}</h2>
+    <button
+      #ajouter
+      mat-stroked-button
+      type="button"
+      [disabled]="envoiEnCours()"
+      [attr.aria-expanded]="ajoutOuvert()"
+      (click)="ajoutDemande.emit()"
+      data-selector="activite-ajouter"
+    >
+      <glm-icon name="plus" /> {{ libelleDeLAjout }}
+    </button>
   </div>
   @if (lignes().length === 0) {
   <p class="px-5 py-6 text-body text-ink-muted" data-selector="activites-vide">{{ libelles.vide }}</p>

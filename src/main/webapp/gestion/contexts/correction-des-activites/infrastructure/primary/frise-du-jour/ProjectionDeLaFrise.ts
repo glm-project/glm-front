@@ -4,6 +4,7 @@ import {
   minutesDeDebut,
   minutesDeFin,
 } from '@/gestion/shared/design-system/infrastructure/primary/axe-du-jour/AxeDuJour';
+import { AjoutEnPreparation } from '../../../domain/correction/AjoutEnPreparation';
 import { ActiviteDeLaJournee } from '../../../domain/journee/ActiviteDeLaJournee';
 import { BornesDuJour } from '../../../domain/journee/BornesDuJour';
 import { CategorieDActivite } from '../../../domain/journee/CategorieDActivite';
@@ -24,6 +25,7 @@ export interface BarreDeFrise {
   readonly automatique: boolean;
   readonly coupeeAuDebut: boolean;
   readonly coupeeALaFin: boolean;
+  readonly enAttente: boolean;
 }
 
 export type CoteDeMention = 'debut' | 'fin';
@@ -122,6 +124,7 @@ const barreDe = (portion: Portion, axe: AxeDuJour, bornes: BornesDuJour): BarreD
     automatique: portion.activite.etat.kind === 'TERMINEE_AUTOMATIQUEMENT',
     coupeeAuDebut: portion.debutAvant !== undefined,
     coupeeALaFin: portion.finApres !== undefined,
+    enAttente: false,
   };
 };
 
@@ -169,12 +172,85 @@ const ligneDe = ({ premiere, portions }: Groupe, axe: AxeDuJour, bornes: BornesD
   mentions: portions.flatMap(mentionsDe),
 });
 
-export const friseDuJour = (journee: JourneeACorriger): FriseProjetee => {
+interface AjoutProjete {
+  readonly cle: string;
+  readonly debut: number;
+  readonly fin: number;
+  readonly ligne: Pick<LigneDeFrise, 'element' | 'poste'>;
+  readonly enonce: string;
+  readonly style: StyleDeBarre;
+}
+
+const projeter = (journee: JourneeACorriger, ajout: AjoutEnPreparation): AjoutProjete | undefined => {
+  const intervalle = ajout.plage(journee).intervalle();
+  if (intervalle === undefined) {
+    return undefined;
+  }
+  const element = ajout.suivi(journee)?.element;
+  const poste = ajout.poste(journee);
+  return {
+    cle: `${element?.id.value ?? ''}|${poste?.id.value ?? ''}`,
+    debut: minutesDeDebut(intervalle.debut.value),
+    fin: minutesDeFin(intervalle.debut.value, intervalle.fin.value),
+    ligne: {
+      element: element === undefined ? LIBELLES.ajout.aAjouter : LIBELLES.nomDeLElement(element),
+      poste: LIBELLES.ajout.libelleDuPoste(poste),
+    },
+    enonce: LIBELLES.ajout.barreAAjouter(element, poste, ajout.categorie, intervalle.debut, intervalle.fin),
+    style: STYLES_DE_BARRE[ajout.categorie],
+  };
+};
+
+const ajoutProjete = (journee: JourneeACorriger, ajout: AjoutEnPreparation | undefined): AjoutProjete | undefined =>
+  ajout === undefined ? undefined : projeter(journee, ajout);
+
+const barreEnAttente = (ajout: AjoutProjete, axe: AxeDuJour): BarreDeFrise => {
+  const gauche = axe.pourcentDe(ajout.debut);
+  return {
+    activite: '',
+    style: ajout.style,
+    gauche,
+    largeur: axe.pourcentDe(ajout.fin) - gauche,
+    enonce: ajout.enonce,
+    automatique: false,
+    coupeeAuDebut: false,
+    coupeeALaFin: false,
+    enAttente: true,
+  };
+};
+
+const avecLAjout = (lignes: readonly LigneDeFrise[], ajout: AjoutProjete | undefined, axe: AxeDuJour): readonly LigneDeFrise[] => {
+  if (ajout === undefined) {
+    return lignes;
+  }
+  const barre = barreEnAttente(ajout, axe);
+  const partagee = lignes.some(ligne => ligne.cle === ajout.cle);
+  return partagee
+    ? lignes.map(ligne => (ligne.cle === ajout.cle ? { ...ligne, barres: [...ligne.barres, barre] } : ligne))
+    : [...lignes, { cle: ajout.cle, ...ajout.ligne, barres: [barre], marques: [], mentions: [] }];
+};
+
+const operationnelDe = (journee: JourneeACorriger, ajout: AjoutEnPreparation | undefined): string => {
+  const effet = ajout?.effet(journee);
+  return effet === undefined
+    ? LIBELLES.duree(journee.dureeOperationnelle)
+    : LIBELLES.avantApres(effet.jourAffiche.avant, effet.jourAffiche.apres);
+};
+
+export const friseDuJour = (journee: JourneeACorriger, ajout: AjoutEnPreparation | undefined): FriseProjetee => {
   const portions = journee.activites.map(activite => portionDe(activite, journee.bornes)).sort(chronologique);
-  const axe = AxeDuJour.de(portions.flatMap(portion => [portion.debut, portion.fin]));
+  const prevu = ajoutProjete(journee, ajout);
+  const axe = AxeDuJour.de([
+    ...portions.flatMap(portion => [portion.debut, portion.fin]),
+    ...(prevu === undefined ? [] : [prevu.debut, prevu.fin]),
+  ]);
   return {
     reperes: axe.reperes(true).map(repere => ({ ...repere, libelle: LIBELLES.frise.repere(repere.minutes) })),
-    lignes: parLigne(portions).map(groupe => ligneDe(groupe, axe, journee.bornes)),
-    operationnel: LIBELLES.duree(journee.dureeOperationnelle),
+    lignes: avecLAjout(
+      parLigne(portions).map(groupe => ligneDe(groupe, axe, journee.bornes)),
+      prevu,
+      axe,
+    ),
+    operationnel: operationnelDe(journee, ajout),
   };
 };

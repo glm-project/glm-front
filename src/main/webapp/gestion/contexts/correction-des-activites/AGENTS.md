@@ -23,6 +23,8 @@ immédiate (chevauchement, clôture, habilitation) appartiennent au `SuiviDAteli
 | correction             | un ajout, un changement de poste ou un retrait                                                                   |
 | saisie                 | le contenu d'une correction et son identifiant, oubliés une fois la correction enregistrée ou la journée changée |
 | effet sur les journées | la prévision par jour touché                                                                                     |
+| plage d'ajout          | le début et la fin tapés (`HH:MM`) d'une activité à ajouter, tenus en heure locale sur le jour affiché           |
+| ajout en préparation   | ce que le gestionnaire a choisi et tapé dans le panneau d'ajout : élément, poste, type, plage                    |
 | journée changée        | la journée lue n'est plus celle du serveur : on relit et on recommence                                           |
 
 Mots à éviter : « pointage » (on corrige des activités ; seul l'identifiant du pointage ouvrant nomme une activité),
@@ -54,7 +56,7 @@ et rejette la lecture. Les types générés restent dans `HttpJourneeACorriger`.
 - Le numéro d'un élément est sa référence, à défaut son nom ; sa désignation est sa description.
 
 Le domaine ne porte que ce que la page lit ou ce que consomment les corrections livrées : la fin du lendemain arrive avec
-l'ajout qui la consomme (ADR 0037).
+l'ajout qui la consomme, donc avec le lot suivant (ADR 0037).
 
 - `JourneeACorriger.postesPourChanger(activite)` rend les postes habilités de l'opérateur sauf le poste actuel de l'activité
   (tous les postes habilités pour une activité sans poste). `activiteCorrigeable(id)` retrouve une activité corrigeable
@@ -80,13 +82,18 @@ borne vers le passé. Le jour affiché n'est lu que dans l'adresse.
   est coupée aux bornes reçues (`debutAvantLeJour`, `finApresLeJour`) et nomme l'autre jour (« ← début le lundi 5 à 22:00 »,
   « suite le mardi 6 → »). Une activité en cours est un repère ponctuel, sans barre ; une fin automatique n'a pas de repère de
   fin et termine sa barre par l'embout hachuré `warn`, nommé dans la légende. L'en-tête dit « Opérationnel » et la durée du jour.
+  Tant qu'un ajout est en préparation, la frise dessine l'activité à venir en pointillé (`data-en-attente`, sans repère de début
+  ni de fin), sur la ligne de son élément et de son poste, ou sur une ligne « À ajouter » tant qu'aucun élément n'est choisi ;
+  elle n'est dessinée qu'une fois les deux heures tapées et cohérentes (la fin suit le début). L'axe l'inclut : il s'ouvre sur le
+  jour entier dès qu'elle sort de 6 h à 22 h. L'en-tête montre alors « Opérationnel : 4 h 45 → 6 h 15 » (avant → après).
 - **Liste** (`ActivitesDuJour`) : par début. La durée est la portion du jour ; une activité à cheval ajoute « sur 5 h 30 »
   (`dureeTotale`) et des liens « début le … » ou « fin le … » vers l'autre jour, pris dans les portions reçues (`jourDuDebut`,
   `jourDeLaFin`). « en cours » sans durée, « fin automatique », « Clôturé le lundi 5 à 11:00 » pour un suivi clôturé. Une
   activité en cours depuis la veille nomme son jour de début (« depuis lundi 5 à 22:00 », comme la frise) ; le back ne lui
   envoie aucune portion, donc aucun lien « début le … ». Chaque activité corrigeable porte le bouton-icône « Retirer l'activité OF 24-131, 18:30 → 21:45 » (nom construit
-  du numéro de l'élément et des horaires, par `LibellesCorrectionDesActivites`). Elle porte aussi le bouton-icône « Changer le poste de l'activité OF 24-131, 18:30 → 21:45 » (même nommage) ;
-  « Ajouter une activité » vient avec le lot qui le câble : aucun bouton inerte.
+  du numéro de l'élément et des horaires, par `LibellesCorrectionDesActivites`). Elle porte aussi le bouton-icône « Changer le poste de l'activité OF 24-131, 18:30 → 21:45 » (même nommage).
+  Son en-tête porte le bouton « Ajouter une activité » (désactivé pendant un envoi, `aria-expanded` tant que le panneau d'ajout
+  est ouvert), même sur un jour vide.
 - Tous les mots affichés sont dans `LibellesCorrectionDesActivites.ts` ; les jours et les heures passent par `DateFormats`.
 
 ## Corrections
@@ -94,21 +101,26 @@ borne vers le passé. Le jour affiché n'est lu que dans l'adresse.
 Une correction est une commande sur un seul suivi, envoyée par `CorrectionsPort` et résolue en `ResultatDeCorrection` :
 `ENREGISTREE`, `JOURNEE_CHANGEE`, ou `REFUS { motif }` quand la correction a des motifs qu'un gestionnaire peut corriger.
 Le type du résultat prend le type des motifs : le retrait n'en a aucun, donc aucun `REFUS` n'existe pour lui ; le changement
-de poste n'a que `CHEVAUCHEMENT`.
+de poste n'a que `CHEVAUCHEMENT` ; l'ajout a `CHEVAUCHEMENT` et `FIN_FUTURE`.
 
-- **Saisie.** `SaisieDeRetrait.pour(precedente, activite, nouvelIdentifiant)` et `SaisieDeChangementDePoste.pour(precedente, activite, poste, nouvelIdentifiant)` lient l'identifiant au contenu : la même activité
-  garde l'identifiant de la saisie précédente (un renvoi après une réponse perdue est la même commande), une autre reçoit
-  un identifiant neuf.
+- **Saisie.** `SaisieDeRetrait.pour(precedente, activite, nouvelIdentifiant)`, `SaisieDeChangementDePoste.pour(precedente, activite, poste, nouvelIdentifiant)`
+  et `SaisieDAjout.pour(precedente, contenu, nouvelIdentifiant)` lient l'identifiant au contenu : la même activité
+  (pour un ajout : mêmes opérateur, suivi, poste, type, début et fin) garde l'identifiant de la saisie précédente (un renvoi
+  après une réponse perdue est la même commande), une autre reçoit un identifiant neuf.
 - **Coordinateur.** `CorrectionDUneActivite` (fourni par la page, donc partagé avec le dialogue ouvert depuis elle) envoie,
   n'envoie rien tant qu'un envoi est en vol (double clic), et passe à `A_RELIRE { issue }` après `ENREGISTREE` ou
   `JOURNEE_CHANGEE` en oubliant la saisie : le même contenu renvoyé plus tard reçoit un nouvel identifiant, car ces
   corrections se défont. Après un échec technique (`ECHEC`) la saisie reste, et le renvoi garde son identifiant. Il ne
-  relit pas : la page détient la lecture. Après un refus (`REFUSEE { motif }`) la saisie reste aussi : le renvoi garde son identifiant. Le retrait et le changement
-  de poste gardent chacun leur saisie.
+  relit pas : la page détient la lecture. Après un refus (`REFUSEE { motif }` pour le changement de poste, `AJOUT_REFUSE { motif }`
+  pour l'ajout, dont le motif a un type propre) la saisie reste aussi : le renvoi garde son identifiant. Le retrait, le
+  changement de poste et l'ajout gardent chacun leur saisie ; `abandonnerLAjout()` oublie celle de l'ajout, comme
+  `abandonnerLeChangementDePoste()` celle du changement.
 - **Effet sur les journées d'un changement de poste.** Aucun calcul : le panneau dit « Le temps ne change pas ».
 - **Effet sur les journées.** `EffetSurLesJournees.duRetrait(journee, activite)` rend le jour affiché, durée
   opérationnelle avant → après (moins la portion du jour), et chaque autre jour touché avec la portion retirée, reçue du
-  serveur. Il ne découpe jamais une activité existante.
+  serveur. Il ne découpe jamais une activité existante. `EffetSurLesJournees.dUnAjout(journee, plage)` rend le jour affiché,
+  durée opérationnelle avant → après (plus la durée de la plage, un écart entre deux instants : `Duree.entre`), ou rien tant que
+  la plage n'est pas cohérente. Ce lot ne touche que le jour affiché ; l'ajout qui finit le lendemain ajoute ses portions.
 - **Retrait.** Le bouton de la liste demande à la page (`retraitDemande`) d'ouvrir `RetraitDeLActivite`, un `MatDialog`
   avec `ConfirmationContent` : titre « Retirer l'activité de 18:30 à 21:45 ? » (« du lundi 5, 20:30, au mardi 6, 04:00 ? »
   à cheval), l'activité et sa durée totale, une ligne d'effet par jour, « Le retrait vaut pour toute l'activité : le mardi 6
@@ -124,7 +136,7 @@ de poste n'a que `CHEVAUCHEMENT`.
   est conservée, le message du serveur n'est jamais montré. L'état du panneau est éphémère (jamais dans l'adresse) : la
   page ne retient que l'identifiant de l'activité, le retrouve dans la journée lue (`activiteCorrigeable`) et le panneau
   disparaît avec elle ; un changement de jour, un retrait de cette activité ou une activité devenue incorrigeable
-  le ferment. Un seul panneau à la fois (les lots suivants). L'instance du panneau est liée à l'activité (`@for` suivi
+  le ferment. Un seul panneau à la fois (voir l'ajout). L'instance du panneau est liée à l'activité (`@for` suivi
   par identifiant) : ouvrir le panneau d'une autre activité en crée un neuf, sans refus, choix ni focus hérités. Tant
   qu'un envoi est en vol (`CorrectionDUneActivite.etat` à `EN_COURS`), les boutons de correction de la liste sont
   désactivés (`envoiEnCours`) : on ne peut ni ouvrir un autre panneau ni demander un retrait, et le résultat d'un envoi
@@ -134,12 +146,54 @@ de poste n'a que `CHEVAUCHEMENT`.
   changement de jour, retrait de l'activité, autre panneau), il appelle `abandonnerLeChangementDePoste()` : la saisie est
   oubliée, car une réponse perdue ou un refus ne doit pas faire rejouer un ancien identifiant après une correction faite
   ailleurs. La saisie d'un retrait, elle, survit à la fermeture du panneau.
+- **Ajout.** Le bouton « Ajouter une activité » de la liste demande à la page (`ajoutDemande`) d'ouvrir `PanneauDAjout`, un
+  `<aside>` non modal dans le même emplacement de la grille que celui du changement de poste. La page ne retient que
+  l'`AjoutEnPreparation` (jamais dans l'adresse), un modèle de formulaire du domaine ([ADR 0036](../../../../../../documentation/adr/0036-rich-domain-models-for-form-interactions.md)) :
+  le panneau lui envoie ses saisies (`avecSuivi`, `avecPoste`, `avecCategorie`, `avecDebut`, `avecFin`, qui l'actualisent
+  avec l'heure lue par `Horloge`) et la page le passe à la frise. Le modèle garde des identifiants et se relit contre la
+  journée courante (`suivi(journee)`, `poste(journee)`, `plage(journee)`) : une relecture, après un retrait par exemple,
+  ne perd ni la saisie ni l'élément choisi. Il propose le premier poste habilité par défaut et ne choisit aucun élément.
+  - **Champs.** « Élément » (`SearchPicker`, une entrée par suivi présent, les suivis clôturés depuis compris, triées par
+    libellé « OF 24-131 · Pièce 1 ») ; « Poste » (postes habilités avec leur nature, « Tour CN 1 · Tournage ») ; « Type »
+    (Travail ou Non-conformité) ; « De » et « À » en `HH:MM` avec la durée calculée à côté ; l'encart « Effet sur les journées »
+    (« Opérationnel du lundi 5 : 4 h 45 → 7 h 15 », ou l'invite à saisir une plage). Les heures se valident à la sortie du champ
+    (`change`), pas à chaque touche. Le focus va à l'élément à l'ouverture et revient au bouton de la liste à la fermeture,
+    abandon ou succès. Sans poste habilité, le panneau le dit et n'a pas de bouton « Ajouter l'activité ».
+  - **`PlageDAjout`** (pure, immuable) reçoit les bornes du jour, le jour affiché, « maintenant » (lu par la page, jamais par le domaine), un
+    `CalendrierLocal` et, l'élément choisi, son suivi présent. Elle lit `HH:MM` sur le jour affiché, mais ne construit aucun
+    instant : le domaine ne connaît aucun fuseau. `CalendrierLocal.instantA(jour, heures, minutes)` est un port du domaine,
+    réalisé par `calendrierDuNavigateur` (`infrastructure/primary`), qui place l'heure sur l'horloge locale du navigateur
+    (ADR 0051) ; l'ajout qui finit le lendemain le rappellera avec le jour suivant. Hors du fuseau de l'atelier, une heure
+    locale peut sortir des bornes reçues : elle est alors refusée comme hors du jour. Une seule erreur
+    à la fois, dans cet ordre : heure mal écrite (« Heure attendue au format 00:00. »), heures manquantes à l'envoi
+    (« Saisissez le début et la fin. »), début ou fin hors du jour affiché, début avant l'engagement (« Le début précède
+    l'engagement de l'élément, le lundi 5 à 14:00. »), fin qui ne suit pas le début (une fin égale est refusée), fin après
+    « maintenant » (« La fin ne peut pas suivre l'heure actuelle. »), fin après la clôture (« La fin suit la clôture de
+    l'élément, le lundi 5 à 11:00. »). L'engagement et la clôture sont inclus (une borne égale est acceptée). Dans ce lot, la fin est
+    sur le jour affiché : une fin hors du jour (navigateur hors du fuseau) est refusée comme un début hors du jour. Elle calcule
+    la durée comme un écart entre deux instants (`Duree.entre`) : la nuit d'un changement d'heure compte sa durée réelle.
+    Elle ne rend un `IntervalleDAjout` que si la fin suit le début (constructeur privé, `entre`) ; `ContenuDAjout.de` bâtit la
+    commande à partir d'objets du domaine (opérateur, suivi présent, poste, intervalle) et nulle part ailleurs.
+    L'erreur s'affiche sous les heures ; elle ne bloque que l'envoi : la plage cohérente reste dessinée et prévue.
+  - **Envoi.** « Ajouter l'activité » demande le contenu (`AjoutEnPreparation.contenu`) : sans élément (même si l'élément choisi a disparu de la journée relue),
+    sans poste ou avec une erreur de plage, rien n'est envoyé, l'erreur se montre sous les heures ou « Choisissez un élément. » sous l'élément.
+    Sinon `CorrectionDUneActivite.ajouter` envoie. Un refus s'affiche sous les boutons (CHEVAUCHEMENT : « Une autre activité de cet
+    élément se chevauche déjà sur ce poste. » ; FIN_FUTURE : « La fin dépasse l'heure du serveur. Choisissez une heure plus
+    tôt ou réessayez dans un instant. »), la saisie est conservée et se vide du refus dès qu'on la modifie. Un succès ferme le panneau,
+    relit la journée et annonce « Activité ajoutée » ; `JOURNEE_CHANGEE` ferme le panneau, oublie la saisie, relit et annonce
+    « La journée a changé, recommencez ». Un échec technique garde la saisie et dit que l'ajout n'a pas abouti.
+  - **Un seul panneau à la fois.** Ouvrir le changement de poste ferme l'ajout et inversement, sans confirmation : le panneau
+    qui disparaît appelle `abandonnerLAjout()` (ou `abandonnerLeChangementDePoste()`), et la saisie de l'ajout est perdue. Un
+    changement de jour abandonne la saisie et le message (`linkedSignal` sur l'adresse). Un retrait enregistré laisse un ajout en cours
+    ouvert ; une `JOURNEE_CHANGEE`, de n'importe quelle correction, est un changement de jour : elle ferme tout panneau ouvert
+    (ajout compris), oublie toute saisie en cours, relit et annonce « La journée a changé, recommencez ». Demander à nouveau l'ajout alors que le panneau est ouvert garde la saisie.
 - **Relecture.** Seul le premier chargement (ou la reprise d'une panne sans valeur) affiche « Chargement… » : pendant la
   relecture d'après une correction, la frise, la liste et l'identité restent à l'écran (`aria-busy`), de sorte qu'un
   panneau ouvert ne soit jamais détruit. La zone `role="status"` reste dans la page ; chaque annonce y est un nouvel
   élément (clé = numéro d'annonce), donc une annonce identique à la précédente est de nouveau lue. Après une issue, le
   focus va à ce message (`tabindex="-1"`), cible stable que la relecture ne détruit pas.
-- **Adaptateur.** `HttpCorrections.retirer` et `changerDePoste` traduisent les codes du back en `ENREGISTREE`,
-  `JOURNEE_CHANGEE` ou, pour le changement de poste, `REFUS { CHEVAUCHEMENT }`, ou signalent une fois la panne par
+- **Adaptateur.** `HttpCorrections.retirer`, `changerDePoste` et `ajouter` traduisent les codes du back en `ENREGISTREE`,
+  `JOURNEE_CHANGEE` ou, pour le changement de poste, `REFUS { CHEVAUCHEMENT }` et, pour l'ajout, `REFUS { CHEVAUCHEMENT }` ou
+  `REFUS { FIN_FUTURE }` (`date-de-survenue-future`), ou signalent une fois la panne par
   `ErrorHandlerPort` et la rejettent ; la liste des codes et leur issue sont dans
-  [`api.md`](../../../../../../documentation/api.md). Le retrait ne vérifie aucune habilitation.
+  [`api.md`](../../../../../../documentation/api.md). Le retrait ne vérifie aucune habilitation ; l'ajout envoie ses instants avec le décalage local (`toOffsetIsoString`).

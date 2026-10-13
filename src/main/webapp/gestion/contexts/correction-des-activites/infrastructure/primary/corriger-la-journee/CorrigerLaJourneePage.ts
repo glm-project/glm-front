@@ -18,6 +18,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, ParamMap, Router, RouterLink } from '@angular/router';
 import { CorrectionDUneActivite, IssueDeCorrection } from '../../../application/CorrectionDUneActivite';
+import { AjoutEnPreparation } from '../../../domain/correction/AjoutEnPreparation';
 import { ActiviteTerminee } from '../../../domain/journee/ActiviteDeLaJournee';
 import { ActiviteDeLaJourneeId } from '../../../domain/journee/ActiviteDeLaJourneeId';
 import { JourACorriger } from '../../../domain/journee/JourACorriger';
@@ -25,8 +26,11 @@ import { JourneeACorriger } from '../../../domain/journee/JourneeACorriger';
 import { JourneeACorrigerPort } from '../../../domain/journee/JourneeACorrigerPort';
 import { OperateurDeLaJourneeId } from '../../../domain/journee/OperateurDeLaJourneeId';
 import { ActivitesDuJour } from '../activites-du-jour/ActivitesDuJour';
+import { calendrierDuNavigateur } from '../CalendrierDuNavigateur';
 import { FriseDuJour } from '../frise-du-jour/FriseDuJour';
+import { maintenant } from '../Horloge';
 import { LIBELLES_CORRECTION_DES_ACTIVITES } from '../LibellesCorrectionDesActivites';
+import { PanneauDAjout } from '../panneau-d-ajout/PanneauDAjout';
 import { PanneauDeChangementDePoste } from '../panneau-de-changement-de-poste/PanneauDeChangementDePoste';
 import { DonneesDuRetrait, RetraitDeLActivite } from '../retrait-de-l-activite/RetraitDeLActivite';
 
@@ -58,7 +62,7 @@ const operateurDe = (chemin: ParamMap): string => {
 @Component({
   selector: 'glm-corriger-la-journee',
   host: { 'data-selector': 'corriger-page' },
-  imports: [ActivitesDuJour, ErrorMessage, FriseDuJour, Icon, MatButtonModule, PanneauDeChangementDePoste, RouterLink],
+  imports: [ActivitesDuJour, ErrorMessage, FriseDuJour, Icon, MatButtonModule, PanneauDAjout, PanneauDeChangementDePoste, RouterLink],
   templateUrl: './CorrigerLaJourneePage.html',
   styleUrl: './CorrigerLaJourneePage.css',
   providers: [CorrectionDUneActivite],
@@ -96,6 +100,11 @@ export class CorrigerLaJourneePage {
   });
 
   private readonly activiteEnChangement = linkedSignal<AdresseDeLaJournee | undefined, ActiviteDeLaJourneeId | undefined>({
+    source: this.adresse,
+    computation: () => undefined,
+  });
+
+  protected readonly ajout = linkedSignal<AdresseDeLaJournee | undefined, AjoutEnPreparation | undefined>({
     source: this.adresse,
     computation: () => undefined,
   });
@@ -152,7 +161,24 @@ export class CorrigerLaJourneePage {
   }
 
   protected ouvrirLeChangementDePoste(activite: ActiviteTerminee): void {
+    this.ajout.set(undefined);
     this.activiteEnChangement.set(activite.id);
+  }
+
+  protected ouvrirLAjout(journee: JourneeACorriger): void {
+    this.activiteEnChangement.set(undefined);
+    this.ajout.update(ouvert => ouvert ?? AjoutEnPreparation.ouvrir(journee, maintenant(), calendrierDuNavigateur));
+  }
+
+  protected abandonnerLAjout(liste: ActivitesDuJour): void {
+    this.ajout.set(undefined);
+    this.rendreLeFocusAuBoutonDAjout(liste);
+  }
+
+  protected ajoutCorrige(issue: IssueDeCorrection, liste: ActivitesDuJour): void {
+    this.ajout.set(undefined);
+    this.relire(LIBELLES_CORRECTION_DES_ACTIVITES.ajout.annonce[issue]);
+    this.rendreLeFocusAuBoutonDAjout(liste);
   }
 
   protected abandonnerLeChangementDePoste(activite: ActiviteTerminee, liste: ActivitesDuJour): void {
@@ -176,11 +202,20 @@ export class CorrigerLaJourneePage {
     });
     dialogue.afterClosed().subscribe(issue => {
       if (issue !== undefined) {
-        this.fermerLeChangementDeLActiviteRetiree(activite);
+        this.fermerLesPanneauxApresLeRetrait(issue, activite);
         this.relire(LIBELLES_CORRECTION_DES_ACTIVITES.retrait.annonce[issue]);
         this.donnerLeFocusAuMessage();
       }
     });
+  }
+
+  private fermerLesPanneauxApresLeRetrait(issue: IssueDeCorrection, activite: ActiviteTerminee): void {
+    if (issue === 'JOURNEE_CHANGEE') {
+      this.activiteEnChangement.set(undefined);
+      this.ajout.set(undefined);
+    } else {
+      this.fermerLeChangementDeLActiviteRetiree(activite);
+    }
   }
 
   private fermerLeChangementDeLActiviteRetiree(activite: ActiviteTerminee): void {
@@ -197,6 +232,15 @@ export class CorrigerLaJourneePage {
 
   private donnerLeFocusAuMessage(): void {
     afterNextRender(() => this.message()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  private rendreLeFocusAuBoutonDAjout(liste: ActivitesDuJour): void {
+    afterNextRender(
+      () => {
+        liste.donnerLeFocusAuBoutonDAjout();
+      },
+      { injector: this.injector },
+    );
   }
 
   private rendreLeFocusAuBoutonDe(activite: ActiviteTerminee, liste: ActivitesDuJour): void {

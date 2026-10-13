@@ -5,7 +5,8 @@ import {
   formatInstantWeekdayDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { IssueDeCorrection } from '../../application/CorrectionDUneActivite';
-import { MotifDeChangementDePoste } from '../../domain/correction/CorrectionsPort';
+import { MotifDAjout, MotifDeChangementDePoste } from '../../domain/correction/CorrectionsPort';
+import { ErreurDePlage } from '../../domain/correction/PlageDAjout';
 import { ActiviteDeLaJournee, ActiviteTerminee } from '../../domain/journee/ActiviteDeLaJournee';
 import { BornesDuJour } from '../../domain/journee/BornesDuJour';
 import { CategorieDActivite } from '../../domain/journee/CategorieDActivite';
@@ -32,9 +33,17 @@ const duree = (valeur: Duree): string => {
   return `${Math.floor(minutes / MINUTES_PAR_HEURE)} h ${String(minutes % MINUTES_PAR_HEURE).padStart(2, '0')}`;
 };
 
+const avantApres = (avant: Duree, apres: Duree): string => `${duree(avant)} → ${duree(apres)}`;
+
+const operationnelDuJour = (jour: JourACorriger): string => `Opérationnel du ${formatCalendarDayLong(jour.value)}`;
+
 const nomDeLElement = (element: ElementDeLaJournee): string => `${element.categorie.value} ${element.numero()}`;
 
-const posteDe = (activite: ActiviteDeLaJournee): string => activite.poste?.libelle ?? SANS_POSTE;
+const plageHoraire = (debut: InstantDeLaJournee, fin: InstantDeLaJournee): string => `${heure(debut)} → ${heure(fin)}`;
+
+const libelleDuPoste = (poste: PosteDeLaJournee | undefined): string => poste?.libelle ?? SANS_POSTE;
+
+const posteDe = (activite: ActiviteDeLaJournee): string => libelleDuPoste(activite.poste);
 
 const depuis = (activite: ActiviteDeLaJournee, bornes: BornesDuJour): string =>
   `depuis ${activite.debutAvantLeJour(bornes) === undefined ? heure(activite.debut) : jourEtHeure(activite.debut)}`;
@@ -60,6 +69,35 @@ const nomDuPoste = (poste: PosteDeLaJournee): string => `${poste.libelle} · ${p
 
 const REFUS_DU_CHANGEMENT_DE_POSTE: Record<MotifDeChangementDePoste, string> = {
   CHEVAUCHEMENT: 'Une autre activité de cet élément se chevauche déjà sur ce poste.',
+};
+
+const REFUS_DE_L_AJOUT: Record<MotifDAjout, string> = {
+  CHEVAUCHEMENT: 'Une autre activité de cet élément se chevauche déjà sur ce poste.',
+  FIN_FUTURE: 'La fin dépasse l’heure du serveur. Choisissez une heure plus tôt ou réessayez dans un instant.',
+};
+
+const ANNONCES_DE_L_AJOUT: Record<IssueDeCorrection, string> = {
+  ENREGISTREE: 'Activité ajoutée',
+  JOURNEE_CHANGEE: 'La journée a changé, recommencez',
+};
+
+const erreurDePlage = (erreur: ErreurDePlage, jour: JourACorriger): string => {
+  switch (erreur.kind) {
+    case 'HEURE_MAL_ECRITE':
+      return 'Heure attendue au format 00:00.';
+    case 'HEURES_MANQUANTES':
+      return 'Saisissez le début et la fin.';
+    case 'HORS_DU_JOUR':
+      return `${erreur.champ === 'DEBUT' ? 'Le début' : 'La fin'} doit tomber le ${formatCalendarDayLong(jour.value)}.`;
+    case 'FIN_NON_APRES_DEBUT':
+      return 'La fin doit suivre le début.';
+    case 'FIN_APRES_MAINTENANT':
+      return 'La fin ne peut pas suivre l’heure actuelle.';
+    case 'DEBUT_AVANT_ENGAGEMENT':
+      return `Le début précède l’engagement de l’élément, le ${jourEtHeure(erreur.engagement)}.`;
+    case 'FIN_APRES_CLOTURE':
+      return `La fin suit la clôture de l’élément, le ${jourEtHeure(erreur.cloture)}.`;
+  }
 };
 
 const ANNONCES_DU_CHANGEMENT_DE_POSTE: Record<IssueDeCorrection, string> = {
@@ -122,6 +160,7 @@ export const LIBELLES_CORRECTION_DES_ACTIVITES = {
     },
   },
   duree,
+  avantApres,
   nomDeLElement,
   posteDe,
   horaires,
@@ -152,6 +191,55 @@ export const LIBELLES_CORRECTION_DES_ACTIVITES = {
     echec: 'Le changement de poste n’a pas abouti. Vérifiez la connexion puis réessayez.',
     annonce: ANNONCES_DU_CHANGEMENT_DE_POSTE,
   },
+  ajout: {
+    bouton: 'Ajouter une activité',
+    titre: 'Ajouter une activité',
+    element: 'Élément',
+    choisirElement: 'Choisir un élément',
+    rechercherElement: 'Rechercher un élément',
+    aucunElement: 'Aucun élément présent ce jour',
+    aucunResultat: 'Aucun élément ne correspond',
+    elementManquant: 'Choisissez un élément.',
+    nomDeLElement: (element: ElementDeLaJournee): string =>
+      element.description === undefined ? nomDeLElement(element) : `${nomDeLElement(element)} · ${element.description}`,
+    poste: 'Poste',
+    nomDuPoste,
+    aucunPoste: 'Aucun poste habilité pour cet opérateur.',
+    type: 'Type',
+    types: TYPES,
+    debut: 'De',
+    fin: 'À',
+    heure: 'hh:mm',
+    effet: 'Effet sur les journées',
+    operationnelDuJour,
+    avantApres,
+    duree,
+    sansEffet: 'Saisissez un début et une fin pour voir l’effet.',
+    ajouter: 'Ajouter l’activité',
+    ajoutEnCours: 'Ajout en cours…',
+    abandonner: 'Abandonner',
+    erreur: erreurDePlage,
+    refus: REFUS_DE_L_AJOUT,
+    echec: 'L’ajout n’a pas abouti. Vérifiez la connexion puis réessayez.',
+    annonce: ANNONCES_DE_L_AJOUT,
+    aAjouter: 'À ajouter',
+    barreAAjouter: (
+      element: ElementDeLaJournee | undefined,
+      poste: PosteDeLaJournee | undefined,
+      categorie: CategorieDActivite,
+      debut: InstantDeLaJournee,
+      fin: InstantDeLaJournee,
+    ): string =>
+      `À ajouter : ${[
+        element === undefined ? undefined : nomDeLElement(element),
+        libelleDuPoste(poste),
+        plageHoraire(debut, fin),
+        TYPES[categorie].toLowerCase(),
+      ]
+        .filter(partie => partie !== undefined)
+        .join(', ')}`,
+    libelleDuPoste,
+  },
   retrait: {
     bouton: (activite: ActiviteDeLaJournee, bornes: BornesDuJour): string =>
       `Retirer l’activité ${nomDeLElement(activite.element)}, ${horaires(activite, bornes)}`,
@@ -163,8 +251,8 @@ export const LIBELLES_CORRECTION_DES_ACTIVITES = {
     retirer: 'Retirer l’activité',
     enCours: 'Retrait en cours…',
     echec: 'Le retrait n’a pas abouti. Vérifiez la connexion puis réessayez.',
-    operationnelDuJour: (jour: JourACorriger): string => `Opérationnel du ${formatCalendarDayLong(jour.value)}`,
-    avantApres: (avant: Duree, apres: Duree): string => `${duree(avant)} → ${duree(apres)}`,
+    operationnelDuJour,
+    avantApres,
     autreJour: (jour: JourACorriger): string => formatCalendarDayLong(jour.value),
     retire: (retire: Duree): string => `− ${duree(retire)}`,
     debordement: (jours: readonly { readonly jour: JourACorriger; readonly retire: Duree }[]): string =>

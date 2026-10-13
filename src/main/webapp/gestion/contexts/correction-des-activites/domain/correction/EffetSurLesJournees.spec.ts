@@ -15,9 +15,17 @@ import { PortionDeJour } from '../journee/PortionDeJour';
 import { SuiviDAtelierId } from '../journee/SuiviDAtelierId';
 import { SuiviPresent } from '../journee/SuiviPresent';
 import { SuivisPresents } from '../journee/SuivisPresents';
+import { CalendrierLocal } from './CalendrierLocal';
 import { EffetSurLesJournees } from './EffetSurLesJournees';
+import { PlageDAjout } from './PlageDAjout';
 
 const instant = (recu: string): InstantDeLaJournee => new InstantDeLaJournee(recu);
+
+const deuxChiffres = (valeur: number): string => String(valeur).padStart(2, '0');
+
+const CALENDRIER: CalendrierLocal = {
+  instantA: (jour, heures, minutes) => instant(`${jour.value}T${deuxChiffres(heures)}:${deuxChiffres(minutes)}:00+02:00`),
+};
 
 const ELEMENT = new ElementDeLaJournee({
   id: new ElementDeLaJourneeId('element-1'),
@@ -88,4 +96,30 @@ describe('Effect of the removal of an activity on the days', () => {
 
   const whenRemovingTheActivity = (journee: JourneeACorriger): EffetSurLesJournees =>
     EffetSurLesJournees.duRetrait(journee, retrouvee(journee));
+});
+
+describe('Effect of the addition of an activity on the days', () => {
+  it('should add the duration of the range to the operational duration of the day displayed and touch no other day', () => {
+    const journee = lundi([], 'PT7H30M');
+
+    const effet = whenAddingOnTheRange(journee, '08:00', '10:30');
+
+    expect(effet?.jourAffiche).toEqual({ jour: new JourACorriger('2026-10-05'), avant: new Duree('PT7H30M'), apres: new Duree('PT10H') });
+    expect(effet?.autresJours).toEqual([]);
+  });
+
+  it.each([
+    { cas: 'nothing is typed', debut: '', fin: '' },
+    { cas: 'the end is missing', debut: '08:00', fin: '' },
+    { cas: 'the end does not follow the start', debut: '08:00', fin: '08:00' },
+    { cas: 'an hour is badly written', debut: '25:00', fin: '10:00' },
+  ])('should forecast nothing when $cas', ({ debut, fin }) => {
+    expect(whenAddingOnTheRange(lundi([], 'PT7H30M'), debut, fin)).toBeUndefined();
+  });
+
+  const whenAddingOnTheRange = (journee: JourneeACorriger, debut: string, fin: string): EffetSurLesJournees | undefined =>
+    EffetSurLesJournees.dUnAjout(
+      journee,
+      PlageDAjout.pour(journee.bornes, journee.jour, instant('2026-10-06T12:00:00+02:00'), CALENDRIER).avecDebut(debut).avecFin(fin),
+    );
 });

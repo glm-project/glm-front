@@ -459,6 +459,234 @@ describe('Page to correct the day of an operator', () => {
     expect(disabledStates('activite-retirer')).toEqual([true, true]);
   });
 
+  it('should open the panel to add an activity beside the day, which stays on screen, with the focus on its first field', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+
+    await whenAskingToAddAnActivity();
+
+    expect(text('ajout-titre')).toBe('Ajouter une activité');
+    expect(texts('activite-horaires')).toEqual(['08:00 → 09:30', '18:30 → 21:45']);
+    expect(texts('frise-operationnel')).toEqual(['Opérationnel : 4 h 45']);
+    expect(expansions('activite-ajouter')).toEqual(['true']);
+    expect(document.activeElement).toBe(all('ajout-element')[0]);
+  });
+
+  it('should close the panel and give the focus back to its button when the manager abandons the addition', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+
+    await whenAbandoningTheAddition();
+
+    expect(texts('ajout-titre')).toEqual([]);
+    expect(corrections.ajouts).toEqual([]);
+    expect(document.activeElement).toBe(all('activite-ajouter')[0]);
+  });
+
+  it('should close the panel, read the day again and say the activity was added once the addition is recorded', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+
+    await whenAddingTheActivity();
+
+    expect(corrections.ajouts.map(saisie => [saisie.suivi.value, saisie.poste.value, saisie.categorie])).toEqual([
+      ['suivi-1', 'poste-tour', 'TRAVAIL'],
+    ]);
+    expect(corrections.ajouts.map(saisie => [saisie.debut, saisie.fin])).toEqual([[instantLocal(5, 13), instantLocal(5, 14, 30)]]);
+    expect(texts('ajout-titre')).toEqual([]);
+    expect(port.lectures).toHaveLength(2);
+    expect(text('corriger-annonce')).toBe('Activité ajoutée');
+    expect(document.activeElement).toBe(all('activite-ajouter')[0]);
+  });
+
+  it('should close the panel, read the day again and ask to start over when the day changed meanwhile the addition', async () => {
+    corrections.repondreALAjout({ kind: 'JOURNEE_CHANGEE' });
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+
+    await whenAddingTheActivity();
+
+    expect(texts('ajout-titre')).toEqual([]);
+    expect(port.lectures).toHaveLength(2);
+    expect(text('corriger-annonce')).toBe('La journée a changé, recommencez');
+  });
+
+  it('should keep the panel open and explain the refusal when the end follows the clock of the server', async () => {
+    corrections.repondreALAjout({ kind: 'REFUS', motif: 'FIN_FUTURE' });
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+
+    await whenAddingTheActivity();
+
+    expect(texts('ajout-refus')).toEqual([
+      'La fin dépasse l’heure du serveur. Choisissez une heure plus tôt ou réessayez dans un instant.',
+    ]);
+    expect(port.lectures).toHaveLength(1);
+    expect(texts('corriger-annonce')).toEqual([]);
+  });
+
+  it('should draw the addition being prepared in the frise and forecast the day while the hours are typed', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+
+    await whenFillingTheAddition();
+
+    expect(texts('frise-barre').filter(enonce => enonce.startsWith('À ajouter'))).toEqual([
+      'À ajouter : OF 24-131, Tour CN 1, 13:00 → 14:30, travail',
+    ]);
+    expect(texts('frise-operationnel')).toEqual(['Opérationnel : 4 h 45 → 6 h 15']);
+  });
+
+  it('should stop drawing the addition when the panel is abandoned', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+    await whenFillingTheAddition();
+
+    await whenAbandoningTheAddition();
+
+    expect(texts('frise-barre').filter(enonce => enonce.startsWith('À ajouter'))).toEqual([]);
+    expect(texts('frise-operationnel')).toEqual(['Opérationnel : 4 h 45']);
+  });
+
+  it('should drop the panel, its entry and the message of a previous correction when the address names another day', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenRemovingTheFirstActivity();
+    await whenAskingToAddAnActivity();
+    await whenFillingTheAddition();
+
+    await whenTheAddressNames('2026-10-06');
+
+    expect(texts('ajout-titre')).toEqual([]);
+    expect(texts('corriger-annonce')).toEqual([]);
+  });
+
+  it('should open the panel to change the workstation instead of the panel to add an activity, the entry being lost', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+    await whenFillingTheAddition();
+
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+    await whenAbandoningTheChange();
+    await whenAskingToAddAnActivity();
+
+    expect(texts('changement-titre')).toEqual([]);
+    expect(values('ajout-debut')).toEqual(['']);
+    expect(text('ajout-element')).toBe('Choisir un élément');
+  });
+
+  it('should open the panel to add an activity instead of the panel to change the workstation', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    await whenAskingToAddAnActivity();
+
+    expect(texts('changement-titre')).toEqual([]);
+    expect(texts('ajout-titre')).toEqual(['Ajouter une activité']);
+    expect(currents('activite')).toEqual([null, null]);
+  });
+
+  it('should keep the panel to add an activity and its entry open when an activity is removed', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+    await whenFillingTheAddition();
+
+    await whenRemovingTheFirstActivity();
+
+    expect(texts('ajout-titre')).toEqual(['Ajouter une activité']);
+    expect([text('ajout-element'), values('ajout-debut'), values('ajout-fin')]).toEqual(['OF 24-131 · Pièce 1', ['13:00'], ['14:30']]);
+  });
+
+  it('should close the panel to add an activity and forget its entry when the day changed meanwhile a removal', async () => {
+    corrections.repondre({ kind: 'JOURNEE_CHANGEE' });
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+    await whenFillingTheAddition();
+
+    await whenRemovingTheFirstActivity();
+    await whenAskingToAddAnActivity();
+
+    expect(text('corriger-annonce')).toBe('La journée a changé, recommencez');
+    expect(values('ajout-debut')).toEqual(['']);
+    expect(text('ajout-element')).toBe('Choisir un élément');
+  });
+
+  it('should close the panel to change the workstation of another activity when the day changed meanwhile a removal', async () => {
+    corrections.repondre({ kind: 'JOURNEE_CHANGEE' });
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+
+    await whenRemovingTheFirstActivity();
+
+    expect(texts('changement-titre')).toEqual([]);
+  });
+
+  it('should keep the entry when the manager asks again to add an activity while the panel is open', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+    await whenFillingTheAddition();
+
+    await whenAskingToAddAnActivity();
+
+    expect(values('ajout-debut')).toEqual(['13:00']);
+  });
+
+  it('should forbid every correction while an addition is being sent', async () => {
+    const arrivee = corrections.retenir();
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+    await whenFillingTheAddition();
+
+    whenAddingTheActivityWithoutWaiting();
+    await arrivee;
+    await shown.whenStable();
+
+    expect(disabledStates('activite-changer-poste')).toEqual([true, true]);
+    expect(disabledStates('activite-retirer')).toEqual([true, true]);
+    expect(disabledStates('activite-ajouter')).toEqual([true]);
+  });
+
+  const whenAskingToAddAnActivity = async (): Promise<void> => {
+    all('activite-ajouter')[0]?.click();
+    await shown.whenStable();
+  };
+
+  const whenAbandoningTheAddition = async (): Promise<void> => {
+    all('ajout-abandonner')[0]?.click();
+    await shown.whenStable();
+  };
+
+  const whenFillingTheAddition = async (): Promise<void> => {
+    all('ajout-element')[0]?.click();
+    await shown.whenStable();
+    document.querySelector<HTMLElement>(dataSelector('ajout-element-proposition'))?.click();
+    await shown.whenStable();
+    for (const [selector, valeur] of [
+      ['ajout-debut', '13:00'],
+      ['ajout-fin', '14:30'],
+    ] as const) {
+      const champ = all(selector)[0] as HTMLInputElement;
+      champ.value = valeur;
+      champ.dispatchEvent(new Event('change'));
+    }
+    await shown.whenStable();
+  };
+
+  const whenAddingTheActivityWithoutWaiting = (): void => {
+    all('ajout-ajouter')[0]?.click();
+  };
+
+  const whenAddingTheActivity = async (): Promise<void> => {
+    await whenFillingTheAddition();
+    all('ajout-ajouter')[0]?.click();
+    await new Promise(resolve => setTimeout(resolve));
+    await shown.whenStable();
+    await new Promise(resolve => setTimeout(resolve));
+    await shown.whenStable();
+  };
+
+  const expansions = (selector: string): (string | null)[] => all(selector).map(element => element.getAttribute('aria-expanded'));
+
+  const values = (selector: string): string[] => all(selector).map(element => (element as HTMLInputElement).value);
+
   const whenOpeningThePageOnADayWithThreeWorkstations = async (): Promise<void> => {
     port.journees.set('2026-10-05', lundiAvecTroisPostes);
     await whenOpeningThePage();

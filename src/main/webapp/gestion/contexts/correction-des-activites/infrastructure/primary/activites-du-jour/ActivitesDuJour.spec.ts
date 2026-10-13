@@ -273,6 +273,58 @@ describe('Activities of the day', () => {
     expect(disabledStates('activite-retirer')).toEqual([false, false]);
   });
 
+  it('should offer to add an activity, even on an empty day', async () => {
+    await whenShowingTheDay([]);
+
+    expect(texts('activite-ajouter')).toEqual(['Ajouter une activité']);
+  });
+
+  it('should ask to add an activity when its button is pressed', async () => {
+    const demandes = givenTheAdditionsAsked();
+    await whenShowingTheDay([matin]);
+
+    whenPressingTheAddition();
+
+    expect(demandes).toEqual([undefined]);
+  });
+
+  it('should forbid the addition while a correction is being sent', async () => {
+    shown.componentRef.setInput('envoiEnCours', true);
+    await whenShowingTheDay([matin]);
+
+    expect(disabledStates('activite-ajouter')).toEqual([true]);
+  });
+
+  it.each([
+    { ouvert: false, attendu: 'false' },
+    { ouvert: true, attendu: 'true' },
+  ])('should say whether the panel of the addition is open, which is $ouvert', async ({ ouvert, attendu }) => {
+    shown.componentRef.setInput('ajoutOuvert', ouvert);
+    await whenShowingTheDay([matin]);
+
+    expect(expansions('activite-ajouter')).toEqual([attendu]);
+  });
+
+  it('should give the focus back to the button that adds an activity', async () => {
+    await whenShowingTheDay([matin]);
+
+    shown.componentInstance.donnerLeFocusAuBoutonDAjout();
+
+    expect(document.activeElement).toBe(all('activite-ajouter')[0]);
+  });
+
+  const expansions = (selector: string): (string | null)[] => all(selector).map(element => element.getAttribute('aria-expanded'));
+
+  const givenTheAdditionsAsked = (): undefined[] => {
+    const demandes: undefined[] = [];
+    shown.componentInstance.ajoutDemande.subscribe(() => demandes.push(undefined));
+    return demandes;
+  };
+
+  const whenPressingTheAddition = (): void => {
+    all('activite-ajouter')[0]?.click();
+  };
+
   const disabledStates = (selector: string): boolean[] => all(selector).map(element => (element as HTMLButtonElement).disabled);
 
   const givenTheChangesOfWorkstationAsked = (): ActiviteTerminee[] => {

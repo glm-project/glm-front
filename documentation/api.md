@@ -149,6 +149,16 @@ day does so here too, with `poste-de-travail-introuvable`, `operateur-non-habili
 the workstations the operator is allowed on, other than the current one, so they only follow a change since the read.
 `activite-en-cours` and any unknown code stay technical failures.
 
+The addition of an activity by the gestionnaire is `POST /api/atelier/suivis/{id}/activites` with
+`{ id, operateur, poste, categorie, debut, fin }`, under the same rule (201 and 200 succeed); `debut` and `fin` are sent
+with their local offset (`toOffsetIsoString`). `chevauchement` and `date-de-survenue-future` are the two refusals the
+gestionnaire can correct (`REFUS { CHEVAUCHEMENT }` and `REFUS { FIN_FUTURE }`, entry kept, wording rendered by the
+context). `saisie-concurrente`, `suivi-d-atelier-introuvable`, `operateur-introuvable`, `poste-de-travail-introuvable`,
+`operateur-non-habilite`, `evenement-anterieur-a-l-engagement` and `evenement-posterieur-a-la-cloture` mean the day read
+is no longer the server's, and resolve as `JOURNEE_CHANGEE`: the screen offers only the suivis present and the
+workstations the operator is allowed on, and checks the hours against the engagement and the closure, so they only follow
+a change since the read. `fin-avant-debut` and any unknown code stay technical failures.
+
 `GesteReplayPolicy` owns the single `saisie-concurrente` retry. The transport
 normalizes the workshop motif but keeps the original diagnostic code. A concurrent refusal triggers a reread
 of the affected aggregate and one identical retry with the original UUID and business timestamp.

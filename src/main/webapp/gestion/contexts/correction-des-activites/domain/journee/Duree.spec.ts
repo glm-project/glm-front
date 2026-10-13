@@ -1,4 +1,5 @@
 import { Duree } from './Duree';
+import { InstantDeLaJournee } from './InstantDeLaJournee';
 
 describe('Duree', () => {
   it.each([
@@ -27,5 +28,12 @@ describe('Duree', () => {
 
   it('should refuse a subtraction that leaves less than nothing', () => {
     expect(() => new Duree('PT1H').moins(new Duree('PT1H1S'))).toThrow('Une durée ne peut pas être retranchée d’une durée plus courte.');
+  });
+
+  it('should measure the real time between two instants, whatever the offsets', () => {
+    const debut = new InstantDeLaJournee('2026-10-24T22:00:00+02:00');
+    const fin = new InstantDeLaJournee('2026-10-25T03:30:00+01:00');
+
+    expect(Duree.entre(debut, fin)).toEqual(new Duree('PT6H30M'));
   });
 });

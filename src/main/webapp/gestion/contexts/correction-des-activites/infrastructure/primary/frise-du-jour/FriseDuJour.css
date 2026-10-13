@@ -205,3 +205,13 @@
   outline: 2px solid var(--color-ink);
   outline-offset: 2px;
 }
+
+.barre[data-en-attente='true'] {
+  border: 2px dashed var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+}
+
+.barre.nc[data-en-attente='true'] {
+  border-color: var(--color-ink);
+  background: color-mix(in srgb, var(--color-nc) 30%, var(--color-surface));
+}

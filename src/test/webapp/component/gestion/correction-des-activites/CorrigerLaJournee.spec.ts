@@ -227,6 +227,128 @@ describe('Correction of the day of an operator in gestion', () => {
     thenTheChangeIsClosedAndTheDayIsReadAgainWithTheMessageToStartOver();
   });
 
+  it('should offer the elements present that day, closed ones included, and the workstations the operator is allowed on', () => {
+    givenTheDay(lundi());
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenOpeningTheElements();
+
+    thenTheElementsAndTheWorkstationsAllowedAreOffered();
+  });
+
+  it('should tell an hour badly written under the hours', () => {
+    givenTheDay(lundi());
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenTypingTheHours('25:00', '10:00');
+
+    thenTheErrorUnderTheHoursIs('Heure attendue au format 00:00.');
+  });
+
+  it('should send nothing and tell the end must follow the start when adding with an end equal to the start', () => {
+    givenTheDayAndItsAddition(lundi(), lundi());
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenChoosingTheElement('OF 24-131 · Pièce 1');
+    whenTypingTheHours('10:00', '10:00');
+    whenAddingTheActivity();
+
+    thenTheErrorUnderTheHoursIsAndNothingWasSent('La fin doit suivre le début.');
+  });
+
+  it('should open the axis of the frise on the whole day for an addition typed at 5 h and draw it dotted', () => {
+    givenTheDay(lundi());
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenChoosingTheElement('OF 24-131 · Pièce 1');
+    whenTypingTheHours('05:00', '06:30');
+
+    thenTheAxisCoversTheWholeDayAndTheAdditionIsDrawnDotted();
+  });
+
+  it('should send the addition once, read the day again and say the activity was added', () => {
+    givenTheDayAndItsAddition(lundi(), lundi([matin, soirNonConforme, ajoutee], 'PT8H00M'));
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenChoosingTheElement('OF 24-131 · Pièce 1');
+    whenTypingTheHours('12:00', '15:15');
+    whenAddingTheActivityWithADoubleClick();
+
+    thenOneAdditionWasSentAndTheDayIsReadAgainWithTheActivity();
+  });
+
+  it('should explain the overlap under the buttons and keep the entry', () => {
+    givenTheDayAndItsAddition(lundi(), lundi());
+    givenTheAdditionOverlaps();
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenChoosingTheElement('OF 24-131 · Pièce 1');
+    whenTypingTheHours('12:00', '15:15');
+    whenAddingTheActivity();
+
+    thenTheRefusalIsExplainedAndTheEntryKept('Une autre activité de cet élément se chevauche déjà sur ce poste.');
+  });
+
+  it('should explain the end following the clock of the server under the buttons and keep the entry', () => {
+    givenTheDayAndItsAddition(lundi(), lundi());
+    givenTheEndFollowsTheClockOfTheServer();
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenChoosingTheElement('OF 24-131 · Pièce 1');
+    whenTypingTheHours('12:00', '15:15');
+    whenAddingTheActivity();
+
+    thenTheRefusalIsExplainedAndTheEntryKept(
+      'La fin dépasse l’heure du serveur. Choisissez une heure plus tôt ou réessayez dans un instant.',
+    );
+  });
+
+  it('should read the day again and ask to start over when the day changed meanwhile the addition', () => {
+    givenTheDayAndItsAddition(lundi(), lundi([matin, soirNonConforme, ajoutee], 'PT8H00M'));
+    givenTheDayChangedMeanwhile();
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenChoosingTheElement('OF 24-131 · Pièce 1');
+    whenTypingTheHours('12:00', '15:15');
+    whenAddingTheActivity();
+
+    thenTheAdditionIsClosedAndTheDayIsReadAgainWithTheMessageToStartOver();
+  });
+
+  it('should drop the panel, its entry and the message of a previous correction when the manager moves to another day', () => {
+    givenTheDaysAndTheRemoval(lundi([matin, soirNonConforme], 'PT4H45M'), lundi([matin], 'PT1H30M'), journeeRecue(6, SUIVIS, []));
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToRemoveTheActivityOfTheEvening();
+    whenConfirmingTheRemoval();
+    whenAskingToAddAnActivity();
+    whenChoosingTheElement('OF 24-131 · Pièce 1');
+    whenTypingTheHours('12:00', '15:15');
+    whenOpeningTheNextDay();
+
+    thenTheAdditionIsDroppedWithTheDay();
+  });
+
+  it('should open the panel to change the workstation instead of the panel to add an activity', () => {
+    givenTheDayAndItsChange(lundi(), lundi());
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenAskingToChangeTheWorkstationOfTheMorning();
+
+    thenOnlyThePanelToChangeTheWorkstationIsOpen();
+  });
+
+  it('should lose the entry of the addition once the panel to change the workstation took its place', () => {
+    givenTheDayAndItsChange(lundi(), lundi());
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenChoosingTheElement('OF 24-131 · Pièce 1');
+    whenTypingTheHours('12:00', '15:15');
+    whenAskingToChangeTheWorkstationOfTheMorning();
+    whenAskingToAddAnActivity();
+
+    thenTheAdditionStartsEmpty();
+  });
+
   const matinSurLaFraiseuse = { ...matin, poste: fraiseuseRecue };
 
   const enCoursDepuisMidi = activiteRecue({
@@ -259,6 +381,29 @@ describe('Correction of the day of an operator in gestion', () => {
     dureeSurLeJour: 'PT30M',
   });
 
+  const ajoutee = activiteRecue({
+    id: 'ajoutee',
+    suivi: 'suivi-1',
+    element: ELEMENT,
+    poste: tourRecu,
+    debut: instantLocal(5, 12),
+    fin: instantLocal(5, 15, 15),
+    etat: 'TERMINEE',
+    dureeSurLeJour: 'PT3H15M',
+  });
+
+  const givenTheDayAndItsAddition = (avant: ReturnType<typeof lundi>, apres: ReturnType<typeof lundi>): void => {
+    givenTheDay(avant);
+    journees.apresLaCorrection(apres);
+    journees.installAjout();
+  };
+  const givenTheAdditionOverlaps = (): void => {
+    journees.chevauchement = true;
+  };
+  const givenTheEndFollowsTheClockOfTheServer = (): void => {
+    journees.finFuture = true;
+  };
+
   const givenTheReport = (): void => {
     releve.install();
     journees.install();
@@ -280,6 +425,15 @@ describe('Correction of the day of an operator in gestion', () => {
   };
   const givenTheDayAndItsRemoval = (avant: ReturnType<typeof lundi>, apres: ReturnType<typeof lundi>): void => {
     givenTheDay(avant);
+    journees.apresLaCorrection(apres);
+    journees.installRetrait();
+  };
+  const givenTheDaysAndTheRemoval = (
+    avant: ReturnType<typeof lundi>,
+    apres: ReturnType<typeof lundi>,
+    suivante: ReturnType<typeof lundi>,
+  ): void => {
+    givenTheDays(avant, suivante);
     journees.apresLaCorrection(apres);
     journees.installRetrait();
   };
@@ -353,6 +507,30 @@ describe('Correction of the day of an operator in gestion', () => {
   const whenSavingTheChangeWithADoubleClick = (): void => {
     cy.get(dataSelector('changement-enregistrer')).dblclick();
   };
+  const whenAskingToAddAnActivity = (): void => {
+    cy.get(dataSelector('activite-ajouter')).click();
+  };
+  const whenOpeningTheElements = (): void => {
+    cy.get(dataSelector('ajout-element')).click();
+  };
+  const whenChoosingTheElement = (libelle: string): void => {
+    cy.get(dataSelector('ajout-element')).click();
+    cy.get(dataSelector('ajout-element-proposition')).contains(libelle).click();
+  };
+  const whenTypingTheHours = (debut: string, fin: string): void => {
+    cy.get(dataSelector('ajout-debut')).clear();
+    cy.get(dataSelector('ajout-debut')).type(debut);
+    cy.get(dataSelector('ajout-fin')).clear();
+    cy.get(dataSelector('ajout-fin')).type(fin);
+    cy.get(dataSelector('ajout-fin')).blur();
+  };
+  const whenAddingTheActivity = (): void => {
+    cy.get(dataSelector('ajout-ajouter')).click();
+  };
+  const whenAddingTheActivityWithADoubleClick = (): void => {
+    cy.get(dataSelector('ajout-ajouter')).dblclick();
+  };
+
   const whenOpeningTheNextDay = (): void => {
     cy.get(dataSelector('corriger-suivant')).click();
   };
@@ -486,6 +664,93 @@ describe('Correction of the day of an operator in gestion', () => {
     cy.get(dataSelector('changement-titre')).should('not.exist');
     cy.get('@journeeRead.all').should('have.length', 2);
   };
+  const thenTheElementsAndTheWorkstationsAllowedAreOffered = (): void => {
+    cy.get(dataSelector('ajout-element-proposition')).then(propositions => {
+      expect([...propositions].map(element => element.textContent.trim())).to.deep.equal(['MOULE 24-132 · Pièce 2', 'OF 24-131 · Pièce 1']);
+    });
+    cy.get(dataSelector('ajout-poste'))
+      .find('option')
+      .then(options => {
+        expect([...options].map(option => option.textContent.trim())).to.deep.equal(['Tour CN 1 · Tournage', 'Fraiseuse 1 · Fraisage']);
+      });
+    cy.get(dataSelector('ajout-type')).then(types => {
+      expect([...types].map(element => element.textContent.trim())).to.deep.equal(['Travail', 'Non-conformité']);
+    });
+    cy.get(dataSelector('ajout-titre')).should('have.text', 'Ajouter une activité');
+  };
+  const thenTheErrorUnderTheHoursIs = (erreur: string): void => {
+    cy.get(dataSelector('ajout-erreur')).should($element => {
+      expect($element.text().trim()).to.equal(erreur);
+    });
+  };
+  const thenTheErrorUnderTheHoursIsAndNothingWasSent = (erreur: string): void => {
+    thenTheErrorUnderTheHoursIs(erreur);
+    cy.get('@ajoutWrite.all').should('have.length', 0);
+  };
+  const thenTheAxisCoversTheWholeDayAndTheAdditionIsDrawnDotted = (): void => {
+    thenTheAxisCoversTheWholeDay();
+    cy.get(dataSelector('frise-barre'))
+      .filter('[data-en-attente="true"]')
+      .should('have.length', 1)
+      .and('be.visible')
+      .and('have.css', 'border-top-style', 'dashed');
+    cy.get(dataSelector('frise-operationnel')).should('contain.text', 'Opérationnel : 4 h 45 → 6 h 15');
+  };
+  const thenOneAdditionWasSentAndTheDayIsReadAgainWithTheActivity = (): void => {
+    cy.get(dataSelector('corriger-annonce')).should('have.text', 'Activité ajoutée');
+    cy.get('@ajoutWrite.all').should('have.length', 1);
+    cy.get('@ajoutWrite')
+      .its('request.url')
+      .should('match', /\/api\/atelier\/suivis\/suivi-1\/activites$/);
+    cy.get('@ajoutWrite').its('request.body.operateur').should('equal', 'op-1');
+    cy.get('@ajoutWrite').its('request.body.poste').should('equal', 'poste-tour');
+    cy.get('@ajoutWrite').its('request.body.categorie').should('equal', 'TRAVAIL');
+    cy.get('@ajoutWrite')
+      .its('request.body.id')
+      .should('match', /^[0-9a-f-]{36}$/);
+    cy.get('@ajoutWrite')
+      .its('request.body.debut')
+      .should('match', /^2026-10-05T12:00:00[+-]\d{2}:\d{2}$/);
+    cy.get('@ajoutWrite')
+      .its('request.body.fin')
+      .should('match', /^2026-10-05T15:15:00[+-]\d{2}:\d{2}$/);
+    cy.get('@journeeRead.all').should('have.length', 2);
+    cy.get(dataSelector('ajout-titre')).should('not.exist');
+    cy.get(dataSelector('activite-horaires')).should('have.length', 3);
+    cy.get(dataSelector('frise-operationnel')).should('contain.text', 'Opérationnel : 8 h 00');
+    cy.focused().should('have.attr', 'data-selector', 'activite-ajouter');
+  };
+  const thenTheRefusalIsExplainedAndTheEntryKept = (libelle: string): void => {
+    cy.get(dataSelector('ajout-refus')).should($element => {
+      expect($element.text().trim()).to.equal(libelle);
+    });
+    cy.get(dataSelector('ajout-element')).should('contain.text', 'OF 24-131 · Pièce 1');
+    cy.get(dataSelector('ajout-debut')).should('have.value', '12:00');
+    cy.get(dataSelector('ajout-fin')).should('have.value', '15:15');
+    cy.get('@journeeRead.all').should('have.length', 1);
+    cy.get(dataSelector('corriger-annonce')).should('not.exist');
+  };
+  const thenTheAdditionIsClosedAndTheDayIsReadAgainWithTheMessageToStartOver = (): void => {
+    cy.get(dataSelector('corriger-annonce')).should('have.text', 'La journée a changé, recommencez');
+    cy.get(dataSelector('ajout-titre')).should('not.exist');
+    cy.get('@journeeRead.all').should('have.length', 2);
+  };
+  const thenTheAdditionIsDroppedWithTheDay = (): void => {
+    thenTheDayOfTheSixthIsShown();
+    cy.get(dataSelector('ajout-titre')).should('not.exist');
+    cy.get(dataSelector('corriger-annonce')).should('not.exist');
+    cy.get(dataSelector('frise-barre')).should('not.exist');
+  };
+  const thenOnlyThePanelToChangeTheWorkstationIsOpen = (): void => {
+    cy.get(dataSelector('ajout-titre')).should('not.exist');
+    cy.get(dataSelector('changement-titre')).should('have.text', 'Changer le poste');
+    cy.get(dataSelector('activite-ajouter')).should('have.attr', 'aria-expanded', 'false');
+  };
+  const thenTheAdditionStartsEmpty = (): void => {
+    cy.get(dataSelector('ajout-debut')).should('have.value', '');
+    cy.get(dataSelector('ajout-fin')).should('have.value', '');
+    cy.get(dataSelector('ajout-element')).should('contain.text', 'Choisir un élément');
+  };
   const thenTheDayOfTheSixthIsShown = (): void => {
     cy.location('pathname').should('eq', '/operateurs/op-1/journees/2026-10-06');
     cy.get(dataSelector('corriger-jour')).should('have.text', 'mardi 6 octobre 2026');
@@ -515,7 +780,7 @@ describe('Correction of the day of an operator in gestion', () => {
       });
   };
   const thenTheAxisCoversTheWholeDay = (): void => {
-    cy.get(dataSelector('frise-repere')).then(reperes => {
+    cy.get(dataSelector('frise-repere')).should(reperes => {
       const libelles = [...reperes].map(element => element.textContent?.trim());
       expect([libelles[0], libelles.at(-1)]).to.deep.equal(['0 h', '24 h']);
     });

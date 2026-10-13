@@ -11,6 +11,11 @@ import {
   tourFixture,
 } from '@test/unit/fixtures/gestion/correction-des-activites/JourneeACorrigerFixture';
 import { dataSelector } from '@test/utils/DataSelector';
+import { AjoutEnPreparation } from '../../../domain/correction/AjoutEnPreparation';
+import { JourneeACorriger } from '../../../domain/journee/JourneeACorriger';
+import { PosteDeLaJourneeId } from '../../../domain/journee/PosteDeLaJourneeId';
+import { SuiviDAtelierId } from '../../../domain/journee/SuiviDAtelierId';
+import { calendrierDuNavigateur } from '../CalendrierDuNavigateur';
 import { FriseDuJour } from './FriseDuJour';
 
 const SUIVIS = [
@@ -145,6 +150,123 @@ describe('Frise of the day', () => {
 
     expect(currents('frise-barre')).toEqual([null, 'true', null]);
   });
+
+  it('should draw the addition being prepared as a dotted bar on the line of its element and workstation', async () => {
+    await whenShowingTheDayWithAnAddition([travail('a', [8, 0], [10, 0])], ajoutSurLeSuivi('suivi-1').avecDebut('13:00').avecFin('14:30'));
+
+    expect(barresParLigne()).toEqual([2]);
+    expect(barres().map(barre => [barre.dataset['enAttente'], barre.dataset['style'], barre.style.left, barre.style.width])).toEqual([
+      ['false', 'travail', '12.5%', '12.5%'],
+      ['true', 'travail', '43.75%', '9.375%'],
+    ]);
+    expect(texts('frise-barre')).toEqual([
+      'OF 24-131, Tour CN 1, 08:00 → 10:00, travail',
+      'À ajouter : OF 24-131, Tour CN 1, 13:00 → 14:30, travail',
+    ]);
+  });
+
+  it('should leave the other lines alone when the addition being prepared joins one of them', async () => {
+    await whenShowingTheDayWithAnAddition(
+      [travail('a', [8, 0], [10, 0]), travail('b', [11, 0], [12, 0], fraiseuseFixture)],
+      ajoutSurLeSuivi('suivi-1').avecPoste(new PosteDeLaJourneeId('poste-fraise')).avecDebut('13:00').avecFin('14:30'),
+    );
+
+    expect(barresParLigne()).toEqual([1, 2]);
+  });
+
+  it('should put no marker on the addition being prepared', async () => {
+    await whenShowingTheDayWithAnAddition([], ajoutSurLeSuivi('suivi-1').avecDebut('13:00').avecFin('14:30'));
+
+    expect(marques()).toEqual([]);
+  });
+
+  it('should draw the addition being prepared on its own line when no activity shares its element and workstation', async () => {
+    await whenShowingTheDayWithAnAddition(
+      [travail('a', [8, 0], [10, 0])],
+      ajoutSurLeSuivi('suivi-2').avecPoste(new PosteDeLaJourneeId('poste-fraise')).avecDebut('13:00').avecFin('14:30'),
+    );
+
+    expect(texts('frise-ligne-element')).toEqual(['OF 24-131', 'MOULE 24-132']);
+    expect(texts('frise-ligne-poste')).toEqual(['Tour CN 1', 'Fraiseuse 1']);
+    expect(barresParLigne()).toEqual([1, 1]);
+  });
+
+  it('should draw a non-conformity being prepared with the hatching of non-conformities', async () => {
+    await whenShowingTheDayWithAnAddition(
+      [],
+      ajoutSurLeSuivi('suivi-1').avecCategorie('NON_CONFORMITE').avecDebut('13:00').avecFin('14:30'),
+    );
+
+    expect(barres().map(barre => [barre.dataset['enAttente'], barre.dataset['style']])).toEqual([['true', 'nc']]);
+  });
+
+  it('should draw the addition being prepared on a line to add when no element is chosen yet', async () => {
+    await whenShowingTheDayWithAnAddition([], ouvert().avecDebut('13:00').avecFin('14:30'));
+
+    expect(texts('frise-ligne-element')).toEqual(['À ajouter']);
+    expect(texts('frise-ligne-poste')).toEqual(['Tour CN 1']);
+    expect(texts('frise-barre')).toEqual(['À ajouter : Tour CN 1, 13:00 → 14:30, travail']);
+  });
+
+  it('should say the addition has no workstation when the operator is allowed on none', async () => {
+    await whenShowingTheDayWithAnAddition([], ouvert([]).avecDebut('13:00').avecFin('14:30'), []);
+
+    expect(texts('frise-barre')).toEqual(['À ajouter : Sans poste, 13:00 → 14:30, travail']);
+  });
+
+  it('should draw nothing for an addition whose hours are not a coherent range yet', async () => {
+    await whenShowingTheDayWithAnAddition([travail('a', [8, 0], [10, 0])], ajoutSurLeSuivi('suivi-1').avecDebut('13:00'));
+
+    expect(barres().map(barre => barre.dataset['enAttente'])).toEqual(['false']);
+  });
+
+  it('should show the addition being prepared instead of saying the day is empty', async () => {
+    await whenShowingTheDayWithAnAddition([], ajoutSurLeSuivi('suivi-1').avecDebut('13:00').avecFin('14:30'));
+
+    expect(all('frise-vide')).toEqual([]);
+    expect(barres()).toHaveLength(1);
+  });
+
+  it('should open the axis on the whole day when the addition being prepared leaves the hours from 6 h to 22 h', async () => {
+    await whenShowingTheDayWithAnAddition([travail('a', [8, 0], [10, 0])], ajoutSurLeSuivi('suivi-1').avecDebut('05:00').avecFin('05:30'));
+
+    expect(texts('frise-repere')).toEqual(['0 h', '3 h', '6 h', '9 h', '12 h', '15 h', '18 h', '21 h', '24 h']);
+  });
+
+  it('should show the operational duration of the day before and after the addition being prepared', async () => {
+    await whenShowingTheDayWithAnAddition([], ajoutSurLeSuivi('suivi-1').avecDebut('13:00').avecFin('14:30'), [tourFixture], 'PT4H45M');
+
+    expect(texts('frise-operationnel')).toEqual(['Opérationnel : 4 h 45 → 6 h 15']);
+  });
+
+  it('should show the operational duration alone while the hours of the addition are incoherent', async () => {
+    await whenShowingTheDayWithAnAddition([], ajoutSurLeSuivi('suivi-1').avecDebut('13:00'), [tourFixture], 'PT4H45M');
+
+    expect(texts('frise-operationnel')).toEqual(['Opérationnel : 4 h 45']);
+  });
+
+  const ouvert = (postes = [tourFixture, fraiseuseFixture]): AjoutEnPreparation =>
+    AjoutEnPreparation.ouvrir(journeeDe([], postes), instantLocal(6, 10), calendrierDuNavigateur);
+
+  const ajoutSurLeSuivi = (suivi: string): AjoutEnPreparation => ouvert().avecSuivi(new SuiviDAtelierId(suivi));
+
+  const journeeDe = (
+    activites: readonly ActiviteSemee[],
+    postes = [tourFixture, fraiseuseFixture],
+    operationnelle = 'PT0S',
+  ): JourneeACorriger => journeeFixture({ jour: 5, suivis: SUIVIS, activites, operationnelle, postes });
+
+  const whenShowingTheDayWithAnAddition = async (
+    activites: readonly ActiviteSemee[],
+    ajout: AjoutEnPreparation,
+    postes = [tourFixture, fraiseuseFixture],
+    operationnelle = 'PT0S',
+  ): Promise<void> => {
+    shown = TestBed.createComponent(FriseDuJour);
+    shown.componentRef.setInput('journee', journeeDe(activites, postes, operationnelle));
+    shown.componentRef.setInput('ajout', ajout);
+    await shown.whenStable();
+  };
 
   const currents = (selector: string): (string | null)[] => all(selector).map(element => element.getAttribute('aria-current'));
 
