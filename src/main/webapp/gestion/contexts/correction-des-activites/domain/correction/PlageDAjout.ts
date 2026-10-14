@@ -6,6 +6,7 @@ import { SuiviPresent } from '../journee/SuiviPresent';
 import { CalendrierLocal } from './CalendrierLocal';
 import { HeureSaisie } from './HeureSaisie';
 import { IntervalleDAjout } from './IntervalleDAjout';
+import { PortionsDeLAjout } from './PortionsDeLAjout';
 
 export type ChampDePlage = 'DEBUT' | 'FIN';
 
@@ -13,7 +14,9 @@ export type ErreurDePlage =
   | { readonly kind: 'HEURE_MAL_ECRITE' }
   | { readonly kind: 'HEURES_MANQUANTES' }
   | { readonly kind: 'HORS_DU_JOUR'; readonly champ: ChampDePlage }
+  | { readonly kind: 'FIN_HORS_DU_LENDEMAIN' }
   | { readonly kind: 'FIN_NON_APRES_DEBUT' }
+  | { readonly kind: 'FIN_AVANT_DEBUT_LE_MEME_JOUR'; readonly debut: InstantDeLaJournee; readonly fin: InstantDeLaJournee }
   | { readonly kind: 'FIN_APRES_MAINTENANT' }
   | { readonly kind: 'DEBUT_AVANT_ENGAGEMENT'; readonly engagement: InstantDeLaJournee }
   | { readonly kind: 'FIN_APRES_CLOTURE'; readonly cloture: InstantDeLaJournee };
@@ -26,9 +29,10 @@ interface CadreDeLaPlage {
   readonly suivi: SuiviPresent | undefined;
 }
 
-interface HeuresTapees {
+interface SaisieDeLaPlage {
   readonly debut: string;
   readonly fin: string;
+  readonly finLeLendemain: boolean;
   readonly tentee: boolean;
 }
 
@@ -38,12 +42,12 @@ type HeureLue =
 const VIDE: HeureLue = { kind: 'VIDE' };
 const MAL_ECRITE: HeureLue = { kind: 'MAL_ECRITE' };
 
-const lire = (texte: string, cadre: CadreDeLaPlage): HeureLue => {
+const lire = (texte: string, jour: JourACorriger, cadre: CadreDeLaPlage): HeureLue => {
   if (texte.trim() === '') {
     return VIDE;
   }
   const heure = HeureSaisie.lire(texte);
-  return heure === undefined ? MAL_ECRITE : { kind: 'LUE', instant: heure.le(cadre.jour, cadre.calendrier) };
+  return heure === undefined ? MAL_ECRITE : { kind: 'LUE', instant: heure.le(jour, cadre.calendrier) };
 };
 
 const instantLu = (heure: HeureLue): InstantDeLaJournee | undefined => (heure.kind === 'LUE' ? heure.instant : undefined);
@@ -51,39 +55,63 @@ const instantLu = (heure: HeureLue): InstantDeLaJournee | undefined => (heure.ki
 export class PlageDAjout {
   private constructor(
     private readonly cadre: CadreDeLaPlage,
-    private readonly heures: HeuresTapees,
+    private readonly saisie: SaisieDeLaPlage,
   ) {}
 
   static pour(bornes: BornesDuJour, jour: JourACorriger, maintenant: InstantDeLaJournee, calendrier: CalendrierLocal): PlageDAjout {
-    return new PlageDAjout({ bornes, jour, calendrier, maintenant, suivi: undefined }, { debut: '', fin: '', tentee: false });
+    return new PlageDAjout(
+      { bornes, jour, calendrier, maintenant, suivi: undefined },
+      { debut: '', fin: '', finLeLendemain: false, tentee: false },
+    );
   }
 
   avecSuivi(suivi: SuiviPresent | undefined): PlageDAjout {
-    return new PlageDAjout({ ...this.cadre, suivi }, this.heures);
+    return new PlageDAjout({ ...this.cadre, suivi }, this.saisie);
   }
 
   avecMaintenant(maintenant: InstantDeLaJournee): PlageDAjout {
-    return new PlageDAjout({ ...this.cadre, maintenant }, this.heures);
+    return new PlageDAjout({ ...this.cadre, maintenant }, this.saisie);
   }
 
   avecDebut(texte: string): PlageDAjout {
-    return new PlageDAjout(this.cadre, { ...this.heures, debut: texte });
+    return new PlageDAjout(this.cadre, { ...this.saisie, debut: texte });
   }
 
   avecFin(texte: string): PlageDAjout {
-    return new PlageDAjout(this.cadre, { ...this.heures, fin: texte });
+    return new PlageDAjout(this.cadre, { ...this.saisie, fin: texte });
+  }
+
+  avecFinLeLendemain(): PlageDAjout {
+    return new PlageDAjout(this.cadre, { ...this.saisie, finLeLendemain: true });
+  }
+
+  avecFinLeJourAffiche(): PlageDAjout {
+    return new PlageDAjout(this.cadre, { ...this.saisie, finLeLendemain: false });
   }
 
   apresUnEnvoi(): PlageDAjout {
-    return new PlageDAjout(this.cadre, { ...this.heures, tentee: true });
+    return new PlageDAjout(this.cadre, { ...this.saisie, tentee: true });
+  }
+
+  finLeLendemain(): boolean {
+    return this.saisie.finLeLendemain;
+  }
+
+  lendemainDisponible(): boolean {
+    return !this.cadre.maintenant.estAvant(this.cadre.bornes.fin);
+  }
+
+  finProposee(): InstantDeLaJournee | undefined {
+    const lendemain = this.avecFinLeLendemain();
+    return this.erreur()?.kind === 'FIN_AVANT_DEBUT_LE_MEME_JOUR' && lendemain.erreur() === undefined ? lendemain.fin() : undefined;
   }
 
   texteDuDebut(): string {
-    return this.heures.debut;
+    return this.saisie.debut;
   }
 
   texteDeLaFin(): string {
-    return this.heures.fin;
+    return this.saisie.fin;
   }
 
   erreur(): ErreurDePlage | undefined {
@@ -96,20 +124,31 @@ export class PlageDAjout {
     return debut === undefined || fin === undefined ? undefined : IntervalleDAjout.entre(debut, fin);
   }
 
-  aEnvoyer(): IntervalleDAjout | undefined {
-    return this.erreur() === undefined ? this.intervalle() : undefined;
+  aEnvoyer(): PortionsDeLAjout | undefined {
+    return this.erreur() === undefined ? this.portions() : undefined;
   }
 
   duree(): Duree | undefined {
     return this.intervalle()?.duree();
   }
 
+  portions(): PortionsDeLAjout | undefined {
+    const intervalle = this.intervalle();
+    return intervalle === undefined || this.estHorsDesJours(intervalle)
+      ? undefined
+      : new PortionsDeLAjout(intervalle, this.cadre.jour, this.cadre.bornes.fin);
+  }
+
   private debutLu(): HeureLue {
-    return lire(this.heures.debut, this.cadre);
+    return lire(this.saisie.debut, this.cadre.jour, this.cadre);
   }
 
   private finLue(): HeureLue {
-    return lire(this.heures.fin, this.cadre);
+    return lire(this.saisie.fin, this.jourDeLaFin(), this.cadre);
+  }
+
+  private jourDeLaFin(): JourACorriger {
+    return this.saisie.finLeLendemain ? this.cadre.jour.lendemain() : this.cadre.jour;
   }
 
   private debut(): InstantDeLaJournee | undefined {
@@ -130,7 +169,7 @@ export class PlageDAjout {
 
   private erreurDHeureManquante(): ErreurDePlage | undefined {
     const manque = this.debutLu().kind === 'VIDE' || this.finLue().kind === 'VIDE';
-    return this.heures.tentee && manque ? { kind: 'HEURES_MANQUANTES' } : undefined;
+    return this.saisie.tentee && manque ? { kind: 'HEURES_MANQUANTES' } : undefined;
   }
 
   private erreurDuDebut(): ErreurDePlage | undefined {
@@ -147,25 +186,44 @@ export class PlageDAjout {
 
   private erreurDeLaFin(): ErreurDePlage | undefined {
     const fin = this.fin();
-    if (fin === undefined) {
+    return fin === undefined ? undefined : (this.erreurDeLaPlaceDeLaFin(fin) ?? this.erreurDeLOrdre(fin) ?? this.erreurDeLaCloture(fin));
+  }
+
+  private erreurDeLaPlaceDeLaFin(fin: InstantDeLaJournee): ErreurDePlage | undefined {
+    if (!this.estFinHorsDesJours(fin)) {
       return undefined;
     }
-    if (this.estHorsDuJour(fin)) {
-      return { kind: 'HORS_DU_JOUR', champ: 'FIN' };
-    }
-    return this.erreurDeLOrdre(fin) ?? this.erreurDeLaCloture(fin);
+    return this.saisie.finLeLendemain ? { kind: 'FIN_HORS_DU_LENDEMAIN' } : { kind: 'HORS_DU_JOUR', champ: 'FIN' };
+  }
+
+  private estHorsDesJours(intervalle: IntervalleDAjout): boolean {
+    return this.estHorsDuJour(intervalle.debut) || this.estFinHorsDesJours(intervalle.fin);
+  }
+
+  private estFinHorsDesJours(fin: InstantDeLaJournee): boolean {
+    return this.saisie.finLeLendemain ? this.estHorsDuLendemain(fin) : this.estHorsDuJour(fin);
+  }
+
+  private estHorsDuLendemain(fin: InstantDeLaJournee): boolean {
+    return fin.estAvant(this.cadre.bornes.fin) || this.cadre.bornes.finDuLendemain.estAvant(fin);
   }
 
   private erreurDeLOrdre(fin: InstantDeLaJournee): ErreurDePlage | undefined {
-    if (this.neSuitPasLeDebut(fin)) {
-      return { kind: 'FIN_NON_APRES_DEBUT' };
+    const debut = this.debut();
+    if (this.neSuitPasLeDebut(debut, fin)) {
+      return this.erreurDeFinNonApresDebut(debut, fin);
     }
     return this.cadre.maintenant.estAvant(fin) ? { kind: 'FIN_APRES_MAINTENANT' } : undefined;
   }
 
-  private neSuitPasLeDebut(fin: InstantDeLaJournee): boolean {
-    const debut = this.debut();
+  private neSuitPasLeDebut(debut: InstantDeLaJournee | undefined, fin: InstantDeLaJournee): debut is InstantDeLaJournee {
     return debut !== undefined && !debut.estAvant(fin);
+  }
+
+  private erreurDeFinNonApresDebut(debut: InstantDeLaJournee, fin: InstantDeLaJournee): ErreurDePlage {
+    return !this.saisie.finLeLendemain && fin.estAvant(debut)
+      ? { kind: 'FIN_AVANT_DEBUT_LE_MEME_JOUR', debut, fin }
+      : { kind: 'FIN_NON_APRES_DEBUT' };
   }
 
   private erreurDeLaCloture(fin: InstantDeLaJournee): ErreurDePlage | undefined {

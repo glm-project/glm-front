@@ -55,6 +55,14 @@ export class AjoutEnPreparation {
     return new AjoutEnPreparation(this.choix, this.saisie.avecFin(texte), this.tentee);
   }
 
+  avecFinLeLendemain(): AjoutEnPreparation {
+    return new AjoutEnPreparation(this.choix, this.saisie.avecFinLeLendemain(), this.tentee);
+  }
+
+  avecFinLeJourAffiche(): AjoutEnPreparation {
+    return new AjoutEnPreparation(this.choix, this.saisie.avecFinLeJourAffiche(), this.tentee);
+  }
+
   avecMaintenant(maintenant: InstantDeLaJournee): AjoutEnPreparation {
     return new AjoutEnPreparation(this.choix, this.saisie.avecMaintenant(maintenant), this.tentee);
   }
@@ -87,9 +95,9 @@ export class AjoutEnPreparation {
   contenu(journee: JourneeACorriger): ContenuDAjout | undefined {
     const suivi = this.suivi(journee);
     const poste = this.poste(journee);
-    const intervalle = this.plage(journee).aEnvoyer();
-    return suivi === undefined || poste === undefined || intervalle === undefined
+    const portions = this.plage(journee).aEnvoyer();
+    return suivi === undefined || poste === undefined || portions === undefined
       ? undefined
-      : ContenuDAjout.de(journee.operateur, suivi, poste, this.choix.categorie, intervalle);
+      : ContenuDAjout.de(journee.operateur, suivi, poste, this.choix.categorie, portions);
   }
 }

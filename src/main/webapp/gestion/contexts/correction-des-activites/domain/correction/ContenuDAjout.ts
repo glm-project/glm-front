@@ -6,13 +6,14 @@ import { PosteDeLaJourneeId } from '../journee/PosteDeLaJourneeId';
 import { SuiviDAtelierId } from '../journee/SuiviDAtelierId';
 import { SuiviPresent } from '../journee/SuiviPresent';
 import { IntervalleDAjout } from './IntervalleDAjout';
+import { PortionsDeLAjout } from './PortionsDeLAjout';
 
 interface FicheDuContenuDAjout {
   readonly operateur: OperateurDeLaJourneeId;
   readonly suivi: SuiviDAtelierId;
   readonly poste: PosteDeLaJourneeId;
   readonly categorie: CategorieDActivite;
-  readonly intervalle: IntervalleDAjout;
+  readonly portions: PortionsDeLAjout;
 }
 
 export class ContenuDAjout {
@@ -21,13 +22,15 @@ export class ContenuDAjout {
   readonly poste: PosteDeLaJourneeId;
   readonly categorie: CategorieDActivite;
   readonly intervalle: IntervalleDAjout;
+  readonly portions: PortionsDeLAjout;
 
   private constructor(fiche: FicheDuContenuDAjout) {
     this.operateur = fiche.operateur;
     this.suivi = fiche.suivi;
     this.poste = fiche.poste;
     this.categorie = fiche.categorie;
-    this.intervalle = fiche.intervalle;
+    this.intervalle = fiche.portions.intervalle;
+    this.portions = fiche.portions;
   }
 
   static de(
@@ -35,8 +38,8 @@ export class ContenuDAjout {
     suivi: SuiviPresent,
     poste: PosteDeLaJournee,
     categorie: CategorieDActivite,
-    intervalle: IntervalleDAjout,
+    portions: PortionsDeLAjout,
   ): ContenuDAjout {
-    return new ContenuDAjout({ operateur: operateur.id, suivi: suivi.suivi, poste: poste.id, categorie, intervalle });
+    return new ContenuDAjout({ operateur: operateur.id, suivi: suivi.suivi, poste: poste.id, categorie, portions });
   }
 }

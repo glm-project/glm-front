@@ -277,6 +277,40 @@ describe('Correction of the day of an operator in gestion', () => {
     thenOneAdditionWasSentAndTheDayIsReadAgainWithTheActivity();
   });
 
+  it('should end the activity the next day, send nothing and clear the error when the manager applies the proposal', () => {
+    givenTheDayAndItsAddition(lundi(), lundi());
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenChoosingTheElement('OF 24-131 · Pièce 1');
+    whenTypingTheHours('22:00', '03:30');
+    whenApplyingTheProposalToFinishTheNextDay();
+
+    thenTheActivityEndsTheNextDayWithoutErrorAndNothingWasSent();
+  });
+
+  it('should draw the addition ending the next day cut at midnight, dotted, and show the operational time before and after', () => {
+    givenTheDay(lundi());
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenChoosingTheElement('OF 24-131 · Pièce 1');
+    whenChoosingTheDayOfTheEnd('Mardi 6');
+    whenTypingTheHours('22:00', '03:30');
+
+    thenTheAdditionIsCutAtMidnightAndTheContinuationIsNamed();
+  });
+
+  it('should name the portion of each day once an activity ending the next day is added and lead to the next day', () => {
+    givenTheDayAndItsAddition(lundi(), lundi([matin, soirNonConforme, nuitDuLundiAuMardi], 'PT6H45M'));
+    whenVisiting('/operateurs/op-1/journees/2026-10-05');
+    whenAskingToAddAnActivity();
+    whenChoosingTheElement('OF 24-131 · Pièce 1');
+    whenChoosingTheDayOfTheEnd('Mardi 6');
+    whenTypingTheHours('22:00', '03:30');
+    whenAddingTheActivity();
+
+    thenEachDayIsNamedWithALinkToTheNextDay();
+  });
+
   it('should explain the overlap under the buttons and keep the entry', () => {
     givenTheDayAndItsAddition(lundi(), lundi());
     givenTheAdditionOverlaps();
@@ -524,6 +558,12 @@ describe('Correction of the day of an operator in gestion', () => {
     cy.get(dataSelector('ajout-fin')).type(fin);
     cy.get(dataSelector('ajout-fin')).blur();
   };
+  const whenChoosingTheDayOfTheEnd = (libelle: string): void => {
+    cy.get(dataSelector('ajout-jour-fin')).contains(libelle).click();
+  };
+  const whenApplyingTheProposalToFinishTheNextDay = (): void => {
+    cy.get(dataSelector('ajout-proposition')).should('have.text', ' Finir le mardi 6 à 03:30 ').click();
+  };
   const whenAddingTheActivity = (): void => {
     cy.get(dataSelector('ajout-ajouter')).click();
   };
@@ -719,6 +759,37 @@ describe('Correction of the day of an operator in gestion', () => {
     cy.get(dataSelector('activite-horaires')).should('have.length', 3);
     cy.get(dataSelector('frise-operationnel')).should('contain.text', 'Opérationnel : 8 h 00');
     cy.focused().should('have.attr', 'data-selector', 'activite-ajouter');
+  };
+  const thenTheActivityEndsTheNextDayWithoutErrorAndNothingWasSent = (): void => {
+    cy.get(dataSelector('ajout-erreur')).should('not.exist');
+    cy.get(dataSelector('ajout-proposition')).should('not.exist');
+    cy.get(dataSelector('ajout-jour-fin')).then(jours => {
+      expect([...jours].map(element => element.getAttribute('aria-pressed'))).to.deep.equal(['false', 'true']);
+    });
+    cy.get(dataSelector('ajout-duree')).should('have.text', '5 h 30');
+    cy.get('@ajoutWrite.all').should('have.length', 0);
+  };
+  const thenTheAdditionIsCutAtMidnightAndTheContinuationIsNamed = (): void => {
+    cy.get(dataSelector('frise-barre'))
+      .filter('[data-en-attente="true"]')
+      .should('have.length', 1)
+      .and('have.css', 'border-top-style', 'dashed')
+      .and('have.attr', 'data-coupee-a-la-fin', 'true');
+    cy.get(dataSelector('frise-mention')).should('have.text', '2 h 00 ce jour · suite le mardi 6 →');
+    cy.get(dataSelector('frise-operationnel')).should('contain.text', 'Opérationnel : 4 h 45 → 6 h 45');
+    cy.get(dataSelector('ajout-effet-valeur')).then(valeurs => {
+      expect([...valeurs].map(element => element.textContent.trim())).to.deep.equal(['4 h 45 → 6 h 45', '+ 3 h 30']);
+    });
+    thenTheAxisCoversTheWholeDay();
+  };
+  const thenEachDayIsNamedWithALinkToTheNextDay = (): void => {
+    cy.get(dataSelector('corriger-annonce')).should('have.text', 'Activité ajoutée : 2 h 00 ce lundi, 3 h 30 le mardi 6');
+    cy.get(dataSelector('corriger-annonce-suite'))
+      .should('have.text', 'Voir le mardi 6')
+      .and('have.attr', 'href', '/operateurs/op-1/journees/2026-10-06');
+    cy.get('@ajoutWrite')
+      .its('request.body.fin')
+      .should('match', /^2026-10-06T03:30:00[+-]\d{2}:\d{2}$/);
   };
   const thenTheRefusalIsExplainedAndTheEntryKept = (libelle: string): void => {
     cy.get(dataSelector('ajout-refus')).should($element => {

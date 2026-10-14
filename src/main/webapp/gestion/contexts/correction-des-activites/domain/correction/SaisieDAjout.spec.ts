@@ -3,6 +3,7 @@ import { CategorieDElement } from '../journee/CategorieDElement';
 import { ElementDeLaJournee } from '../journee/ElementDeLaJournee';
 import { ElementDeLaJourneeId } from '../journee/ElementDeLaJourneeId';
 import { InstantDeLaJournee } from '../journee/InstantDeLaJournee';
+import { JourACorriger } from '../journee/JourACorriger';
 import { OperateurDeLaJournee } from '../journee/OperateurDeLaJournee';
 import { OperateurDeLaJourneeId } from '../journee/OperateurDeLaJourneeId';
 import { PosteDeLaJournee } from '../journee/PosteDeLaJournee';
@@ -11,6 +12,7 @@ import { SuiviDAtelierId } from '../journee/SuiviDAtelierId';
 import { SuiviPresent } from '../journee/SuiviPresent';
 import { ContenuDAjout } from './ContenuDAjout';
 import { IntervalleDAjout } from './IntervalleDAjout';
+import { PortionsDeLAjout } from './PortionsDeLAjout';
 import { SaisieDAjout } from './SaisieDAjout';
 
 const instant = (recu: string): InstantDeLaJournee => new InstantDeLaJournee(recu);
@@ -50,7 +52,7 @@ const contenu = (variation: Variation = {}): ContenuDAjout => {
     }),
     new PosteDeLaJournee(new PosteDeLaJourneeId(variation.poste ?? 'tour'), 'Poste', 'Tournage'),
     variation.categorie ?? 'TRAVAIL',
-    intervalle,
+    new PortionsDeLAjout(intervalle, new JourACorriger('2026-10-05'), instant('2026-10-06T00:00:00-03:00')),
   );
 };
 

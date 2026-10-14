@@ -78,7 +78,11 @@ const journeeDesActivites = (activites: readonly ActiviteDeLaJournee[], postes: 
   new JourneeACorriger({
     operateur: new OperateurDeLaJournee(new OperateurDeLaJourneeId('op-1'), 'Dupont', 'Jean'),
     jour: new JourACorriger('2026-10-05'),
-    bornes: new BornesDuJour({ debut: instant('2026-10-05T00:00:00+02:00'), fin: instant('2026-10-06T00:00:00+02:00') }),
+    bornes: new BornesDuJour({
+      debut: instant('2026-10-05T00:00:00+02:00'),
+      fin: instant('2026-10-06T00:00:00+02:00'),
+      finDuLendemain: instant('2026-10-07T00:00:00+02:00'),
+    }),
     dureeOperationnelle: new Duree('PT0S'),
     activites,
     choix: new ChoixDAjout({ suivis: suivisPresents(), postes }),

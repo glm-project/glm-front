@@ -245,6 +245,27 @@ describe('Frise of the day', () => {
     expect(texts('frise-operationnel')).toEqual(['Opérationnel : 4 h 45']);
   });
 
+  it('should cut the addition ending the next day at midnight, name its portion and its continuation, and show the operational duration before and after', async () => {
+    await whenShowingTheDayWithAnAddition(
+      [],
+      ajoutSurLeSuivi('suivi-1').avecDebut('22:00').avecFin('03:30').avecFinLeLendemain(),
+      [tourFixture],
+      'PT4H45M',
+    );
+
+    expect(barres().map(barre => [barre.dataset['enAttente'], barre.dataset['coupeeALaFin']])).toEqual([['true', 'true']]);
+    expect(extremite(barres()[0])).toBeCloseTo(100);
+    expect(texts('frise-mention')).toEqual(['2 h 00 ce jour · suite le mardi 6 →']);
+    expect(texts('frise-operationnel')).toEqual(['Opérationnel : 4 h 45 → 6 h 45']);
+    expect(texts('frise-repere')).toEqual(['0 h', '3 h', '6 h', '9 h', '12 h', '15 h', '18 h', '21 h', '24 h']);
+  });
+
+  it('should name no continuation for an addition ending the next day exactly at midnight', async () => {
+    await whenShowingTheDayWithAnAddition([], ajoutSurLeSuivi('suivi-1').avecDebut('22:00').avecFin('00:00').avecFinLeLendemain());
+
+    expect(texts('frise-mention')).toEqual([]);
+  });
+
   const ouvert = (postes = [tourFixture, fraiseuseFixture]): AjoutEnPreparation =>
     AjoutEnPreparation.ouvrir(journeeDe([], postes), instantLocal(6, 10), calendrierDuNavigateur);
 

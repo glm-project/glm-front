@@ -23,8 +23,10 @@ const instant = (recu: string): InstantDeLaJournee => new InstantDeLaJournee(rec
 
 const deuxChiffres = (valeur: number): string => String(valeur).padStart(2, '0');
 
+const decalageDuJour = (jour: JourACorriger): string => (jour.value >= '2026-10-25' ? '+01:00' : '+02:00');
+
 const CALENDRIER: CalendrierLocal = {
-  instantA: (jour, heures, minutes) => instant(`${jour.value}T${deuxChiffres(heures)}:${deuxChiffres(minutes)}:00+02:00`),
+  instantA: (jour, heures, minutes) => instant(`${jour.value}T${deuxChiffres(heures)}:${deuxChiffres(minutes)}:00${decalageDuJour(jour)}`),
 };
 
 const ELEMENT = new ElementDeLaJournee({
@@ -49,11 +51,16 @@ const activite = (debut: string, fin: string, portionDuJour: string, autresJours
     autresJours,
   });
 
-const lundi = (activites: readonly ActiviteDeLaJournee[], operationnelle: string): JourneeACorriger =>
+const journeeAvec = (
+  jour: string,
+  bornes: BornesDuJour,
+  activites: readonly ActiviteDeLaJournee[],
+  operationnelle: string,
+): JourneeACorriger =>
   new JourneeACorriger({
     operateur: new OperateurDeLaJournee(new OperateurDeLaJourneeId('op-1'), 'Leroy', 'Hugo'),
-    jour: new JourACorriger('2026-10-05'),
-    bornes: new BornesDuJour({ debut: instant('2026-10-05T00:00:00+02:00'), fin: instant('2026-10-06T00:00:00+02:00') }),
+    jour: new JourACorriger(jour),
+    bornes,
     dureeOperationnelle: new Duree(operationnelle),
     activites,
     choix: new ChoixDAjout({
@@ -63,6 +70,30 @@ const lundi = (activites: readonly ActiviteDeLaJournee[], operationnelle: string
       postes: [],
     }),
   });
+
+const lundi = (activites: readonly ActiviteDeLaJournee[], operationnelle: string): JourneeACorriger =>
+  journeeAvec(
+    '2026-10-05',
+    new BornesDuJour({
+      debut: instant('2026-10-05T00:00:00+02:00'),
+      fin: instant('2026-10-06T00:00:00+02:00'),
+      finDuLendemain: instant('2026-10-07T00:00:00+02:00'),
+    }),
+    activites,
+    operationnelle,
+  );
+
+const samediDuChangementDHeure = (operationnelle: string): JourneeACorriger =>
+  journeeAvec(
+    '2026-10-24',
+    new BornesDuJour({
+      debut: instant('2026-10-24T00:00:00+02:00'),
+      fin: instant('2026-10-25T00:00:00+02:00'),
+      finDuLendemain: instant('2026-10-26T00:00:00+01:00'),
+    }),
+    [],
+    operationnelle,
+  );
 
 const retrouvee = (journee: JourneeACorriger): ActiviteTerminee => {
   const [premiere] = journee.activites;
@@ -79,7 +110,7 @@ describe('Effect of the removal of an activity on the days', () => {
     const effet = whenRemovingTheActivity(journee);
 
     expect(effet.jourAffiche).toEqual({ jour: new JourACorriger('2026-10-05'), avant: new Duree('PT7H30M'), apres: new Duree('PT4H15M') });
-    expect(effet.autresJours).toEqual([]);
+    expect(effet.autresJoursRetires).toEqual([]);
   });
 
   it('should take the portion of the day displayed off the day displayed and the other portions off the other days', () => {
@@ -91,7 +122,7 @@ describe('Effect of the removal of an activity on the days', () => {
     const effet = whenRemovingTheActivity(journee);
 
     expect(effet.jourAffiche).toEqual({ jour: new JourACorriger('2026-10-05'), avant: new Duree('PT7H30M'), apres: new Duree('PT4H30M') });
-    expect(effet.autresJours).toEqual([{ jour: new JourACorriger('2026-10-04'), retire: new Duree('PT2H') }]);
+    expect(effet.autresJoursRetires).toEqual([{ jour: new JourACorriger('2026-10-04'), retire: new Duree('PT2H') }]);
   });
 
   const whenRemovingTheActivity = (journee: JourneeACorriger): EffetSurLesJournees =>
@@ -105,7 +136,7 @@ describe('Effect of the addition of an activity on the days', () => {
     const effet = whenAddingOnTheRange(journee, '08:00', '10:30');
 
     expect(effet?.jourAffiche).toEqual({ jour: new JourACorriger('2026-10-05'), avant: new Duree('PT7H30M'), apres: new Duree('PT10H') });
-    expect(effet?.autresJours).toEqual([]);
+    expect(effet?.autresJoursRetires).toEqual([]);
   });
 
   it.each([
@@ -117,9 +148,54 @@ describe('Effect of the addition of an activity on the days', () => {
     expect(whenAddingOnTheRange(lundi([], 'PT7H30M'), debut, fin)).toBeUndefined();
   });
 
-  const whenAddingOnTheRange = (journee: JourneeACorriger, debut: string, fin: string): EffetSurLesJournees | undefined =>
-    EffetSurLesJournees.dUnAjout(
-      journee,
-      PlageDAjout.pour(journee.bornes, journee.jour, instant('2026-10-06T12:00:00+02:00'), CALENDRIER).avecDebut(debut).avecFin(fin),
+  it('should announce each day an addition ending the next day touches: the portion of the day displayed added to its total, the other day on its own', () => {
+    const effet = whenAddingOnTheRange(lundi([], 'PT7H30M'), '22:00', '03:30', 'LENDEMAIN');
+
+    expect(effet?.jourAffiche).toEqual({ jour: new JourACorriger('2026-10-05'), avant: new Duree('PT7H30M'), apres: new Duree('PT9H30M') });
+    expect(effet?.autresJoursAjoutes).toEqual([{ jour: new JourACorriger('2026-10-06'), ajoute: new Duree('PT3H30M') }]);
+    expect(effet?.autresJoursRetires).toEqual([]);
+  });
+
+  it('should touch no other day when the addition ends the next day exactly at midnight', () => {
+    const effet = whenAddingOnTheRange(lundi([], 'PT7H30M'), '22:00', '00:00', 'LENDEMAIN');
+
+    expect(effet?.jourAffiche.apres).toEqual(new Duree('PT9H30M'));
+    expect(effet?.autresJoursAjoutes).toEqual([]);
+  });
+
+  it('should count the real duration of the night the clocks change: 2 h on the Saturday and 4 h 30 on the Sunday', () => {
+    const effet = whenAddingOnTheRange(samediDuChangementDHeure('PT1H'), '22:00', '03:30', 'LENDEMAIN');
+
+    expect(effet?.jourAffiche).toEqual({ jour: new JourACorriger('2026-10-24'), avant: new Duree('PT1H'), apres: new Duree('PT3H') });
+    expect(effet?.autresJoursAjoutes).toEqual([{ jour: new JourACorriger('2026-10-25'), ajoute: new Duree('PT4H30M') }]);
+  });
+
+  it('should forecast nothing for an end past the end of the next day rather than credit the next day with the whole remainder', () => {
+    const finissantAvantQuatreHeures = journeeAvec(
+      '2026-10-05',
+      new BornesDuJour({
+        debut: instant('2026-10-05T00:00:00+02:00'),
+        fin: instant('2026-10-06T00:00:00+02:00'),
+        finDuLendemain: instant('2026-10-06T03:00:00+02:00'),
+      }),
+      [],
+      'PT7H30M',
     );
+
+    expect(whenAddingOnTheRange(finissantAvantQuatreHeures, '22:00', '04:00', 'LENDEMAIN')).toBeUndefined();
+  });
+
+  type JourDeLaFin = 'JOUR_AFFICHE' | 'LENDEMAIN';
+
+  const whenAddingOnTheRange = (
+    journee: JourneeACorriger,
+    debut: string,
+    fin: string,
+    jourDeLaFin: JourDeLaFin = 'JOUR_AFFICHE',
+  ): EffetSurLesJournees | undefined => {
+    const saisie = PlageDAjout.pour(journee.bornes, journee.jour, instant('2026-10-27T12:00:00+01:00'), CALENDRIER)
+      .avecDebut(debut)
+      .avecFin(fin);
+    return EffetSurLesJournees.dUnAjout(journee, jourDeLaFin === 'LENDEMAIN' ? saisie.avecFinLeLendemain() : saisie);
+  };
 });

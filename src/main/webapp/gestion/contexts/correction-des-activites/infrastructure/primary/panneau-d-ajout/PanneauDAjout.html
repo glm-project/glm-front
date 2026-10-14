@@ -128,8 +128,46 @@
       </div>
       @if (erreur(); as probleme) {
       <p id="ajout-erreur" role="alert" class="field-error" data-selector="ajout-erreur">{{ libelles.erreur(probleme, journee().jour) }}</p>
+      } @if (finProposee(); as fin) {
+      <button
+        mat-stroked-button
+        type="button"
+        class="mt-2"
+        [disabled]="enCours()"
+        (click)="finirLeLendemain(true)"
+        data-selector="ajout-proposition"
+      >
+        {{ libelles.finirLe(fin) }}
+      </button>
       }
     </div>
+    @if (lendemainDisponible()) {
+    <div>
+      <span id="ajout-jour-fin-label" class="field-label">{{ libelles.jourDeLaFin }}</span>
+      <div role="group" aria-labelledby="ajout-jour-fin-label" class="gestion-segments">
+        <button
+          type="button"
+          class="gestion-segment"
+          [attr.aria-pressed]="!finLeLendemain()"
+          [disabled]="enCours()"
+          (click)="finirLeLendemain(false)"
+          data-selector="ajout-jour-fin"
+        >
+          {{ libelles.nomDuJour(journee().jour) }}
+        </button>
+        <button
+          type="button"
+          class="gestion-segment"
+          [attr.aria-pressed]="finLeLendemain()"
+          [disabled]="enCours()"
+          (click)="finirLeLendemain(true)"
+          data-selector="ajout-jour-fin"
+        >
+          {{ libelles.nomDuJour(lendemain()) }}
+        </button>
+      </div>
+    </div>
+    }
     <div class="rounded-control border border-border bg-sunken p-3.5">
       <p class="text-label uppercase text-ink-muted">{{ libelles.effet }}</p>
       @if (effet(); as prevision) {
@@ -139,7 +177,12 @@
           >{{ libelles.avantApres(prevision.jourAffiche.avant, prevision.jourAffiche.apres) }}</strong
         >
       </p>
-      } @else {
+      @for (autre of prevision.autresJoursAjoutes; track autre.jour.value) {
+      <p class="mt-1 flex justify-between gap-3 text-body-sm">
+        <span data-selector="ajout-effet-libelle">{{ libelles.operationnelDuJour(autre.jour) }}</span>
+        <strong class="tabular-nums" data-selector="ajout-effet-valeur">{{ libelles.ajoutSurUnAutreJour(autre.ajoute) }}</strong>
+      </p>
+      } } @else {
       <p class="mt-2 text-body-sm text-ink-muted" data-selector="ajout-sans-effet">{{ libelles.sansEffet }}</p>
       }
     </div>

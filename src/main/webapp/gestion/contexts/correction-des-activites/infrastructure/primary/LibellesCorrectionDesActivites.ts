@@ -1,12 +1,14 @@
 import {
   formatCalendarDayFullWithYear,
   formatCalendarDayLong,
+  formatCalendarDayWeekday,
   formatInstantTime,
   formatInstantWeekdayDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { IssueDeCorrection } from '../../application/CorrectionDUneActivite';
 import { MotifDAjout, MotifDeChangementDePoste } from '../../domain/correction/CorrectionsPort';
 import { ErreurDePlage } from '../../domain/correction/PlageDAjout';
+import { PortionsDeLAjout } from '../../domain/correction/PortionsDeLAjout';
 import { ActiviteDeLaJournee, ActiviteTerminee } from '../../domain/journee/ActiviteDeLaJournee';
 import { BornesDuJour } from '../../domain/journee/BornesDuJour';
 import { CategorieDActivite } from '../../domain/journee/CategorieDActivite';
@@ -14,7 +16,9 @@ import { Duree } from '../../domain/journee/Duree';
 import { ElementDeLaJournee } from '../../domain/journee/ElementDeLaJournee';
 import { InstantDeLaJournee } from '../../domain/journee/InstantDeLaJournee';
 import { JourACorriger } from '../../domain/journee/JourACorriger';
+import { PortionDeJour } from '../../domain/journee/PortionDeJour';
 import { PosteDeLaJournee } from '../../domain/journee/PosteDeLaJournee';
+import { AjoutCorrige } from './AjoutCorrige';
 
 const MINUTES_PAR_HEURE = 60;
 const MILLISECONDES_PAR_MINUTE = 60_000;
@@ -25,6 +29,8 @@ const FIN_AUTOMATIQUE = 'fin automatique';
 const heure = (instant: InstantDeLaJournee): string => formatInstantTime(instant.value);
 
 const jourEtHeure = (instant: InstantDeLaJournee): string => `${formatInstantWeekdayDay(instant.value)} à ${heure(instant)}`;
+
+const suite = (instant: InstantDeLaJournee): string => `suite le ${formatInstantWeekdayDay(instant.value)} →`;
 
 const jourEtHeureSeparees = (instant: InstantDeLaJournee): string => `${formatInstantWeekdayDay(instant.value)}, ${heure(instant)}`;
 
@@ -81,6 +87,24 @@ const ANNONCES_DE_L_AJOUT: Record<IssueDeCorrection, string> = {
   JOURNEE_CHANGEE: 'La journée a changé, recommencez',
 };
 
+const portionsAnnoncees = (portions: PortionsDeLAjout, lendemain: PortionDeJour): string =>
+  [
+    `${duree(portions.duJourAffiche.duree)} ce ${formatCalendarDayWeekday(portions.duJourAffiche.jour.value)}`,
+    `${duree(lendemain.duree)} le ${formatCalendarDayLong(lendemain.jour.value)}`,
+  ].join(', ');
+
+const annonceDeLAjout = (corrige: AjoutCorrige): string => {
+  if (corrige.issue === 'JOURNEE_CHANGEE') {
+    return ANNONCES_DE_L_AJOUT.JOURNEE_CHANGEE;
+  }
+  const lendemain = corrige.portions.duLendemain;
+  return lendemain === undefined
+    ? ANNONCES_DE_L_AJOUT.ENREGISTREE
+    : `${ANNONCES_DE_L_AJOUT.ENREGISTREE} : ${portionsAnnoncees(corrige.portions, lendemain)}`;
+};
+
+const avecUneCapitale = (texte: string): string => texte.charAt(0).toLocaleUpperCase('fr-FR') + texte.slice(1);
+
 const erreurDePlage = (erreur: ErreurDePlage, jour: JourACorriger): string => {
   switch (erreur.kind) {
     case 'HEURE_MAL_ECRITE':
@@ -89,8 +113,12 @@ const erreurDePlage = (erreur: ErreurDePlage, jour: JourACorriger): string => {
       return 'Saisissez le début et la fin.';
     case 'HORS_DU_JOUR':
       return `${erreur.champ === 'DEBUT' ? 'Le début' : 'La fin'} doit tomber le ${formatCalendarDayLong(jour.value)}.`;
+    case 'FIN_HORS_DU_LENDEMAIN':
+      return `La fin doit tomber le ${formatCalendarDayLong(jour.lendemain().value)}.`;
     case 'FIN_NON_APRES_DEBUT':
       return 'La fin doit suivre le début.';
+    case 'FIN_AVANT_DEBUT_LE_MEME_JOUR':
+      return `La fin, ${heure(erreur.fin)}, précède le début, ${heure(erreur.debut)}, sur la même journée.`;
     case 'FIN_APRES_MAINTENANT':
       return 'La fin ne peut pas suivre l’heure actuelle.';
     case 'DEBUT_AVANT_ENGAGEMENT':
@@ -149,7 +177,7 @@ export const LIBELLES_CORRECTION_DES_ACTIVITES = {
     finPointee: (instant: InstantDeLaJournee): string => `Fin ${heure(instant)}`,
     debutAvant: (instant: InstantDeLaJournee): string => `← début le ${jourEtHeure(instant)}`,
     enCoursDepuis: (instant: InstantDeLaJournee): string => `← en cours depuis ${jourEtHeure(instant)}`,
-    suite: (instant: InstantDeLaJournee): string => `suite le ${formatInstantWeekdayDay(instant.value)} →`,
+    suite,
     legende: {
       travail: 'Travail',
       nonConformite: 'Non-conformité',
@@ -214,6 +242,11 @@ export const LIBELLES_CORRECTION_DES_ACTIVITES = {
     operationnelDuJour,
     avantApres,
     duree,
+    ajoutSurUnAutreJour: (ajoute: Duree): string => `+ ${duree(ajoute)}`,
+    jourDeLaFin: 'Jour de la fin',
+    nomDuJour: (jour: JourACorriger): string => avecUneCapitale(formatCalendarDayLong(jour.value)),
+    suiteDeLAjout: (portion: Duree, fin: InstantDeLaJournee): string => `${duree(portion)} ce jour · ${suite(fin)}`,
+    finirLe: (fin: InstantDeLaJournee): string => `Finir le ${jourEtHeure(fin)}`,
     sansEffet: 'Saisissez un début et une fin pour voir l’effet.',
     ajouter: 'Ajouter l’activité',
     ajoutEnCours: 'Ajout en cours…',
@@ -221,7 +254,7 @@ export const LIBELLES_CORRECTION_DES_ACTIVITES = {
     erreur: erreurDePlage,
     refus: REFUS_DE_L_AJOUT,
     echec: 'L’ajout n’a pas abouti. Vérifiez la connexion puis réessayez.',
-    annonce: ANNONCES_DE_L_AJOUT,
+    annonce: annonceDeLAjout,
     aAjouter: 'À ajouter',
     barreAAjouter: (
       element: ElementDeLaJournee | undefined,

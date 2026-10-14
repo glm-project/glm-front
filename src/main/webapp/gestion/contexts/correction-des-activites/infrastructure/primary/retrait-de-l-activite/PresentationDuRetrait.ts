@@ -35,11 +35,11 @@ export const presentationDuRetrait = (journee: JourneeACorriger, activite: Activ
         libelle: LIBELLES.retrait.operationnelDuJour(effet.jourAffiche.jour),
         valeur: LIBELLES.retrait.avantApres(effet.jourAffiche.avant, effet.jourAffiche.apres),
       },
-      ...effet.autresJours.map(autre => ({
+      ...effet.autresJoursRetires.map(autre => ({
         libelle: LIBELLES.retrait.autreJour(autre.jour),
         valeur: LIBELLES.retrait.retire(autre.retire),
       })),
     ],
-    debordement: effet.autresJours.length === 0 ? undefined : LIBELLES.retrait.debordement(effet.autresJours),
+    debordement: effet.autresJoursRetires.length === 0 ? undefined : LIBELLES.retrait.debordement(effet.autresJoursRetires),
   };
 };

@@ -5,6 +5,7 @@ import {
   minutesDeFin,
 } from '@/gestion/shared/design-system/infrastructure/primary/axe-du-jour/AxeDuJour';
 import { AjoutEnPreparation } from '../../../domain/correction/AjoutEnPreparation';
+import { PortionsDeLAjout } from '../../../domain/correction/PortionsDeLAjout';
 import { ActiviteDeLaJournee } from '../../../domain/journee/ActiviteDeLaJournee';
 import { BornesDuJour } from '../../../domain/journee/BornesDuJour';
 import { CategorieDActivite } from '../../../domain/journee/CategorieDActivite';
@@ -179,25 +180,33 @@ interface AjoutProjete {
   readonly ligne: Pick<LigneDeFrise, 'element' | 'poste'>;
   readonly enonce: string;
   readonly style: StyleDeBarre;
+  readonly suite: MentionDeFrise | undefined;
 }
 
+const suiteDeLAjout = (portions: PortionsDeLAjout): MentionDeFrise | undefined =>
+  portions.duLendemain === undefined
+    ? undefined
+    : { cote: 'fin', texte: LIBELLES.ajout.suiteDeLAjout(portions.duJourAffiche.duree, portions.intervalle.fin) };
+
 const projeter = (journee: JourneeACorriger, ajout: AjoutEnPreparation): AjoutProjete | undefined => {
-  const intervalle = ajout.plage(journee).intervalle();
-  if (intervalle === undefined) {
+  const portions = ajout.plage(journee).portions();
+  if (portions === undefined) {
     return undefined;
   }
+  const { intervalle } = portions;
   const element = ajout.suivi(journee)?.element;
   const poste = ajout.poste(journee);
   return {
     cle: `${element?.id.value ?? ''}|${poste?.id.value ?? ''}`,
     debut: minutesDeDebut(intervalle.debut.value),
-    fin: minutesDeFin(intervalle.debut.value, intervalle.fin.value),
+    fin: minutesDeFin(intervalle.debut.value, portions.finSurLeJourAffiche.value),
     ligne: {
       element: element === undefined ? LIBELLES.ajout.aAjouter : LIBELLES.nomDeLElement(element),
       poste: LIBELLES.ajout.libelleDuPoste(poste),
     },
     enonce: LIBELLES.ajout.barreAAjouter(element, poste, ajout.categorie, intervalle.debut, intervalle.fin),
     style: STYLES_DE_BARRE[ajout.categorie],
+    suite: suiteDeLAjout(portions),
   };
 };
 
@@ -214,7 +223,7 @@ const barreEnAttente = (ajout: AjoutProjete, axe: AxeDuJour): BarreDeFrise => {
     enonce: ajout.enonce,
     automatique: false,
     coupeeAuDebut: false,
-    coupeeALaFin: false,
+    coupeeALaFin: ajout.suite !== undefined,
     enAttente: true,
   };
 };
@@ -224,10 +233,13 @@ const avecLAjout = (lignes: readonly LigneDeFrise[], ajout: AjoutProjete | undef
     return lignes;
   }
   const barre = barreEnAttente(ajout, axe);
+  const mentions = ajout.suite === undefined ? [] : [ajout.suite];
   const partagee = lignes.some(ligne => ligne.cle === ajout.cle);
   return partagee
-    ? lignes.map(ligne => (ligne.cle === ajout.cle ? { ...ligne, barres: [...ligne.barres, barre] } : ligne))
-    : [...lignes, { cle: ajout.cle, ...ajout.ligne, barres: [barre], marques: [], mentions: [] }];
+    ? lignes.map(ligne =>
+        ligne.cle === ajout.cle ? { ...ligne, barres: [...ligne.barres, barre], mentions: [...ligne.mentions, ...mentions] } : ligne,
+      )
+    : [...lignes, { cle: ajout.cle, ...ajout.ligne, barres: [barre], marques: [], mentions }];
 };
 
 const operationnelDe = (journee: JourneeACorriger, ajout: AjoutEnPreparation | undefined): string => {

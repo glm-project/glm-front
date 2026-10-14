@@ -7,6 +7,7 @@ import {
   fraiseuseFixture,
   instantLocal,
   journeeFixture,
+  portionsDuLundiFixture,
   terminee,
   tourFixture,
 } from '@test/unit/fixtures/gestion/correction-des-activites/JourneeACorrigerFixture';
@@ -39,7 +40,7 @@ const contenuDAjout = (categorie: CategorieDActivite): ContenuDAjout =>
     requiredFixture(JOURNEE.choix.suivis.de(new SuiviDAtelierId('suivi-1')), 'suivi-1'),
     tourFixture,
     categorie,
-    requiredFixture(IntervalleDAjout.entre(instantLocal(5, 13, 30), instantLocal(5, 16, 45)), 'intervalle'),
+    portionsDuLundiFixture(requiredFixture(IntervalleDAjout.entre(instantLocal(5, 13, 30), instantLocal(5, 16, 45)), 'intervalle')),
   );
 const AJOUT = contenuDAjout('TRAVAIL');
 const AJOUT_EN_NON_CONFORMITE = contenuDAjout('NON_CONFORMITE');

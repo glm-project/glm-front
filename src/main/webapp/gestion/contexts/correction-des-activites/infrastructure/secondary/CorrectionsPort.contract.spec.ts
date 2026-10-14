@@ -10,6 +10,7 @@ import {
   fraiseuseFixture,
   instantLocal,
   journeeFixture,
+  portionsDuLundiFixture,
   terminee,
   tourFixture,
 } from '@test/unit/fixtures/gestion/correction-des-activites/JourneeACorrigerFixture';
@@ -44,9 +45,11 @@ const CONTENU_DE_L_AJOUT = ContenuDAjout.de(
   requiredFixture(JOURNEE.choix.suivis.de(new SuiviDAtelierId('suivi-1')), 'suivi-1'),
   tourFixture,
   'NON_CONFORMITE',
-  requiredFixture(
-    IntervalleDAjout.entre(new InstantDeLaJournee('2026-10-05T13:30:00-03:00'), new InstantDeLaJournee('2026-10-05T16:45:00-03:00')),
-    'intervalle',
+  portionsDuLundiFixture(
+    requiredFixture(
+      IntervalleDAjout.entre(new InstantDeLaJournee('2026-10-05T13:30:00-03:00'), new InstantDeLaJournee('2026-10-05T16:45:00-03:00')),
+      'intervalle',
+    ),
   ),
 );
 const AJOUT = SaisieDAjout.pour(undefined, CONTENU_DE_L_AJOUT, () => 'saisie-3');

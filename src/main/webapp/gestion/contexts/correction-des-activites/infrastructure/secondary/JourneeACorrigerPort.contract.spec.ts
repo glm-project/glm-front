@@ -161,6 +161,7 @@ const journeeDomaine = (): JourneeACorriger =>
     bornes: new BornesDuJour({
       debut: instant('2026-10-05T00:00:00+02:00'),
       fin: instant('2026-10-06T00:00:00+02:00'),
+      finDuLendemain: instant('2026-10-07T00:00:00+02:00'),
     }),
     dureeOperationnelle: new Duree('PT7H30M'),
     activites: [
@@ -275,6 +276,10 @@ describe('Beyond the contract: HTTP reading of the day to correct', () => {
     {
       cas: 'bornes that do not follow each other',
       corrompre: (journee: RestJournee): RestJournee => ({ ...journee, bornes: { ...journee.bornes, fin: journee.bornes.debut } }),
+    },
+    {
+      cas: 'an end of the next day that does not follow the end of the day',
+      corrompre: (journee: RestJournee): RestJournee => ({ ...journee, bornes: { ...journee.bornes, finDuLendemain: journee.bornes.fin } }),
     },
   ])('should reject and report once $cas instead of showing a doubtful day', async ({ corrompre }) => {
     const rejet = await whenReadingRejectedWith(200, corrompre(restJourneeFixture()));

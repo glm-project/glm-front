@@ -44,7 +44,15 @@
       data-selector="corriger-annonce"
       >{{ annonce.texte }}</span
     >
-    }
+    @if (annonce.suite; as suite) {
+    <a
+      mat-stroked-button
+      class="mb-6"
+      [routerLink]="['/operateurs', operateur(), 'journees', suite.value]"
+      data-selector="corriger-annonce-suite"
+      >{{ libelles.voirLeJour(suite) }}</a
+    >
+    } }
   </p>
   @switch (etat().kind) { @case ('ADRESSE_INVALIDE') {
   <p role="alert" class="py-12 text-center text-body text-danger" data-selector="corriger-adresse-invalide">

@@ -23,7 +23,9 @@ immédiate (chevauchement, clôture, habilitation) appartiennent au `SuiviDAteli
 | correction             | un ajout, un changement de poste ou un retrait                                                                   |
 | saisie                 | le contenu d'une correction et son identifiant, oubliés une fois la correction enregistrée ou la journée changée |
 | effet sur les journées | la prévision par jour touché                                                                                     |
-| plage d'ajout          | le début et la fin tapés (`HH:MM`) d'une activité à ajouter, tenus en heure locale sur le jour affiché           |
+| plage d'ajout          | le début (sur le jour affiché) et la fin (sur le jour de la fin) tapés en `HH:MM` d'une activité à ajouter       |
+| jour de la fin         | le jour affiché ou le lendemain : le jour sur lequel se lit la fin tapée d'un ajout                              |
+| portions de l'ajout    | la durée de l'ajout comptée sur le jour affiché et, s'il finit le lendemain, sur le lendemain                    |
 | ajout en préparation   | ce que le gestionnaire a choisi et tapé dans le panneau d'ajout : élément, poste, type, plage                    |
 | journée changée        | la journée lue n'est plus celle du serveur : on relit et on recommence                                           |
 
@@ -40,8 +42,8 @@ absence connue, `undefined`, sans signalement technique ; toute autre panne ou r
 et rejette la lecture. Les types générés restent dans `HttpJourneeACorriger`.
 
 - Les instants arrivent en UTC (`Z`), les durées en ISO-8601, les jours en `AAAA-MM-JJ` du fuseau de l'atelier. Le
-  domaine ne connaît aucun fuseau et ne calcule aucun minuit : les bornes du jour (début et fin) viennent du back. La fin du
-  lendemain, rendue aussi, n'est lue qu'avec l'ajout qui finit le lendemain.
+  domaine ne connaît aucun fuseau et ne calcule aucun minuit : les bornes du jour (début, fin et fin du
+  lendemain) viennent du back et se suivent.
 - Une activité est identifiée par son pointage ouvrant, qui ne change pas avec son poste. Sa portion du jour et ses
   autres jours sont reçus ; le front ne découpe aucune activité existante.
 - Une activité en cours n'a ni fin ni durée. Une activité sans poste pointé est possible.
@@ -55,8 +57,8 @@ et rejette la lecture. Les types générés restent dans `HttpJourneeACorriger`.
   tronque à la minute, sur le total et non sur chaque portion.
 - Le numéro d'un élément est sa référence, à défaut son nom ; sa désignation est sa description.
 
-Le domaine ne porte que ce que la page lit ou ce que consomment les corrections livrées : la fin du lendemain arrive avec
-l'ajout qui la consomme, donc avec le lot suivant (ADR 0037).
+Le domaine ne porte que ce que la page lit ou ce que consomment les corrections livrées (ADR 0037) : la fin du lendemain
+sert à borner l'ajout qui finit le lendemain.
 
 - `JourneeACorriger.postesPourChanger(activite)` rend les postes habilités de l'opérateur sauf le poste actuel de l'activité
   (tous les postes habilités pour une activité sans poste). `activiteCorrigeable(id)` retrouve une activité corrigeable
@@ -86,6 +88,7 @@ borne vers le passé. Le jour affiché n'est lu que dans l'adresse.
   ni de fin), sur la ligne de son élément et de son poste, ou sur une ligne « À ajouter » tant qu'aucun élément n'est choisi ;
   elle n'est dessinée qu'une fois les deux heures tapées et cohérentes (la fin suit le début). L'axe l'inclut : il s'ouvre sur le
   jour entier dès qu'elle sort de 6 h à 22 h. L'en-tête montre alors « Opérationnel : 4 h 45 → 6 h 15 » (avant → après).
+  Un ajout qui finit le lendemain est coupé à la fin du jour reçue, sans repère de fin, et nomme sa suite sur la ligne : « 2 h 00 ce jour · suite le mardi 6 → ».
 - **Liste** (`ActivitesDuJour`) : par début. La durée est la portion du jour ; une activité à cheval ajoute « sur 5 h 30 »
   (`dureeTotale`) et des liens « début le … » ou « fin le … » vers l'autre jour, pris dans les portions reçues (`jourDuDebut`,
   `jourDeLaFin`). « en cours » sans durée, « fin automatique », « Clôturé le lundi 5 à 11:00 » pour un suivi clôturé. Une
@@ -118,9 +121,15 @@ de poste n'a que `CHEVAUCHEMENT` ; l'ajout a `CHEVAUCHEMENT` et `FIN_FUTURE`.
 - **Effet sur les journées d'un changement de poste.** Aucun calcul : le panneau dit « Le temps ne change pas ».
 - **Effet sur les journées.** `EffetSurLesJournees.duRetrait(journee, activite)` rend le jour affiché, durée
   opérationnelle avant → après (moins la portion du jour), et chaque autre jour touché avec la portion retirée, reçue du
-  serveur. Il ne découpe jamais une activité existante. `EffetSurLesJournees.dUnAjout(journee, plage)` rend le jour affiché,
-  durée opérationnelle avant → après (plus la durée de la plage, un écart entre deux instants : `Duree.entre`), ou rien tant que
-  la plage n'est pas cohérente. Ce lot ne touche que le jour affiché ; l'ajout qui finit le lendemain ajoute ses portions.
+  serveur (`autresJoursRetires`). Il ne découpe jamais une activité existante. `EffetSurLesJournees.dUnAjout(journee, plage)` rend le jour affiché,
+  durée opérationnelle avant → après (plus la portion du jour affiché), ou rien tant que la plage n'est pas cohérente ; l'ajout
+  qui finit le lendemain ajoute la portion du lendemain, seule (« + 3 h 30 », `autresJoursAjoutes`) : la lecture ne rend pas la
+  durée de ce jour. Les portions sont un objet du domaine, `PortionsDeLAjout` (`duJourAffiche`, `duLendemain` s'il y en a un,
+  `finSurLeJourAffiche`, l'intervalle), rendu par `PlageDAjout.portions()` et coupé à la fin du jour reçue
+  (`IntervalleDAjout.coupeA`) : c'est l'unique endroit qui décide de la coupure, que la frise, l'effet et le message lisent.
+  Aucun minuit n'est calculé, et la nuit d'un changement d'heure compte sa durée réelle. Une plage dont le début ou la fin sort
+  des jours reçus (fin après la fin du lendemain, navigateur hors du fuseau) n'a aucune portion : ni effet, ni dessin, et
+  l'erreur le dit. Les autres erreurs (fin après « maintenant », après la clôture) laissent la plage dessinée et prévue.
 - **Retrait.** Le bouton de la liste demande à la page (`retraitDemande`) d'ouvrir `RetraitDeLActivite`, un `MatDialog`
   avec `ConfirmationContent` : titre « Retirer l'activité de 18:30 à 21:45 ? » (« du lundi 5, 20:30, au mardi 6, 04:00 ? »
   à cheval), l'activité et sa durée totale, une ligne d'effet par jour, « Le retrait vaut pour toute l'activité : le mardi 6
@@ -163,24 +172,36 @@ de poste n'a que `CHEVAUCHEMENT` ; l'ajout a `CHEVAUCHEMENT` et `FIN_FUTURE`.
     `CalendrierLocal` et, l'élément choisi, son suivi présent. Elle lit `HH:MM` sur le jour affiché, mais ne construit aucun
     instant : le domaine ne connaît aucun fuseau. `CalendrierLocal.instantA(jour, heures, minutes)` est un port du domaine,
     réalisé par `calendrierDuNavigateur` (`infrastructure/primary`), qui place l'heure sur l'horloge locale du navigateur
-    (ADR 0051) ; l'ajout qui finit le lendemain le rappellera avec le jour suivant. Hors du fuseau de l'atelier, une heure
+    (ADR 0051) ; la fin tapée est lue sur le jour affiché ou, si le gestionnaire l'a choisi, sur le lendemain
+    (`JourACorriger.lendemain`). Hors du fuseau de l'atelier, une heure
     locale peut sortir des bornes reçues : elle est alors refusée comme hors du jour. Une seule erreur
     à la fois, dans cet ordre : heure mal écrite (« Heure attendue au format 00:00. »), heures manquantes à l'envoi
     (« Saisissez le début et la fin. »), début ou fin hors du jour affiché, début avant l'engagement (« Le début précède
-    l'engagement de l'élément, le lundi 5 à 14:00. »), fin qui ne suit pas le début (une fin égale est refusée), fin après
+    l'engagement de l'élément, le lundi 5 à 14:00. »), fin qui ne suit pas le début (une fin égale est refusée ; une fin qui précède
+    le début sur le même jour dit « La fin, 03:30, précède le début, 22:00, sur la même journée. »), fin après
     « maintenant » (« La fin ne peut pas suivre l'heure actuelle. »), fin après la clôture (« La fin suit la clôture de
-    l'élément, le lundi 5 à 11:00. »). L'engagement et la clôture sont inclus (une borne égale est acceptée). Dans ce lot, la fin est
-    sur le jour affiché : une fin hors du jour (navigateur hors du fuseau) est refusée comme un début hors du jour. Elle calcule
+    l'élément, le lundi 5 à 11:00. »). L'engagement et la clôture sont inclus (une borne égale est acceptée). Une fin sur le jour affiché hors du jour
+    (navigateur hors du fuseau) est refusée comme un début hors du jour ; une fin du lendemain doit tomber entre la fin du jour et
+    la fin du lendemain reçues (« La fin doit tomber le mardi 6. »). Elle calcule
     la durée comme un écart entre deux instants (`Duree.entre`) : la nuit d'un changement d'heure compte sa durée réelle.
     Elle ne rend un `IntervalleDAjout` que si la fin suit le début (constructeur privé, `entre`) ; `ContenuDAjout.de` bâtit la
     commande à partir d'objets du domaine (opérateur, suivi présent, poste, intervalle) et nulle part ailleurs.
     L'erreur s'affiche sous les heures ; elle ne bloque que l'envoi : la plage cohérente reste dessinée et prévue.
+  - **Jour de la fin.** Le jour affiché, par défaut, ou le lendemain (`avecFinLeLendemain`, `avecFinLeJourAffiche`), proposé par
+    deux segments « Lundi 5 » / « Mardi 6 » seulement une fois le lendemain commencé (`lendemainDisponible` : « maintenant » n'est pas
+    avant la fin du jour). Tant que le lendemain n'a pas commencé, une fin du lendemain suit « maintenant » et est refusée comme telle.
+  - **Proposition.** Quand la fin précède le début sur le même jour, `finProposee` rend la fin du lendemain, sans l'appliquer, et
+    seulement si la plage qui en résulte est valide (fin passée, pas après la clôture, pas après la fin du lendemain). Le panneau
+    en fait le bouton « Finir le mardi 6 à 03:30 » sous l'erreur ; le clic passe la fin au lendemain, lève l'erreur et n'envoie
+    rien.
   - **Envoi.** « Ajouter l'activité » demande le contenu (`AjoutEnPreparation.contenu`) : sans élément (même si l'élément choisi a disparu de la journée relue),
     sans poste ou avec une erreur de plage, rien n'est envoyé, l'erreur se montre sous les heures ou « Choisissez un élément. » sous l'élément.
     Sinon `CorrectionDUneActivite.ajouter` envoie. Un refus s'affiche sous les boutons (CHEVAUCHEMENT : « Une autre activité de cet
     élément se chevauche déjà sur ce poste. » ; FIN_FUTURE : « La fin dépasse l'heure du serveur. Choisissez une heure plus
     tôt ou réessayez dans un instant. »), la saisie est conservée et se vide du refus dès qu'on la modifie. Un succès ferme le panneau,
-    relit la journée et annonce « Activité ajoutée » ; `JOURNEE_CHANGEE` ferme le panneau, oublie la saisie, relit et annonce
+    relit la journée et annonce « Activité ajoutée » ; pour un ajout à cheval, le panneau remet les portions de chaque jour
+    (`AjoutCorrige`, qui n'a de portions que pour `ENREGISTREE`) et le message les nomme : « Activité ajoutée : 2 h 00 ce lundi, 3 h 30 le mardi 6 », avec le lien « Voir le
+    mardi 6 » (`routerLink` vers le lendemain), qui disparaît avec le message au changement de jour ; `JOURNEE_CHANGEE` ferme le panneau, oublie la saisie, relit et annonce
     « La journée a changé, recommencez ». Un échec technique garde la saisie et dit que l'ajout n'a pas abouti.
   - **Un seul panneau à la fois.** Ouvrir le changement de poste ferme l'ajout et inversement, sans confirmation : le panneau
     qui disparaît appelle `abandonnerLAjout()` (ou `abandonnerLeChangementDePoste()`), et la saisie de l'ajout est perdue. Un

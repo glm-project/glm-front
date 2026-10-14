@@ -71,15 +71,15 @@ export class JourneeApiFixture {
   chevauchement = false;
   finFuture = false;
   private readonly journees = new Map<string, RestJournee>();
-  private journeeApresLaCorrection: RestJournee | undefined;
+  private journeesApresLaCorrection: readonly RestJournee[] = [];
   private lectureLibre: Promise<void> = Promise.resolve();
 
   retenirLesLecturesSuivantes(): void {
     this.lectureLibre = new Promise(() => undefined);
   }
 
-  apresLaCorrection(journee: RestJournee): void {
-    this.journeeApresLaCorrection = journee;
+  apresLaCorrection(...journees: readonly RestJournee[]): void {
+    this.journeesApresLaCorrection = journees;
   }
 
   seed(journee: RestJournee): void {
@@ -97,9 +97,9 @@ export class JourneeApiFixture {
 
   installRetrait(): void {
     cy.intercept({ method: 'POST', pathname: RETRAIT }, request => {
-      if (this.journeeApresLaCorrection !== undefined) {
-        this.seed(this.journeeApresLaCorrection);
-      }
+      this.journeesApresLaCorrection.forEach(journee => {
+        this.seed(journee);
+      });
       if (this.journeeChangee) {
         request.reply({ statusCode: 409, body: { type: SAISIE_CONCURRENTE } });
         return;
@@ -114,9 +114,9 @@ export class JourneeApiFixture {
         request.reply({ statusCode: 409, body: { type: CHEVAUCHEMENT } });
         return;
       }
-      if (this.journeeApresLaCorrection !== undefined) {
-        this.seed(this.journeeApresLaCorrection);
-      }
+      this.journeesApresLaCorrection.forEach(journee => {
+        this.seed(journee);
+      });
       if (this.journeeChangee) {
         request.reply({ statusCode: 409, body: { type: SAISIE_CONCURRENTE } });
         return;
@@ -135,9 +135,9 @@ export class JourneeApiFixture {
         request.reply({ statusCode: 400, body: { type: DATE_DE_SURVENUE_FUTURE } });
         return;
       }
-      if (this.journeeApresLaCorrection !== undefined) {
-        this.seed(this.journeeApresLaCorrection);
-      }
+      this.journeesApresLaCorrection.forEach(journee => {
+        this.seed(journee);
+      });
       if (this.journeeChangee) {
         request.reply({ statusCode: 409, body: { type: SAISIE_CONCURRENTE } });
         return;

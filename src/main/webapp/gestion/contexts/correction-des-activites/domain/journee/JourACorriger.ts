@@ -35,8 +35,12 @@ export class JourACorriger {
     return new JourACorriger(decale(this.value, -1));
   }
 
+  lendemain(): JourACorriger {
+    return new JourACorriger(decale(this.value, 1));
+  }
+
   suivant(aujourdhui: JourACorriger): JourACorriger | undefined {
-    const suivant = new JourACorriger(decale(this.value, 1));
+    const suivant = this.lendemain();
     return suivant.estApres(aujourdhui) ? undefined : suivant;
   }
 

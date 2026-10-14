@@ -1,3 +1,5 @@
+import { IntervalleDAjout } from '@/gestion/contexts/correction-des-activites/domain/correction/IntervalleDAjout';
+import { PortionsDeLAjout } from '@/gestion/contexts/correction-des-activites/domain/correction/PortionsDeLAjout';
 import { ActiviteDeLaJournee, ActiviteTerminee } from '@/gestion/contexts/correction-des-activites/domain/journee/ActiviteDeLaJournee';
 import { ActiviteDeLaJourneeId } from '@/gestion/contexts/correction-des-activites/domain/journee/ActiviteDeLaJourneeId';
 import { BornesDuJour } from '@/gestion/contexts/correction-des-activites/domain/journee/BornesDuJour';
@@ -31,7 +33,10 @@ export const instantLocal = (jour: number, heures: number, minutes = 0): Instant
 export const jourDOctobre = (jour: number): JourACorriger => new JourACorriger(`2026-10-${String(jour).padStart(2, '0')}`);
 
 export const bornesDuJourDOctobre = (jour: number): BornesDuJour =>
-  new BornesDuJour({ debut: instantLocal(jour, 0), fin: instantLocal(jour + 1, 0) });
+  new BornesDuJour({ debut: instantLocal(jour, 0), fin: instantLocal(jour + 1, 0), finDuLendemain: instantLocal(jour + 2, 0) });
+
+export const portionsDuLundiFixture = (intervalle: IntervalleDAjout): PortionsDeLAjout =>
+  new PortionsDeLAjout(intervalle, jourDOctobre(5), bornesDuJourDOctobre(5).fin);
 
 export const tourFixture = new PosteDeLaJournee(new PosteDeLaJourneeId('poste-tour'), 'Tour CN 1', 'Tournage');
 export const fraiseuseFixture = new PosteDeLaJournee(new PosteDeLaJourneeId('poste-fraise'), 'Fraiseuse 1', 'Fraisage');

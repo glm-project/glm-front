@@ -2,13 +2,14 @@ import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandler
 import { SearchPicker } from '@/gestion/shared/design-system/infrastructure/primary/search-picker/SearchPicker';
 import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, input, model, output, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { CorrectionDUneActivite, IssueDeCorrection } from '../../../application/CorrectionDUneActivite';
+import { CorrectionDUneActivite } from '../../../application/CorrectionDUneActivite';
 import { AjoutEnPreparation } from '../../../domain/correction/AjoutEnPreparation';
 import { MotifDAjout } from '../../../domain/correction/CorrectionsPort';
 import { CategorieDActivite } from '../../../domain/journee/CategorieDActivite';
 import { JourneeACorriger } from '../../../domain/journee/JourneeACorriger';
 import { PosteDeLaJourneeId } from '../../../domain/journee/PosteDeLaJourneeId';
 import { SuiviDAtelierId } from '../../../domain/journee/SuiviDAtelierId';
+import { AjoutCorrige } from '../AjoutCorrige';
 import { maintenant } from '../Horloge';
 import { LIBELLES_CORRECTION_DES_ACTIVITES } from '../LibellesCorrectionDesActivites';
 
@@ -26,7 +27,7 @@ export class PanneauDAjout {
   readonly journee = input.required<JourneeACorriger>();
   readonly ajout = model.required<AjoutEnPreparation>();
   readonly abandon = output();
-  readonly corrigee = output<IssueDeCorrection>();
+  readonly corrigee = output<AjoutCorrige>();
 
   private readonly correction = inject(CorrectionDUneActivite);
   private readonly errors = inject(ErrorHandlerPort);
@@ -43,6 +44,10 @@ export class PanneauDAjout {
   protected readonly plage = computed(() => this.ajout().plage(this.journee()));
   protected readonly erreur = computed(() => this.plage().erreur());
   protected readonly duree = computed(() => this.plage().duree());
+  protected readonly lendemainDisponible = computed(() => this.plage().lendemainDisponible());
+  protected readonly finLeLendemain = computed(() => this.plage().finLeLendemain());
+  protected readonly lendemain = computed(() => this.journee().jour.lendemain());
+  protected readonly finProposee = computed(() => this.plage().finProposee());
   protected readonly effet = computed(() => this.ajout().effet(this.journee()));
   protected readonly elementManquant = computed(() => this.ajout().elementManquant(this.journee()));
   protected readonly elementChoisi = computed(() => this.ajout().suivi(this.journee())?.element);
@@ -84,6 +89,10 @@ export class PanneauDAjout {
     this.modifier(ajout => ajout.avecFin(texte));
   }
 
+  protected finirLeLendemain(lendemain: boolean): void {
+    this.modifier(ajout => (lendemain ? ajout.avecFinLeLendemain() : ajout.avecFinLeJourAffiche()));
+  }
+
   protected envoyer(evenement: Event): void {
     evenement.preventDefault();
     this.errors.observe(this.ajouter());
@@ -106,7 +115,7 @@ export class PanneauDAjout {
     this.refus.set(etat.kind === 'AJOUT_REFUSE' ? etat.motif : undefined);
     this.echec.set(etat.kind === 'ECHEC');
     if (etat.kind === 'A_RELIRE') {
-      this.corrigee.emit(etat.issue);
+      this.corrigee.emit(etat.issue === 'ENREGISTREE' ? { issue: etat.issue, portions: contenu.portions } : { issue: etat.issue });
     }
   }
 }

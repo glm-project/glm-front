@@ -40,6 +40,15 @@ describe('JourACorriger neighbours', () => {
     expect(new JourACorriger(jour).precedent().value).toBe(precedent);
   });
 
+  it.each([
+    { jour: '2026-10-05', lendemain: '2026-10-06' },
+    { jour: '2026-10-31', lendemain: '2026-11-01' },
+    { jour: '2026-12-31', lendemain: '2027-01-01' },
+    { jour: '2024-02-28', lendemain: '2024-02-29' },
+  ])('should have $lendemain the day after $jour, whatever today is', ({ jour, lendemain }) => {
+    expect(new JourACorriger(jour).lendemain().value).toBe(lendemain);
+  });
+
   it('should have the next day while it is not after today', () => {
     expect(new JourACorriger('2026-10-05').suivant(AUJOURDHUI)?.value).toBe('2026-10-06');
   });

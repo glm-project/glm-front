@@ -495,7 +495,41 @@ describe('Page to correct the day of an operator', () => {
     expect(texts('ajout-titre')).toEqual([]);
     expect(port.lectures).toHaveLength(2);
     expect(text('corriger-annonce')).toBe('Activité ajoutée');
+    expect(texts('corriger-annonce-suite')).toEqual([]);
     expect(document.activeElement).toBe(all('activite-ajouter')[0]);
+  });
+
+  it('should name the portion of each day an activity ending the next day counts and lead to the next day', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+
+    await whenAddingAnActivityEndingTheNextDay();
+
+    expect(text('corriger-annonce')).toBe('Activité ajoutée : 2 h 00 ce lundi, 3 h 30 le mardi 6');
+    expect(texts('corriger-annonce-suite')).toEqual(['Voir le mardi 6']);
+    expect(hrefs('corriger-annonce-suite')).toEqual(['/operateurs/op-1/journees/2026-10-06']);
+  });
+
+  it('should ask to start over without any link to the next day when the day changed meanwhile an addition ending the next day', async () => {
+    corrections.repondreALAjout({ kind: 'JOURNEE_CHANGEE' });
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+
+    await whenAddingAnActivityEndingTheNextDay();
+
+    expect(text('corriger-annonce')).toBe('La journée a changé, recommencez');
+    expect(texts('corriger-annonce-suite')).toEqual([]);
+  });
+
+  it('should drop the message of an activity ending the next day and its link when the address names the next day', async () => {
+    await whenOpeningThePageOnADayWithWorkstations();
+    await whenAskingToAddAnActivity();
+    await whenAddingAnActivityEndingTheNextDay();
+
+    await whenTheAddressNames('2026-10-06');
+
+    expect(texts('corriger-annonce')).toEqual([]);
+    expect(texts('corriger-annonce-suite')).toEqual([]);
   });
 
   it('should close the panel, read the day again and ask to start over when the day changed meanwhile the addition', async () => {
@@ -667,6 +701,25 @@ describe('Page to correct the day of an operator', () => {
       champ.value = valeur;
       champ.dispatchEvent(new Event('change'));
     }
+    await shown.whenStable();
+  };
+
+  const whenAddingAnActivityEndingTheNextDay = async (): Promise<void> => {
+    await whenFillingTheAddition();
+    for (const [selector, valeur] of [
+      ['ajout-debut', '22:00'],
+      ['ajout-fin', '03:30'],
+    ] as const) {
+      const champ = all(selector)[0] as HTMLInputElement;
+      champ.value = valeur;
+      champ.dispatchEvent(new Event('change'));
+    }
+    all('ajout-jour-fin')[1]?.click();
+    await shown.whenStable();
+    all('ajout-ajouter')[0]?.click();
+    await new Promise(resolve => setTimeout(resolve));
+    await shown.whenStable();
+    await new Promise(resolve => setTimeout(resolve));
     await shown.whenStable();
   };
 

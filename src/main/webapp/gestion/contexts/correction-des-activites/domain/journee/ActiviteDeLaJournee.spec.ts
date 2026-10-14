@@ -60,6 +60,7 @@ describe('ActiviteDeLaJournee on the day displayed', () => {
   const BORNES = new BornesDuJour({
     debut: instant('2026-10-05T00:00:00+02:00'),
     fin: instant('2026-10-06T00:00:00+02:00'),
+    finDuLendemain: instant('2026-10-07T00:00:00+02:00'),
   });
   const JOUR = new JourACorriger('2026-10-05');
 

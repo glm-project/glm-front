@@ -10,31 +10,58 @@ export interface EffetSurLeJourAffiche {
   readonly apres: Duree;
 }
 
-export interface EffetSurUnAutreJour {
+export interface RetraitSurUnAutreJour {
   readonly jour: JourACorriger;
   readonly retire: Duree;
 }
 
+export interface AjoutSurUnAutreJour {
+  readonly jour: JourACorriger;
+  readonly ajoute: Duree;
+}
+
+interface EffetParJour {
+  readonly jourAffiche: EffetSurLeJourAffiche;
+  readonly autresJoursRetires: readonly RetraitSurUnAutreJour[];
+  readonly autresJoursAjoutes: readonly AjoutSurUnAutreJour[];
+}
+
 export class EffetSurLesJournees {
-  private constructor(
-    readonly jourAffiche: EffetSurLeJourAffiche,
-    readonly autresJours: readonly EffetSurUnAutreJour[],
-  ) {}
+  readonly jourAffiche: EffetSurLeJourAffiche;
+  readonly autresJoursRetires: readonly RetraitSurUnAutreJour[];
+  readonly autresJoursAjoutes: readonly AjoutSurUnAutreJour[];
+
+  private constructor(effet: EffetParJour) {
+    this.jourAffiche = effet.jourAffiche;
+    this.autresJoursRetires = effet.autresJoursRetires;
+    this.autresJoursAjoutes = effet.autresJoursAjoutes;
+  }
 
   static duRetrait(journee: JourneeACorriger, activite: ActiviteTerminee): EffetSurLesJournees {
-    return new EffetSurLesJournees(
-      { jour: journee.jour, avant: journee.dureeOperationnelle, apres: journee.dureeOperationnelle.moins(activite.etat.dureeSurLeJour) },
-      activite.autresJours.map(autre => ({ jour: autre.jour, retire: autre.duree })),
-    );
+    return new EffetSurLesJournees({
+      jourAffiche: {
+        jour: journee.jour,
+        avant: journee.dureeOperationnelle,
+        apres: journee.dureeOperationnelle.moins(activite.etat.dureeSurLeJour),
+      },
+      autresJoursRetires: activite.autresJours.map(autre => ({ jour: autre.jour, retire: autre.duree })),
+      autresJoursAjoutes: [],
+    });
   }
 
   static dUnAjout(journee: JourneeACorriger, plage: PlageDAjout): EffetSurLesJournees | undefined {
-    const ajoutee = plage.duree();
-    return ajoutee === undefined
+    const portions = plage.portions();
+    return portions === undefined
       ? undefined
-      : new EffetSurLesJournees(
-          { jour: journee.jour, avant: journee.dureeOperationnelle, apres: journee.dureeOperationnelle.plus(ajoutee) },
-          [],
-        );
+      : new EffetSurLesJournees({
+          jourAffiche: {
+            jour: journee.jour,
+            avant: journee.dureeOperationnelle,
+            apres: journee.dureeOperationnelle.plus(portions.duJourAffiche.duree),
+          },
+          autresJoursRetires: [],
+          autresJoursAjoutes:
+            portions.duLendemain === undefined ? [] : [{ jour: portions.duLendemain.jour, ajoute: portions.duLendemain.duree }],
+        });
   }
 }

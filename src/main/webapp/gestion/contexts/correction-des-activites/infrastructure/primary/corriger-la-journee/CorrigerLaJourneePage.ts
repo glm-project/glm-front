@@ -26,6 +26,7 @@ import { JourneeACorriger } from '../../../domain/journee/JourneeACorriger';
 import { JourneeACorrigerPort } from '../../../domain/journee/JourneeACorrigerPort';
 import { OperateurDeLaJourneeId } from '../../../domain/journee/OperateurDeLaJourneeId';
 import { ActivitesDuJour } from '../activites-du-jour/ActivitesDuJour';
+import { AjoutCorrige } from '../AjoutCorrige';
 import { calendrierDuNavigateur } from '../CalendrierDuNavigateur';
 import { FriseDuJour } from '../frise-du-jour/FriseDuJour';
 import { maintenant } from '../Horloge';
@@ -44,6 +45,7 @@ export type EtatDeLaPage =
 interface AnnonceDeCorrection {
   readonly texte: string;
   readonly numero: number;
+  readonly suite: JourACorriger | undefined;
 }
 
 interface AdresseDeLaJournee {
@@ -175,9 +177,9 @@ export class CorrigerLaJourneePage {
     this.rendreLeFocusAuBoutonDAjout(liste);
   }
 
-  protected ajoutCorrige(issue: IssueDeCorrection, liste: ActivitesDuJour): void {
+  protected ajoutCorrige(corrige: AjoutCorrige, liste: ActivitesDuJour): void {
     this.ajout.set(undefined);
-    this.relire(LIBELLES_CORRECTION_DES_ACTIVITES.ajout.annonce[issue]);
+    this.relire(LIBELLES_CORRECTION_DES_ACTIVITES.ajout.annonce(corrige), this.jourDeLaSuite(corrige));
     this.rendreLeFocusAuBoutonDAjout(liste);
   }
 
@@ -224,9 +226,13 @@ export class CorrigerLaJourneePage {
     }
   }
 
-  private relire(texte: string): void {
+  private jourDeLaSuite(corrige: AjoutCorrige): JourACorriger | undefined {
+    return corrige.issue === 'ENREGISTREE' ? corrige.portions.duLendemain?.jour : undefined;
+  }
+
+  private relire(texte: string, suite?: JourACorriger): void {
     this.numeroDAnnonce += 1;
-    this.annonce.set({ texte, numero: this.numeroDAnnonce });
+    this.annonce.set({ texte, numero: this.numeroDAnnonce, suite });
     this.lecture.reload();
   }
 

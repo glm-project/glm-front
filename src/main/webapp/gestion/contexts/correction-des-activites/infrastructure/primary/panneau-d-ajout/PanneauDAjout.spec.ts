@@ -29,6 +29,7 @@ import { PosteDeLaJournee } from '../../../domain/journee/PosteDeLaJournee';
 import { SuiviDAtelierId } from '../../../domain/journee/SuiviDAtelierId';
 import { SuiviPresent } from '../../../domain/journee/SuiviPresent';
 import { SuivisPresents } from '../../../domain/journee/SuivisPresents';
+import { AjoutCorrige } from '../AjoutCorrige';
 import { calendrierDuNavigateur } from '../CalendrierDuNavigateur';
 import { PanneauDAjout } from './PanneauDAjout';
 
@@ -48,6 +49,7 @@ describe('Panel to add an activity', () => {
   let shown: ComponentFixture<PanneauDAjout>;
   let corrections: CorrectionsFixture;
   let corrigees: IssueDeCorrection[];
+  let portionsAjoutees: { jour: string; duree: Duree }[][];
   let abandons: number;
 
   beforeEach(() => {
@@ -55,6 +57,7 @@ describe('Panel to add an activity', () => {
     vi.setSystemTime(new Date(2026, 9, 6, 10, 0));
     corrections = new CorrectionsFixture();
     corrigees = [];
+    portionsAjoutees = [];
     abandons = 0;
     TestBed.configureTestingModule({
       providers: [
@@ -398,6 +401,114 @@ describe('Panel to add an activity', () => {
     expect(text('ajout-erreur')).toBe('Le début précède l’engagement de l’élément, le lundi 5 à 14:00.');
   });
 
+  it('should offer to end the activity the day displayed or the next day, the day displayed chosen, once the next day has begun', async () => {
+    await whenOpening();
+
+    expect(texts('ajout-jour-fin')).toEqual(['Lundi 5', 'Mardi 6']);
+    expect(pressed('ajout-jour-fin')).toEqual(['true', 'false']);
+  });
+
+  it('should offer no day of the end while the next day has not begun', async () => {
+    givenTheClockAt(new Date(2026, 9, 5, 20, 0));
+    await whenOpening(lundi(), instantLocal(5, 20));
+
+    expect(all('ajout-jour-fin')).toEqual([]);
+  });
+
+  it('should show each day touched by an addition ending the next day, the next day with its portion only', async () => {
+    await whenOpening();
+    await whenChoosingTheDayOfTheEnd('Mardi 6');
+
+    await whenTyping('22:00', '03:30');
+
+    expect(pressed('ajout-jour-fin')).toEqual(['false', 'true']);
+    expect(text('ajout-duree')).toBe('5 h 30');
+    expect(texts('ajout-effet-libelle')).toEqual(['Opérationnel du lundi 5', 'Opérationnel du mardi 6']);
+    expect(texts('ajout-effet-valeur')).toEqual(['4 h 45 → 6 h 45', '+ 3 h 30']);
+  });
+
+  it('should end the activity the day displayed again when that day is chosen back', async () => {
+    await whenOpening();
+    await whenChoosingTheDayOfTheEnd('Mardi 6');
+
+    await whenChoosingTheDayOfTheEnd('Lundi 5');
+
+    expect(pressed('ajout-jour-fin')).toEqual(['true', 'false']);
+  });
+
+  it('should explain an end preceding the start on the same day and propose to end the next day, without applying it', async () => {
+    await whenOpening();
+
+    await whenTyping('22:00', '03:30');
+
+    expect(text('ajout-erreur')).toBe('La fin, 03:30, précède le début, 22:00, sur la même journée.');
+    expect(texts('ajout-proposition')).toEqual(['Finir le mardi 6 à 03:30']);
+    expect(pressed('ajout-jour-fin')).toEqual(['true', 'false']);
+    expect(corrections.ajouts).toEqual([]);
+  });
+
+  it('should end the next day when the proposal is applied: the error goes, the hours stay, nothing is sent', async () => {
+    await whenOpening();
+    await whenTyping('22:00', '03:30');
+
+    await whenApplyingTheProposal();
+
+    expect(text('ajout-erreur')).toBe('');
+    expect(all('ajout-proposition')).toEqual([]);
+    expect(pressed('ajout-jour-fin')).toEqual(['false', 'true']);
+    expect(values()).toEqual(['22:00', '03:30']);
+    expect(corrections.ajouts).toEqual([]);
+  });
+
+  it('should explain the end preceding the start without proposing anything when the element is closed before the next day end', async () => {
+    await whenOpening(lundiAvecUnElementClotureLeMardi());
+    await whenOpeningTheElements();
+    await whenChoosingTheElement('OF 24-131 · Pièce 1');
+
+    await whenTyping('22:00', '03:30');
+
+    expect(text('ajout-erreur')).toBe('La fin, 03:30, précède le début, 22:00, sur la même journée.');
+    expect(all('ajout-proposition')).toEqual([]);
+  });
+
+  it('should propose nothing while the next day has not begun', async () => {
+    givenTheClockAt(new Date(2026, 9, 5, 23, 0));
+    await whenOpening(lundi(), instantLocal(5, 23));
+
+    await whenTyping('22:00', '03:30');
+
+    expect(text('ajout-erreur')).toBe('La fin, 03:30, précède le début, 22:00, sur la même journée.');
+    expect(all('ajout-proposition')).toEqual([]);
+  });
+
+  it('should tell the end must fall on the next day when the workshop zone puts it elsewhere', async () => {
+    await whenOpening(lundiDeLAtelierDeParis());
+    await whenChoosingTheDayOfTheEnd('Mardi 6');
+
+    await whenTyping('18:00', '22:00');
+
+    expect(text('ajout-erreur')).toBe('La fin doit tomber le mardi 6.');
+  });
+
+  it('should send the activity ending the next day and give the portion of each day to be announced', async () => {
+    await whenOpening();
+    await whenOpeningTheElements();
+    await whenChoosingTheElement('OF 24-131 · Pièce 1');
+    await whenChoosingTheDayOfTheEnd('Mardi 6');
+    await whenTyping('22:00', '03:30');
+
+    await whenAdding();
+
+    expect(corrections.ajouts.map(saisie => [saisie.debut, saisie.fin])).toEqual([[instantLocal(5, 22), instantLocal(6, 3, 30)]]);
+    expect(corrigees).toEqual(['ENREGISTREE']);
+    expect(portionsAjoutees).toEqual([
+      [
+        { jour: '2026-10-05', duree: new Duree('PT2H') },
+        { jour: '2026-10-06', duree: new Duree('PT3H30M') },
+      ],
+    ]);
+  });
+
   const journeeSurMesure = (bornes: BornesDuJour, suivis: readonly SuiviPresent[]): JourneeACorriger =>
     new JourneeACorriger({
       operateur: new OperateurDeLaJournee(new OperateurDeLaJourneeId('op-1'), 'Leroy', 'Hugo'),
@@ -412,6 +523,7 @@ describe('Panel to add an activity', () => {
     new BornesDuJour({
       debut: new InstantDeLaJournee(`2026-10-05T00:00:00${fuseau}`),
       fin: new InstantDeLaJournee(`2026-10-06T00:00:00${fuseau}`),
+      finDuLendemain: new InstantDeLaJournee(`2026-10-07T00:00:00${fuseau}`),
     });
 
   const suiviPresent = (element: ElementDeLaJournee, engageLe: InstantDeLaJournee, suivi = 'suivi-1'): SuiviPresent =>
@@ -442,11 +554,21 @@ describe('Panel to add an activity', () => {
 
   const lundiSansSuivi = (): JourneeACorriger => journeeFixture({ jour: 5, suivis: [], activites: [], postes: [tourFixture] });
 
-  const whenOpening = async (journee: JourneeACorriger = lundi()): Promise<void> => {
+  const portionsAnnoncees = (corrige: AjoutCorrige): { jour: string; duree: Duree }[] =>
+    corrige.issue === 'JOURNEE_CHANGEE'
+      ? []
+      : [corrige.portions.duJourAffiche, ...(corrige.portions.duLendemain === undefined ? [] : [corrige.portions.duLendemain])].map(
+          portion => ({ jour: portion.jour.value, duree: portion.duree }),
+        );
+
+  const whenOpening = async (journee: JourneeACorriger = lundi(), ouvertA: InstantDeLaJournee = instantLocal(6, 10)): Promise<void> => {
     shown = TestBed.createComponent(PanneauDAjout);
     shown.componentRef.setInput('journee', journee);
-    shown.componentRef.setInput('ajout', AjoutEnPreparation.ouvrir(journee, instantLocal(6, 10), calendrierDuNavigateur));
-    shown.componentInstance.corrigee.subscribe(issue => corrigees.push(issue));
+    shown.componentRef.setInput('ajout', AjoutEnPreparation.ouvrir(journee, ouvertA, calendrierDuNavigateur));
+    shown.componentInstance.corrigee.subscribe(corrige => {
+      corrigees.push(corrige.issue);
+      portionsAjoutees.push(portionsAnnoncees(corrige));
+    });
     shown.componentInstance.abandon.subscribe(() => {
       abandons += 1;
     });
@@ -526,6 +648,27 @@ describe('Panel to add an activity', () => {
     await new Promise(resolve => setTimeout(resolve));
     await shown.whenStable();
   };
+
+  const whenChoosingTheDayOfTheEnd = async (libelle: string): Promise<void> => {
+    const bouton = all('ajout-jour-fin').find(candidat => candidat.textContent.trim() === libelle);
+    requiredFixture(bouton, libelle).click();
+    await shown.whenStable();
+  };
+
+  const whenApplyingTheProposal = async (): Promise<void> => {
+    requiredFixture(all('ajout-proposition')[0], 'ajout-proposition').click();
+    await shown.whenStable();
+  };
+
+  const lundiAvecUnElementClotureLeMardi = (): JourneeACorriger =>
+    journeeSurMesure(bornesDuLundi('-03:00'), [
+      new SuiviPresent({
+        suivi: new SuiviDAtelierId('suivi-1'),
+        element: elementFixture('1'),
+        engageLe: instantLocal(1, 8),
+        clotureLe: instantLocal(6, 2),
+      }),
+    ]);
 
   const whenAddingWithoutWaiting = (): void => {
     requiredFixture(all('ajout-ajouter')[0], 'ajout-ajouter').click();

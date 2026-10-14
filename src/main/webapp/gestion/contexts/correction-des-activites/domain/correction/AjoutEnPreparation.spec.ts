@@ -51,7 +51,11 @@ const journeeAvec = (suivis: readonly SuiviPresent[], postes: readonly PosteDeLa
   new JourneeACorriger({
     operateur: new OperateurDeLaJournee(new OperateurDeLaJourneeId('op-1'), 'Leroy', 'Hugo'),
     jour: new JourACorriger('2026-10-05'),
-    bornes: new BornesDuJour({ debut: instant('2026-10-05T00:00:00-03:00'), fin: instant('2026-10-06T00:00:00-03:00') }),
+    bornes: new BornesDuJour({
+      debut: instant('2026-10-05T00:00:00-03:00'),
+      fin: instant('2026-10-06T00:00:00-03:00'),
+      finDuLendemain: instant('2026-10-07T00:00:00-03:00'),
+    }),
     dureeOperationnelle: new Duree('PT4H45M'),
     activites: [],
     choix: new ChoixDAjout({ suivis: new SuivisPresents(suivis), postes }),
@@ -189,5 +193,31 @@ describe('Addition of an activity being prepared', () => {
 
   it('should ask for the hours not typed once the submission was tried', () => {
     expect(ouvert().apresUnEnvoi().plage(lundi()).erreur()).toEqual({ kind: 'HEURES_MANQUANTES' });
+  });
+
+  it('should describe the command of an activity ending the next day, and forecast the day it ends on', () => {
+    const ajout = ouvert().avecSuivi(new SuiviDAtelierId('suivi-1')).avecDebut('22:00').avecFin('03:30').avecFinLeLendemain();
+
+    expect([ajout.contenu(lundi())?.intervalle.debut, ajout.contenu(lundi())?.intervalle.fin]).toEqual([
+      instant('2026-10-05T22:00:00-03:00'),
+      instant('2026-10-06T03:30:00-03:00'),
+    ]);
+    expect(ajout.effet(lundi())?.autresJoursAjoutes).toEqual([{ jour: new JourACorriger('2026-10-06'), ajoute: new Duree('PT3H30M') }]);
+  });
+
+  it('should end on the day displayed again when asked to, the hours typed being kept', () => {
+    const ajout = ouvert().avecDebut('22:00').avecFin('03:30').avecFinLeLendemain().avecFinLeJourAffiche();
+
+    expect(ajout.plage(lundi()).erreur()?.kind).toBe('FIN_AVANT_DEBUT_LE_MEME_JOUR');
+  });
+
+  it('should propose to end the next day only if the element chosen is not closed before that end', () => {
+    const ferme = journeeAvec([suiviPresent('suivi-1', element('1'), '2026-10-06T02:00:00-03:00')], [tour]);
+    const saisie = ouvert(ferme).avecSuivi(new SuiviDAtelierId('suivi-1')).avecDebut('22:00').avecFin('03:30');
+
+    expect([saisie.plage(ferme).finProposee(), saisie.avecSuivi(new SuiviDAtelierId('suivi-9')).plage(ferme).finProposee()]).toEqual([
+      undefined,
+      instant('2026-10-06T03:30:00-03:00'),
+    ]);
   });
 });

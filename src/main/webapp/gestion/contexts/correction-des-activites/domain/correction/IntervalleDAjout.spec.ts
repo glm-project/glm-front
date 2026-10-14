@@ -24,3 +24,41 @@ describe('Interval of an added activity', () => {
     expect(IntervalleDAjout.entre(MIDI, instant(fin))).toBeUndefined();
   });
 });
+
+describe('Interval of an added activity cut at a midnight', () => {
+  const MINUIT_DU_6 = instant('2026-10-06T00:00:00-03:00');
+
+  const coupe = (debut: string, fin: string) => IntervalleDAjout.entre(instant(debut), instant(fin))?.coupeA(MINUIT_DU_6);
+
+  it('should keep the whole duration before the midnight and nothing after it when it ends before it', () => {
+    expect(coupe('2026-10-05T12:00:00-03:00', '2026-10-05T14:30:00-03:00')).toEqual({
+      avant: new Duree('PT2H30M'),
+      apres: undefined,
+      finSurLeJour: instant('2026-10-05T14:30:00-03:00'),
+    });
+  });
+
+  it('should keep nothing after the midnight when it ends on it', () => {
+    expect(coupe('2026-10-05T22:00:00-03:00', '2026-10-06T00:00:00-03:00')).toEqual({
+      avant: new Duree('PT2H'),
+      apres: undefined,
+      finSurLeJour: MINUIT_DU_6,
+    });
+  });
+
+  it('should share its duration between the two sides of the midnight when it crosses it', () => {
+    expect(coupe('2026-10-05T22:00:00-03:00', '2026-10-06T03:30:00-03:00')).toEqual({
+      avant: new Duree('PT2H'),
+      apres: new Duree('PT3H30M'),
+      finSurLeJour: MINUIT_DU_6,
+    });
+  });
+
+  it('should keep nothing before the midnight when it starts after it', () => {
+    expect(coupe('2026-10-06T01:00:00-03:00', '2026-10-06T03:30:00-03:00')).toEqual({
+      avant: new Duree('PT0S'),
+      apres: new Duree('PT2H30M'),
+      finSurLeJour: MINUIT_DU_6,
+    });
+  });
+});

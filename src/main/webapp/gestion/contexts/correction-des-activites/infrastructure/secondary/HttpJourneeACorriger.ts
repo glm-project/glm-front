@@ -94,6 +94,7 @@ const toJournee = (journee: RestJournee): JourneeACorriger => {
     bornes: new BornesDuJour({
       debut: toInstant(journee.bornes.debut),
       fin: toInstant(journee.bornes.fin),
+      finDuLendemain: toInstant(journee.bornes.finDuLendemain),
     }),
     dureeOperationnelle: new Duree(journee.dureeOperationnelle),
     activites: journee.activites.map(toActivite),
