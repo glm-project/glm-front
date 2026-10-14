@@ -5,9 +5,12 @@ describe('JourACorriger', () => {
     expect(new JourACorriger('2026-10-05').value).toBe('2026-10-05');
   });
 
-  it.each(['2026-02-30', '2026-13-01', '05/10/2026', '2026-10-5', 'lundi'])('should refuse the day "%s"', jour => {
-    expect(() => new JourACorriger(jour)).toThrow('Le jour reçu n’est pas un jour du calendrier.');
-  });
+  it.each(['2026-02-30', '2026-13-01', '05/10/2026', '2026-10-5', 'lundi', 'le 2026-10-05', '2026-10-05T', '2026-10-05T00:00:00.000Z'])(
+    'should refuse the day "%s"',
+    jour => {
+      expect(() => new JourACorriger(jour)).toThrow('Le jour reçu n’est pas un jour du calendrier.');
+    },
+  );
 });
 
 describe('JourACorriger asked for by an address', () => {

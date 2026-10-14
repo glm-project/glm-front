@@ -82,12 +82,15 @@ describe('Range of an added activity', () => {
     expect(saisie(' 08:00 ', ' 10:30 ').duree()).toEqual(new Duree('PT2H30M'));
   });
 
-  it.each(['25:00', '24:00', '12:60', '8h30', '8:30', 'aa:bb', '08:0', '0800'])('should refuse the hour "%s" as badly written', texte => {
-    expect([saisie(texte, '10:00').erreur(), saisie('08:00', texte).erreur()]).toEqual([
-      { kind: 'HEURE_MAL_ECRITE' },
-      { kind: 'HEURE_MAL_ECRITE' },
-    ]);
-  });
+  it.each(['25:00', '24:00', '12:60', '8h30', '8:30', 'aa:bb', '08:0', '0800', '123:45', '12:345'])(
+    'should refuse the hour "%s" as badly written',
+    texte => {
+      expect([saisie(texte, '10:00').erreur(), saisie('08:00', texte).erreur()]).toEqual([
+        { kind: 'HEURE_MAL_ECRITE' },
+        { kind: 'HEURE_MAL_ECRITE' },
+      ]);
+    },
+  );
 
   it('should draw no range while an hour is badly written', () => {
     const mal = saisie('25:00', '10:00');

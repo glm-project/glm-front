@@ -10,11 +10,12 @@ describe('Duree', () => {
     { recue: 'PT57H30M', millisecondes: 207_000_000 },
     { recue: 'PT1M59.5S', millisecondes: 119_500 },
     { recue: 'PT30S', millisecondes: 30_000 },
+    { recue: 'PT1.25S', millisecondes: 1_250 },
   ])('should read the duration $recue as $millisecondes milliseconds', ({ recue, millisecondes }) => {
     expect(new Duree(recue).millisecondes).toBe(millisecondes);
   });
 
-  it.each(['PT', '2h', 'P1D', 'PT-1H', ''])('should refuse the duration "%s"', recue => {
+  it.each(['PT', '2h', 'P1D', 'PT-1H', '', 'xPT1H', 'PT1H30'])('should refuse the duration "%s"', recue => {
     expect(() => new Duree(recue)).toThrow(`La durée « ${recue} » reçue du serveur n’est pas une durée.`);
   });
 
