@@ -3,6 +3,7 @@ import { requiredFixture } from '@test/utils/RequiredFixture';
 import { routes } from './app.route';
 import { DossierAnomaliePage } from './contexts/anomalies-de-pointage/infrastructure/primary/dossier-anomalie/DossierAnomaliePage';
 import { ListeAnomalies } from './contexts/anomalies-de-pointage/infrastructure/primary/liste-anomalies/ListeAnomalies';
+import { CorrigerLaJourneePage } from './contexts/correction-des-activites/infrastructure/primary/corriger-la-journee/CorrigerLaJourneePage';
 import { CoutDeRevientDeLElement } from './contexts/cout-de-revient/infrastructure/primary/cout-de-revient/CoutDeRevientDeLElement';
 import { Produits } from './contexts/element-de-fabrication/infrastructure/primary/produits/Produits';
 import { Operateurs } from './contexts/operateur/infrastructure/primary/operateurs/Operateurs';
@@ -19,6 +20,7 @@ const ECRANS: [string, unknown][] = [
   ['postes-de-travail', PostesDeTravail],
   ['operateurs', Operateurs],
   ['operateurs/:operateur/heures', SyntheseDesHeures],
+  ['operateurs/:operateur/journees/:jour', CorrigerLaJourneePage],
   ['couts-de-revient/:element', CoutDeRevientDeLElement],
   ['parametres', Parametres],
 ];

@@ -1,5 +1,3 @@
-import { InstantDeReleve } from '../../../domain/releve/InstantDeReleve';
-
 const MINUTES_PAR_HEURE = 60;
 const MINUTES_PAR_JOUR = 24 * MINUTES_PAR_HEURE;
 const POURCENT = 100;
@@ -44,14 +42,13 @@ const ancrageDe = (rang: number, nombre: number): AncrageDuRepere => {
 
 const sortDesHeuresDeJour = (minutes: number): boolean => minutes < HEURES_DE_JOUR.debut || minutes > HEURES_DE_JOUR.fin;
 
-const minutesDe = (instant: InstantDeReleve): number => instant.value.getHours() * MINUTES_PAR_HEURE + instant.value.getMinutes();
+const minutesDe = (instant: Date): number => instant.getHours() * MINUTES_PAR_HEURE + instant.getMinutes();
 
-const finitUnAutreJour = (debut: InstantDeReleve, fin: InstantDeReleve): boolean => fin.estUnAutreJourQue(debut);
+const finitUnAutreJour = (debut: Date, fin: Date): boolean => fin.toDateString() !== debut.toDateString();
 
 export const minutesDeDebut = minutesDe;
 
-export const minutesDeFin = (debut: InstantDeReleve, fin: InstantDeReleve): number =>
-  finitUnAutreJour(debut, fin) ? MINUTES_PAR_JOUR : minutesDe(fin);
+export const minutesDeFin = (debut: Date, fin: Date): number => (finitUnAutreJour(debut, fin) ? MINUTES_PAR_JOUR : minutesDe(fin));
 
 export class AxeDuJour {
   private constructor(private readonly fenetre: Fenetre) {}

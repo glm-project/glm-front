@@ -1,0 +1,217 @@
+:host {
+  display: block;
+}
+
+.frise {
+  --largeur-etiquette: 160px;
+  --colonnes: var(--largeur-etiquette) minmax(300px, 1fr);
+  --milieu-des-barres: 2.25rem;
+  position: relative;
+  min-width: 460px;
+}
+
+.ligne {
+  display: grid;
+  grid-template-columns: var(--colonnes);
+  border-top: 1px solid var(--color-border);
+}
+
+.ligne > * {
+  min-width: 0;
+}
+
+.entete {
+  background: var(--color-canvas);
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+}
+
+.element {
+  min-height: 4.5rem;
+}
+
+.etiquette {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.125rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.entete .etiquette {
+  justify-content: flex-end;
+  padding: 0.625rem 0.75rem;
+}
+
+.reperes {
+  position: relative;
+  margin: 0.75rem;
+  height: 1rem;
+}
+
+.repere {
+  position: absolute;
+  top: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.repere.centre {
+  transform: translateX(-50%);
+}
+
+.repere.fin {
+  transform: translateX(-100%);
+}
+
+.piste {
+  position: relative;
+  margin-inline: 0.75rem;
+}
+
+.barre {
+  position: absolute;
+  top: calc(var(--milieu-des-barres) - 0.875rem);
+  height: 1.75rem;
+  border: 1px solid var(--color-ink-muted);
+  border-radius: 3px;
+  background: var(--color-sunken);
+}
+
+.barre.travail {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.barre.nc {
+  border-color: var(--color-ink);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--color-nc) 0 5px,
+    color-mix(in srgb, var(--color-nc) 30%, var(--color-surface)) 5px 10px
+  );
+}
+
+.barre.en-cours {
+  top: calc(var(--milieu-des-barres) - 1.375rem);
+  width: 3px;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 2px;
+  background: var(--color-ink-muted);
+}
+
+.barre[data-coupee-au-debut='true'] {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.barre[data-coupee-a-la-fin='true'] {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.embout-automatique {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 0.75rem;
+  max-width: 100%;
+  border-radius: 0 2px 2px 0;
+  background-image: var(--gestion-hachure-fin-automatique);
+}
+
+.forme {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid var(--color-surface);
+  background: var(--color-ink);
+}
+
+.forme.debut {
+  border-radius: 50%;
+}
+
+.forme.fin {
+  border-radius: 2px;
+}
+
+.marque {
+  position: absolute;
+  top: var(--milieu-des-barres);
+  translate: -50% -50%;
+}
+
+.mention {
+  position: absolute;
+  bottom: 0.25rem;
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mention.debut {
+  left: 0;
+}
+
+.mention.fin {
+  right: 0;
+}
+
+.legende {
+  font-size: var(--text-body-sm);
+}
+
+.pastille {
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.pastille-travail {
+  background: var(--color-accent);
+}
+
+.pastille-nc {
+  border: 1px solid var(--color-ink);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--color-nc) 0 4px,
+    color-mix(in srgb, var(--color-nc) 30%, var(--color-surface)) 4px 8px
+  );
+}
+
+.pastille-en-cours {
+  width: 3px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--color-ink-muted);
+}
+
+.pastille-fin-automatique {
+  background-image: linear-gradient(90deg, var(--color-accent) 0 8px, transparent 8px), var(--gestion-hachure-fin-automatique);
+}
+
+.barre[aria-current='true'] {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.barre[data-en-attente='true'] {
+  border: 2px dashed var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+}
+
+.barre.nc[data-en-attente='true'] {
+  border-color: var(--color-ink);
+  background: color-mix(in srgb, var(--color-nc) 30%, var(--color-surface));
+}

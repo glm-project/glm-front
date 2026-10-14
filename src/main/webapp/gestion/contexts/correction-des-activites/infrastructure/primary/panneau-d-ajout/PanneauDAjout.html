@@ -1,0 +1,205 @@
+<aside class="gestion-carte" aria-labelledby="ajout-titre" data-selector="ajout-panneau">
+  <div class="border-b border-border px-5 py-4">
+    <h2 id="ajout-titre" class="text-section" data-selector="ajout-titre">{{ libelles.titre }}</h2>
+  </div>
+  <form class="flex flex-col gap-5 p-5" novalidate (submit)="envoyer($event)">
+    <div>
+      <label id="ajout-element-label" for="ajout-element" class="field-label">{{ libelles.element }}</label>
+      <glm-search-picker
+        #picker
+        triggerId="ajout-element"
+        triggerSelector="ajout-element"
+        labelledBy="ajout-element-label ajout-element-identite"
+        [describedBy]="elementManquant() ? 'ajout-element-manquant' : null"
+        panelId="ajout-element-panneau"
+        panelWidth="22rem"
+        panelMaxHeight="calc(100dvh - 2rem)"
+        [panelLabel]="libelles.choisirElement"
+        [searchLabel]="libelles.rechercherElement"
+        searchSelector="ajout-element-recherche"
+        [disabled]="enCours()"
+        [mutedPlaceholder]="true"
+        [focusAfterRender]="true"
+        [(search)]="recherche"
+        (detached)="picker.opened.set(false)"
+      >
+        <span pickerIdentity id="ajout-element-identite" class="identite"
+          >@if (elementChoisi(); as element) { {{ libelles.nomDeLElement(element) }} } @else { {{ libelles.choisirElement }} }</span
+        >
+        @if (propositions().length === 0) {
+        <p role="status" class="py-3 text-body-sm text-ink-muted" data-selector="ajout-element-sans-resultat">
+          {{ recherche() === '' ? libelles.aucunElement : libelles.aucunResultat }}
+        </p>
+        }
+        <ul class="propositions">
+          @for (proposition of propositions(); track proposition.id) {
+          <li>
+            <button
+              type="button"
+              class="proposition"
+              (click)="choisirLElement(proposition.id, picker)"
+              data-selector="ajout-element-proposition"
+            >
+              <span class="nom">{{ proposition.libelle }}</span>
+            </button>
+          </li>
+          }
+        </ul>
+      </glm-search-picker>
+      @if (elementManquant()) {
+      <p id="ajout-element-manquant" class="field-error" data-selector="ajout-element-manquant">{{ libelles.elementManquant }}</p>
+      }
+    </div>
+    @if (posteChoisi(); as choisi) {
+    <div>
+      <label for="ajout-poste" class="field-label">{{ libelles.poste }}</label>
+      <select
+        id="ajout-poste"
+        class="field-input"
+        [disabled]="enCours()"
+        (change)="choisirLePoste($any($event.target).value)"
+        data-selector="ajout-poste"
+      >
+        @for (poste of postes(); track poste.id.value) {
+        <option [value]="poste.id.value" [selected]="poste.id.value === choisi.id.value">{{ libelles.nomDuPoste(poste) }}</option>
+        }
+      </select>
+    </div>
+    } @else {
+    <p data-selector="ajout-aucun-poste">{{ libelles.aucunPoste }}</p>
+    }
+    <div>
+      <span id="ajout-type-label" class="field-label">{{ libelles.type }}</span>
+      <div role="group" aria-labelledby="ajout-type-label" class="gestion-segments">
+        @for (categorie of categories; track categorie) {
+        <button
+          type="button"
+          class="gestion-segment"
+          [attr.aria-pressed]="ajout().categorie === categorie"
+          [disabled]="enCours()"
+          (click)="choisirLeType(categorie)"
+          data-selector="ajout-type"
+        >
+          <i [class]="'pastille ' + (categorie === 'TRAVAIL' ? 'pastille-travail' : 'pastille-nc')" aria-hidden="true"></i>{{
+          libelles.types[categorie] }}
+        </button>
+        }
+      </div>
+    </div>
+    <div>
+      <div class="flex items-end gap-3">
+        <div class="min-w-0 flex-1">
+          <label for="ajout-debut" class="field-label">{{ libelles.debut }}</label>
+          <input
+            id="ajout-debut"
+            class="field-input tabular-nums"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            [placeholder]="libelles.heure"
+            [value]="plage().texteDuDebut()"
+            [disabled]="enCours()"
+            [attr.aria-invalid]="erreur() ? 'true' : null"
+            [attr.aria-describedby]="erreur() ? 'ajout-erreur' : null"
+            (change)="saisirLeDebut($any($event.target).value)"
+            data-selector="ajout-debut"
+          />
+        </div>
+        <div class="min-w-0 flex-1">
+          <label for="ajout-fin" class="field-label">{{ libelles.fin }}</label>
+          <input
+            id="ajout-fin"
+            class="field-input tabular-nums"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            [placeholder]="libelles.heure"
+            [value]="plage().texteDeLaFin()"
+            [disabled]="enCours()"
+            [attr.aria-invalid]="erreur() ? 'true' : null"
+            [attr.aria-describedby]="erreur() ? 'ajout-erreur' : null"
+            (change)="saisirLaFin($any($event.target).value)"
+            data-selector="ajout-fin"
+          />
+        </div>
+        <p class="flex min-h-touch min-w-14 items-center font-bold tabular-nums" aria-live="polite" data-selector="ajout-duree">
+          @if (duree(); as ecart) {{{ libelles.duree(ecart) }}}
+        </p>
+      </div>
+      @if (erreur(); as probleme) {
+      <p id="ajout-erreur" role="alert" class="field-error" data-selector="ajout-erreur">{{ libelles.erreur(probleme, journee().jour) }}</p>
+      } @if (finProposee(); as fin) {
+      <button
+        mat-stroked-button
+        type="button"
+        class="mt-2"
+        [disabled]="enCours()"
+        (click)="finirLeLendemain(true)"
+        data-selector="ajout-proposition"
+      >
+        {{ libelles.finirLe(fin) }}
+      </button>
+      }
+    </div>
+    @if (lendemainDisponible()) {
+    <div>
+      <span id="ajout-jour-fin-label" class="field-label">{{ libelles.jourDeLaFin }}</span>
+      <div role="group" aria-labelledby="ajout-jour-fin-label" class="gestion-segments">
+        <button
+          type="button"
+          class="gestion-segment"
+          [attr.aria-pressed]="!finLeLendemain()"
+          [disabled]="enCours()"
+          (click)="finirLeLendemain(false)"
+          data-selector="ajout-jour-fin"
+        >
+          {{ libelles.nomDuJour(journee().jour) }}
+        </button>
+        <button
+          type="button"
+          class="gestion-segment"
+          [attr.aria-pressed]="finLeLendemain()"
+          [disabled]="enCours()"
+          (click)="finirLeLendemain(true)"
+          data-selector="ajout-jour-fin"
+        >
+          {{ libelles.nomDuJour(lendemain()) }}
+        </button>
+      </div>
+    </div>
+    }
+    <div class="rounded-control border border-border bg-sunken p-3.5">
+      <p class="text-label uppercase text-ink-muted">{{ libelles.effet }}</p>
+      @if (effet(); as prevision) {
+      <p class="mt-2 flex justify-between gap-3 text-body-sm">
+        <span data-selector="ajout-effet-libelle">{{ libelles.operationnelDuJour(prevision.jourAffiche.jour) }}</span>
+        <strong class="tabular-nums" data-selector="ajout-effet-valeur"
+          >{{ libelles.avantApres(prevision.jourAffiche.avant, prevision.jourAffiche.apres) }}</strong
+        >
+      </p>
+      @for (autre of prevision.autresJoursAjoutes; track autre.jour.value) {
+      <p class="mt-1 flex justify-between gap-3 text-body-sm">
+        <span data-selector="ajout-effet-libelle">{{ libelles.operationnelDuJour(autre.jour) }}</span>
+        <strong class="tabular-nums" data-selector="ajout-effet-valeur">{{ libelles.ajoutSurUnAutreJour(autre.ajoute) }}</strong>
+      </p>
+      } } @else {
+      <p class="mt-2 text-body-sm text-ink-muted" data-selector="ajout-sans-effet">{{ libelles.sansEffet }}</p>
+      }
+    </div>
+    <div class="flex flex-wrap gap-2">
+      @if (posteChoisi()) {
+      <button mat-flat-button type="submit" [disabled]="enCours()" data-selector="ajout-ajouter">
+        {{ enCours() ? libelles.ajoutEnCours : libelles.ajouter }}
+      </button>
+      }
+      <button mat-button type="button" [disabled]="enCours()" (click)="abandon.emit()" data-selector="ajout-abandonner">
+        {{ libelles.abandonner }}
+      </button>
+    </div>
+    @if (refus(); as motif) {
+    <p role="alert" class="text-body-sm text-danger" data-selector="ajout-refus">{{ libelles.refus[motif] }}</p>
+    } @if (echec()) {
+    <p role="alert" class="text-body-sm text-danger" data-selector="ajout-echec">{{ libelles.echec }}</p>
+    }
+  </form>
+</aside>

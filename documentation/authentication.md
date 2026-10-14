@@ -41,6 +41,15 @@ moved the URL to the reserved address, so it pushes `/` after the current page; 
 traversal it replaces the entry. Going back therefore returns to the previous page and never to the reserved
 address.
 
+A context reserves an element, not a route, to the gestionnaire with the structural directive
+`*glmReservedToGestionnaire` (`ReservedToGestionnaire`, `reserved-to-gestionnaire.directive.ts` beside the guard). It reads
+`RolesPort`, applies `isReservedToGestionnaire` and renders its content only once `realmRoles()` has resolved with
+`ROLE_GESTIONNAIRE`: while the roles are unresolved, or for any other role, the element is absent. A context therefore never
+reads the roles itself; the authentication of Gestion stays the one place that does, and ADR 0052 stays true. The header keeps its
+own signal because it filters a list of destinations. A spec that renders a template using the directive provides a `RolesPort`
+(`RolesFixture` in `@test/unit/fixtures/gestion/authentication/`, or `window.gestionRolesFixture` in the Cypress build).
+The `selector` carries the `glm` prefix the lint requires. The correction of a day is the first user, from the report of hours.
+
 ## Each front owns its wiring
 
 `gestion/auth.provider.ts` builds `keycloak-js` from the front environment, binds

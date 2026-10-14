@@ -5,6 +5,7 @@
 `Accepted`
 
 - `Complements 0025: un garde de route ne renvoie jamais false, car sans route ** le refus lèverait NG04002 vers ErrorHandlerPort.`
+- `Complemented by 0056: une directive structurelle *reservedToGestionnaire réserve un élément d'un écran au gestionnaire ; seule l'authentification lit toujours les rôles.`
 - `Complements 0039: le garde se pose sur le parent qui porte déjà les enfants chargés paresseusement ; il ne change pas le chargement.`
 
 ## Context

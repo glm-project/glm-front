@@ -256,9 +256,20 @@
       <section class="gestion-carte detail-jour" aria-labelledby="detail-jour-titre" data-selector="synthese-detail-jour">
         <div class="flex flex-wrap justify-between gap-x-4 gap-y-2 px-5 py-4">
           <h2 id="detail-jour-titre" class="text-section">{{ libelles.detailDuJour }} · {{ detail.jour.libelle }}</h2>
-          <p class="text-body-sm text-ink-muted">
-            {{ libelles.operationnel }} : <strong class="text-ink">{{ detail.jour.operationnel }}</strong>
-          </p>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <p class="text-body-sm text-ink-muted">
+              {{ libelles.operationnel }} : <strong class="text-ink">{{ detail.jour.operationnel }}</strong>
+            </p>
+            @if (detail.jour.echu) {
+            <a
+              *glmReservedToGestionnaire
+              mat-stroked-button
+              [routerLink]="['/operateurs', operateur(), 'journees', detail.jour.cle]"
+              data-selector="synthese-corriger-la-journee"
+              ><glm-icon name="pencil" /> {{ libelles.corrigerLaJournee }}</a
+            >
+            }
+          </div>
         </div>
         @if (detail.lignes.length > 0) {
         <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.detailDuJour">

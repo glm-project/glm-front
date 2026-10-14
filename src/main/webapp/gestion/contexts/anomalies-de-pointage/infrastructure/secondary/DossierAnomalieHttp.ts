@@ -1,10 +1,16 @@
 import { components } from '@/app/generated/schema';
 import { ActiviteAnomalieId } from '../../domain/dossier/ActiviteAnomalieId';
-import { ActiviteEchue, DossierAnomalie, PointageAnomalie } from '../../domain/dossier/DossierAnomalie';
+import { ActiviteEchue, DossierAnomalie, PointageAnomalie, TypePointage } from '../../domain/dossier/DossierAnomalie';
 import { OperateurAnomalieId } from '../../domain/dossier/OperateurAnomalieId';
 import { PointageAnomalieId } from '../../domain/dossier/PointageAnomalieId';
 
-const toPointage = (pointage: components['schemas']['RestEvenementDAtelier']): PointageAnomalie => ({
+type EvenementDAtelier = components['schemas']['RestEvenementDAtelier'];
+type Pointage = EvenementDAtelier & { readonly type: TypePointage };
+
+const estUnPointage = (evenement: EvenementDAtelier): evenement is Pointage =>
+  evenement.type !== 'RETRAIT' && evenement.type !== 'CHANGEMENT_DE_POSTE';
+
+const toPointage = (pointage: Pointage): PointageAnomalie => ({
   id: new PointageAnomalieId(pointage.id),
   fait: {
     type: pointage.type,
@@ -24,7 +30,7 @@ const toActiviteEchue = (activite: components['schemas']['RestActiviteDuDossier'
 
 export const toDossier = (dossier: components['schemas']['RestDossierAnomalie']): DossierAnomalie => {
   const echue = dossier.activite;
-  const journal = dossier.pointages.map(toPointage);
+  const journal = dossier.pointages.filter(estUnPointage).map(toPointage);
   return {
     designation: dossier.designation,
     operateur: new OperateurAnomalieId(echue.operateurId),

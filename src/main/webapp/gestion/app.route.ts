@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { anomaliesDePointageProvider } from './anomalies-de-pointage.provider';
+import { correctionDesActivitesProvider } from './correction-des-activites.provider';
 import { coutDeRevientProvider } from './cout-de-revient.provider';
 import { elementsDeFabricationProvider } from './elements-de-fabrication.provider';
 import { operateursProvider } from './operateurs.provider';
@@ -56,6 +57,15 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./contexts/releve-des-heures/infrastructure/primary/synthese-des-heures/SyntheseDesHeures').then(m => m.SyntheseDesHeures),
     providers: releveDesHeuresProvider,
+  },
+  {
+    path: 'operateurs/:operateur/journees/:jour',
+    canMatch: [reservedToGestionnaire],
+    providers: correctionDesActivitesProvider,
+    loadComponent: () =>
+      import('./contexts/correction-des-activites/infrastructure/primary/corriger-la-journee/CorrigerLaJourneePage').then(
+        m => m.CorrigerLaJourneePage,
+      ),
   },
   {
     path: 'couts-de-revient/:element',

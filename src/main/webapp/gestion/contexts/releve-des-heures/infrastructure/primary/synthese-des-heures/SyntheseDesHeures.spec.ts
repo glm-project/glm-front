@@ -1,7 +1,10 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
+import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
+import { ROLE_GESTIONNAIRE } from '@/gestion/shared/authentication/infrastructure/primary/gestionnaire';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { RolesFixture } from '@test/unit/fixtures/gestion/authentication/RolesFixture';
 import {
   elementFixture,
   instantFixture,
@@ -83,6 +86,8 @@ describe('Synthese des heures component', () => {
     portFixture = new SyntheseDesHeuresFixture();
     routeFixture = new RouteFixture();
     routerFixture = new RouterFixture();
+    const rolesFixture = new RolesFixture();
+    rolesFixture.grant([ROLE_GESTIONNAIRE]);
     TestBed.configureTestingModule({
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
@@ -90,6 +95,7 @@ describe('Synthese des heures component', () => {
         { provide: ActivatedRoute, useValue: routeFixture },
         { provide: Router, useValue: routerFixture },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
+        { provide: RolesPort, useValue: rolesFixture },
       ],
     });
   });
