@@ -7,7 +7,7 @@ export default {
   ],
   testRunner: 'command',
   commandRunner: {
-    command: 'ng test --watch=false',
+    command: 'ng test --watch=false --reporters=default',
   },
   checkers: ['typescript'],
   tsconfigFile: 'tsconfig.stryker.json',

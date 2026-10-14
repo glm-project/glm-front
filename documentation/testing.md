@@ -268,7 +268,9 @@ Under the Domain mutation policy ([ADR 0024](adr/0024-extend-mutation-to-the-uni
   redundancy that produced it ([ADR 0042](adr/0042-forbid-comments-in-code.md)).
 - Mutation score is informational outside the domain core (`break: null`).
 
-`npm run test:mutation` mutates the domain core TypeScript (`src/main/webapp/**/domain/**/*.ts`) and runs the suite through `ng test --watch=false`. Stryker's built-in command runner keeps the Angular builder's zoneless TestBed and JIT setup; a direct Vitest runner does not establish that environment. One worker gives every sandbox its own Angular cache and avoids the shared-cache race described in `AGENTS.md`.
+`npm run test:mutation` mutates the domain core TypeScript (`src/main/webapp/**/domain/**/*.ts`) and runs the suite through `ng test --watch=false --reporters=default`. Stryker's built-in command runner keeps the Angular builder's zoneless TestBed and JIT setup; a direct Vitest runner does not establish that environment. One worker gives every sandbox its own Angular cache and avoids the shared-cache race described in `AGENTS.md`.
+
+Keep that command quiet: Stryker's command runner starts it with `child_process.exec`, which stops the child once its output passes about 1 MiB, and every mutant then looks surviving. The `verbose` reporter configured in `vitest.config.ts` prints one line per test and exceeds that limit, so the command overrides it with the default reporter.
 
 The mutation scope excludes specs, declarations and package-info files. Component, application and production-offline browser behavior remains protected by its own suites rather than being restarted for every mutant.
 
