@@ -8,7 +8,7 @@ const existe = (jour: string): boolean => {
     return false;
   }
   const minuit = new Date(Date.UTC(Number(composantes[1]), Number(composantes[2]) - 1, Number(composantes[3])));
-  return minuit.toISOString().slice(0, jour.length) === jour;
+  return minuit.toISOString().slice(0, LONGUEUR_DU_JOUR) === composantes[0];
 };
 
 const estUnJourDuCalendrier = (jour: string | null): jour is string => jour !== null && existe(jour);
