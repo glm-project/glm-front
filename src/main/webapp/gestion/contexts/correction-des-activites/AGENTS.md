@@ -71,13 +71,12 @@ sert à borner l'ajout qui finit le lendemain.
 
 ## Restitution de la page
 
-`CorrigerLaJourneePage` lit
-l'adresse et le jour courant (`localCalendarDay`, lu par la page). Un `:jour` mal formé, hors calendrier ou après aujourd'hui
-(`JourACorriger.demande`) ramène au relevé de l'opérateur, `/operateurs/:operateur/heures`, sans rien lire ; un opérateur
-inconnu affiche « Opérateur introuvable » sans signalement technique ; une panne de lecture affiche un message et
-« Réessayer ». Le retour mène à `/operateurs/:operateur/heures?jour=…`. Les flèches « Voir le … » sont des `routerLink` vers
-le jour précédent et le suivant (`JourACorriger.precedent`, `suivant`) ; il n'y a pas de jour suivant après aujourd'hui ni de
-borne vers le passé. Le jour affiché n'est lu que dans l'adresse.
+`CorrigerLaJourneePage` lit l'adresse et le jour courant (`localCalendarDay`, lu par la page). Un `:jour` mal formé, hors
+calendrier ou après aujourd'hui (`JourACorriger.demande`) ramène au relevé de l'opérateur, `/operateurs/:operateur/heures`,
+sans rien lire ; un opérateur inconnu affiche « Opérateur introuvable » sans signalement technique ; une panne de lecture
+affiche un message et « Réessayer ». Le retour mène à `/operateurs/:operateur/heures?jour=…`. Les flèches « Voir le … » sont
+des `routerLink` vers le jour précédent et le suivant (`JourACorriger.precedent`, `suivant`) ; il n'y a pas de jour suivant
+après aujourd'hui ni de borne vers le passé. Le jour affiché n'est lu que dans l'adresse.
 
 - **Frise** (`FriseDuJour`) : lecture seule, une ligne par élément et poste, sur l'`AxeDuJour` partagé (de 6 h à 22 h, le jour
   entier dès qu'une borne en sort). Un repère marque le début et la fin réels, jamais une coupure de minuit : une activité à cheval

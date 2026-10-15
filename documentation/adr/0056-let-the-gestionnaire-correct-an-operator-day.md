@@ -12,7 +12,7 @@ contrat de la correction des activités.
   automatique, dans son dossier d'anomalie, reste en place : les deux chemins coexistent.
 - `Complements 0052`: une directive structurelle `*reservedToGestionnaire` de l'authentification de Gestion réserve
   un élément d'un écran au gestionnaire. Un contexte ne lit toujours pas les rôles : l'authentification reste le seul
-  endroit qui les lit.
+  endroit qui les lit. Cette directive a disparu avec 0058.
 - `Amended by 0058`: la route `operateurs/:operateur/journees/:jour` n'est plus gardée et la directive disparaît. Le
   bouton « Corriger la journée » du relevé s'affiche pour tout jour échu, puisque Gestion ne s'ouvre qu'au
   gestionnaire. Le reste de 0056 tient.
@@ -130,7 +130,9 @@ ensuite les pointages sur le journal tel qu'il est après corrections : seuls le
 de l'activité comptent sur la nouvelle clé ; la `FIN` d'un ajout compte comme une fin régularisée.
 
 **L'accès.** La route `operateurs/:operateur/journees/:jour` est gardée par `reservedToGestionnaire`. Le bouton du
-relevé est posé sous la directive `*reservedToGestionnaire`, et seulement pour un jour échu ou aujourd'hui.
+relevé est posé sous la directive `*reservedToGestionnaire`, et seulement pour un jour échu ou aujourd'hui. Ni la
+garde ni la directive n'existent plus : 0058 ouvre Gestion au seul gestionnaire, et le bouton s'affiche pour tout jour
+échu ou aujourd'hui.
 
 ## Consequences
 
