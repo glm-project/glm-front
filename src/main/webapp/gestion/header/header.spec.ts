@@ -35,10 +35,15 @@ const showTheHeader = async (ouverte = false): Promise<ComponentFixture<GestionH
   return shown;
 };
 
-const openTheSession = async (shown: ComponentFixture<GestionHeader>): Promise<void> => {
-  await TestBed.inject(AuthenticationPort).authenticate();
+const openTheApplication = async (shown: ComponentFixture<GestionHeader>): Promise<void> => {
   shown.componentRef.setInput('ouverte', true);
   await shown.whenStable();
+};
+
+const givenAnAuthenticatedSession = async (): Promise<void> => {
+  const authentication = TestBed.inject(AuthenticationPort);
+  await authentication.authenticate();
+  expect(authentication.currentToken()).toBeDefined();
 };
 
 describe('Gestion header', () => {
@@ -49,10 +54,12 @@ describe('Gestion header', () => {
     await configureHeaderOf();
     fixture = await showTheHeader();
     authentication = TestBed.inject(AuthenticationPort);
-    await openTheSession(fixture);
+    await openTheApplication(fixture);
   });
 
-  it('should end the session on click on the logout button', () => {
+  it('should end the session on click on the logout button', async () => {
+    await givenAnAuthenticatedSession();
+
     whenClickingLogout();
 
     thenTheSessionIsOver();
@@ -178,7 +185,9 @@ describe('Gestion header, while the application is closed', () => {
     thenNoMenuButtonIsOffered();
   });
 
-  it('should end the session on click on the logout button', () => {
+  it('should end the session on click on the logout button', async () => {
+    await givenAnAuthenticatedSession();
+
     whenClickingLogout();
 
     thenTheSessionIsOver();
@@ -215,7 +224,7 @@ describe('Gestion header, with the logo of the company', () => {
     parametrage = new ParametrageFixture();
   });
 
-  it('should show the GLM logo until the session is open, without reading the settings', async () => {
+  it('should show the GLM logo until the application is open, without reading the settings', async () => {
     givenTheCompanyHasALogo();
     await configureHeaderOf(parametrage);
 
@@ -224,12 +233,12 @@ describe('Gestion header, with the logo of the company', () => {
     thenTheGlmLogoIsShown();
   });
 
-  it('should show the logo of the company once the session is open', async () => {
+  it('should show the logo of the company once the application is open', async () => {
     givenTheCompanyHasALogo();
     await configureHeaderOf(parametrage);
     const header = await showTheHeader();
 
-    await whenTheSessionOpens(header);
+    await whenTheApplicationOpens(header);
 
     thenTheCompanyLogoIsShown('data:image/png;base64,iVBORw0K');
   });
@@ -238,7 +247,7 @@ describe('Gestion header, with the logo of the company', () => {
     await configureHeaderOf(parametrage);
     const header = await showTheHeader();
 
-    await whenTheSessionOpens(header);
+    await whenTheApplicationOpens(header);
 
     thenTheGlmLogoIsShown();
   });
@@ -246,7 +255,7 @@ describe('Gestion header, with the logo of the company', () => {
   it('should show the logo the gestionnaire has just deposited, without reloading the page', async () => {
     await configureHeaderOf(parametrage);
     const header = await showTheHeader();
-    await whenTheSessionOpens(header);
+    await whenTheApplicationOpens(header);
 
     await whenALogoIsDeposited(header);
 
@@ -257,7 +266,7 @@ describe('Gestion header, with the logo of the company', () => {
     givenTheCompanyHasALogo();
     await configureHeaderOf(parametrage);
     const header = await showTheHeader();
-    await whenTheSessionOpens(header);
+    await whenTheApplicationOpens(header);
 
     await whenTheLogoIsRemoved(header);
 
@@ -270,7 +279,7 @@ describe('Gestion header, with the logo of the company', () => {
     await configureHeaderOf(parametrage);
     const header = await showTheHeader();
 
-    await whenTheSessionOpens(header);
+    await whenTheApplicationOpens(header);
 
     thenTheGlmLogoIsShown();
   });
@@ -290,8 +299,8 @@ describe('Gestion header, with the logo of the company', () => {
     await header.whenStable();
   };
 
-  const whenTheSessionOpens = async (header: ComponentFixture<GestionHeader>): Promise<void> => {
-    await openTheSession(header);
+  const whenTheApplicationOpens = async (header: ComponentFixture<GestionHeader>): Promise<void> => {
+    await openTheApplication(header);
     await new Promise(resolve => setTimeout(resolve));
     await header.whenStable();
   };

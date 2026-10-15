@@ -1,4 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
+import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
 import { ROLE_GESTIONNAIRE } from '@/gestion/shared/authentication/infrastructure/primary/gestionnaire';
@@ -80,8 +81,17 @@ describe('Gestion shell', () => {
     thenNoReservedAccessScreenIsShown();
   });
 
-  it('should show neither the routed content nor the reserved access screen while the realm roles are unknown', async () => {
-    givenAuthenticationIsPending();
+  it('should show neither the routed content nor the reserved access screen while authentication is in progress', async () => {
+    givenAuthenticationIsInProgress();
+
+    await whenBootingTheShell();
+
+    thenNoRoutedContentIsMounted();
+    thenNoReservedAccessScreenIsShown();
+  });
+
+  it('should show neither the routed content nor the reserved access screen once authenticated, while the realm roles are unknown', async () => {
+    givenTheRealmRolesAreUnknown();
 
     await whenBootingTheShell();
 
@@ -108,10 +118,14 @@ describe('Gestion shell', () => {
     TestBed.overrideProvider(RolesPort, { useValue: refused });
   };
 
-  const givenAuthenticationIsPending = (): void => {
-    const pending = new PendingAuthenticationFixture();
-    TestBed.overrideProvider(AuthenticationPort, { useValue: pending });
-    TestBed.overrideProvider(RolesPort, { useValue: pending });
+  const givenAuthenticationIsInProgress = (): void => {
+    TestBed.overrideProvider(AuthenticationPort, { useValue: new PendingAuthenticationFixture() });
+    TestBed.overrideProvider(RolesPort, { useValue: new UnknownRolesFixture() });
+  };
+
+  const givenTheRealmRolesAreUnknown = (): void => {
+    TestBed.overrideProvider(AuthenticationPort, { useValue: new InMemoryAuthentication() });
+    TestBed.overrideProvider(RolesPort, { useValue: new UnknownRolesFixture() });
   };
 
   const whenBootingTheShell = async (): Promise<void> => {
@@ -177,11 +191,7 @@ class RefusedAuthenticationFixture extends AuthenticationPort implements RolesPo
   }
 }
 
-class PendingAuthenticationFixture extends AuthenticationPort implements RolesPort {
-  realmRoles(): Promise<readonly string[]> {
-    return new Promise(() => undefined);
-  }
-
+class PendingAuthenticationFixture extends AuthenticationPort {
   override authenticate(): Promise<void> {
     return new Promise(() => undefined);
   }
@@ -192,5 +202,11 @@ class PendingAuthenticationFixture extends AuthenticationPort implements RolesPo
 
   override logout(): void {
     throw new Error('No session can be closed');
+  }
+}
+
+class UnknownRolesFixture extends RolesPort {
+  realmRoles(): Promise<readonly string[]> {
+    return new Promise(() => undefined);
   }
 }

@@ -12,6 +12,7 @@ import { ElementsApiFixture } from '../../../utils/gestion/element-de-fabricatio
 import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
 const ROLES_WITHOUT_GESTIONNAIRE = ['ROLE_USER'];
+const LATE_REQUEST_HORIZON_FIXTURE_MS = 500;
 const DOSSIER_ADDRESS = `/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`;
 
 describe('Gestion shell, opened to the gestionnaire alone', () => {
@@ -57,15 +58,16 @@ describe('Gestion shell, for an account without the gestionnaire role', () => {
   });
 
   [
-    { screen: 'a dossier of anomalies', address: DOSSIER_ADDRESS },
-    { screen: 'the settings', address: '/parametres' },
-    { screen: 'the cost of an element', address: '/couts-de-revient/element-1' },
-    { screen: 'the supervision', address: '/' },
-  ].forEach(({ screen, address }) => {
+    { screen: 'a dossier of anomalies', address: DOSSIER_ADDRESS, routedScreen: 'anomalie-retour' },
+    { screen: 'the settings', address: '/parametres', routedScreen: 'parametres' },
+    { screen: 'the cost of an element', address: '/couts-de-revient/element-1', routedScreen: 'cout-de-revient-page' },
+    { screen: 'the supervision', address: '/', routedScreen: 'supervision-atelier' },
+  ].forEach(({ screen, address, routedScreen }) => {
     it(`should reserve the access when opening ${screen}, and send no request to the API`, () => {
       whenOpeningWithoutTheGestionnaireRole(address, new AuthenticationFixture());
+      whenALateRequestHadTimeToLeave();
 
-      thenOnlyTheReservedAccessScreenIsShown();
+      thenOnlyTheReservedAccessScreenIsShown(routedScreen);
       thenNoRequestWasSentToTheApi();
     });
   });
@@ -113,6 +115,14 @@ const whenOpeningWithoutTheGestionnaireRole = (address: string, authenticationFi
   cy.get(dataSelector('gestion-acces-reserve')).should('be.visible');
 };
 
+const elapse = (milliseconds: number): void => {
+  cy.wait(milliseconds);
+};
+
+const whenALateRequestHadTimeToLeave = (): void => {
+  elapse(LATE_REQUEST_HORIZON_FIXTURE_MS);
+};
+
 const whenAuthenticationCompletes = (authenticationFixture: AuthenticationFixture): void => {
   cy.then(() => authenticationFixture.release());
 };
@@ -140,11 +150,12 @@ const thenTheDossierIsDisplayed = (): void => {
   cy.location('pathname').should('eq', `/anomalies/${suiviFinAutomatiqueFixture}`);
 };
 
-const thenOnlyTheReservedAccessScreenIsShown = (): void => {
+const thenOnlyTheReservedAccessScreenIsShown = (routedScreen: string): void => {
   cy.get(dataSelector('gestion-acces-reserve')).should('be.visible').and('contain.text', 'Accès réservé aux gestionnaires');
   cy.get(dataSelector('gestion-acces-reserve-deconnexion')).should('be.visible');
   cy.get(dataSelector('gestion-navigation')).should('not.exist');
   cy.get('router-outlet').should('not.exist');
+  cy.get(dataSelector(routedScreen)).should('not.exist');
 };
 
 const thenNoRequestWasSentToTheApi = (): void => {
