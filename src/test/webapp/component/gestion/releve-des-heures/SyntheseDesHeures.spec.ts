@@ -1,6 +1,5 @@
 import { components } from '@/app/generated/schema';
 import { dataSelector } from '../../../utils/DataSelector';
-import type {} from '../../../utils/gestion/authentication/RolesFixture';
 import {
   feuilleFixture,
   SemaineSemee,
@@ -161,13 +160,6 @@ describe('Operational time report in gestion', () => {
     whenVisiting(ADRESSE);
 
     thenTheCorrectionOfTheDayIsOffered('/operateurs/op-1/journees/2026-09-14');
-  });
-
-  it('should hide the correction of the day from a consultant', () => {
-    givenAWeek(semaineDeJourFixture());
-    whenVisitingAsAConsultant(ADRESSE);
-
-    thenNoCorrectionOfTheDayIsOffered();
   });
 
   it('should offer no correction for a day that has not come', () => {
@@ -379,15 +371,6 @@ describe('Operational time report in gestion', () => {
       const style = document.createElement('style');
       style.textContent = '::-webkit-scrollbar { width: 15px; height: 15px; }';
       document.head.append(style);
-    });
-  };
-  const whenVisitingAsAConsultant = (adresse: string): void => {
-    cy.viewport(1280, 900);
-    cy.clock(HORLOGE, ['Date']);
-    cy.visit(adresse, {
-      onBeforeLoad: window => {
-        window.gestionRolesFixture = ['ROLE_CONSULTANT'];
-      },
     });
   };
   const whenVisiting = (adresse: string): void => {

@@ -1,7 +1,5 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
-import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
-import { ROLE_GESTIONNAIRE } from '@/gestion/shared/authentication/infrastructure/primary/gestionnaire';
-import { InMemoryGestionAuthentication } from '@/gestion/shared/authentication/infrastructure/secondary/in-memory/InMemoryGestionAuthentication';
+import { InMemoryAuthentication } from '@/app/shared/authentication/infrastructure/secondary/in-memory/InMemoryAuthentication';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 
 import { By } from '@angular/platform-browser';
@@ -16,7 +14,7 @@ import { ParametragePort } from '../contexts/parametrage/domain/ParametragePort'
 import { VersionDuLogo } from '../contexts/parametrage/domain/VersionDuLogo';
 import { GestionHeader } from './header';
 
-const configureHeaderOf = async (roles: readonly string[], parametrage = new ParametrageFixture()): Promise<void> => {
+const configureHeaderOf = async (parametrage = new ParametrageFixture()): Promise<void> => {
   await TestBed.configureTestingModule({
     providers: [
       { provide: ParametragePort, useValue: parametrage },
@@ -24,23 +22,28 @@ const configureHeaderOf = async (roles: readonly string[], parametrage = new Par
       { provide: IconeDeLOnglet, useValue: new IconeDeLOngletFixture() },
       provideRouter([{ path: '**', children: [] }]),
       { provide: ComponentFixtureAutoDetect, useValue: true },
-      { provide: InMemoryGestionAuthentication, useFactory: () => new InMemoryGestionAuthentication(roles) },
-      { provide: AuthenticationPort, useExisting: InMemoryGestionAuthentication },
-      { provide: RolesPort, useExisting: InMemoryGestionAuthentication },
+      { provide: AuthenticationPort, useClass: InMemoryAuthentication },
     ],
   }).compileComponents();
 };
 
-const showTheHeader = async (): Promise<ComponentFixture<GestionHeader>> => {
+const showTheHeader = async (ouverte = false): Promise<ComponentFixture<GestionHeader>> => {
   const shown = TestBed.createComponent(GestionHeader);
   shown.componentRef.setInput('heading', 'glmfront');
+  shown.componentRef.setInput('ouverte', ouverte);
   await shown.whenStable();
   return shown;
 };
 
-const openTheSession = async (shown: ComponentFixture<GestionHeader>): Promise<void> => {
-  await TestBed.inject(AuthenticationPort).authenticate();
+const openTheApplication = async (shown: ComponentFixture<GestionHeader>): Promise<void> => {
+  shown.componentRef.setInput('ouverte', true);
   await shown.whenStable();
+};
+
+const givenAnAuthenticatedSession = async (): Promise<void> => {
+  const authentication = TestBed.inject(AuthenticationPort);
+  await authentication.authenticate();
+  expect(authentication.currentToken()).toBeDefined();
 };
 
 describe('Gestion header', () => {
@@ -48,13 +51,15 @@ describe('Gestion header', () => {
   let authentication: AuthenticationPort;
 
   beforeEach(async () => {
-    await configureHeaderOf([ROLE_GESTIONNAIRE]);
+    await configureHeaderOf();
     fixture = await showTheHeader();
     authentication = TestBed.inject(AuthenticationPort);
-    await openTheSession(fixture);
+    await openTheApplication(fixture);
   });
 
-  it('should end the session on click on the logout button', () => {
+  it('should end the session on click on the logout button', async () => {
+    await givenAnAuthenticatedSession();
+
     whenClickingLogout();
 
     thenTheSessionIsOver();
@@ -163,64 +168,51 @@ describe('Gestion header', () => {
   };
 });
 
-describe('Gestion header, according to the realm roles', () => {
-  it('should offer the anomalies destination to a gestionnaire', async () => {
-    await configureHeaderOf([ROLE_GESTIONNAIRE]);
-    const header = await showTheHeader();
+describe('Gestion header, while the application is closed', () => {
+  let fixture: ComponentFixture<GestionHeader>;
 
-    await openTheSession(header);
-
-    thenAnomaliesAreOffered(true);
+  beforeEach(async () => {
+    await configureHeaderOf();
+    fixture = await showTheHeader();
   });
 
-  it('should offer the settings destination to a gestionnaire', async () => {
-    await configureHeaderOf([ROLE_GESTIONNAIRE]);
-    const header = await showTheHeader();
-
-    await openTheSession(header);
-
-    thenSettingsAreOffered(true);
+  it('should offer neither the navigation nor the settings, but keep the logout', () => {
+    thenNeitherTheNavigationNorTheSettingsAreOffered();
+    thenTheLogoutIsOffered();
   });
 
-  it('should hide the settings destination from a consultant', async () => {
-    await configureHeaderOf(['ROLE_CONSULTANT']);
-    const header = await showTheHeader();
-
-    await openTheSession(header);
-
-    thenSettingsAreOffered(false);
+  it('should not offer to unfold a navigation it does not show', () => {
+    thenNoMenuButtonIsOffered();
   });
 
-  it('should hide the anomalies destination from a consultant', async () => {
-    await configureHeaderOf(['ROLE_CONSULTANT']);
-    const header = await showTheHeader();
+  it('should end the session on click on the logout button', async () => {
+    await givenAnAuthenticatedSession();
 
-    await openTheSession(header);
+    whenClickingLogout();
 
-    thenAnomaliesAreOffered(false);
-    thenTheOtherDestinationsAreOffered();
+    thenTheSessionIsOver();
   });
 
-  it('should hide the anomalies destination while the realm roles are unknown', async () => {
-    await configureHeaderOf([ROLE_GESTIONNAIRE]);
-
-    await showTheHeader();
-
-    thenAnomaliesAreOffered(false);
-    thenTheOtherDestinationsAreOffered();
-  });
-
-  const thenSettingsAreOffered = (offered: boolean): void => {
-    expect(document.querySelector(dataSelector('gestion-parametres')) !== null).toBe(offered);
+  const whenClickingLogout = (): void => {
+    const logoutButton = fixture.debugElement.query(By.css(dataSelector('gestion-logout'))).nativeElement as HTMLElement;
+    logoutButton.click();
   };
 
-  const thenAnomaliesAreOffered = (offered: boolean): void => {
-    expect(document.querySelector(dataSelector('gestion-navigation-anomalies')) !== null).toBe(offered);
+  const thenNeitherTheNavigationNorTheSettingsAreOffered = (): void => {
+    expect(document.querySelector(dataSelector('gestion-navigation'))).toBeNull();
+    expect(document.querySelector(dataSelector('gestion-parametres'))).toBeNull();
   };
 
-  const thenTheOtherDestinationsAreOffered = (): void => {
-    expect(document.querySelector(dataSelector('gestion-navigation-supervision')) !== null).toBe(true);
-    expect(document.querySelector(dataSelector('gestion-navigation-operateurs')) !== null).toBe(true);
+  const thenTheLogoutIsOffered = (): void => {
+    expect(document.querySelector(dataSelector('gestion-logout'))).not.toBeNull();
+  };
+
+  const thenNoMenuButtonIsOffered = (): void => {
+    expect(document.querySelector(dataSelector('gestion-menu'))).toBeNull();
+  };
+
+  const thenTheSessionIsOver = (): void => {
+    expect(TestBed.inject(AuthenticationPort).currentToken()).toBeUndefined();
   };
 });
 
@@ -232,38 +224,38 @@ describe('Gestion header, with the logo of the company', () => {
     parametrage = new ParametrageFixture();
   });
 
-  it('should show the GLM logo until the session is open, without reading the settings', async () => {
+  it('should show the GLM logo until the application is open, without reading the settings', async () => {
     givenTheCompanyHasALogo();
-    await configureHeaderOf([ROLE_GESTIONNAIRE], parametrage);
+    await configureHeaderOf(parametrage);
 
     await showTheHeader();
 
     thenTheGlmLogoIsShown();
   });
 
-  it('should show the logo of the company once the session is open', async () => {
+  it('should show the logo of the company once the application is open', async () => {
     givenTheCompanyHasALogo();
-    await configureHeaderOf(['ROLE_CONSULTANT'], parametrage);
+    await configureHeaderOf(parametrage);
     const header = await showTheHeader();
 
-    await whenTheSessionOpens(header);
+    await whenTheApplicationOpens(header);
 
     thenTheCompanyLogoIsShown('data:image/png;base64,iVBORw0K');
   });
 
   it('should keep the GLM logo for a company without a logo', async () => {
-    await configureHeaderOf([ROLE_GESTIONNAIRE], parametrage);
+    await configureHeaderOf(parametrage);
     const header = await showTheHeader();
 
-    await whenTheSessionOpens(header);
+    await whenTheApplicationOpens(header);
 
     thenTheGlmLogoIsShown();
   });
 
   it('should show the logo the gestionnaire has just deposited, without reloading the page', async () => {
-    await configureHeaderOf([ROLE_GESTIONNAIRE], parametrage);
+    await configureHeaderOf(parametrage);
     const header = await showTheHeader();
-    await whenTheSessionOpens(header);
+    await whenTheApplicationOpens(header);
 
     await whenALogoIsDeposited(header);
 
@@ -272,9 +264,9 @@ describe('Gestion header, with the logo of the company', () => {
 
   it('should go back to the GLM logo once the gestionnaire removes the logo, without reloading the page', async () => {
     givenTheCompanyHasALogo();
-    await configureHeaderOf([ROLE_GESTIONNAIRE], parametrage);
+    await configureHeaderOf(parametrage);
     const header = await showTheHeader();
-    await whenTheSessionOpens(header);
+    await whenTheApplicationOpens(header);
 
     await whenTheLogoIsRemoved(header);
 
@@ -284,10 +276,10 @@ describe('Gestion header, with the logo of the company', () => {
   it('should keep the GLM logo when the logo cannot be read', async () => {
     givenTheCompanyHasALogo();
     parametrage.imageFailure = new Error('panne');
-    await configureHeaderOf([ROLE_GESTIONNAIRE], parametrage);
+    await configureHeaderOf(parametrage);
     const header = await showTheHeader();
 
-    await whenTheSessionOpens(header);
+    await whenTheApplicationOpens(header);
 
     thenTheGlmLogoIsShown();
   });
@@ -307,8 +299,8 @@ describe('Gestion header, with the logo of the company', () => {
     await header.whenStable();
   };
 
-  const whenTheSessionOpens = async (header: ComponentFixture<GestionHeader>): Promise<void> => {
-    await openTheSession(header);
+  const whenTheApplicationOpens = async (header: ComponentFixture<GestionHeader>): Promise<void> => {
+    await openTheApplication(header);
     await new Promise(resolve => setTimeout(resolve));
     await header.whenStable();
   };

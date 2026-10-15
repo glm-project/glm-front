@@ -136,8 +136,8 @@ something stays, with a status that says what died.
   adapter it described was removed on 2026-10-08
 
 - [0052 — Réserver les anomalies au gestionnaire par les rôles de la session](0052-reserve-anomalies-to-the-gestionnaire.md) —
-  un `RolesPort` à promesse qui reste en attente si l'authentification échoue, un garde `canMatch` qui ne renvoie
-  jamais `false`, un menu filtré par les mêmes rôles figés pour la session
+  un `RolesPort` à promesse qui reste en attente si l'authentification échoue, rôles figés pour la session ; le
+  garde `canMatch` et le menu filtré sont retirés par 0058
 
 - [0053 — Remplacer le type d'élément par les catégories de l'entreprise](0053-replace-the-element-type-with-company-categories.md) —
   un Value Object de catégorie par contexte affiché tel quel, aucune lecture de `type` déprécié, l'ordre lu au
@@ -154,3 +154,7 @@ something stays, with a status that says what died.
 - [0056 — Laisser le gestionnaire corriger la journée d'un opérateur](0056-let-the-gestionnaire-correct-an-operator-day.md) —
   une page dédiée corrige des activités, pas des pointages : ajouter, changer le poste, retirer ; chaque correction
   ajoute un fait au journal, seule trace, sans motif ni historique ; une fin régularisée redevient corrigeable
+
+- [0058 — Ouvrir Gestion au seul gestionnaire](0058-open-gestion-to-the-gestionnaire-alone.md) —
+  le shell vérifie `ROLE_GESTIONNAIRE` une fois et montre sinon un écran d'accès réservé ; plus de garde, de
+  directive ni de menu filtré ; il amende 0052 et 0056

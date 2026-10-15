@@ -26,7 +26,6 @@ Ce contexte appartient exclusivement à `gestion`. Il porte les réglages que l'
 
 ## Responsabilités et invariants
 
-- La page est réservée au gestionnaire : route protégée par `reservedToGestionnaire`, entrée de menu `reserveeAuGestionnaire` (ADR 0052).
 - Une saisie hors de 1 à 24, vide ou non entière n'est jamais envoyée : le formulaire la refuse avec son message. Le serveur n'a donc aucun refus métier à traduire ; un refus 400 reste une panne technique.
 - Le serveur accepte une durée à la minute. Ce front n'écrit que des heures entières ; une durée lue qui n'en est pas une est une panne technique de lecture, signalée une fois, jamais arrondie en silence.
 - Un logo choisi est d'abord montré dans l'aperçu (« Pas encore enregistré »), puis envoyé par « Enregistrer le logo » ; « Annuler » rend le logo de l'entreprise. Seul un fichier qui respecte les trois règles s'enregistre : un fichier refusé par `FichierDeLogo` n'est jamais envoyé. Le retrait se confirme dans la carte, sans boîte de dialogue.
