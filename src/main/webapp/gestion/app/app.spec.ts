@@ -74,6 +74,14 @@ describe('Gestion shell', () => {
     thenNoRoutedContentIsMounted();
   });
 
+  it('should present the reserved access screen as a page named by its title', async () => {
+    givenTheRealmRoles(['ROLE_USER']);
+
+    await whenBootingTheShell();
+
+    thenTheReservedAccessScreenIsAPageNamedByItsTitle();
+  });
+
   it('should mount the routed content, and no reserved access screen, for a gestionnaire', async () => {
     await whenBootingTheShell();
 
@@ -162,6 +170,15 @@ describe('Gestion shell', () => {
 
   const thenTheReservedAccessScreenIsShown = (): void => {
     expect(fixture.debugElement.query(By.css(dataSelector('gestion-acces-reserve')))).not.toBeNull();
+  };
+
+  const thenTheReservedAccessScreenIsAPageNamedByItsTitle = (): void => {
+    const screen = fixture.debugElement.query(By.css(dataSelector('gestion-acces-reserve'))).nativeElement as HTMLElement;
+    const title = (fixture.nativeElement as HTMLElement).querySelector(`#${screen.getAttribute('aria-labelledby') ?? ''}`);
+
+    expect(screen.tagName).toBe('MAIN');
+    expect(title?.tagName).toBe('H1');
+    expect(title?.textContent.trim()).toBe('Accès réservé aux gestionnaires');
   };
 
   const thenNoRoutedContentIsMounted = (): void => {

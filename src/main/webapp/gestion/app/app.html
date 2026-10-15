@@ -4,12 +4,16 @@
   @switch (acces()) { @case ('OUVERTE') {
   <router-outlet />
   } @case ('RESERVEE') {
-  <section class="mx-auto flex max-w-xl flex-col gap-4 px-4 py-12 md:px-8" data-selector="gestion-acces-reserve">
-    <h1 class="text-title">{{ libelles.accesReserve }}</h1>
+  <main
+    class="mx-auto flex max-w-xl flex-col gap-4 px-4 py-6 text-ink md:px-8 md:py-8"
+    aria-labelledby="acces-reserve-heading"
+    data-selector="gestion-acces-reserve"
+  >
+    <h1 id="acces-reserve-heading" class="text-title">{{ libelles.accesReserve }}</h1>
     <p class="text-body text-ink-muted">{{ libelles.accesReserveExplication }}</p>
     <button mat-flat-button type="button" class="self-start" data-selector="gestion-acces-reserve-deconnexion" (click)="deconnecter()">
       {{ libelles.deconnexion }}
     </button>
-  </section>
+  </main>
   } }
 </div>
