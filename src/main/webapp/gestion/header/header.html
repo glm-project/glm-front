@@ -21,7 +21,7 @@
       data-selector="gestion-navigation"
     >
       <ul class="navigation-liste">
-        @for (destination of destinations(); track destination.route) {
+        @for (destination of destinations; track destination.route) {
         <li>
           <a
             class="lien"
@@ -40,7 +40,7 @@
     }
 
     <div class="ml-auto flex items-center gap-1">
-      @if (ouverte() && gestionnaire()) {
+      @if (ouverte()) {
       <a
         class="action"
         routerLink="/parametres"

@@ -262,7 +262,6 @@
             </p>
             @if (detail.jour.echu) {
             <a
-              *glmReservedToGestionnaire
               mat-stroked-button
               [routerLink]="['/operateurs', operateur(), 'journees', detail.jour.cle]"
               data-selector="synthese-corriger-la-journee"

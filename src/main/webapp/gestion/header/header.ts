@@ -1,40 +1,33 @@
 import { AuthenticationPort } from '@/app/shared/authentication/domain/AuthenticationPort';
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { LogoDeLEntreprise } from '@/gestion/contexts/parametrage/infrastructure/primary/logo-de-l-entreprise/LogoDeLEntreprise';
-import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
-import { isGestionnaire } from '@/gestion/shared/authentication/infrastructure/primary/gestionnaire';
 import { MarqueGlm } from '@/gestion/shared/design-system/infrastructure/primary/marque-glm/MarqueGlm';
-import { Component, computed, inject, input, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, inject, input, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { from } from 'rxjs';
 
 interface Destination {
   readonly route: string;
   readonly libelle: string;
   readonly selecteur: string;
   readonly exacte: boolean;
-  readonly reserveeAuGestionnaire: boolean;
 }
 
 const DESTINATIONS: readonly Destination[] = [
-  { route: '/', libelle: 'Supervision', selecteur: 'gestion-navigation-supervision', exacte: true, reserveeAuGestionnaire: false },
+  { route: '/', libelle: 'Supervision', selecteur: 'gestion-navigation-supervision', exacte: true },
   {
     route: '/produits',
     libelle: 'Produits',
     selecteur: 'gestion-navigation-elements',
     exacte: false,
-    reserveeAuGestionnaire: false,
   },
   {
     route: '/postes-de-travail',
     libelle: 'Postes de travail',
     selecteur: 'gestion-navigation-postes',
     exacte: false,
-    reserveeAuGestionnaire: false,
   },
-  { route: '/operateurs', libelle: 'Opérateurs', selecteur: 'gestion-navigation-operateurs', exacte: false, reserveeAuGestionnaire: false },
-  { route: '/anomalies', libelle: 'Anomalies', selecteur: 'gestion-navigation-anomalies', exacte: false, reserveeAuGestionnaire: true },
+  { route: '/operateurs', libelle: 'Opérateurs', selecteur: 'gestion-navigation-operateurs', exacte: false },
+  { route: '/anomalies', libelle: 'Anomalies', selecteur: 'gestion-navigation-anomalies', exacte: false },
 ];
 
 const LIBELLES_EN_TETE = {
@@ -57,17 +50,9 @@ export class GestionHeader {
   readonly heading = input.required<string>();
   readonly ouverte = input.required<boolean>();
   private readonly authentication = inject(AuthenticationPort);
-  private readonly roles = inject(RolesPort);
-  private readonly realmRoles = toSignal(from(this.roles.realmRoles()));
 
   protected readonly libelles = LIBELLES_EN_TETE;
-  protected readonly gestionnaire = computed(() => {
-    const roles = this.realmRoles();
-    return roles !== undefined && isGestionnaire(roles);
-  });
-  protected readonly destinations = computed(() =>
-    DESTINATIONS.filter(destination => this.gestionnaire() || !destination.reserveeAuGestionnaire),
-  );
+  protected readonly destinations = DESTINATIONS;
   protected readonly menuOuvert = signal(false);
 
   protected basculerMenu(): void {

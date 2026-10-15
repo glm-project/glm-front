@@ -11,7 +11,7 @@ import type {} from '../../../utils/gestion/authentication/RolesFixture';
 import { ElementsApiFixture } from '../../../utils/gestion/element-de-fabrication/ElementsApiFixture';
 import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
-const CONSULTANT_ROLES = ['ROLE_CONSULTANT'];
+const ROLES_WITHOUT_GESTIONNAIRE = ['ROLE_USER'];
 const DOSSIER_ADDRESS = `/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouvrantFinAutomatiqueFixture}`;
 
 describe('Gestion shell, opened to the gestionnaire alone', () => {
@@ -63,7 +63,7 @@ describe('Gestion shell, for an account without the gestionnaire role', () => {
     { screen: 'the supervision', address: '/' },
   ].forEach(({ screen, address }) => {
     it(`should reserve the access when opening ${screen}, and send no request to the API`, () => {
-      whenOpeningAsAConsultant(address, new AuthenticationFixture());
+      whenOpeningWithoutTheGestionnaireRole(address, new AuthenticationFixture());
 
       thenOnlyTheReservedAccessScreenIsShown();
       thenNoRequestWasSentToTheApi();
@@ -72,7 +72,7 @@ describe('Gestion shell, for an account without the gestionnaire role', () => {
 
   it('should end the session from the reserved access screen', () => {
     const authenticationFixture = new AuthenticationFixture();
-    whenOpeningAsAConsultant('/', authenticationFixture);
+    whenOpeningWithoutTheGestionnaireRole('/', authenticationFixture);
 
     whenLeavingFromTheReservedAccessScreen();
 
@@ -105,9 +105,9 @@ const whenOpeningTheDossierWithRetainedAuthentication = (authenticationFixture: 
   cy.get(dataSelector('gestion-header')).should('be.visible');
 };
 
-const whenOpeningAsAConsultant = (address: string, authenticationFixture: AuthenticationFixture): void => {
+const whenOpeningWithoutTheGestionnaireRole = (address: string, authenticationFixture: AuthenticationFixture): void => {
   cy.viewport(1440, 900);
-  cy.visit(address, { onBeforeLoad: opening(authenticationFixture, CONSULTANT_ROLES) });
+  cy.visit(address, { onBeforeLoad: opening(authenticationFixture, ROLES_WITHOUT_GESTIONNAIRE) });
   cy.then(() => authenticationFixture.started);
   cy.then(() => authenticationFixture.release());
   cy.get(dataSelector('gestion-acces-reserve')).should('be.visible');

@@ -13,6 +13,9 @@ contrat de la correction des activités.
 - `Complements 0052`: une directive structurelle `*reservedToGestionnaire` de l'authentification de Gestion réserve
   un élément d'un écran au gestionnaire. Un contexte ne lit toujours pas les rôles : l'authentification reste le seul
   endroit qui les lit.
+- `Amended by 0058`: la route `operateurs/:operateur/journees/:jour` n'est plus gardée et la directive disparaît. Le
+  bouton « Corriger la journée » du relevé s'affiche pour tout jour échu, puisque Gestion ne s'ouvre qu'au
+  gestionnaire. Le reste de 0056 tient.
 
 Un lecteur qui arrive ici depuis un autre ADR garde la règle en vigueur : **le gestionnaire corrige des activités, pas
 des pointages, depuis une page dédiée ; chaque correction ajoute un fait au journal, qui reste la seule trace, et la

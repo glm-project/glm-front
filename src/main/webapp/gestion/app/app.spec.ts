@@ -65,7 +65,7 @@ describe('Gestion shell', () => {
   });
 
   it('should show the reserved access screen, and mount no routed content, to an account without the gestionnaire role', async () => {
-    givenTheRealmRoles(['ROLE_CONSULTANT']);
+    givenTheRealmRoles(['ROLE_USER']);
 
     await whenBootingTheShell();
 
@@ -90,7 +90,7 @@ describe('Gestion shell', () => {
   });
 
   it('should end the session from the reserved access screen', async () => {
-    givenTheRealmRoles(['ROLE_CONSULTANT']);
+    givenTheRealmRoles(['ROLE_USER']);
     await whenBootingTheShell();
 
     whenLeavingTheReservedAccessScreen();

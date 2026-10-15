@@ -37,7 +37,7 @@ et des coûts reste au backend, selon l'[ADR 0047](../../../../../../documentati
 
 ### Liste
 
-La liste vit sous `/anomalies`, gardée par `reservedToGestionnaire` ([authentification](../../../../../../documentation/authentication.md)).
+La liste vit sous `/anomalies`.
 Son état est dans l'adresse ([ADR 0038](../../../../../../documentation/adr/0038-hold-view-state-in-the-url.md)) :
 `operateur`, `element` et `page`. Un `nature` d'un ancien lien est ignoré. Une page invalide n'émet aucune requête, pas
 même celles des opérateurs et des éléments, et désactive les filtres. Chaque ligne ouvre son dossier en gardant

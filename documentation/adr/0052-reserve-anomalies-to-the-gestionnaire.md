@@ -4,9 +4,14 @@
 
 `Accepted`
 
-- `Complements 0025: un garde de route ne renvoie jamais false, car sans route ** le refus lèverait NG04002 vers ErrorHandlerPort.`
-- `Complemented by 0056: une directive structurelle *reservedToGestionnaire réserve un élément d'un écran au gestionnaire ; seule l'authentification lit toujours les rôles.`
-- `Complements 0039: le garde se pose sur le parent qui porte déjà les enfants chargés paresseusement ; il ne change pas le chargement.`
+- `Amended by 0058`: aucune route ni aucune entrée de menu n'est plus réservée. Le garde `reservedToGestionnaire`, la
+  directive de 0056 et le filtre des destinations de l'en-tête disparaissent ; le « consultant » n'a plus d'accès.
+  Il reste de 0052 le `RolesPort` à promesse, ses rôles figés pour la session, sa promesse qui reste en attente quand
+  l'authentification échoue, et la lecture des rôles par la seule authentification de Gestion. Le shell est désormais
+  son unique consommateur : il vérifie `ROLE_GESTIONNAIRE` une fois et affiche un écran d'accès réservé sans lui.
+- `Complements 0025: un garde de route ne renvoie jamais false, car sans route ** le refus lèverait NG04002 vers ErrorHandlerPort. Le garde de 0052 a disparu avec 0058 ; la règle vaut pour tout garde à venir.`
+- `Complemented by 0056: une directive structurelle *reservedToGestionnaire réserve un élément d'un écran au gestionnaire ; seule l'authentification lit toujours les rôles. Cette directive a disparu avec 0058.`
+- `Complements 0039: le garde se pose sur le parent qui porte déjà les enfants chargés paresseusement ; il ne change pas le chargement. Ce garde a disparu avec 0058.`
 
 ## Context
 

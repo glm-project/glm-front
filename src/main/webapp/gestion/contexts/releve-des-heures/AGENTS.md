@@ -4,8 +4,7 @@ Ce contexte de `gestion` porte le relevé hebdomadaire du **temps opérationnel*
 Il est lecteur : la régularisation des fins automatiques appartient au contexte `anomalies-de-pointage`, et la
 correction des activités d'une journée au contexte `correction-des-activites`. Le relevé y mène par un lien : le bouton
 « Corriger la journée » de l'en-tête du détail du jour est un `routerLink` vers `/operateurs/:operateur/journees/:jour`,
-posé sous `*glmReservedToGestionnaire` (l'authentification de Gestion reste seule à lire les rôles) et seulement pour un
-jour antérieur ou égal à aujourd'hui (`JourDeFrise.echu`). Il n'importe rien de ce contexte.
+posé seulement pour un jour antérieur ou égal à aujourd'hui (`JourDeFrise.echu`). Il n'importe rien de ce contexte.
 La route `/operateurs/:operateur/heures`, le composant `SyntheseDesHeures` et le port
 `SyntheseDesHeuresPort` conservent leur nom pour garder les liens partagés.
 

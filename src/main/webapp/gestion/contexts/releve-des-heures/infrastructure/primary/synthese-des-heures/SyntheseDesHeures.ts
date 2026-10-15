@@ -1,6 +1,5 @@
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { ReservedToGestionnaire } from '@/gestion/shared/authentication/infrastructure/primary/reserved-to-gestionnaire.directive';
 import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, linkedSignal, resource, Signal } from '@angular/core';
@@ -52,7 +51,7 @@ const derniereSemaineDe = (annee: number, courante: SemaineISO): number =>
   host: { 'data-selector': 'synthese-page' },
   templateUrl: './SyntheseDesHeures.html',
   styleUrl: './SyntheseDesHeures.css',
-  imports: [ErrorMessage, SelecteurOperateur, Icon, Journal, MatButtonModule, NgTemplateOutlet, ReservedToGestionnaire, RouterLink],
+  imports: [ErrorMessage, SelecteurOperateur, Icon, Journal, MatButtonModule, NgTemplateOutlet, RouterLink],
 })
 export class SyntheseDesHeures {
   protected readonly libelles = LIBELLES_RELEVE_DES_HEURES;

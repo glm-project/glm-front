@@ -71,7 +71,7 @@ sert à borner l'ajout qui finit le lendemain.
 
 ## Restitution de la page
 
-La route `operateurs/:operateur/journees/:jour` est gardée par `reservedToGestionnaire`. `CorrigerLaJourneePage` lit
+`CorrigerLaJourneePage` lit
 l'adresse et le jour courant (`localCalendarDay`, lu par la page). Un `:jour` mal formé, hors calendrier ou après aujourd'hui
 (`JourACorriger.demande`) ramène au relevé de l'opérateur, `/operateurs/:operateur/heures`, sans rien lire ; un opérateur
 inconnu affiche « Opérateur introuvable » sans signalement technique ; une panne de lecture affiche un message et

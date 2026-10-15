@@ -44,27 +44,6 @@ application unstable. The decision and its alternatives are in
 account without the role (« Condition - User Role » then « Deny Access »); that flow lives outside this repository
 and the shell check stays necessary.
 
-The `anomalies` route reserves itself with `reservedToGestionnaire`, a `canMatch` guard in
-`gestion/shared/authentication/infrastructure/primary/`. It awaits `realmRoles()` and returns `true` for the
-gestionnaire, or the `UrlTree` of `/` for anyone else, so the reserved address simply does not match and the
-Supervision opens. It never returns `false`: the repository has no `**` route, so a refusal would raise NG04002
-towards `ErrorHandlerPort`. While authentication is pending, and for good if it fails, the guard stays pending
-with the promise: the address does not change and no error is added to the authentication failure. A unit
-spec runs the guard through `TestBed.runInInjectionContext`; the application tests hold, release or refuse
-authentication to cover the journeys. The redirection is not recorded for a consultant: in-app, the router never
-moved the URL to the reserved address, so it pushes `/` after the current page; on a load or a browser
-traversal it replaces the entry. Going back therefore returns to the previous page and never to the reserved
-address.
-
-A context reserves an element, not a route, to the gestionnaire with the structural directive
-`*glmReservedToGestionnaire` (`ReservedToGestionnaire`, `reserved-to-gestionnaire.directive.ts` beside the guard). It reads
-`RolesPort`, applies `isGestionnaire` and renders its content only once `realmRoles()` has resolved with
-`ROLE_GESTIONNAIRE`: while the roles are unresolved, or for any other role, the element is absent. A context therefore never
-reads the roles itself; the authentication of Gestion stays the one place that does, and ADR 0052 stays true. The header keeps its
-own signal because it filters a list of destinations. A spec that renders a template using the directive provides a `RolesPort`
-(`RolesFixture` in `@test/unit/fixtures/gestion/authentication/`, or `window.gestionRolesFixture` in the Cypress build).
-The `selector` carries the `glm` prefix the lint requires. The correction of a day is the first user, from the report of hours.
-
 ## Each front owns its wiring
 
 `gestion/auth.provider.ts` builds `keycloak-js` from the front environment, binds

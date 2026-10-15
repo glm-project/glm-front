@@ -2,7 +2,7 @@
 
 ## Status
 
-`Proposed` le 15 octobre 2026.
+`Accepted` le 15 octobre 2026.
 
 - `Amends 0052`: aucune route ni aucune entrée de menu n'est plus réservée. Le garde `reservedToGestionnaire` et le
   filtre des destinations de l'en-tête disparaissent. Il reste de 0052 le `RolesPort` à promesse, ses rôles figés pour
