@@ -1,4 +1,3 @@
-import { ActiviteReleveId } from '../releve/ActiviteReleveId';
 import { InstantDeReleve } from '../releve/InstantDeReleve';
 import { ActiviteDuReleve } from './ActiviteDuReleve';
 import { ElementReleveId } from './ElementReleveId';
@@ -6,16 +5,13 @@ import { FicheDIntervalle, IntervalleDActivite } from './IntervalleDActivite';
 import { PosteReleveId } from './PosteReleveId';
 
 const activiteFixture = (debut: InstantDeReleve, fin: InstantDeReleve | undefined): ActiviteDuReleve =>
-  fin === undefined
-    ? { id: new ActiviteReleveId('a'), debut, etat: 'EN_COURS' }
-    : { id: new ActiviteReleveId('a'), debut, fin, etat: 'TERMINEE' };
+  fin === undefined ? { debut, etat: 'EN_COURS' } : { debut, fin, etat: 'TERMINEE' };
 
 const instantFixture = (heure: string): InstantDeReleve => new InstantDeReleve(`2026-09-14T${heure}:00Z`);
 
 const ficheFixture = (fiche: Partial<FicheDIntervalle>): FicheDIntervalle => ({
   element: new ElementReleveId('element-1'),
   poste: undefined,
-  nature: undefined,
   categorie: 'TRAVAIL',
   debut: instantFixture('08:20'),
   fin: instantFixture('09:00'),

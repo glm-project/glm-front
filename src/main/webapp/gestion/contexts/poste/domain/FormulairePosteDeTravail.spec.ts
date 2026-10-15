@@ -21,7 +21,6 @@ describe('FormulairePosteDeTravail', () => {
         type: 'MODIFICATION',
         id: { value: 'tour-1' },
         libelle: { value: 'Tour 1' },
-        nature: { value: 'tournage' },
         natureId: { value: 'nature-tournage' },
         coutHoraire: { value: attendu },
       },
@@ -102,7 +101,6 @@ describe('FormulairePosteDeTravail', () => {
       value: {
         type: 'CREATION',
         libelle: { value: 'Tour 1' },
-        nature: { value: 'tournage' },
         natureId: { value: 'nature-tournage' },
         coutHoraire: { value: attendu },
       },

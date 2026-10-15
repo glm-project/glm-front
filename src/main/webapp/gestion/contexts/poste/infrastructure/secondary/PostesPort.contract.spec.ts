@@ -1,7 +1,6 @@
 import { components } from '@/app/generated/schema';
 import { ApiClient } from '@/app/shared/api-client/infrastructure/secondary/ApiClient';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { Page } from '@/app/shared/pagination/domain/Page';
 import { Result } from '@/app/shared/result/domain/Result';
 import { HttpBackend, HttpErrorResponse, HttpEvent, HttpRequest, HttpResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting, TestRequest } from '@angular/common/http/testing';
@@ -23,7 +22,6 @@ import { PostesPort } from '../../domain/PostesPort';
 import { RefusCreationPoste } from '../../domain/RefusCreationPoste';
 import { RefusModificationPoste } from '../../domain/RefusModificationPoste';
 import { RefusSuppressionPoste } from '../../domain/RefusSuppressionPoste';
-import { RequetePostes } from '../../domain/RequetePostes';
 import { HttpPostes } from './HttpPostes';
 
 type RestPoste = components['schemas']['RestPosteDeTravail'];
@@ -189,31 +187,21 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     expect(entries).toHaveLength(125);
   });
 
-  it('should return the requested page with domain values and the total count', async () => {
+  it('should return the workstations with their domain values', async () => {
     givenWorkstations([tourFixture, scieFixture]);
 
-    const page = await whenQueryingPage(0, 10);
+    const entries = await port.referentiel();
 
-    thenPageMatches(page, 2, [
+    thenWorkstationsMatch(entries, [
       { id: 'tour-1', libelle: 'Tour 1', nature: 'tournage', coutHoraire: 45.5 },
       { id: 'scie-1', libelle: 'Scie 1', nature: 'sciage' },
     ]);
   });
 
-  it('should slice pages according to the requested page and size', async () => {
-    givenManyWorkstations(25);
-
-    const page = await whenQueryingPage(1, 10);
-
-    thenPageSliceMatches(page, 25, 10, 'p-10', 'p-19');
-  });
-
-  it('should return an empty page for an empty workshop', async () => {
+  it('should return an empty referential for an empty workshop', async () => {
     givenWorkstations([]);
 
-    const page = await whenQueryingPage(0, 20);
-
-    thenPageMatches(page, 0, []);
+    thenWorkstationsMatch(await port.referentiel(), []);
   });
 
   it('should create a workstation with hourly cost and reflect it in queries', async () => {
@@ -263,13 +251,10 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     harness.seed(postes);
   };
 
-  const whenQueryingPage = (page: number, size: number): Promise<Page<PosteDeTravail>> => port.postes(new RequetePostes(page, size));
-
   const whenCreatingWorkstation = (libelle: string, nature: string, coutHoraire: number): Promise<Result<void, RefusCreationPoste>> =>
     port.creer({
       type: 'CREATION',
       libelle: new LibellePoste(libelle),
-      nature: new NatureDeTravail(nature),
       natureId: new NatureDeTravailId('nature-' + nature),
       coutHoraire: new CoutHoraire(coutHoraire),
     });
@@ -284,7 +269,6 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
       type: 'MODIFICATION',
       id: new PosteDeTravailId(id),
       libelle: new LibellePoste(libelle),
-      nature: new NatureDeTravail(nature),
       natureId: new NatureDeTravailId('nature-' + nature),
       coutHoraire: new CoutHoraire(coutHoraire),
     });
@@ -295,14 +279,12 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     expect(resultat).toEqual({ ok: true, value: undefined });
   };
 
-  const thenPageMatches = (
-    page: Page<PosteDeTravail>,
-    total: number,
+  const thenWorkstationsMatch = (
+    entries: readonly PosteDeTravail[],
     expected: readonly { id: string; libelle: string; nature: string; coutHoraire?: number }[],
   ): void => {
-    expect(page.totalCount).toBe(total);
     expect(
-      page.elements.map(poste => ({
+      entries.map(poste => ({
         id: poste.id.value,
         libelle: poste.libelle.value,
         nature: poste.nature.value,
@@ -311,16 +293,8 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
     ).toEqual(expected);
   };
 
-  const thenPageSliceMatches = (page: Page<PosteDeTravail>, total: number, count: number, firstId: string, lastId: string): void => {
-    expect(page.totalCount).toBe(total);
-    expect(page.elements).toHaveLength(count);
-    expect(page.elements[0]?.id.value).toBe(firstId);
-    expect(page.elements[count - 1]?.id.value).toBe(lastId);
-  };
-
   const thenWorkstationExists = async (libelle: string, nature: string, coutHoraire?: number): Promise<void> => {
-    const page = await port.postes(new RequetePostes(0, 20));
-    const matching = page.elements.find(poste => poste.libelle.value === libelle);
+    const matching = (await port.referentiel()).find(poste => poste.libelle.value === libelle);
     expect(matching).toBeDefined();
     expect(matching?.nature.value).toBe(nature);
     expect(matching?.coutHoraire?.value).toBe(coutHoraire);
@@ -328,8 +302,7 @@ describe.each(adapters)('PostesPort contract, honoured by %s', (_adapter, create
   };
 
   const thenWorkstationDoesNotExist = async (id: string): Promise<void> => {
-    const page = await port.postes(new RequetePostes(0, 20));
-    expect(page.elements.some(poste => poste.id.value === id)).toBe(false);
+    expect((await port.referentiel()).some(poste => poste.id.value === id)).toBe(false);
   };
 });
 
@@ -411,7 +384,6 @@ describe('Beyond the contract: HttpPostes', () => {
         return port.creer({
           type: 'CREATION',
           libelle: new LibellePoste('Tour 1'),
-          nature: new NatureDeTravail('tournage'),
           natureId: new NatureDeTravailId('nature-tournage'),
           coutHoraire: new CoutHoraire(45.5),
         });
@@ -420,7 +392,6 @@ describe('Beyond the contract: HttpPostes', () => {
           type: 'MODIFICATION',
           id: new PosteDeTravailId('tour-1'),
           libelle: new LibellePoste('Tour 1'),
-          nature: new NatureDeTravail('tournage'),
           natureId: new NatureDeTravailId('nature-tournage'),
           coutHoraire: new CoutHoraire(45.5),
         });

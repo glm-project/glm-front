@@ -1,4 +1,3 @@
-import { PointageReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageReleveId';
 import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { CategorieDElement } from '../element/CategorieDElement';
 import { ElementDuReleve } from '../element/ElementDuReleve';
@@ -40,7 +39,6 @@ const jourFixture = (jour: JourCalendaire, fiche: { pointe?: boolean; couvert?: 
       fiche.pointe === true
         ? [
             new PointageDElement({
-              id: new PointageReleveId('pointage-fixture'),
               type: 'DEBUT',
               instant: instant,
               cible: new CibleDePointage(new ElementReleveId('element-1'), undefined),

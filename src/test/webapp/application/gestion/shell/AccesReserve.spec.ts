@@ -8,8 +8,6 @@ import {
 import { givenTheElementsFinsAutomatiques } from '../../../utils/gestion/anomalies-de-pointage/FinsAutomatiquesHttp.fixture';
 import { AuthenticationFixture } from '../../../utils/gestion/authentication/AuthenticationFixture';
 import type {} from '../../../utils/gestion/authentication/RolesFixture';
-import { ElementsApiFixture } from '../../../utils/gestion/element-de-fabrication/ElementsApiFixture';
-import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
 
 const ROLES_WITHOUT_GESTIONNAIRE = ['ROLE_USER'];
 const LATE_REQUEST_HORIZON_FIXTURE_MS = 500;
@@ -17,8 +15,6 @@ const DOSSIER_ADDRESS = `/anomalies/${suiviFinAutomatiqueFixture}?pointage=${ouv
 
 describe('Gestion shell, opened to the gestionnaire alone', () => {
   beforeEach(() => {
-    new SupervisionApiFixture().intercept();
-    new ElementsApiFixture().install();
     givenTheReferentielFinAutomatique();
     givenTheElementsFinsAutomatiques();
     givenAnAddressedDossier();

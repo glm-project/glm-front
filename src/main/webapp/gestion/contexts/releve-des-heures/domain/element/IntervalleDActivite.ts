@@ -8,7 +8,6 @@ import { PosteReleveId } from './PosteReleveId';
 export interface FicheDIntervalle {
   readonly element: ElementReleveId;
   readonly poste: PosteReleveId | undefined;
-  readonly nature: string | undefined;
   readonly categorie: CategorieDActivite;
   readonly debut: InstantDeReleve;
   readonly fin: InstantDeReleve | undefined;
@@ -18,7 +17,6 @@ export interface FicheDIntervalle {
 export class IntervalleDActivite {
   readonly element: ElementReleveId;
   readonly poste: PosteReleveId | undefined;
-  readonly nature: string | undefined;
   readonly categorie: CategorieDActivite;
   readonly debut: InstantDeReleve;
   readonly fin: InstantDeReleve | undefined;
@@ -30,7 +28,6 @@ export class IntervalleDActivite {
     }
     this.element = fiche.element;
     this.poste = fiche.poste;
-    this.nature = fiche.nature;
     this.categorie = fiche.categorie;
     this.debut = fiche.debut;
     this.fin = fiche.fin;

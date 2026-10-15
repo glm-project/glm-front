@@ -1,4 +1,3 @@
-import { PointageReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageReleveId';
 import { DureeTravaillee } from '../duree/DureeTravaillee';
 import { ActiviteDuReleve } from '../element/ActiviteDuReleve';
 import { CategorieDElement } from '../element/CategorieDElement';
@@ -9,7 +8,6 @@ import { PosteDeLElement } from '../element/PosteDeLElement';
 import { PosteReleveId } from '../element/PosteReleveId';
 import { JourCalendaire } from '../semaine/JourCalendaire';
 import { SemaineISO } from '../semaine/SemaineISO';
-import { ActiviteReleveId } from './ActiviteReleveId';
 import { CibleDePointage } from './CibleDePointage';
 import { IdentiteOperateur } from './IdentiteOperateur';
 import { InstantDeReleve } from './InstantDeReleve';
@@ -18,9 +16,7 @@ import { PointageDElement } from './PointageDElement';
 import { FicheDuReleve, ReleveDesHeures } from './ReleveDesHeures';
 
 const activiteFixture = (debut: InstantDeReleve, fin: InstantDeReleve | undefined): ActiviteDuReleve =>
-  fin === undefined
-    ? { id: new ActiviteReleveId('a'), debut, etat: 'EN_COURS' }
-    : { id: new ActiviteReleveId('a'), debut, fin, etat: 'TERMINEE' };
+  fin === undefined ? { debut, etat: 'EN_COURS' } : { debut, fin, etat: 'TERMINEE' };
 
 const SEMAINE = new SemaineISO(2026, 38);
 
@@ -62,7 +58,6 @@ const intervalleFixture = (element: string, poste: string, debut: string, fin: s
   new IntervalleDActivite({
     element: new ElementReleveId(element),
     poste: new PosteReleveId(poste),
-    nature: undefined,
     categorie: 'TRAVAIL',
     debut: instantDe(debut),
     fin: fin === undefined ? undefined : instantDe(fin),
@@ -71,7 +66,6 @@ const intervalleFixture = (element: string, poste: string, debut: string, fin: s
 
 const pointageDElementFixture = (element: string, poste: string): PointageDElement =>
   new PointageDElement({
-    id: new PointageReleveId('pointage-fixture'),
     type: 'DEBUT',
     instant: instantDe('08:00'),
     cible: new CibleDePointage(new ElementReleveId(element), new PosteReleveId(poste)),
@@ -225,7 +219,6 @@ describe('ReleveDesHeures', () => {
         releveDes({
           pointages: [
             new PointageDElement({
-              id: new PointageReleveId('pointage-fixture'),
               type: 'DEBUT',
               instant: instantDe('08:00'),
               cible: new CibleDePointage(new ElementReleveId('carter'), undefined),

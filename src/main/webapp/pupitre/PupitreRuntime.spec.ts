@@ -1,9 +1,7 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
-import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { DeviceAuthorizationPort, EnrolmentRequirement } from '@/pupitre/shared/authentication/domain/DeviceAuthorizationPort';
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { PupitreRuntime } from './PupitreRuntime';
@@ -58,7 +56,6 @@ class DeviceAuthorizationFixture extends DeviceAuthorizationPort {
 }
 
 class AtelierCoordinatorFixture {
-  readonly connected = signal(true).asReadonly();
   synchronizationAttempts = 0;
   unavailable = false;
   private readonly completions: Promise<void>[] = [];
@@ -98,7 +95,6 @@ describe('PupitreRuntime', () => {
         PupitreRuntime,
         { provide: EnrolementDuPupitre, useValue: enrolement },
         { provide: AtelierCoordinator, useValue: pupitre },
-        { provide: EtatHorsLigneDuPupitre, useValue: pupitre },
         { provide: ErrorHandlerPort, useValue: errorHandler },
         { provide: DeviceAuthorizationPort, useValue: authorization },
       ],

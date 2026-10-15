@@ -16,16 +16,11 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
-  cursor: default;
-}
-
 button:hover:enabled {
   background: var(--color-sunken);
 }
 
-button:focus-visible,
-input:focus-visible {
+button:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }

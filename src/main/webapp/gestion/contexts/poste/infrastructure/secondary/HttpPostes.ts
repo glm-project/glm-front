@@ -23,7 +23,6 @@ import { PostesPort } from '../../domain/PostesPort';
 import { RefusCreationPoste } from '../../domain/RefusCreationPoste';
 import { RefusModificationPoste } from '../../domain/RefusModificationPoste';
 import { RefusSuppressionPoste } from '../../domain/RefusSuppressionPoste';
-import { RequetePostes } from '../../domain/RequetePostes';
 
 const toPoste = (poste: components['schemas']['RestPosteDeTravail']): PosteDeTravail =>
   new PosteDeTravail(new PosteDeTravailId(poste.id), {
@@ -83,7 +82,7 @@ export class HttpPostes extends PostesPort {
   override async referentiel(): Promise<readonly PosteDeTravail[]> {
     try {
       return await collectAllPages(
-        (page, size) => this.postes(new RequetePostes(page, size)),
+        (page, size) => this.page(page, size),
         entry => entry.id.value,
       );
     } catch (failure) {
@@ -92,15 +91,9 @@ export class HttpPostes extends PostesPort {
     }
   }
 
-  override async postes(requete: RequetePostes): Promise<Page<PosteDeTravail>> {
-    return await this.fetchPage(requete);
-  }
-
-  private async fetchPage(requete: RequetePostes): Promise<Page<PosteDeTravail>> {
-    const response = await this.api.read('/api/postes-de-travail', {
-      queryParams: { page: requete.page, size: requete.taille },
-    });
-    return buildPageFrom(response, toPoste, requete);
+  private async page(page: number, taille: number): Promise<Page<PosteDeTravail>> {
+    const response = await this.api.read('/api/postes-de-travail', { queryParams: { page, size: taille } });
+    return buildPageFrom(response, toPoste, { page, taille });
   }
 
   override creer(commande: CommandeCreationPoste): Promise<Result<void, RefusCreationPoste>> {

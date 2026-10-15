@@ -63,10 +63,6 @@ class DeviceEnrolmentFixture extends DeviceEnrolmentPort {
   attempt(index: number): AttemptFixture {
     return requiredFixture(this.attempts[index], `enrolment attempt ${index}`);
   }
-
-  first(): AttemptFixture {
-    return this.attempt(0);
-  }
 }
 
 class ChargementDeLAtelierFixture extends ChargementDeLAtelierPort {

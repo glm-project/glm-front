@@ -148,11 +148,11 @@ describe('Operational time report in gestion', () => {
     api = new SyntheseDesHeuresApiFixture();
   });
 
-  it('should show the received closed activity and operational total without presence', () => {
+  it('should show the received closed activity and operational total', () => {
     givenAWeek(semaineDeJourFixture());
     whenVisiting(ADRESSE);
 
-    thenShowTheReceivedClosedActivityAndOperationalTotalWithoutPresence();
+    thenShowTheReceivedClosedActivityAndOperationalTotal();
   });
 
   it('should offer the correction of the day to the gestionnaire, towards the day opened', () => {
@@ -537,10 +537,9 @@ describe('Operational time report in gestion', () => {
     cy.get(dataSelector('synthese-semaine')).should('have.focus');
   };
 
-  const thenShowTheReceivedClosedActivityAndOperationalTotalWithoutPresence = (): void => {
+  const thenShowTheReceivedClosedActivityAndOperationalTotal = (): void => {
     cy.get(dataSelector('synthese-barre')).should('have.length', 1);
     cy.get(dataSelector('synthese-operationnel-total')).should('have.text', '2 h 00');
-    cy.get(dataSelector('synthese-presence-libelle')).should('not.exist');
   };
 
   const thenSplitReceivedConcurrentWorkIntoOneSubRowPerWorkstation = (): void => {

@@ -50,10 +50,10 @@ Une adresse invalide au montage n'acquiert ni relevé ni liste.
   serveur ; aucune somme des jours, éléments ou portions ne refait le total.
 - **Portion d'activité** : début et éventuelle fin de ce qui appartient au jour rendu. Une portion ne
   remplace pas l'activité d'origine. Refuser une portion finissant avant son début ; zéro est accepté.
-- **Activité d'origine** : `ActiviteReleveId`, début d'origine et état explicite. `TERMINEE` et
+- **Activité d'origine** : début d'origine et état explicite. `TERMINEE` et
   `TERMINEE_AUTOMATIQUEMENT` portent une fin effective. `EN_COURS` ne porte aucune fin effective.
   Le front ne fabrique aucune fin à minuit, à l'évaluation ou à l'échéance.
-- **Pointage** : `PointageReleveId`, instant absolu et type reçus (`DEBUT`, `NON_CONFORMITE`, `FIN`). Le
+- **Pointage** : instant absolu et type reçus (`DEBUT`, `NON_CONFORMITE`, `FIN`). Le
   pointage ne porte ni intention ni activité visée. `CibleDePointage` ne désigne que l'élément et le poste
   du pointage ; elle n'est pas l'identité d'une activité. Garder l'ordre du journal donné par le serveur.
 - **Jour vide** : ni pointage ni intervalle. Une portion traversant un jour sans pointage le rend non vide.

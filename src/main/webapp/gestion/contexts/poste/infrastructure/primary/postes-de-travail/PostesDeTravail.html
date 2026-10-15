@@ -88,7 +88,7 @@
           </ng-container>
           <ng-container matColumnDef="coutHoraire">
             <th mat-header-cell *matHeaderCellDef scope="col">Coût horaire</th>
-            <td mat-cell *matCellDef="let poste" [class.text-ink-muted]="poste.coutHoraire === undefined" data-selector="poste-cout-cell">
+            <td mat-cell *matCellDef="let poste" [class.text-ink-muted]="poste.coutHoraire === undefined">
               {{ formatCout(poste.coutHoraire) }}
             </td>
           </ng-container>

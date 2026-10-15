@@ -21,7 +21,7 @@ type EcranOperateur = 'POINTAGE' | 'MES_POINTAGES';
 @Component({
   selector: 'glm-pupitre-page',
   imports: [Designation, Enrolement, MesPointages, Pointage, PupitreHeader, Reinitialisation],
-  host: { class: 'flex h-screen flex-col', 'data-selector': 'pupitre-page' },
+  host: { class: 'flex h-screen flex-col' },
   templateUrl: './page.html',
 })
 export class PupitrePage implements OnInit, OnDestroy {

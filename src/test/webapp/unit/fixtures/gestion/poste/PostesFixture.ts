@@ -1,16 +1,20 @@
-import { Page } from '@/app/shared/pagination/domain/Page';
 import { ok, Result } from '@/app/shared/result/domain/Result';
 import { CommandeCreationPoste } from '@/gestion/contexts/poste/domain/CommandeCreationPoste';
 import { CommandeModificationPoste } from '@/gestion/contexts/poste/domain/CommandeModificationPoste';
+import { NatureDeTravail } from '@/gestion/contexts/poste/domain/NatureDeTravail';
 import { PosteDeTravail } from '@/gestion/contexts/poste/domain/PosteDeTravail';
 import { PosteDeTravailId } from '@/gestion/contexts/poste/domain/PosteDeTravailId';
 import { PostesPort } from '@/gestion/contexts/poste/domain/PostesPort';
 import { RefusCreationPoste } from '@/gestion/contexts/poste/domain/RefusCreationPoste';
 import { RefusModificationPoste } from '@/gestion/contexts/poste/domain/RefusModificationPoste';
 import { RefusSuppressionPoste } from '@/gestion/contexts/poste/domain/RefusSuppressionPoste';
-import { RequetePostes } from '@/gestion/contexts/poste/domain/RequetePostes';
 
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
+
+const configurationDe = (commande: CommandeCreationPoste | CommandeModificationPoste) => ({
+  ...commande,
+  nature: new NatureDeTravail(commande.natureId.value.replace('nature-', '')),
+});
 
 export class PostesFixture extends PostesPort {
   liste: readonly PosteDeTravail[] = [];
@@ -21,7 +25,7 @@ export class PostesFixture extends PostesPort {
   suppression: Result<void, RefusSuppressionPoste> = ok(undefined);
   lectureFailure: Error | undefined;
   ecritureFailure: Error | undefined;
-  lectureDifferee: Promise<Page<PosteDeTravail>> | undefined;
+  lectureDifferee: Promise<readonly PosteDeTravail[]> | undefined;
   creationDifferee: Promise<Result<void, RefusCreationPoste>> | undefined;
   suppressionDifferee: Promise<Result<void, RefusSuppressionPoste>> | undefined;
   private lectureSignal: SignalFixture | undefined;
@@ -31,25 +35,18 @@ export class PostesFixture extends PostesPort {
     return this.lectureSignal.promise;
   }
 
-  override async referentiel(): Promise<readonly PosteDeTravail[]> {
-    return (await this.postes(new RequetePostes(0, Number.MAX_SAFE_INTEGER))).elements;
-  }
-
-  override postes(requete: RequetePostes): Promise<Page<PosteDeTravail>> {
+  override referentiel(): Promise<readonly PosteDeTravail[]> {
     this.lectureSignal?.release();
     this.lectureSignal = undefined;
     if (this.lectureFailure !== undefined) return Promise.reject(this.lectureFailure);
-    return (
-      this.lectureDifferee
-      ?? Promise.resolve(new Page(this.liste.slice(requete.page * requete.taille, (requete.page + 1) * requete.taille), this.liste.length))
-    );
+    return this.lectureDifferee ?? Promise.resolve(this.liste);
   }
 
   override async creer(commande: CommandeCreationPoste): Promise<Result<void, RefusCreationPoste>> {
     this.enregistrements.push(commande);
     const resultat = await this.answerEnregistrement(this.creationDifferee ?? Promise.resolve(this.creation));
     if (resultat.ok) {
-      this.liste = [...this.liste, new PosteDeTravail(new PosteDeTravailId('created-poste'), commande)];
+      this.liste = [...this.liste, new PosteDeTravail(new PosteDeTravailId('created-poste'), configurationDe(commande))];
     }
     return resultat;
   }
@@ -58,7 +55,9 @@ export class PostesFixture extends PostesPort {
     this.enregistrements.push(commande);
     const resultat = await this.answerEnregistrement(Promise.resolve(this.modification));
     if (resultat.ok) {
-      this.liste = this.liste.map(poste => (poste.id.value === commande.id.value ? new PosteDeTravail(poste.id, commande) : poste));
+      this.liste = this.liste.map(poste =>
+        poste.id.value === commande.id.value ? new PosteDeTravail(poste.id, configurationDe(commande)) : poste,
+      );
     }
     return resultat;
   }
