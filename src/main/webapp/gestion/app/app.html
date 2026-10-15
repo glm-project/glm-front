@@ -1,7 +1,15 @@
-<glm-gestion-header [heading]="appName()" />
+<glm-gestion-header [heading]="appName()" [ouverte]="ouverte()" />
 
 <div class="flex-1">
-  @if (authenticated()) {
+  @switch (acces()) { @case ('OUVERTE') {
   <router-outlet />
-  }
+  } @case ('RESERVEE') {
+  <section class="mx-auto flex max-w-xl flex-col gap-4 px-4 py-12 md:px-8" data-selector="gestion-acces-reserve">
+    <h1 class="text-title">{{ libelles.accesReserve }}</h1>
+    <p class="text-body text-ink-muted">{{ libelles.accesReserveExplication }}</p>
+    <button mat-flat-button type="button" class="self-start" data-selector="gestion-acces-reserve-deconnexion" (click)="deconnecter()">
+      {{ libelles.deconnexion }}
+    </button>
+  </section>
+  } }
 </div>

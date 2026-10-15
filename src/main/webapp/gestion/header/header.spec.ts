@@ -31,15 +31,17 @@ const configureHeaderOf = async (roles: readonly string[], parametrage = new Par
   }).compileComponents();
 };
 
-const showTheHeader = async (): Promise<ComponentFixture<GestionHeader>> => {
+const showTheHeader = async (ouverte = false): Promise<ComponentFixture<GestionHeader>> => {
   const shown = TestBed.createComponent(GestionHeader);
   shown.componentRef.setInput('heading', 'glmfront');
+  shown.componentRef.setInput('ouverte', ouverte);
   await shown.whenStable();
   return shown;
 };
 
 const openTheSession = async (shown: ComponentFixture<GestionHeader>): Promise<void> => {
   await TestBed.inject(AuthenticationPort).authenticate();
+  shown.componentRef.setInput('ouverte', true);
   await shown.whenStable();
 };
 
@@ -163,6 +165,52 @@ describe('Gestion header', () => {
   };
 });
 
+describe('Gestion header, while the application is closed', () => {
+  let fixture: ComponentFixture<GestionHeader>;
+
+  beforeEach(async () => {
+    await configureHeaderOf([ROLE_GESTIONNAIRE]);
+    fixture = await showTheHeader();
+  });
+
+  it('should offer neither the navigation nor the settings, but keep the logout', () => {
+    thenNeitherTheNavigationNorTheSettingsAreOffered();
+    thenTheLogoutIsOffered();
+  });
+
+  it('should not offer to unfold a navigation it does not show', () => {
+    thenNoMenuButtonIsOffered();
+  });
+
+  it('should end the session on click on the logout button', () => {
+    whenClickingLogout();
+
+    thenTheSessionIsOver();
+  });
+
+  const whenClickingLogout = (): void => {
+    const logoutButton = fixture.debugElement.query(By.css(dataSelector('gestion-logout'))).nativeElement as HTMLElement;
+    logoutButton.click();
+  };
+
+  const thenNeitherTheNavigationNorTheSettingsAreOffered = (): void => {
+    expect(document.querySelector(dataSelector('gestion-navigation'))).toBeNull();
+    expect(document.querySelector(dataSelector('gestion-parametres'))).toBeNull();
+  };
+
+  const thenTheLogoutIsOffered = (): void => {
+    expect(document.querySelector(dataSelector('gestion-logout'))).not.toBeNull();
+  };
+
+  const thenNoMenuButtonIsOffered = (): void => {
+    expect(document.querySelector(dataSelector('gestion-menu'))).toBeNull();
+  };
+
+  const thenTheSessionIsOver = (): void => {
+    expect(TestBed.inject(AuthenticationPort).currentToken()).toBeUndefined();
+  };
+});
+
 describe('Gestion header, according to the realm roles', () => {
   it('should offer the anomalies destination to a gestionnaire', async () => {
     await configureHeaderOf([ROLE_GESTIONNAIRE]);
@@ -204,7 +252,7 @@ describe('Gestion header, according to the realm roles', () => {
   it('should hide the anomalies destination while the realm roles are unknown', async () => {
     await configureHeaderOf([ROLE_GESTIONNAIRE]);
 
-    await showTheHeader();
+    await showTheHeader(true);
 
     thenAnomaliesAreOffered(false);
     thenTheOtherDestinationsAreOffered();

@@ -2,7 +2,7 @@ import { AuthenticationPort } from '@/app/shared/authentication/domain/Authentic
 import { Icon } from '@/app/shared/design-system/infrastructure/primary/icon/icon';
 import { LogoDeLEntreprise } from '@/gestion/contexts/parametrage/infrastructure/primary/logo-de-l-entreprise/LogoDeLEntreprise';
 import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
-import { isReservedToGestionnaire } from '@/gestion/shared/authentication/infrastructure/primary/gestionnaire';
+import { isGestionnaire } from '@/gestion/shared/authentication/infrastructure/primary/gestionnaire';
 import { MarqueGlm } from '@/gestion/shared/design-system/infrastructure/primary/marque-glm/MarqueGlm';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -55,15 +55,15 @@ const LIBELLES_EN_TETE = {
 })
 export class GestionHeader {
   readonly heading = input.required<string>();
+  readonly ouverte = input.required<boolean>();
   private readonly authentication = inject(AuthenticationPort);
   private readonly roles = inject(RolesPort);
   private readonly realmRoles = toSignal(from(this.roles.realmRoles()));
 
   protected readonly libelles = LIBELLES_EN_TETE;
-  protected readonly sessionOuverte = computed(() => this.realmRoles() !== undefined);
   protected readonly gestionnaire = computed(() => {
     const roles = this.realmRoles();
-    return roles !== undefined && isReservedToGestionnaire(roles);
+    return roles !== undefined && isGestionnaire(roles);
   });
   protected readonly destinations = computed(() =>
     DESTINATIONS.filter(destination => this.gestionnaire() || !destination.reserveeAuGestionnaire),

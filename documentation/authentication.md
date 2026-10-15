@@ -20,14 +20,29 @@ authentication has succeeded, with the realm roles of the session. It never reje
 for a failure: when authentication fails or Keycloak opens no session (the window reloads), the promise stays
 pending, so no second error is reported and nothing redirects before the reload. Roles are read once, at the
 end of `authenticate()`; a role changed in Keycloak applies at the next sign-in, and the back stays the
-authority. The port holds no business word. `ROLE_GESTIONNAIRE` and the predicate `isReservedToGestionnaire`
-live once, in `gestion/shared/authentication/infrastructure/primary/gestionnaire.ts`, for every Gestion caller.
+authority. The port holds no business word. `ROLE_GESTIONNAIRE` and the predicate `isGestionnaire` live once, in
+`gestion/shared/authentication/infrastructure/primary/gestionnaire.ts`.
 
-`KeycloakOidcAuthentication` implements both ports on one object. The header turns `realmRoles()` into a signal
-and drops the « Anomalies » destination until it holds `ROLE_GESTIONNAIRE`, so the entry appears when
-authentication ends. Do not read this port through `resource()`: a promise that may stay pending would hold the
+`KeycloakOidcAuthentication` implements both ports on one object. The Gestion shell (`gestion/app/app.ts`) is the
+one consumer: Gestion has a single audience, the gestionnaire, and the shell checks `ROLE_GESTIONNAIRE` once, at the
+end of `authenticate()`. A single signal carries three states:
+
+- in progress: authentication or the roles are not known yet. The header shows the GLM mark and « Se déconnecter »,
+  and nothing is routed;
+- open: the roles hold `ROLE_GESTIONNAIRE`. The shell mounts the `<router-outlet>` and tells the header, through its
+  `ouverte` input, to show the navigation, the settings and the logo of the company;
+- reserved: the roles do not hold it. The shell shows the access-reserved screen
+  (`data-selector="gestion-acces-reserve"`) with a « Se déconnecter » button that calls `AuthenticationPort.logout()`,
+  and never mounts the `<router-outlet>`: no routed screen is created and no request leaves for the API.
+
+The reserved access is not an error and does not go through `ErrorHandlerPort`. When authentication fails, the
+shell stays in progress and the failure is reported once; when Keycloak opens no session, the roles promise stays
+pending until the reload. Do not read this port through `resource()`: a promise that may stay pending would hold the
 application unstable. The decision and its alternatives are in
-[ADR 0052](adr/0052-reserve-anomalies-to-the-gestionnaire.md).
+[ADR 0058](adr/0058-open-gestion-to-the-gestionnaire-alone.md), which amends
+[ADR 0052](adr/0052-reserve-anomalies-to-the-gestionnaire.md). Keycloak should also refuse the `gestion` client to an
+account without the role (« Condition - User Role » then « Deny Access »); that flow lives outside this repository
+and the shell check stays necessary.
 
 The `anomalies` route reserves itself with `reservedToGestionnaire`, a `canMatch` guard in
 `gestion/shared/authentication/infrastructure/primary/`. It awaits `realmRoles()` and returns `true` for the
@@ -43,7 +58,7 @@ address.
 
 A context reserves an element, not a route, to the gestionnaire with the structural directive
 `*glmReservedToGestionnaire` (`ReservedToGestionnaire`, `reserved-to-gestionnaire.directive.ts` beside the guard). It reads
-`RolesPort`, applies `isReservedToGestionnaire` and renders its content only once `realmRoles()` has resolved with
+`RolesPort`, applies `isGestionnaire` and renders its content only once `realmRoles()` has resolved with
 `ROLE_GESTIONNAIRE`: while the roles are unresolved, or for any other role, the element is absent. A context therefore never
 reads the roles itself; the authentication of Gestion stays the one place that does, and ADR 0052 stays true. The header keeps its
 own signal because it filters a list of destinations. A spec that renders a template using the directive provides a `RolesPort`
@@ -53,9 +68,9 @@ The `selector` carries the `glm` prefix the lint requires. The correction of a d
 ## Each front owns its wiring
 
 `gestion/auth.provider.ts` builds `keycloak-js` from the front environment, binds
-`KeycloakOidcAuthentication`, and exposes it as `AuthenticationPort` and `RolesPort` with `useExisting`. The Gestion shell mounts routed content only after `authenticate()` succeeds,
-so the first API session synchronization cannot precede the authorization-code exchange. An authentication
-failure is reported through `ErrorHandlerPort` and keeps the routed content closed.
+`KeycloakOidcAuthentication`, and exposes it as `AuthenticationPort` and `RolesPort` with `useExisting`. The Gestion shell mounts routed content only after `authenticate()` succeeds and the roles hold
+`ROLE_GESTIONNAIRE`, so the first API session synchronization cannot precede the authorization-code exchange. An
+authentication failure is reported through `ErrorHandlerPort` and keeps the routed content closed.
 
 The Cypress build replaces that provider file with a composition under `src/test/`. It binds one
 `InMemoryGestionAuthentication` to both ports, plays the gestionnaire by default, plays other realm roles

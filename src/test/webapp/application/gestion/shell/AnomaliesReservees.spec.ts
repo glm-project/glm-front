@@ -40,15 +40,6 @@ describe('Anomalies reserved to the gestionnaire', () => {
     thenTheDossierIsDisplayed();
   });
 
-  it('should send a consultant to the supervision once authentication completes', () => {
-    const authenticationFixture = new AuthenticationFixture();
-
-    whenOpeningTheDossierWithRetainedAuthentication(authenticationFixture, CONSULTANT_ROLES);
-    whenAuthenticationCompletes(authenticationFixture);
-
-    thenTheConsultantIsOnTheSupervisionWithoutTheAnomaliesEntry();
-  });
-
   it('should keep the address and report only the refusal when authentication is refused', () => {
     const authenticationFixture = new AuthenticationFixture();
     const reportedErrors: string[] = [];
@@ -57,12 +48,6 @@ describe('Anomalies reserved to the gestionnaire', () => {
     whenAuthenticationIsRefused(authenticationFixture);
 
     thenTheAddressIsUnchangedAndOnlyTheRefusalIsReported(reportedErrors);
-  });
-
-  it('should send a consultant who opens the list of anomalies to the supervision', () => {
-    whenVisitingTheListAsAConsultant();
-
-    thenTheConsultantIsOnTheSupervisionWithoutTheAnomaliesEntry();
   });
 
   it('should return a consultant to the previous page, not to the reserved address, when going back from the redirection', () => {
@@ -109,11 +94,6 @@ const whenAuthenticationIsRefused = (authenticationFixture: AuthenticationFixtur
   cy.then(() => authenticationFixture.refuse());
 };
 
-const whenVisitingTheListAsAConsultant = (): void => {
-  cy.viewport(1440, 900);
-  cy.visit('/anomalies', { onBeforeLoad: openingWithRoles(CONSULTANT_ROLES) });
-};
-
 const whenVisitingTheProductsThenTheListAsAConsultantAndGoingBack = (): void => {
   cy.viewport(1440, 900);
   cy.visit('/produits', { onBeforeLoad: openingWithRoles(CONSULTANT_ROLES) });
@@ -132,14 +112,6 @@ const thenTheHeaderIsVisibleAndTheDossierAbsent = (): void => {
 const thenTheDossierIsDisplayed = (): void => {
   cy.get(dataSelector('anomalie-retour')).should('be.visible');
   cy.location('pathname').should('eq', `/anomalies/${suiviFinAutomatiqueFixture}`);
-};
-
-const thenTheConsultantIsOnTheSupervisionWithoutTheAnomaliesEntry = (): void => {
-  cy.location('pathname').should('eq', '/');
-  cy.get(dataSelector('supervision-atelier')).should('be.visible');
-  cy.get(dataSelector('gestion-navigation-supervision')).should('exist');
-  cy.get(dataSelector('gestion-navigation-anomalies')).should('not.exist');
-  cy.get(dataSelector('anomalie-retour')).should('not.exist');
 };
 
 const thenTheAddressIsUnchangedAndOnlyTheRefusalIsReported = (reportedErrors: readonly string[]): void => {

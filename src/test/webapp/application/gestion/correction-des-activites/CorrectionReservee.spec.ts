@@ -22,12 +22,6 @@ describe('Correction of the day reserved to the gestionnaire', () => {
     thenThePageToCorrectTheDayIsShown();
   });
 
-  it('should send a consultant who opens the address to the supervision', () => {
-    whenOpeningTheAddressWithRoles(['ROLE_CONSULTANT']);
-
-    thenTheConsultantIsOnTheSupervision();
-  });
-
   const whenOpeningTheAddressWithRoles = (roles: readonly string[] | undefined): void => {
     cy.viewport(1440, 900);
     cy.clock(HORLOGE, ['Date']);
@@ -41,11 +35,5 @@ describe('Correction of the day reserved to the gestionnaire', () => {
   const thenThePageToCorrectTheDayIsShown = (): void => {
     cy.get(dataSelector('corriger-titre')).should('have.text', 'Corriger la journée');
     cy.location('pathname').should('eq', ADDRESS);
-  };
-
-  const thenTheConsultantIsOnTheSupervision = (): void => {
-    cy.location('pathname').should('eq', '/');
-    cy.get(dataSelector('supervision-atelier')).should('be.visible');
-    cy.get(dataSelector('corriger-titre')).should('not.exist');
   };
 });

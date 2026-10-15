@@ -2,7 +2,7 @@ import { RolesPort } from '@/gestion/shared/authentication/domain/RolesPort';
 import { DestroyRef, Directive, inject, OnInit, TemplateRef, ViewContainerRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { from } from 'rxjs';
-import { isReservedToGestionnaire } from './gestionnaire';
+import { isGestionnaire } from './gestionnaire';
 
 @Directive({ selector: '[glmReservedToGestionnaire]' })
 export class ReservedToGestionnaire implements OnInit {
@@ -15,7 +15,7 @@ export class ReservedToGestionnaire implements OnInit {
     from(this.roles.realmRoles())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(roles => {
-        if (isReservedToGestionnaire(roles)) {
+        if (isGestionnaire(roles)) {
           this.container.createEmbeddedView(this.template);
         }
       });
