@@ -30,7 +30,6 @@
   --largeur-etiquette: 200px;
   --largeur-total: 112px;
   --largeur-jour: minmax(88px, 1fr);
-  --colonnes: var(--largeur-etiquette) repeat(7, var(--largeur-jour)) var(--largeur-total);
   position: relative;
   min-width: calc(var(--largeur-etiquette) + var(--largeur-total) + 7 * 88px);
 }

@@ -103,7 +103,7 @@ const domaineFixture = (): ReleveDesHeures =>
     {
       0: {
         operationnelle: 'PT2H',
-        pointagesDElement: [{ id: 'debut-a', type: 'DEBUT', heure: [8, 0], poste: 'poste-1' }],
+        pointagesDElement: [{ type: 'DEBUT', heure: [8, 0], poste: 'poste-1' }],
         intervalles: [{ debut: [8, 0], fin: [10, 0], poste: 'poste-1' }],
       },
     },
@@ -310,10 +310,10 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
     expect(releve?.elements[0]?.postes[0]?.libelle).toBe('DMU 50');
   });
 
-  it('should retain clocking identity in the journal', async () => {
+  it('should retain the type of each clocking in the journal', async () => {
     const releve = await harness.port.synthese(DEMANDE);
 
-    expect(releve?.jours[0]?.pointages[0]).toMatchObject({ id: { value: 'debut-a' }, type: 'DEBUT' });
+    expect(releve?.jours[0]?.pointages[0]).toMatchObject({ type: 'DEBUT' });
     expect(releve?.jours[1]?.estVide()).toBe(true);
   });
 
@@ -332,8 +332,8 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
       releveFixture(SEMAINE, {
         0: {
           pointagesDElement: [
-            { id: 'fin-a', type: 'FIN', heure: [17, 0] },
-            { id: 'nc-b', type: 'NON_CONFORMITE', heure: [12, 0] },
+            { type: 'FIN', heure: [17, 0] },
+            { type: 'NON_CONFORMITE', heure: [12, 0] },
           ],
         },
       }),
@@ -343,9 +343,9 @@ describe.each(adapters)('SyntheseDesHeuresPort contract, honoured by %s', (_adap
 
     const releve = await harness.port.synthese(DEMANDE);
 
-    expect(releve?.jours[0]?.pointages.map(pointage => [pointage.id.value, pointage.type, pointage.cible.element.value])).toEqual([
-      ['fin-a', 'FIN', 'element-1'],
-      ['nc-b', 'NON_CONFORMITE', 'element-1'],
+    expect(releve?.jours[0]?.pointages.map(pointage => [pointage.type, pointage.cible.element.value])).toEqual([
+      ['FIN', 'element-1'],
+      ['NON_CONFORMITE', 'element-1'],
     ]);
   });
 
@@ -615,7 +615,6 @@ describe('Beyond the contract: HttpSyntheseDesHeures', () => {
     const releve = await result;
 
     expect(releve?.jours[0]?.intervalles[0]?.activite).toMatchObject({
-      id: { value: 'origine-hors-journal' },
       debut: { value: new Date('2026-09-13T22:00:00Z') },
       etat,
     });

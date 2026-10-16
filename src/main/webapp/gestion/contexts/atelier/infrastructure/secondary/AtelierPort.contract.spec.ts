@@ -19,7 +19,6 @@ const URN = 'urn:glm:erreur:atelier:';
 
 interface PassageFixture {
   readonly element: string;
-  readonly clos: boolean;
 }
 
 const notFound = (): HttpErrorResponse => new HttpErrorResponse({ status: 404, statusText: 'Not Found' });
@@ -55,14 +54,12 @@ class AtelierHttpBackendFixture implements HttpBackend {
   private engage(element: string): HttpResponse<unknown> | HttpErrorResponse {
     if (this.suiviDe(element) !== undefined) return refus(409, 'element-deja-engage');
     if (!this.elementsConnus.includes(element)) return refus(404, 'element-de-fabrication-introuvable');
-    this.passages.set(`suivi-${element}`, { element, clos: false });
+    this.passages.set(`suivi-${element}`, { element });
     return new HttpResponse({ status: 201, body: { id: `suivi-${element}` } });
   }
 
   private revise(suivi: string, clos: boolean): HttpResponse<unknown> | HttpErrorResponse {
-    const passage = this.passages.get(suivi);
-    if (passage === undefined) return refus(404, 'suivi-d-atelier-introuvable');
-    this.passages.set(suivi, { element: passage.element, clos });
+    if (!this.passages.has(suivi)) return refus(404, 'suivi-d-atelier-introuvable');
     return new HttpResponse({ status: clos ? 200 : 204, body: {} });
   }
 }
@@ -217,18 +214,6 @@ describe('Beyond the contract: HttpAtelier', () => {
 
     await result;
     expect(request.request.body).toEqual({});
-  });
-
-  it.each([
-    ['mettreALAtelier', 'POST', ROUTE, 409, 'element-deja-engage', new ElementDejaALAtelier()],
-    ['mettreALAtelier', 'POST', ROUTE, 404, 'element-de-fabrication-introuvable', new ElementDeFabricationIntrouvable()],
-    ['cloturer', 'PUT', `${ROUTE}/suivi-1/cloture`, 404, 'suivi-d-atelier-introuvable', new SuiviIntrouvable()],
-    ['rouvrir', 'DELETE', `${ROUTE}/suivi-1/cloture`, 404, 'suivi-d-atelier-introuvable', new SuiviIntrouvable()],
-  ] as const)('should translate the %s refusal into the domain', async (action, method, url, status, code, attendu) => {
-    const result = whenCommandStarts(action);
-    await whenWriteAnswers(method, url, status, { type: `${URN}${code}` });
-
-    expect(await result).toEqual({ ok: false, error: attendu });
   });
 
   it('should keep a closure refusal unknown to closure a technical failure', async () => {

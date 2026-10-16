@@ -1,23 +1,14 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
-import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
-import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
-import { CommandesGlobales } from '@/pupitre/contexts/atelier/domain/designation/fenetre-operateur/CommandesGlobales';
-import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
-import { VueDEnrolement } from '@/pupitre/contexts/enrolement/domain/Enrolement';
 import { PupitreRuntime } from '@/pupitre/PupitreRuntime';
 import { PupitreVersionUpdater } from '@/pupitre/PupitreVersionUpdater';
-import { signal } from '@angular/core';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
-import { dataSelector } from '@test/utils/DataSelector';
 
 import { routes } from '../app.route';
 import { App } from './app';
 
 class PupitreRuntimeFixture {
-  readonly connected = signal(true).asReadonly();
   started = false;
   failure: Error | undefined;
 
@@ -38,44 +29,6 @@ class PupitreVersionUpdaterFixture {
   }
 }
 
-class AtelierCoordinatorPageFixture {
-  readonly connected = signal(true);
-  readonly operateur = signal(undefined);
-  readonly echecCaptureLocale = signal(false);
-  readonly refusAtelier = signal(undefined);
-  readonly pointage = signal(undefined);
-  readonly gestesDisponibles = signal(true);
-  readonly commandesGlobales = signal(new CommandesGlobales({ activiteEnCours: false, pauseEnCours: false }));
-
-  referentiel(): undefined {
-    return undefined;
-  }
-
-  registerPress(): boolean {
-    return true;
-  }
-
-  finish(): Promise<void> {
-    return Promise.resolve();
-  }
-}
-
-class EnrolementPageFixture {
-  readonly vue = signal<VueDEnrolement>({ kind: 'DEMANDE_EN_COURS' }).asReadonly();
-
-  rafraichir(): void {
-    return undefined;
-  }
-
-  enroler(): Promise<void> {
-    return Promise.resolve();
-  }
-
-  chargerLAtelier(): Promise<void> {
-    return Promise.resolve();
-  }
-}
-
 describe('Pupitre shell', () => {
   let errorHandler: ErrorHandlerFixture;
   let fixture: ComponentFixture<App>;
@@ -92,10 +45,6 @@ describe('Pupitre shell', () => {
         provideRouter(routes),
         { provide: PupitreRuntime, useValue: runtime },
         { provide: PupitreVersionUpdater, useValue: versionUpdater },
-        { provide: AtelierCoordinator, useClass: AtelierCoordinatorPageFixture },
-        { provide: CurrentOperateurLifecycle, useExisting: AtelierCoordinator },
-        { provide: EtatHorsLigneDuPupitre, useExisting: AtelierCoordinator },
-        { provide: EnrolementDuPupitre, useClass: EnrolementPageFixture },
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: ErrorHandlerPort, useValue: errorHandler },
       ],
@@ -120,14 +69,6 @@ describe('Pupitre shell', () => {
     thenTheVersionUpdaterIsStarted();
   });
 
-  it('should route the common pupitre page at its root URL', async () => {
-    await whenBootingTheShell();
-
-    await whenNavigatingToTheRoot();
-
-    thenTheCommonPupitrePageIsRendered();
-  });
-
   it('should report a runtime startup refusal without starting the runtime', async () => {
     givenAuthenticationIsRefused();
 
@@ -150,16 +91,6 @@ describe('Pupitre shell', () => {
     const shell = fixture.nativeElement as HTMLElement;
 
     expect(shell.querySelector('router-outlet')).not.toBeNull();
-  };
-
-  const whenNavigatingToTheRoot = async (): Promise<void> => {
-    await TestBed.inject(Router).navigateByUrl('/');
-    fixture.detectChanges();
-  };
-
-  const thenTheCommonPupitrePageIsRendered = (): void => {
-    const shell = fixture.nativeElement as HTMLElement;
-    expect(shell.querySelector(dataSelector('pupitre-page'))).not.toBeNull();
   };
 
   const thenTheAuthenticationFailureIsReported = (): void => {

@@ -72,13 +72,13 @@ export class FormulairePosteDeTravail {
       return err(this.erreurs());
     }
     const libelle = new LibellePoste(this.saisie.libelle);
-    const { id: natureId, libelle: nature } = choisie;
+    const natureId = choisie.id;
     const coutHoraire = new CoutHoraire(this.coutNumerique());
 
     if (this.id === undefined) {
-      return ok({ type: 'CREATION', libelle, nature, natureId, coutHoraire });
+      return ok({ type: 'CREATION', libelle, natureId, coutHoraire });
     }
-    return ok({ type: 'MODIFICATION', id: this.id, libelle, nature, natureId, coutHoraire });
+    return ok({ type: 'MODIFICATION', id: this.id, libelle, natureId, coutHoraire });
   }
 
   avecLibelle(libelle: string): FormulairePosteDeTravail {

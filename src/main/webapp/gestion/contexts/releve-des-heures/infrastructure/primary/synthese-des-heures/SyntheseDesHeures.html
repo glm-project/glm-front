@@ -112,7 +112,7 @@
       <h2 class="text-section">{{ libelles.vueSemaine }}</h2>
       <p class="text-body-sm text-ink-muted">{{ libelles.axeSemaine }}</p>
     </div>
-    <div class="gestion-table semaine-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
+    <div class="gestion-table" tabindex="0" role="region" [attr.aria-label]="libelles.defilement">
       <div class="frise" role="table" [attr.aria-label]="libelles.tableau" [style.--colonnes]="vue.frise.colonnes">
         @if (vue.frise.calque; as calque) {
         <div class="calque" aria-hidden="true">
@@ -211,7 +211,7 @@
           </span>
         </div>
         @for (sousLigne of ligne.sousLignes; track sousLigne.cle) {
-        <div class="ligne sous-ligne" role="row" data-selector="synthese-sous-ligne">
+        <div class="ligne" role="row" data-selector="synthese-sous-ligne">
           <span class="etiquette text-body-sm text-ink-muted" role="rowheader" data-selector="synthese-sous-ligne-poste"
             >{{ sousLigne.poste }}</span
           >
@@ -253,7 +253,7 @@
   <div class="details-semaine">
     <div>
       @if (vue.frise.detail; as detail) {
-      <section class="gestion-carte detail-jour" aria-labelledby="detail-jour-titre" data-selector="synthese-detail-jour">
+      <section class="gestion-carte" aria-labelledby="detail-jour-titre" data-selector="synthese-detail-jour">
         <div class="flex flex-wrap justify-between gap-x-4 gap-y-2 px-5 py-4">
           <h2 id="detail-jour-titre" class="text-section">{{ libelles.detailDuJour }} · {{ detail.jour.libelle }}</h2>
           <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -294,7 +294,7 @@
               }
             </div>
             @for (sousLigne of ligne.sousLignes; track sousLigne.cle) {
-            <div class="ligne sous-ligne">
+            <div class="ligne">
               <span class="etiquette text-body-sm text-ink-muted">{{ sousLigne.poste }}</span>
               @for (cellule of sousLigne.cellules; track $index) {
               <span class="cellule"><ng-container *ngTemplateOutlet="barres; context: { $implicit: cellule, detail: true }" /></span>

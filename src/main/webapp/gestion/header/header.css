@@ -178,7 +178,6 @@ a.action {
 
   .lien {
     min-height: var(--spacing-touch);
-    padding-inline: 0.75rem;
     font-size: var(--text-body);
   }
 

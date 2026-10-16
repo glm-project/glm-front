@@ -13,7 +13,6 @@ import { ElementReleveId } from '../../domain/element/ElementReleveId';
 import { IntervalleDActivite } from '../../domain/element/IntervalleDActivite';
 import { PosteDeLElement } from '../../domain/element/PosteDeLElement';
 import { PosteReleveId } from '../../domain/element/PosteReleveId';
-import { ActiviteReleveId } from '../../domain/releve/ActiviteReleveId';
 import { CibleDePointage } from '../../domain/releve/CibleDePointage';
 import { IdentiteOperateur } from '../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../domain/releve/InstantDeReleve';
@@ -22,7 +21,6 @@ import { OperateurDuReleve } from '../../domain/releve/OperateurDuReleve';
 import { OperateurReleveId } from '../../domain/releve/OperateurReleveId';
 import { PointageDElement } from '../../domain/releve/PointageDElement';
 import { PointageDeReleve } from '../../domain/releve/PointageDeReleve';
-import { PointageReleveId } from '../../domain/releve/PointageReleveId';
 import { ReleveDesHeures } from '../../domain/releve/ReleveDesHeures';
 import { DemandeDeReleve, SyntheseDesHeuresPort } from '../../domain/releve/SyntheseDesHeuresPort';
 import { JourCalendaire } from '../../domain/semaine/JourCalendaire';
@@ -58,7 +56,6 @@ const toCible = (pointage: RestPointage): CibleDePointage =>
 
 const toPointage = (pointage: RestPointage): PointageDeReleve =>
   new PointageDElement({
-    id: new PointageReleveId(pointage.id),
     type: pointage.type,
     instant: new InstantDeReleve(pointage.dateDeSurvenue),
     cible: toCible(pointage),
@@ -84,7 +81,7 @@ const toElement = (element: RestElement): ElementDuReleve =>
 const toFin = (fin: string | undefined): InstantDeReleve | undefined => (fin === undefined ? undefined : new InstantDeReleve(fin));
 
 const toActivite = (activite: components['schemas']['RestActiviteInterpreteeDeLaFeuilleDeTemps']): ActiviteDuReleve => {
-  const commun = { id: new ActiviteReleveId(activite.id), debut: new InstantDeReleve(activite.debut) };
+  const commun = { debut: new InstantDeReleve(activite.debut) };
   switch (activite.etat) {
     case 'TERMINEE':
     case 'TERMINEE_AUTOMATIQUEMENT':
@@ -98,7 +95,6 @@ const toIntervalle = (activite: RestActivite): IntervalleDActivite =>
   new IntervalleDActivite({
     element: new ElementReleveId(activite.element),
     poste: activite.poste === undefined ? undefined : new PosteReleveId(activite.poste),
-    nature: activite.nature,
     categorie: activite.categorie,
     debut: new InstantDeReleve(activite.debut),
     fin: toFin(activite.fin),

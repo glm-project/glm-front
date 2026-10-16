@@ -21,12 +21,12 @@ const soudageFixture = new NatureGeree(new NatureDeTravailId('nature-soudage'), 
 describe('ColonneDesNatures', () => {
   let fixture: ComponentFixture<ColonneDesNatures>;
   let port: NaturesDeTravailFixture;
-  let enregistrees: NatureDeTravail[];
+  let enregistrees: number;
 
   beforeEach(async () => {
     port = new NaturesDeTravailFixture();
     port.liste = [soudageFixture];
-    enregistrees = [];
+    enregistrees = 0;
     TestBed.configureTestingModule({
       providers: [
         { provide: ComponentFixtureAutoDetect, useValue: true },
@@ -39,7 +39,7 @@ describe('ColonneDesNatures', () => {
     fixture.componentRef.setInput('choisie', undefined);
     fixture.componentRef.setInput('total', 2);
     fixture.componentRef.setInput('lue', true);
-    fixture.componentInstance.enregistree.subscribe(libelle => enregistrees.push(libelle));
+    fixture.componentInstance.enregistree.subscribe(() => (enregistrees += 1));
     await fixture.whenStable();
   });
 
@@ -47,7 +47,7 @@ describe('ColonneDesNatures', () => {
     await whenSaving('Rectification');
 
     expect(port.enregistrements).toEqual([new NatureDeTravail('Rectification')]);
-    expect(enregistrees).toEqual([new NatureDeTravail('Rectification')]);
+    expect(enregistrees).toBe(1);
     expect(text('nature-success')).toBe('Nature « Rectification » enregistrée.');
     expect(isShown('nature-form')).toBe(false);
   });
@@ -101,7 +101,7 @@ describe('ColonneDesNatures', () => {
     await whenSaving('Rectification');
 
     expect(text('nature-form')).toContain(new NatureDejaExistante().message);
-    expect(enregistrees).toEqual([]);
+    expect(enregistrees).toBe(0);
   });
 
   it('should keep the entry open after a technical failure', async () => {

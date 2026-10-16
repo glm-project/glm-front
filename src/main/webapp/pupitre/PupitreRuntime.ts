@@ -1,6 +1,5 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { AtelierCoordinator } from '@/pupitre/contexts/atelier/application/AtelierCoordinator';
-import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { DeviceAuthorizationPort, EnrolmentRequirement } from '@/pupitre/shared/authentication/domain/DeviceAuthorizationPort';
 import { inject, Injectable, OnDestroy } from '@angular/core';
@@ -9,7 +8,6 @@ import { inject, Injectable, OnDestroy } from '@angular/core';
 export class PupitreRuntime implements OnDestroy {
   private readonly enrolement = inject(EnrolementDuPupitre);
   private readonly atelier = inject(AtelierCoordinator);
-  private readonly etatHorsLigne = inject(EtatHorsLigneDuPupitre);
   private readonly errorHandler = inject(ErrorHandlerPort);
   private readonly authorization = inject(DeviceAuthorizationPort);
   private startup: Promise<void> | undefined;
@@ -19,8 +17,6 @@ export class PupitreRuntime implements OnDestroy {
   private readonly refresh = (): void => {
     this.errorHandler.observe(this.atelier.synchronize());
   };
-
-  readonly connected = this.etatHorsLigne.connected;
 
   start(): Promise<void> {
     this.startup ??= this.initialize();

@@ -7,13 +7,11 @@ import { ElementReleveId } from '@/gestion/contexts/releve-des-heures/domain/ele
 import { IntervalleDActivite } from '@/gestion/contexts/releve-des-heures/domain/element/IntervalleDActivite';
 import { PosteDeLElement } from '@/gestion/contexts/releve-des-heures/domain/element/PosteDeLElement';
 import { PosteReleveId } from '@/gestion/contexts/releve-des-heures/domain/element/PosteReleveId';
-import { ActiviteReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/ActiviteReleveId';
 import { CibleDePointage } from '@/gestion/contexts/releve-des-heures/domain/releve/CibleDePointage';
 import { IdentiteOperateur } from '@/gestion/contexts/releve-des-heures/domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '@/gestion/contexts/releve-des-heures/domain/releve/InstantDeReleve';
 import { JourDeReleve } from '@/gestion/contexts/releve-des-heures/domain/releve/JourDeReleve';
 import { PointageDElement } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageDElement';
-import { PointageReleveId } from '@/gestion/contexts/releve-des-heures/domain/releve/PointageReleveId';
 import { ReleveDesHeures } from '@/gestion/contexts/releve-des-heures/domain/releve/ReleveDesHeures';
 import { TypeDePointage } from '@/gestion/contexts/releve-des-heures/domain/releve/TypeDePointage';
 import { JourCalendaire } from '@/gestion/contexts/releve-des-heures/domain/semaine/JourCalendaire';
@@ -28,10 +26,8 @@ export const instantFixture = (rang: number, [heure, minute]: Heure): InstantDeR
 
 export const totalFixture = (valeur = 'PT0S'): DureeTravaillee => new DureeTravaillee(valeur);
 
-export const activiteFixture = (debut: InstantDeReleve, fin: InstantDeReleve | undefined, id = 'activite-fixture'): ActiviteDuReleve =>
-  fin === undefined
-    ? { id: new ActiviteReleveId(id), debut, etat: 'EN_COURS' }
-    : { id: new ActiviteReleveId(id), debut, etat: 'TERMINEE', fin };
+export const activiteFixture = (debut: InstantDeReleve, fin: InstantDeReleve | undefined): ActiviteDuReleve =>
+  fin === undefined ? { debut, etat: 'EN_COURS' } : { debut, etat: 'TERMINEE', fin };
 
 export interface IntervalleFixture {
   readonly element?: string;
@@ -43,7 +39,6 @@ export interface IntervalleFixture {
 }
 
 export interface PointageDElementFixture {
-  readonly id?: string;
   readonly type: TypeDePointage;
   readonly heure: Heure;
   readonly element?: string;
@@ -62,7 +57,6 @@ const instantDuJourFixture = (jour: JourCalendaire, [heure, minute]: Heure): Ins
 
 export const pointageFixture = (rang: number, pointage: PointageDElementFixture, jour?: JourCalendaire): PointageDElement =>
   new PointageDElement({
-    id: new PointageReleveId(pointage.id ?? `${pointage.element ?? 'element-1'}:${String(rang)}:${pointage.heure.join(':')}`),
     type: pointage.type,
     instant: jour === undefined ? instantFixture(rang, pointage.heure) : instantDuJourFixture(jour, pointage.heure),
     cible: new CibleDePointage(
@@ -81,7 +75,6 @@ export const jourFixture = (jour: JourCalendaire, rang: number, fiche: JourFixtu
       return new IntervalleDActivite({
         element: new ElementReleveId(intervalle.element ?? 'element-1'),
         poste: intervalle.poste === undefined ? undefined : new PosteReleveId(intervalle.poste),
-        nature: undefined,
         categorie: intervalle.categorie ?? 'TRAVAIL',
         debut,
         fin,

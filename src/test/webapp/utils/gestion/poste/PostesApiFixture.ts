@@ -65,7 +65,7 @@ export class PostesApiFixture {
       }
       const content = [...natures.values()].sort((gauche, droite) => gauche.libelle.localeCompare(droite.libelle, 'fr'));
       request.reply({ content, currentPage: 0, pageSize: Number(request.query['size'] ?? 20), totalElementsCount: content.length });
-    }).as('naturesRead');
+    });
     cy.intercept('POST', '/api/natures-de-travail', request => {
       const { libelle } = request.body as { libelle: string };
       const nature = { id: 'nature-' + String(this.natures.length + 1), libelle, utilisee: false, postes: 0 };
