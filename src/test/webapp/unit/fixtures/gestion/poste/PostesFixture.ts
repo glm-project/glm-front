@@ -2,6 +2,7 @@ import { ok, Result } from '@/app/shared/result/domain/Result';
 import { CommandeCreationPoste } from '@/gestion/contexts/poste/domain/CommandeCreationPoste';
 import { CommandeModificationPoste } from '@/gestion/contexts/poste/domain/CommandeModificationPoste';
 import { NatureDeTravail } from '@/gestion/contexts/poste/domain/NatureDeTravail';
+import { NatureDeTravailId } from '@/gestion/contexts/poste/domain/NatureDeTravailId';
 import { PosteDeTravail } from '@/gestion/contexts/poste/domain/PosteDeTravail';
 import { PosteDeTravailId } from '@/gestion/contexts/poste/domain/PosteDeTravailId';
 import { PostesPort } from '@/gestion/contexts/poste/domain/PostesPort';
@@ -11,9 +12,12 @@ import { RefusSuppressionPoste } from '@/gestion/contexts/poste/domain/RefusSupp
 
 import { SignalFixture } from '@test/unit/fixtures/SignalFixture';
 
-const configurationDe = (commande: CommandeCreationPoste | CommandeModificationPoste) => ({
+const natureNommeeDansSonIdentifiant = (natureId: NatureDeTravailId): NatureDeTravail =>
+  new NatureDeTravail(natureId.value.replace('nature-', ''));
+
+const configurationRendueParLeServeur = (commande: CommandeCreationPoste | CommandeModificationPoste) => ({
   ...commande,
-  nature: new NatureDeTravail(commande.natureId.value.replace('nature-', '')),
+  nature: natureNommeeDansSonIdentifiant(commande.natureId),
 });
 
 export class PostesFixture extends PostesPort {
@@ -46,7 +50,7 @@ export class PostesFixture extends PostesPort {
     this.enregistrements.push(commande);
     const resultat = await this.answerEnregistrement(this.creationDifferee ?? Promise.resolve(this.creation));
     if (resultat.ok) {
-      this.liste = [...this.liste, new PosteDeTravail(new PosteDeTravailId('created-poste'), configurationDe(commande))];
+      this.liste = [...this.liste, new PosteDeTravail(new PosteDeTravailId('created-poste'), configurationRendueParLeServeur(commande))];
     }
     return resultat;
   }
@@ -56,7 +60,7 @@ export class PostesFixture extends PostesPort {
     const resultat = await this.answerEnregistrement(Promise.resolve(this.modification));
     if (resultat.ok) {
       this.liste = this.liste.map(poste =>
-        poste.id.value === commande.id.value ? new PosteDeTravail(poste.id, configurationDe(commande)) : poste,
+        poste.id.value === commande.id.value ? new PosteDeTravail(poste.id, configurationRendueParLeServeur(commande)) : poste,
       );
     }
     return resultat;
