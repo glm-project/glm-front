@@ -1,0 +1,23 @@
+:host {
+  display: block;
+}
+
+.pas {
+  min-width: var(--spacing-touch);
+  min-height: var(--spacing-touch);
+  padding-inline: 0;
+  font-size: 1.125rem;
+}
+
+.grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 64rem) {
+  .grille-avec-panneau {
+    grid-template-columns: minmax(0, 1fr) 25rem;
+  }
+}

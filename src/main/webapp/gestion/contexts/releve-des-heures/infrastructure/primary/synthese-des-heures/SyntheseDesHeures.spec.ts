@@ -14,7 +14,6 @@ import { SyntheseDesHeuresFixture } from '@test/unit/fixtures/gestion/releve-des
 import { dataSelector } from '@test/utils/DataSelector';
 import { BehaviorSubject, EMPTY } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ActiviteReleveId } from '../../../domain/releve/ActiviteReleveId';
 import { IdentiteOperateur } from '../../../domain/releve/IdentiteOperateur';
 import { InstantDeReleve } from '../../../domain/releve/InstantDeReleve';
 import { OperateurReleveId } from '../../../domain/releve/OperateurReleveId';
@@ -337,7 +336,7 @@ describe('Synthese des heures component', () => {
     await componentFixture.whenStable();
   };
 
-  it('should show a received two-hour activity without any arrival or presence row', async () => {
+  it('should show a received two-hour activity with its bar and its operational total', async () => {
     givenReleve(
       releveFixture(
         SEMAINE_EN_COURS,
@@ -352,7 +351,6 @@ describe('Synthese des heures component', () => {
 
     await whenEcranAffiche();
 
-    expect(present('synthese-presence-libelle')).toBe(false);
     expect(texte('synthese-operationnel-total')).toBe('2 h 00');
     expect(textes('synthese-operationnel-jour')[0]).toBe('2 h 00');
     expect(titresDe(barresDe('travail'))).toEqual(['MOULE 1015, lundi 14, 08:00 à 10:00, travail']);
@@ -372,7 +370,6 @@ describe('Synthese des heures component', () => {
                 debut: [8, 0],
                 fin: [9, 0],
                 activite: {
-                  id: new ActiviteReleveId('a'),
                   debut: instantFixture(0, [8, 0]),
                   fin: instantFixture(0, [9, 0]),
                   etat: 'TERMINEE',
@@ -383,7 +380,6 @@ describe('Synthese des heures component', () => {
                 debut: [8, 0],
                 fin: [9, 0],
                 activite: {
-                  id: new ActiviteReleveId('b'),
                   debut: instantFixture(0, [8, 0]),
                   fin: instantFixture(0, [9, 0]),
                   etat: 'TERMINEE',
@@ -414,7 +410,6 @@ describe('Synthese des heures component', () => {
             {
               debut: [0, 0],
               activite: {
-                id: new ActiviteReleveId('dimanche-22'),
                 debut: new InstantDeReleve(new Date(2026, 8, 13, 22).toISOString()),
                 etat: 'EN_COURS',
               },
@@ -436,7 +431,6 @@ describe('Synthese des heures component', () => {
 
   it('should show the received four-hour and eight-hour portions of one night activity on nonempty days', async () => {
     const origine = {
-      id: new ActiviteReleveId('nuit'),
       debut: instantFixture(0, [20, 0]),
       fin: instantFixture(1, [8, 0]),
       etat: 'TERMINEE' as const,
@@ -472,9 +466,8 @@ describe('Synthese des heures component', () => {
     async (_cas, debut, fin, etat, duree, finBrute, attendu, automatique) => {
       const origine =
         etat === 'EN_COURS'
-          ? { id: new ActiviteReleveId('a'), debut: instantFixture(0, [debut, 0]), etat }
+          ? { debut: instantFixture(0, [debut, 0]), etat }
           : {
-              id: new ActiviteReleveId('a'),
               debut: instantFixture(0, [debut, 0]),
               fin: instantFixture(0, [requiredFixture(fin), 0]),
               etat,
@@ -487,8 +480,8 @@ describe('Synthese des heures component', () => {
               operationnelle: duree,
               intervalles: [{ debut: [debut, 0], ...(fin === undefined ? {} : { fin: [fin, 0] as const }), activite: origine }],
               pointagesDElement: [
-                { id: 'a', type: 'DEBUT', heure: [debut, 0] },
-                ...(finBrute === undefined ? [] : [{ id: 'fin-a', type: 'FIN' as const, heure: [finBrute, 0] as const }]),
+                { type: 'DEBUT', heure: [debut, 0] },
+                ...(finBrute === undefined ? [] : [{ type: 'FIN' as const, heure: [finBrute, 0] as const }]),
               ],
             },
           },
@@ -519,7 +512,6 @@ describe('Synthese des heures component', () => {
     async (numero, rang, debut, fin, duree, attendu) => {
       const semaine = new SemaineISO(2026, numero);
       const origine = {
-        id: new ActiviteReleveId('dimanche-22'),
         debut: new InstantDeReleve(new Date(2026, 8, 13, 22).toISOString()),
         fin: new InstantDeReleve(new Date(2026, 8, 14, 3).toISOString()),
         etat: 'TERMINEE' as const,
@@ -1418,7 +1410,6 @@ describe('Synthese des heures component', () => {
                 debut: [8, 0],
                 fin: [21, 0],
                 activite: {
-                  id: new ActiviteReleveId('automatique'),
                   debut: instantFixture(3, [8, 0]),
                   fin: instantFixture(3, [21, 0]),
                   etat: 'TERMINEE_AUTOMATIQUEMENT',

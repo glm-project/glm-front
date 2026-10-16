@@ -44,4 +44,8 @@ export class JourCalendaire {
   estLeMeme(autre: JourCalendaire): boolean {
     return this.jourEpoque === autre.jourEpoque;
   }
+
+  estApres(autre: JourCalendaire): boolean {
+    return this.jourEpoque > autre.jourEpoque;
+  }
 }

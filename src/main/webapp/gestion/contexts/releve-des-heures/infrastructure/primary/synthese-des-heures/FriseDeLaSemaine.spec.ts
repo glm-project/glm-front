@@ -87,4 +87,12 @@ describe('FriseDeLaSemaine', () => {
       expect(colonnes(releve, new JourCalendaire('2026-09-20'))[7]).toBe('var(--largeur-jour)');
     });
   });
+
+  describe('elapsed days', () => {
+    it('should tell which days of the week have come, today included, and which have not', () => {
+      const releve = releveFixture(SEMAINE_EN_COURS, { 0: jourTravailleFixture });
+
+      expect(frise(releve, LUNDI).jours.map(jour => jour.echu)).toEqual([true, true, true, true, false, false, false]);
+    });
+  });
 });

@@ -7,6 +7,7 @@ import {
   formatCalendarDayShortDayMonth,
   formatCalendarDayShortDayMonthYear,
   formatCalendarDayShortWithMonth,
+  formatCalendarDayWeekday,
   formatCalendarMonthName,
   formatInstantLongDay,
   formatInstantNumericDateTime,
@@ -131,6 +132,12 @@ describe('DateFormats', () => {
     const text = formatCalendarDayLong('2026-09-14');
 
     expect(text).toBe('lundi 14');
+  });
+
+  it('should format a calendar day as its full weekday alone without any time zone shift', () => {
+    const text = formatCalendarDayWeekday('2026-09-14');
+
+    expect(text).toBe('lundi');
   });
 
   it('should format a calendar day as its full weekday, day and month without any time zone shift', () => {

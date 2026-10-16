@@ -1,9 +1,9 @@
+import { AncrageDuRepere, AxeDuJour, minutesDeDebut } from '@/gestion/shared/design-system/infrastructure/primary/axe-du-jour/AxeDuJour';
 import { JourDeReleve } from '../../../domain/releve/JourDeReleve';
 import { ReleveDesHeures } from '../../../domain/releve/ReleveDesHeures';
 import { JourCalendaire } from '../../../domain/semaine/JourCalendaire';
 import { JournalDuJour, journalDuJour } from '../journal-du-jour/JournalDuJour';
 import { LIBELLES_RELEVE_DES_HEURES } from '../LibellesReleveDesHeures';
-import { AncrageDuRepere, AxeDuJour, minutesDeDebut } from './AxeDuJour';
 import { JourSurSonAxe, jourSurSonAxe } from './JourSurSonAxe';
 import { LigneDeFrise, ligneDeFrise } from './LignesDElements';
 
@@ -21,6 +21,7 @@ export interface JourDeFrise {
   readonly reperes: readonly RepereDeFrise[];
   readonly libelle: string;
   readonly aujourdhui: boolean;
+  readonly echu: boolean;
   readonly ouvert: boolean;
   readonly operationnel: string;
   readonly sansOperationnel: boolean;
@@ -69,6 +70,7 @@ const jourDeFrise = ({ jour, axe, ouvert }: JourSurSonAxe, aujourdhui: JourCalen
   reperes: axe.reperes(false).map(repere => ({ ...repere, libelle: LIBELLES.repere(repere.minutes) })),
   libelle: LIBELLES.jour(jour.jour),
   aujourdhui: jour.jour.estLeMeme(aujourdhui),
+  echu: !jour.jour.estApres(aujourdhui),
   ouvert,
   operationnel: sansOperationnel(jour) ? LIBELLES.sansValeur : LIBELLES.duree(jour.operationnelTotal),
   sansOperationnel: sansOperationnel(jour),
@@ -83,7 +85,7 @@ const repereDe = ({ axe, pointageChoisi }: JourSurSonAxe): GuideDePointage | und
   pointageChoisi === undefined
     ? undefined
     : {
-        gauche: axe.pourcentDe(minutesDeDebut(pointageChoisi.instant)),
+        gauche: axe.pourcentDe(minutesDeDebut(pointageChoisi.instant.value)),
         titre: LIBELLES.pointage(pointageChoisi.type, pointageChoisi.instant),
       };
 

@@ -1,7 +1,10 @@
 # Relevé des heures
 
 Ce contexte de `gestion` porte le relevé hebdomadaire du **temps opérationnel** d'une personne.
-Il est lecteur : la régularisation des fins automatiques appartient au contexte `anomalies-de-pointage`.
+Il est lecteur : la régularisation des fins automatiques appartient au contexte `anomalies-de-pointage`, et la
+correction des activités d'une journée au contexte `correction-des-activites`. Le relevé y mène par un lien : le bouton
+« Corriger la journée » de l'en-tête du détail du jour est un `routerLink` vers `/operateurs/:operateur/journees/:jour`,
+posé seulement pour un jour antérieur ou égal à aujourd'hui (`JourDeFrise.echu`). Il n'importe rien de ce contexte.
 La route `/operateurs/:operateur/heures`, le composant `SyntheseDesHeures` et le port
 `SyntheseDesHeuresPort` conservent leur nom pour garder les liens partagés.
 
@@ -47,10 +50,10 @@ Une adresse invalide au montage n'acquiert ni relevé ni liste.
   serveur ; aucune somme des jours, éléments ou portions ne refait le total.
 - **Portion d'activité** : début et éventuelle fin de ce qui appartient au jour rendu. Une portion ne
   remplace pas l'activité d'origine. Refuser une portion finissant avant son début ; zéro est accepté.
-- **Activité d'origine** : `ActiviteReleveId`, début d'origine et état explicite. `TERMINEE` et
+- **Activité d'origine** : début d'origine et état explicite. `TERMINEE` et
   `TERMINEE_AUTOMATIQUEMENT` portent une fin effective. `EN_COURS` ne porte aucune fin effective.
   Le front ne fabrique aucune fin à minuit, à l'évaluation ou à l'échéance.
-- **Pointage** : `PointageReleveId`, instant absolu et type reçus (`DEBUT`, `NON_CONFORMITE`, `FIN`). Le
+- **Pointage** : instant absolu et type reçus (`DEBUT`, `NON_CONFORMITE`, `FIN`). Le
   pointage ne porte ni intention ni activité visée. `CibleDePointage` ne désigne que l'élément et le poste
   du pointage ; elle n'est pas l'identité d'une activité. Garder l'ordre du journal donné par le serveur.
 - **Jour vide** : ni pointage ni intervalle. Une portion traversant un jour sans pointage le rend non vide.
@@ -125,12 +128,14 @@ pour la semaine en cours, même vide ; sinon le premier jour portant un pointage
 sélectionné est éphémère : aucun à l'ouverture, effacé au changement d’opérateur/jour/semaine, désélectionné par un
 second clic. Changer seulement le jour ou la sélection conserve les rapports acquis et leur évaluation.
 
-La vue de semaine garde sept colonnes de même largeur et une échelle commune de 0 à 24 h, vides compris.
+La vue de semaine garde sept colonnes de même largeur et une échelle commune de 0 à 24 h, vides compris, sans
+dépendre de la fenêtre de l'axe partagé.
 Les deux repères de chaque jour restent à l'intérieur de sa colonne, avec une marge lisible.
 Le jour consulté conserve son état dans l'URL, sans agrandir sa colonne. Le détail et le journal du jour
 figurent sous la semaine ; sur mobile, sept liens donnent accès aux jours sans défiler la frise.
-Le détail conserve un axe normalement 6–22 h, étendu au jour entier pour une borne nocturne ou à minuit.
-Une fin à minuit du lendemain ferme la portion à 1 440 minutes, sans fabriquer cette fin.
+Le détail place ses instants sur l'`AxeDuJour` du design system de gestion, qui possède la fenêtre (normalement
+6–22 h, étendue au jour entier pour une borne nocturne ou à minuit), ses repères et la coupure à minuit : une fin
+à minuit du lendemain ferme la portion à 1 440 minutes, sans fabriquer cette fin.
 Les mentions longues de fin automatique restent accessibles dans les barres, le détail et
 le panneau À vérifier, qui ne liste que des fins automatiques. Leur résumé dans la semaine ne doit pas dilater ses lignes.
 

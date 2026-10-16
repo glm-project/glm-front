@@ -52,6 +52,8 @@ const CALENDAR_DAY_SHORT = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', d
 
 const CALENDAR_DAY_LONG = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', day: 'numeric', timeZone: 'UTC' });
 
+const CALENDAR_DAY_WEEKDAY = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', timeZone: 'UTC' });
+
 const CALENDAR_DAY_FULL = new Intl.DateTimeFormat(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
 
 const CALENDAR_DAY_SHORT_WITH_MONTH = new Intl.DateTimeFormat(LOCALE, {
@@ -104,6 +106,8 @@ export const formatCalendarDayRange = (first: string, last: string): string =>
 export const formatCalendarDayShort = (day: string): string => CALENDAR_DAY_SHORT.format(utcMidnightOf(day));
 
 export const formatCalendarDayLong = (day: string): string => CALENDAR_DAY_LONG.format(utcMidnightOf(day));
+
+export const formatCalendarDayWeekday = (day: string): string => CALENDAR_DAY_WEEKDAY.format(utcMidnightOf(day));
 
 export const formatCalendarDayFull = (day: string): string => CALENDAR_DAY_FULL.format(utcMidnightOf(day));
 

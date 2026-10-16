@@ -95,7 +95,6 @@ describe('PosteFormDialog', () => {
       {
         type: 'CREATION',
         libelle: new LibellePoste('Tour 1'),
-        nature: new NatureDeTravail('tournage'),
         natureId: new NatureDeTravailId('nature-tournage'),
         coutHoraire: new CoutHoraire(45.5),
       },
@@ -190,7 +189,6 @@ describe('PosteFormDialog', () => {
       type: 'MODIFICATION',
       id: new PosteDeTravailId('tour-1'),
       libelle: new LibellePoste('Tour 2'),
-      nature: new NatureDeTravail('tournage'),
       natureId: new NatureDeTravailId('nature-tournage'),
       coutHoraire: new CoutHoraire(0),
     });

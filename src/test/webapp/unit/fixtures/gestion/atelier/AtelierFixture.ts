@@ -9,7 +9,6 @@ import { SuiviIntrouvable } from '@/gestion/contexts/atelier/domain/SuiviIntrouv
 
 interface Passage {
   readonly element: string;
-  readonly clos: boolean;
 }
 
 export class AtelierFixture extends AtelierPort {
@@ -25,24 +24,22 @@ export class AtelierFixture extends AtelierPort {
   }
 
   override cloturer(suivi: SuiviId): Promise<Result<void, SuiviIntrouvable>> {
-    return Promise.resolve(this.revise(suivi, true));
+    return Promise.resolve(this.revise(suivi));
   }
 
   override rouvrir(suivi: SuiviId): Promise<Result<void, SuiviIntrouvable>> {
-    return Promise.resolve(this.revise(suivi, false));
+    return Promise.resolve(this.revise(suivi));
   }
 
   private engage(element: string): Result<void, RefusMiseALAtelier> {
     if (this.suiviDe(element) !== undefined) return err(new ElementDejaALAtelier());
     if (!this.elementsConnus.includes(element)) return err(new ElementDeFabricationIntrouvable());
-    this.passages.set(`suivi-${element}`, { element, clos: false });
+    this.passages.set(`suivi-${element}`, { element });
     return ok(undefined);
   }
 
-  private revise(suivi: SuiviId, clos: boolean): Result<void, SuiviIntrouvable> {
-    const passage = this.passages.get(suivi.value);
-    if (passage === undefined) return err(new SuiviIntrouvable());
-    this.passages.set(suivi.value, { element: passage.element, clos });
+  private revise(suivi: SuiviId): Result<void, SuiviIntrouvable> {
+    if (!this.passages.has(suivi.value)) return err(new SuiviIntrouvable());
     return ok(undefined);
   }
 }

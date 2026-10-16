@@ -89,6 +89,10 @@ close policy when extracting it; sharing markup does not authorize changing an i
 Paginator labels use a technical factory while each consumer keeps its own `MatPaginatorIntl` provider and
 contextual labels. Reuse Material's paginator directly instead of introducing a wrapper around the same API.
 
+`AxeDuJour` (`gestion/shared/design-system/infrastructure/primary/axe-du-jour/`) owns the day window (6 h to 22 h,
+widened to the whole day once a bound leaves it), its landmarks and the midnight clamp: an end on another day
+closes at 1 440 minutes. Each consumer chooses which instants it places on it.
+
 ## The pupitre confirms a gesture with a sustained press
 
 `pupitre/shared/design-system/infrastructure/primary/long-press/long-press.ts` owns the `glmLongPress` primitive.

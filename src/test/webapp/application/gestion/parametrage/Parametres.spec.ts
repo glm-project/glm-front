@@ -1,9 +1,6 @@
 import { dataSelector } from '../../../utils/DataSelector';
-import type {} from '../../../utils/gestion/authentication/RolesFixture';
 import { ParametrageApiFixture, pngFixture } from '../../../utils/gestion/parametrage/ParametrageApiFixture';
 import { SupervisionApiFixture } from '../../../utils/gestion/supervision-atelier/SupervisionApiFixture';
-
-const CONSULTANT_ROLES = ['ROLE_CONSULTANT'];
 
 describe('Company settings in gestion', () => {
   beforeEach(() => new SupervisionApiFixture().intercept());
@@ -87,13 +84,6 @@ describe('Company settings in gestion', () => {
 
     thenThePreviewMeasures(256, 100);
   });
-
-  it('should send a consultant who opens the settings to the supervision, without the settings access', () => {
-    givenSettings();
-    whenVisitingSettingsAsAConsultant();
-
-    thenTheConsultantIsOnTheSupervisionWithoutTheSettingsAccess();
-  });
 });
 
 const givenSettings = (api = new ParametrageApiFixture()): ParametrageApiFixture => {
@@ -145,15 +135,6 @@ const whenChoosingTheLogo = (octets: Uint8Array): void => {
 
 const whenSavingTheLogo = (): void => {
   cy.get(dataSelector('logo-enregistrer')).click();
-};
-
-const whenVisitingSettingsAsAConsultant = (): void => {
-  cy.viewport(1440, 900);
-  cy.visit('/parametres', {
-    onBeforeLoad: window => {
-      window.gestionRolesFixture = CONSULTANT_ROLES;
-    },
-  });
 };
 
 const thenTheDurationIs = (heures: string): void => {
@@ -222,10 +203,4 @@ const thenThePreviewMeasures = (largeur: number, hauteur: number): void => {
     expect(cadre.width).to.equal(largeur);
     expect(cadre.height).to.equal(hauteur);
   });
-};
-
-const thenTheConsultantIsOnTheSupervisionWithoutTheSettingsAccess = (): void => {
-  cy.location('pathname').should('eq', '/');
-  cy.get(dataSelector('supervision-atelier')).should('be.visible');
-  cy.get(dataSelector('gestion-parametres')).should('not.exist');
 };

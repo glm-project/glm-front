@@ -4,7 +4,6 @@ import { TextField } from '@/gestion/shared/design-system/infrastructure/primary
 import { afterNextRender, Component, computed, ElementRef, inject, Injector, input, output, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { FormulaireNature } from '../../../domain/FormulaireNature';
-import { NatureDeTravail } from '../../../domain/NatureDeTravail';
 import { NatureGeree } from '../../../domain/NatureGeree';
 import { NaturesDeTravailPort } from '../../../domain/NaturesDeTravailPort';
 
@@ -25,7 +24,7 @@ export class ColonneDesNatures {
   readonly total = input.required<number>();
   readonly lue = input.required<boolean>();
   readonly choisir = output<NatureGeree | undefined>();
-  readonly enregistree = output<NatureDeTravail>();
+  readonly enregistree = output();
 
   protected readonly ajout = signal(false);
   protected readonly formulaire = signal(FormulaireNature.vide());
@@ -92,7 +91,7 @@ export class ColonneDesNatures {
       if (resultat.ok) {
         this.fermerAjout();
         this.succes.set(`Nature « ${decision.libelle.value} » enregistrée.`);
-        this.enregistree.emit(decision.libelle);
+        this.enregistree.emit();
       } else {
         this.formulaire.update(formulaire => formulaire.avecRefus(resultat.error));
       }

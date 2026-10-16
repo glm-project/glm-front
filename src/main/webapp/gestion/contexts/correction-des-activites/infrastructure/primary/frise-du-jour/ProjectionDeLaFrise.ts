@@ -1,0 +1,268 @@
+import {
+  AncrageDuRepere,
+  AxeDuJour,
+  minutesDeDebut,
+  minutesDeFin,
+} from '@/gestion/shared/design-system/infrastructure/primary/axe-du-jour/AxeDuJour';
+import { AjoutEnPreparation } from '../../../domain/correction/AjoutEnPreparation';
+import { PortionsDeLAjout } from '../../../domain/correction/PortionsDeLAjout';
+import { ActiviteDeLaJournee } from '../../../domain/journee/ActiviteDeLaJournee';
+import { BornesDuJour } from '../../../domain/journee/BornesDuJour';
+import { CategorieDActivite } from '../../../domain/journee/CategorieDActivite';
+import { InstantDeLaJournee } from '../../../domain/journee/InstantDeLaJournee';
+import { JourneeACorriger } from '../../../domain/journee/JourneeACorriger';
+import { LIBELLES_CORRECTION_DES_ACTIVITES } from '../LibellesCorrectionDesActivites';
+
+const LIBELLES = LIBELLES_CORRECTION_DES_ACTIVITES;
+
+export type StyleDeBarre = 'travail' | 'nc' | 'en-cours';
+
+export interface BarreDeFrise {
+  readonly activite: string;
+  readonly style: StyleDeBarre;
+  readonly gauche: number;
+  readonly largeur: number | undefined;
+  readonly enonce: string;
+  readonly automatique: boolean;
+  readonly coupeeAuDebut: boolean;
+  readonly coupeeALaFin: boolean;
+  readonly enAttente: boolean;
+}
+
+export type CoteDeMention = 'debut' | 'fin';
+
+export interface MentionDeFrise {
+  readonly cote: CoteDeMention;
+  readonly texte: string;
+}
+
+export type TypeDeMarque = 'debut' | 'fin';
+
+export interface MarqueDeFrise {
+  readonly type: TypeDeMarque;
+  readonly gauche: number;
+  readonly titre: string;
+}
+
+export interface LigneDeFrise {
+  readonly cle: string;
+  readonly element: string;
+  readonly poste: string;
+  readonly barres: readonly BarreDeFrise[];
+  readonly marques: readonly MarqueDeFrise[];
+  readonly mentions: readonly MentionDeFrise[];
+}
+
+export interface RepereDeFrise {
+  readonly minutes: number;
+  readonly libelle: string;
+  readonly gauche: number;
+  readonly ancrage: AncrageDuRepere;
+}
+
+export interface FriseProjetee {
+  readonly reperes: readonly RepereDeFrise[];
+  readonly lignes: readonly LigneDeFrise[];
+  readonly operationnel: string;
+}
+
+interface Portion {
+  readonly activite: ActiviteDeLaJournee;
+  readonly debut: number;
+  readonly fin: number;
+  readonly debutAvant: InstantDeLaJournee | undefined;
+  readonly finApres: InstantDeLaJournee | undefined;
+}
+
+const STYLES_DE_BARRE: Record<CategorieDActivite, StyleDeBarre> = { TRAVAIL: 'travail', NON_CONFORMITE: 'nc' };
+
+const portionDe = (activite: ActiviteDeLaJournee, bornes: BornesDuJour): Portion => {
+  const debut = activite.debutSurLeJour(bornes).value;
+  const fin = activite.finSurLeJour(bornes)?.value ?? debut;
+  return {
+    activite,
+    debut: minutesDeDebut(debut),
+    fin: minutesDeFin(debut, fin),
+    debutAvant: activite.debutAvantLeJour(bornes),
+    finApres: activite.finApresLeJour(bornes),
+  };
+};
+
+const cleDeLigne = (activite: ActiviteDeLaJournee): string => `${activite.element.id.value}|${activite.poste?.id.value ?? ''}`;
+
+const chronologique = (une: Portion, autre: Portion): number => (une.activite.debut.estAvant(autre.activite.debut) ? -1 : 1);
+
+interface Groupe {
+  readonly premiere: Portion;
+  readonly portions: Portion[];
+}
+
+const parLigne = (portions: readonly Portion[]): readonly Groupe[] => {
+  const groupes = new Map<string, Groupe>();
+  portions.forEach(portion => {
+    const groupe = groupes.get(cleDeLigne(portion.activite));
+    if (groupe === undefined) {
+      groupes.set(cleDeLigne(portion.activite), { premiere: portion, portions: [portion] });
+    } else {
+      groupe.portions.push(portion);
+    }
+  });
+  return [...groupes.values()];
+};
+
+const enCours = (activite: ActiviteDeLaJournee): boolean => activite.etat.kind === 'EN_COURS';
+
+const styleDe = (activite: ActiviteDeLaJournee): StyleDeBarre => (enCours(activite) ? 'en-cours' : STYLES_DE_BARRE[activite.categorie]);
+
+const barreDe = (portion: Portion, axe: AxeDuJour, bornes: BornesDuJour): BarreDeFrise => {
+  const gauche = axe.pourcentDe(portion.debut);
+  return {
+    activite: portion.activite.id.value,
+    style: styleDe(portion.activite),
+    gauche,
+    largeur: enCours(portion.activite) ? undefined : axe.pourcentDe(portion.fin) - gauche,
+    enonce: LIBELLES.frise.barre(portion.activite, bornes),
+    automatique: portion.activite.etat.kind === 'TERMINEE_AUTOMATIQUEMENT',
+    coupeeAuDebut: portion.debutAvant !== undefined,
+    coupeeALaFin: portion.finApres !== undefined,
+    enAttente: false,
+  };
+};
+
+const finPointee = (activite: ActiviteDeLaJournee): InstantDeLaJournee | undefined =>
+  activite.etat.kind === 'TERMINEE' ? activite.etat.fin : undefined;
+
+const marqueDeDebut = (portion: Portion, axe: AxeDuJour): readonly MarqueDeFrise[] =>
+  enCours(portion.activite) || portion.debutAvant !== undefined
+    ? []
+    : [{ type: 'debut', gauche: axe.pourcentDe(portion.debut), titre: LIBELLES.frise.debutPointe(portion.activite.debut) }];
+
+const marqueDeFin = (portion: Portion, axe: AxeDuJour): readonly MarqueDeFrise[] => {
+  const fin = finPointee(portion.activite);
+  return fin === undefined || portion.finApres !== undefined
+    ? []
+    : [{ type: 'fin', gauche: axe.pourcentDe(portion.fin), titre: LIBELLES.frise.finPointee(fin) }];
+};
+
+const marquesDe = (portion: Portion, axe: AxeDuJour): readonly MarqueDeFrise[] => [
+  ...marqueDeDebut(portion, axe),
+  ...marqueDeFin(portion, axe),
+];
+
+const mentionDeDebut = (portion: Portion): readonly MentionDeFrise[] => {
+  if (portion.debutAvant === undefined) {
+    return [];
+  }
+  const texte = enCours(portion.activite)
+    ? LIBELLES.frise.enCoursDepuis(portion.debutAvant)
+    : LIBELLES.frise.debutAvant(portion.debutAvant);
+  return [{ cote: 'debut', texte }];
+};
+
+const mentionDeFin = (portion: Portion): readonly MentionDeFrise[] =>
+  portion.finApres === undefined ? [] : [{ cote: 'fin', texte: LIBELLES.frise.suite(portion.finApres) }];
+
+const mentionsDe = (portion: Portion): readonly MentionDeFrise[] => [...mentionDeDebut(portion), ...mentionDeFin(portion)];
+
+const ligneDe = ({ premiere, portions }: Groupe, axe: AxeDuJour, bornes: BornesDuJour): LigneDeFrise => ({
+  cle: cleDeLigne(premiere.activite),
+  element: LIBELLES.nomDeLElement(premiere.activite.element),
+  poste: LIBELLES.posteDe(premiere.activite),
+  barres: portions.map(portion => barreDe(portion, axe, bornes)),
+  marques: portions.flatMap(portion => marquesDe(portion, axe)),
+  mentions: portions.flatMap(mentionsDe),
+});
+
+interface AjoutProjete {
+  readonly cle: string;
+  readonly debut: number;
+  readonly fin: number;
+  readonly ligne: Pick<LigneDeFrise, 'element' | 'poste'>;
+  readonly enonce: string;
+  readonly style: StyleDeBarre;
+  readonly suite: MentionDeFrise | undefined;
+}
+
+const suiteDeLAjout = (portions: PortionsDeLAjout): MentionDeFrise | undefined =>
+  portions.duLendemain === undefined
+    ? undefined
+    : { cote: 'fin', texte: LIBELLES.ajout.suiteDeLAjout(portions.duJourAffiche.duree, portions.intervalle.fin) };
+
+const projeter = (journee: JourneeACorriger, ajout: AjoutEnPreparation): AjoutProjete | undefined => {
+  const portions = ajout.plage(journee).portions();
+  if (portions === undefined) {
+    return undefined;
+  }
+  const { intervalle } = portions;
+  const element = ajout.suivi(journee)?.element;
+  const poste = ajout.poste(journee);
+  return {
+    cle: `${element?.id.value ?? ''}|${poste?.id.value ?? ''}`,
+    debut: minutesDeDebut(intervalle.debut.value),
+    fin: minutesDeFin(intervalle.debut.value, portions.finSurLeJourAffiche.value),
+    ligne: {
+      element: element === undefined ? LIBELLES.ajout.aAjouter : LIBELLES.nomDeLElement(element),
+      poste: LIBELLES.ajout.libelleDuPoste(poste),
+    },
+    enonce: LIBELLES.ajout.barreAAjouter(element, poste, ajout.categorie, intervalle.debut, intervalle.fin),
+    style: STYLES_DE_BARRE[ajout.categorie],
+    suite: suiteDeLAjout(portions),
+  };
+};
+
+const ajoutProjete = (journee: JourneeACorriger, ajout: AjoutEnPreparation | undefined): AjoutProjete | undefined =>
+  ajout === undefined ? undefined : projeter(journee, ajout);
+
+const barreEnAttente = (ajout: AjoutProjete, axe: AxeDuJour): BarreDeFrise => {
+  const gauche = axe.pourcentDe(ajout.debut);
+  return {
+    activite: '',
+    style: ajout.style,
+    gauche,
+    largeur: axe.pourcentDe(ajout.fin) - gauche,
+    enonce: ajout.enonce,
+    automatique: false,
+    coupeeAuDebut: false,
+    coupeeALaFin: ajout.suite !== undefined,
+    enAttente: true,
+  };
+};
+
+const avecLAjout = (lignes: readonly LigneDeFrise[], ajout: AjoutProjete | undefined, axe: AxeDuJour): readonly LigneDeFrise[] => {
+  if (ajout === undefined) {
+    return lignes;
+  }
+  const barre = barreEnAttente(ajout, axe);
+  const mentions = ajout.suite === undefined ? [] : [ajout.suite];
+  const partagee = lignes.some(ligne => ligne.cle === ajout.cle);
+  return partagee
+    ? lignes.map(ligne =>
+        ligne.cle === ajout.cle ? { ...ligne, barres: [...ligne.barres, barre], mentions: [...ligne.mentions, ...mentions] } : ligne,
+      )
+    : [...lignes, { cle: ajout.cle, ...ajout.ligne, barres: [barre], marques: [], mentions }];
+};
+
+const operationnelDe = (journee: JourneeACorriger, ajout: AjoutEnPreparation | undefined): string => {
+  const effet = ajout?.effet(journee);
+  return effet === undefined
+    ? LIBELLES.duree(journee.dureeOperationnelle)
+    : LIBELLES.avantApres(effet.jourAffiche.avant, effet.jourAffiche.apres);
+};
+
+export const friseDuJour = (journee: JourneeACorriger, ajout: AjoutEnPreparation | undefined): FriseProjetee => {
+  const portions = journee.activites.map(activite => portionDe(activite, journee.bornes)).sort(chronologique);
+  const prevu = ajoutProjete(journee, ajout);
+  const axe = AxeDuJour.de([
+    ...portions.flatMap(portion => [portion.debut, portion.fin]),
+    ...(prevu === undefined ? [] : [prevu.debut, prevu.fin]),
+  ]);
+  return {
+    reperes: axe.reperes(true).map(repere => ({ ...repere, libelle: LIBELLES.frise.repere(repere.minutes) })),
+    lignes: avecLAjout(
+      parLigne(portions).map(groupe => ligneDe(groupe, axe, journee.bornes)),
+      prevu,
+      axe,
+    ),
+    operationnel: operationnelDe(journee, ajout),
+  };
+};

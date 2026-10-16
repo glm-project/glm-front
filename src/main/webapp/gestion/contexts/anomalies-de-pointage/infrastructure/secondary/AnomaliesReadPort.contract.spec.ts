@@ -126,6 +126,19 @@ describe('Beyond the contract: HTTP anomaly dossier reading', () => {
     });
   });
 
+  it.each(['RETRAIT', 'CHANGEMENT_DE_POSTE'] as const)(
+    'should leave a %s fact of the manager out of the pointages of the dossier',
+    async type => {
+      const lecture = port.read(adresse);
+      const dossier = dossierFixture();
+      dossier.pointages = [ouvertureFixture, { ...ouvertureFixture, id: 'fait-9', type, activiteVisee: 'travail-8' }];
+      whenDossierAnswers(dossier);
+      const resultat = await lecture;
+
+      expect(dossierFromReading(resultat).journal.map(pointage => pointage.id)).toEqual([new PointageAnomalieId('debut-8')]);
+    },
+  );
+
   it('should keep no bound of the end when nothing bounds it', async () => {
     const lecture = port.read(adresse);
     const sansBorne = dossierFixture();

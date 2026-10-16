@@ -1,5 +1,4 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
-import { Page } from '@/app/shared/pagination/domain/Page';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
 import { By } from '@angular/platform-browser';
@@ -84,12 +83,12 @@ describe('PostesDeTravail page', () => {
   it('should keep loading the current catalogue when an obsolete read fails', async () => {
     givenManyWorkstations(21);
     await whenOpening();
-    const old = new DeferredFixture<Page<PosteDeTravail>>();
+    const old = new DeferredFixture<readonly PosteDeTravail[]>();
     givenReadingIsPending(old);
     const firstArrival = port.signalLecture();
     whenRefreshingCatalogue();
     await firstArrival;
-    const current = new DeferredFixture<Page<PosteDeTravail>>();
+    const current = new DeferredFixture<readonly PosteDeTravail[]>();
     givenReadingIsPending(current);
     const secondArrival = port.signalLecture();
     whenRefreshingCatalogue();
@@ -98,7 +97,7 @@ describe('PostesDeTravail page', () => {
     await whenViewSettles();
     const loading = text('postes-loading');
     const failure = text('postes-error');
-    current.resolve(new Page([scieFixture], 1));
+    current.resolve([scieFixture]);
     await whenViewSettles();
 
     expect(loading).toContain('Chargement');
@@ -110,7 +109,7 @@ describe('PostesDeTravail page', () => {
   it('should keep the most recently requested catalogue when an older response arrives last', async () => {
     givenManyWorkstations(21);
     await whenOpening();
-    const old = new DeferredFixture<Page<PosteDeTravail>>();
+    const old = new DeferredFixture<readonly PosteDeTravail[]>();
     givenReadingIsPending(old);
     const arrival = port.signalLecture();
     whenRefreshingCatalogue();
@@ -119,7 +118,7 @@ describe('PostesDeTravail page', () => {
     whenRefreshingCatalogue();
     await whenViewSettles();
     await whenPageSelected(1, 20);
-    old.resolve(new Page([tourFixture], 1));
+    old.resolve([tourFixture]);
     await whenViewSettles();
 
     expect(texts('poste-row')).toEqual([expect.stringContaining('Poste 21')]);
@@ -127,12 +126,12 @@ describe('PostesDeTravail page', () => {
   });
 
   it('should show loading without displaying the empty state prematurely', async () => {
-    const deferred = new DeferredFixture<Page<PosteDeTravail>>();
+    const deferred = new DeferredFixture<readonly PosteDeTravail[]>();
     givenReadingIsPending(deferred);
     await whenOpening();
     const loading = text('postes-loading');
     const empty = text('postes-empty');
-    deferred.resolve(new Page([], 0));
+    deferred.resolve([]);
     await whenViewSettles();
 
     expect(loading).toContain('Chargement');
@@ -436,7 +435,7 @@ describe('PostesDeTravail page', () => {
   const givenWorkstations = (): void => {
     port.liste = [tourFixture, scieFixture];
   };
-  const givenReadingIsPending = (deferred: DeferredFixture<Page<PosteDeTravail>>): void => {
+  const givenReadingIsPending = (deferred: DeferredFixture<readonly PosteDeTravail[]>): void => {
     port.lectureDifferee = deferred.promise;
   };
   const givenReadingFails = (message: string): void => {

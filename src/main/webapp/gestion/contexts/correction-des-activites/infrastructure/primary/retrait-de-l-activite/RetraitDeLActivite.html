@@ -1,0 +1,32 @@
+<glm-confirmation-content
+  [title]="presentation.titre"
+  [cancelLabel]="libelles.garder"
+  [confirmLabel]="libelles.retirer"
+  [pendingLabel]="libelles.enCours"
+  [pending]="enCours()"
+  [destructive]="true"
+  [technicalErrorMessage]="echec() ? libelles.echec : undefined"
+  selectorPrefix="retrait"
+  (cancelRequested)="dialog.close()"
+  (confirmRequested)="confirmer()"
+>
+  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control border border-border bg-sunken p-3">
+    <span class="text-body font-semibold" data-selector="retrait-element">{{ presentation.element }}</span>
+    @if (presentation.designation; as designation) {
+    <span class="text-body-sm text-ink-muted" data-selector="retrait-designation">{{ designation }}</span>
+    }
+    <span class="text-body-sm text-ink-muted" data-selector="retrait-poste">{{ presentation.poste }} · {{ presentation.type }}</span>
+    <span class="ml-auto font-bold tabular-nums" data-selector="retrait-duree">{{ presentation.duree }}</span>
+  </div>
+  <dl class="mt-3 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-body-sm">
+    @for (effet of presentation.effets; track effet.libelle) {
+    <div class="contents">
+      <dt class="text-ink-muted" data-selector="retrait-effet-libelle">{{ effet.libelle }}</dt>
+      <dd class="font-bold tabular-nums" data-selector="retrait-effet-valeur">{{ effet.valeur }}</dd>
+    </div>
+    }
+  </dl>
+  @if (presentation.debordement; as debordement) {
+  <p class="mt-3 text-body-sm" data-selector="retrait-debordement">{{ debordement }}</p>
+  }
+</glm-confirmation-content>

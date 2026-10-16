@@ -50,12 +50,3 @@
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
-
-html,
-body {
-  height: 100%;
-}
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-}

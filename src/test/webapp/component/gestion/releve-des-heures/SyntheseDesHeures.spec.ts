@@ -148,11 +148,25 @@ describe('Operational time report in gestion', () => {
     api = new SyntheseDesHeuresApiFixture();
   });
 
-  it('should show the received closed activity and operational total without presence', () => {
+  it('should show the received closed activity and operational total', () => {
     givenAWeek(semaineDeJourFixture());
     whenVisiting(ADRESSE);
 
-    thenShowTheReceivedClosedActivityAndOperationalTotalWithoutPresence();
+    thenShowTheReceivedClosedActivityAndOperationalTotal();
+  });
+
+  it('should offer the correction of the day to the gestionnaire, towards the day opened', () => {
+    givenAWeek(semaineDeJourFixture());
+    whenVisiting(ADRESSE);
+
+    thenTheCorrectionOfTheDayIsOffered('/operateurs/op-1/journees/2026-09-14');
+  });
+
+  it('should offer no correction for a day that has not come', () => {
+    givenAWeek(semaineDeJourFixture());
+    whenVisiting('/operateurs/op-1/heures?annee=2026&semaine=40&jour=2026-09-30');
+
+    thenNoCorrectionOfTheDayIsOffered();
   });
 
   it('should split received concurrent work into one sub-row per workstation', () => {
@@ -369,6 +383,17 @@ describe('Operational time report in gestion', () => {
     cy.get(dataSelector('synthese-semaine')).focus();
   };
 
+  const thenTheCorrectionOfTheDayIsOffered = (adresseDeLaCorrection: string): void => {
+    cy.get(dataSelector('synthese-corriger-la-journee'))
+      .should('be.visible')
+      .and('contain.text', 'Corriger la journée')
+      .and('have.attr', 'href', adresseDeLaCorrection);
+  };
+  const thenNoCorrectionOfTheDayIsOffered = (): void => {
+    cy.get(dataSelector('synthese-detail-jour')).should('be.visible');
+    cy.get(dataSelector('synthese-corriger-la-journee')).should('not.exist');
+  };
+
   const thenEveryDayHasTheSameWidth = (): void => {
     cy.get(dataSelector('synthese-jour-cell')).should(entetes => {
       const largeurs = [...entetes].map(entete => entete.getBoundingClientRect().width);
@@ -512,10 +537,9 @@ describe('Operational time report in gestion', () => {
     cy.get(dataSelector('synthese-semaine')).should('have.focus');
   };
 
-  const thenShowTheReceivedClosedActivityAndOperationalTotalWithoutPresence = (): void => {
+  const thenShowTheReceivedClosedActivityAndOperationalTotal = (): void => {
     cy.get(dataSelector('synthese-barre')).should('have.length', 1);
     cy.get(dataSelector('synthese-operationnel-total')).should('have.text', '2 h 00');
-    cy.get(dataSelector('synthese-presence-libelle')).should('not.exist');
   };
 
   const thenSplitReceivedConcurrentWorkIntoOneSubRowPerWorkstation = (): void => {

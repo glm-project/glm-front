@@ -21,11 +21,10 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 - **LibellePoste** : Value Object garantissant un libellé textuel non vide et borné à 100 caractères.
 - **NatureDeTravail** : Value Object garantissant un métier non vide et borné à 50 caractères, avec comparaison et correspondance insensible à la casse.
 - **CoutHoraire** : Value Object représentant une valeur monétaire horaire positive ou nulle.
-- **CommandeCreationPoste** : commande encapsulant les attributs validés pour la création d'un nouveau poste (`libelle`, `nature`, `natureId`, `coutHoraire`) ; seul `natureId` part au serveur.
-- **CommandeModificationPoste** : commande encapsulant l'identifiant et les attributs validés pour la modification d'un poste existant (`id`, `libelle`, `nature`, `natureId`, `coutHoraire`).
-- **RequetePostes** : objet de requête paginée portant l'indice de page et le nombre d'éléments par page (`page`, `taille`).
+- **CommandeCreationPoste** : commande encapsulant les attributs validés pour la création d'un nouveau poste (`libelle`, `natureId`, `coutHoraire`).
+- **CommandeModificationPoste** : commande encapsulant l'identifiant et les attributs validés pour la modification d'un poste existant (`id`, `libelle`, `natureId`, `coutHoraire`).
 - **FormulairePosteDeTravail** : modèle riche d'interaction pour la création et la modification, validant les entrées brutes, produisant la commande adéquate et effaçant l'erreur de doublon dès que le libellé est modifié. La nature est une **liste fermée** : le texte saisi ne fait que filtrer, seule une `NatureChoisie` du référentiel (`choisirNature`) rend le formulaire valide, et modifier le texte la désélectionne.
-- **PostesPort** : port secondaire exposant la consultation paginée via `RequetePostes`, la création (`CommandeCreationPoste`), la modification (`CommandeModificationPoste`) et la suppression protégée par un `Result<T, Refus>`.
+- **PostesPort** : port secondaire exposant la lecture entière du référentiel (`referentiel()`), la création (`CommandeCreationPoste`), la modification (`CommandeModificationPoste`) et la suppression protégée par un `Result<T, Refus>`.
 - **NatureDeTravailId** : Value Object de l'identifiant d'une nature du référentiel des natures de travail.
 - **NatureGeree** : une nature telle que la page la présente : identifiant, libellé, nombre de postes qui la portent
   (champ `postes` de l'API) et usage (`utilisee`). `supprimable` tant que rien ne s'en sert : une nature sans poste
@@ -54,7 +53,7 @@ Ce contexte appartient exclusivement à `gestion`. Il gère le référentiel des
 
 - Le serveur possède les habilitations des opérateurs ; une habilitation existante interdit la suppression du poste.
 - `app/shared/result` : utilise le shared kernel commun `Result<T, E>` pour les retours d'écriture de `PostesPort`.
-- `app/shared/pagination` : utilise `Page<T>` pour la consultation paginée des postes.
+- `app/shared/pagination` : le secondaire `HttpPostes` utilise `Page<T>` pour parcourir les pages du serveur ; le port n'expose aucune page.
 
 ## Règles locales
 
