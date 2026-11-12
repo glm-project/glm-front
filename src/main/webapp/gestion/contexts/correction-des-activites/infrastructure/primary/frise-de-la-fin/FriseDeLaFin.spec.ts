@@ -1,0 +1,1581 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ResizeObserverFixture } from '@test/unit/fixtures/gestion/correction-des-activites/ResizeObserverFixture';
+import { dataSelector } from '@test/utils/DataSelector';
+import { requiredFixture } from '@test/utils/RequiredFixture';
+import { instantLocalFixture } from '@test/utils/gestion/correction-des-activites/InstantLocal.fixture';
+import { LimiteDeLaFin } from '../../../domain/fin-automatique/CadreDeLaFin';
+import { ActiviteEchue, PointageDuDossier } from '../../../domain/fin-automatique/DossierDeLaFin';
+import { PointageDuDossierId } from '../../../domain/fin-automatique/PointageDuDossierId';
+import { ActiviteDeLaJourneeId } from '../../../domain/journee/ActiviteDeLaJourneeId';
+import { VueDeFrise } from './DispositionFrise';
+import { FriseDeLaFin } from './FriseDeLaFin';
+import { DemandeDeDeplacement, DeplacementDemande, PlacementDeLInstant, PlacementDemande, PoigneeDeFrise } from './PoigneeDeFrise';
+
+const GESTES = {
+  DEMARRAGE: { type: 'DEBUT' },
+  DEMARRAGE_NC: { type: 'NON_CONFORMITE' },
+  ARRET: { type: 'FIN' },
+} as const;
+
+type Geste = keyof typeof GESTES;
+
+const instantAt = (heure: string, jour = 14): string => {
+  const [heures = 0, minutes = 0] = heure.split(':').map(Number);
+  return instantLocalFixture(new Date(2026, 8, jour, heures, minutes));
+};
+
+const pointageA = (id: string, geste: Geste, instant: string): PointageDuDossier => ({
+  id: new PointageDuDossierId(id),
+  fait: { ...GESTES[geste], instant },
+});
+
+const pointageFixture = (id: string, geste: Geste, heure: string): PointageDuDossier => pointageA(id, geste, instantAt(heure));
+
+const activiteA = (id: string, debut: string, echeance: string, categorie: ActiviteEchue['categorie'] = 'TRAVAIL'): ActiviteEchue => ({
+  id: new ActiviteDeLaJourneeId(id),
+  ouvrant: new PointageDuDossierId(`debut-${id}`),
+  categorie,
+  debut,
+  echeance,
+});
+
+const activiteFixture = (id: string, debut: string, echeance: string, categorie: ActiviteEchue['categorie'] = 'TRAVAIL'): ActiviteEchue =>
+  activiteA(id, instantAt(debut), instantAt(echeance), categorie);
+
+const vueDe = (activite: ActiviteEchue, geste: Geste = 'DEMARRAGE', ...autres: readonly PointageDuDossier[]): VueDeFrise => ({
+  journal: [pointageA(activite.ouvrant.value, geste, activite.debut), ...autres],
+  activite,
+});
+
+const vueEntre = (debut: string, echeance: string, jourEcheance = 14): VueDeFrise =>
+  vueDe(activiteA('a-1', instantAt(debut), instantAt(echeance, jourEcheance)));
+
+const vueDuJour = (debut: string, echeance: string, jour: number, jourEcheance: number): VueDeFrise =>
+  vueDe(activiteA('a-1', instantAt(debut, jour), instantAt(echeance, jourEcheance)));
+
+const vueEntreInstants = (debut: Date, echeance: Date): VueDeFrise => vueDe(activiteA('a-1', debut.toISOString(), echeance.toISOString()));
+
+const avecLaBorne = (vue: VueDeFrise, heure: string, ...pointages: readonly PointageDuDossier[]): VueDeFrise => ({
+  ...vue,
+  journal: [...vue.journal, ...pointages],
+  borneDeFin: instantAt(heure),
+});
+
+const avecLaBorneLe = (vue: VueDeFrise, jour: number, heure: string, ...pointages: readonly PointageDuDossier[]): VueDeFrise => ({
+  ...vue,
+  journal: [...vue.journal, ...pointages],
+  borneDeFin: instantAt(heure, jour),
+});
+
+const dossierDeLaFinAutomatique = (): VueDeFrise => vueDe(activiteFixture('a-1', '08:00', '12:00'));
+
+const poigneeFixture = (heure: string, surcharge: Partial<PoigneeDeFrise> = {}, jour = 14): PoigneeDeFrise => ({
+  instant: instantAt(heure, jour),
+  bornes: { min: instantAt('08:00'), max: instantAt('15:00') },
+  ...surcharge,
+});
+
+const poigneeJusqua = (heure: string, jour = 14): Pick<PoigneeDeFrise, 'bornes'> => ({
+  bornes: { min: instantAt('08:00'), max: instantAt(heure, jour) },
+});
+
+const poigneeJusquaLe17 = (): Pick<PoigneeDeFrise, 'bornes'> => poigneeJusqua('08:00', 17);
+
+const placementFixture = (surcharge: Partial<PlacementDeLInstant> = {}): PlacementDeLInstant => ({
+  bornes: { min: instantAt('08:00'), max: instantAt('13:00') },
+  ...surcharge,
+});
+
+const placementDeLaFixture = (): PlacementDeLInstant => placementFixture({ bornes: { min: instantAt('08:00'), max: instantAt('15:00') } });
+
+const limiteFixture = (par: LimiteDeLaFin['par'], heure: string, jour = 17): LimiteDeLaFin => ({ par, instant: instantAt(heure, jour) });
+
+const PLAN_WIDTH = 1000;
+
+describe('Frise of the end of an automatic end', () => {
+  let fixture: ComponentFixture<FriseDeLaFin>;
+  let requestedMoves: DeplacementDemande[];
+  let requestedPlacements: PlacementDemande[];
+  let resizeObserver: ResizeObserverFixture;
+
+  beforeEach(() => {
+    resizeObserver = new ResizeObserverFixture();
+    requestedMoves = [];
+    requestedPlacements = [];
+    HTMLElement.prototype.setPointerCapture = () => undefined;
+  });
+
+  afterEach(() => {
+    resizeObserver.restore();
+  });
+
+  it('should draw the marker of the pointage that opened the expired activity, and no other', async () => {
+    const dossier = vueDe(activiteFixture('a-1', '08:00', '21:00'), 'DEMARRAGE', pointageFixture('fin-17', 'ARRET', '17:00'));
+
+    await whenRenderingTheFrise(dossier);
+
+    thenTheMarkersAre(['debut-a-1']);
+  });
+
+  it('should keep the scale on what is drawn when the journal holds pointages of other days or that open no bar', async () => {
+    const dossier = vueDe(
+      activiteFixture('a-1', '08:00', '11:00'),
+      'DEMARRAGE',
+      pointageA('veille-9', 'DEMARRAGE', instantAt('09:00', 10)),
+      pointageFixture('fin-11', 'ARRET', '11:00'),
+    );
+
+    await whenRenderingTheFrise(dossier);
+
+    thenTheMarkersAre(['debut-a-1']);
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00']);
+  });
+
+  it('should name the marker by the time of its pointage with its seconds and its gesture', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '21:00'));
+
+    thenTheMarkerIsNamed('debut-a-1', '08:00:00 · Démarrage');
+  });
+
+  it.each([
+    ['DEMARRAGE', '▶'],
+    ['DEMARRAGE_NC', '▷'],
+  ] as const)('should draw the %s gesture of the opening pointage with the symbol %s', async (geste, symbole) => {
+    await whenRenderingTheFrise(vueDe(activiteFixture('a-1', '08:00', '21:00'), geste));
+
+    thenTheMarkerSymbolIs('debut-a-1', symbole);
+  });
+
+  it.each([
+    ['DEMARRAGE', 'false'],
+    ['DEMARRAGE_NC', 'true'],
+  ] as const)('should flag the marker of a %s gesture as a non-conformity: %s', async (geste, drapeau) => {
+    await whenRenderingTheFrise(vueDe(activiteFixture('a-1', '08:00', '21:00'), geste));
+
+    thenTheMarkerFlagIs('debut-a-1', 'data-non-conformite', drapeau);
+  });
+
+  it('should show under the marker the hour and minute of its pointage', async () => {
+    await whenRenderingTheFrise(vueEntre('08:05', '21:00'));
+
+    thenTheMarkerTimeIs('debut-a-1', '08:05');
+  });
+
+  it.each([
+    ['TRAVAIL', 'Travail · Fin automatique'],
+    ['NON_CONFORMITE', 'Non-conformité · Fin automatique'],
+  ] as const)('should write on the bar of a %s activity its category and the automatic end: %s', async (categorie, texte) => {
+    await whenRenderingTheFrise(vueDe(activiteFixture('a-1', '08:00', '21:00', categorie)));
+
+    thenTheBarReads('a-1', texte);
+  });
+
+  it('should tell the category of the bar by an attribute', async () => {
+    await whenRenderingTheFrise(vueDe(activiteFixture('nc-9', '09:00', '22:00', 'NON_CONFORMITE')));
+
+    thenTheBarAttributeIs('nc-9', 'data-categorie', 'NON_CONFORMITE');
+  });
+
+  it('should end the bar of the expired activity as an automatic end', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '21:00'));
+
+    thenTheBarAttributeIs('a-1', 'data-fin', 'AUTOMATIQUE');
+  });
+
+  it('should name the bar by its category, its received period and its automatic end', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
+
+    thenTheBarIsNamed('a-1', 'Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 17:00 · Fin automatique');
+  });
+
+  it('should graduate the scale by the hour, from an hour before the first instant to an hour after the last, rounded to the hour', async () => {
+    await whenRenderingTheFrise(vueEntre('08:30', '10:15'));
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00']);
+  });
+
+  it.each([
+    {
+      largeur: 704,
+      pas: 'an hour',
+      attendu: ['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
+    },
+    { largeur: 500, pas: 'two hours', attendu: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'] },
+    { largeur: 350, pas: 'three hours', attendu: ['09:00', '12:00', '15:00', '18:00'] },
+    { largeur: 200, pas: 'four hours', attendu: ['08:00', '12:00', '16:00'] },
+    { largeur: 150, pas: 'six hours', attendu: ['12:00', '18:00'] },
+    { largeur: 70, pas: 'twelve hours', attendu: ['12:00'] },
+  ])('should graduate every $pas on a frise $largeur pixels wide', async ({ largeur, attendu }) => {
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
+
+    await whenTheFriseIsMeasured(largeur);
+
+    thenTheGraduationsAre(attendu);
+    thenNoTwoGraduationsAreCloserThan(64, largeur);
+  });
+
+  it.each([
+    { largeur: 300, pas: 'a day', jours: ['mar. 15 sept.', 'mer. 16 sept.', 'jeu. 17 sept.'] },
+    { largeur: 150, pas: 'two days', jours: ['mer. 16 sept.'] },
+    { largeur: 80, pas: 'three days', jours: ['jeu. 17 sept.'] },
+    { largeur: 20, pas: 'a week, although it cannot hold 64 pixels', jours: [] },
+  ])('should graduate every $pas, midnight to midnight, on a frise $largeur pixels wide holding four days', async ({ largeur, jours }) => {
+    await whenRenderingTheFrise(vueDuJour('08:00', '17:00', 14, 17));
+
+    await whenTheFriseIsMeasured(largeur);
+
+    thenTheGraduationsAre(jours.map(() => '00:00'));
+    thenTheGraduationsOpenTheDaysOfTheBand(jours);
+  });
+
+  it('should graduate the midnight that opens a week counted from the start of the scale', async () => {
+    await whenRenderingTheFrise(vueDuJour('08:00', '17:00', 14, 23));
+
+    await whenTheFriseIsMeasured(100);
+
+    thenTheGraduationsOpenTheDaysOfTheBand(['lun. 21 sept.']);
+  });
+
+  it('should graduate the hours the way it did when the frise is wide, as the reference width leaves 64 pixels per hour', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
+
+    thenTheNumberOfGraduationsIs(12);
+  });
+
+  it('should take a new measure of its host into account', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
+    await whenTheFriseIsMeasured(150);
+
+    await whenTheFriseIsMeasured(704);
+
+    thenTheNumberOfGraduationsIs(12);
+  });
+
+  it('should ignore a measure of zero width', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
+    await whenTheFriseIsMeasured(150);
+
+    await whenTheFriseIsMeasured(0);
+
+    thenTheGraduationsAre(['12:00', '18:00']);
+  });
+
+  it('should stop observing the size of its host when destroyed', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
+
+    whenDestroyingTheFrise();
+
+    expect(resizeObserver.observantUnElement).toBe(false);
+  });
+
+  it('should keep the exact time of the marker on a narrow frise, whatever the room its position leaves', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
+
+    await whenTheFriseIsMeasured(100);
+
+    thenTheMarkerTimeIs('debut-a-1', '08:00');
+  });
+
+  it('should keep the exact time of the handle on a narrow frise, whatever the room its position leaves', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:45'));
+
+    await whenTheFriseIsMeasured(100);
+
+    thenTheHandleIsReadAs('10:45');
+  });
+
+  it('should not shift the handle under the pointer when it is grabbed while held away from the edge', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:45'));
+    await whenTheFriseIsMeasured(100);
+
+    whenDraggingTheHandle({ from: 780, to: 780 });
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 10, 45).getTime() }]);
+  });
+
+  it('should reach the start and the end of the expired activity, not a stop that opens no bar, when graduating the scale', async () => {
+    const dossier = vueDe(activiteFixture('a-1', '06:00', '08:00'), 'DEMARRAGE', pointageFixture('fin-10', 'ARRET', '10:00'));
+
+    await whenRenderingTheFrise(dossier);
+
+    thenTheGraduationsAre(['05:00', '06:00', '07:00', '08:00', '09:00']);
+  });
+
+  it('should leave the day to the band and graduate midnight by its hour alone', async () => {
+    await whenRenderingTheFrise(vueEntre('22:00', '02:00', 15));
+
+    thenTheGraduationsAre(['21:00', '22:00', '23:00', '00:00', '01:00', '02:00', '03:00']);
+    thenNoGraduationTellsItsDay();
+  });
+
+  it('should name in a band every day the frise covers when it crosses midnight', async () => {
+    await whenRenderingTheFrise(vueEntre('22:00', '02:00', 15));
+
+    thenTheDaysOfTheBandAre(['lun. 14 sept.', 'mar. 15 sept.']);
+  });
+
+  it('should span every day of the band from its midnight, or the start of the scale, to the next midnight, or the end of the scale', async () => {
+    await whenRenderingTheFrise(vueEntre('20:30', '02:00', 15));
+
+    thenTheDaysOfTheBandSpan([
+      { left: 0, width: 62.5 },
+      { left: 62.5, width: 37.5 },
+    ]);
+  });
+
+  it('should draw a line across the frise at midnight', async () => {
+    await whenRenderingTheFrise(vueEntre('20:30', '02:00', 15));
+
+    thenTheMidnightLinesStandAt([62.5]);
+  });
+
+  it('should draw no band of days when the frise stays within one day', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '17:00'));
+
+    thenNoBandOfDaysIsDrawn();
+  });
+
+  it('should draw no marker for a pointage whose instant it cannot read, nor let it spoil the scale', async () => {
+    const activite = activiteFixture('a-1', '08:00', '09:00');
+    const dossier = { journal: [pointageA('debut-a-1', 'DEMARRAGE', 'illisible')], activite };
+
+    await whenRenderingTheFrise(dossier);
+
+    thenTheMarkersAre([]);
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00']);
+  });
+
+  it('should be tall enough for its bar', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '21:00'));
+
+    expect(Number.parseFloat(thePlan().style.height)).toBeGreaterThanOrEqual(topOf(bar('a-1')) + 44);
+  });
+
+  it('should ask to place the instant where the pointages row is clicked', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), undefined, placementFixture());
+
+    whenClickingThePlacementRowAt(500);
+
+    thenThePlacementsAsked([new Date(2026, 8, 14, 10, 0).getTime()]);
+  });
+
+  it.each([
+    { cas: 'down to the nearest five minutes', clientX: 504, heure: new Date(2026, 8, 14, 10, 0) },
+    { cas: 'up to the nearest five minutes', clientX: 513, heure: new Date(2026, 8, 14, 10, 5) },
+  ])('should round the instant of the click $cas', async ({ clientX, heure }) => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), undefined, placementFixture());
+
+    whenClickingThePlacementRowAt(clientX);
+
+    thenThePlacementsAsked([heure.getTime()]);
+  });
+
+  it('should draw no placement row while no instant waits to be placed', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique());
+
+    thenNoPlacementRowIsDrawn();
+  });
+
+  it('should stop the scale an hour after the automatic end while an instant waits to be placed', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), undefined, placementDeLaFixture());
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
+  });
+
+  it('should draw the handle of the proposed instant as a slider', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('12:00'));
+
+    thenTheHandleIsASlider();
+  });
+
+  it('should stop the scale an hour after the automatic end while a handle is active', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
+  });
+
+  it('should keep the normal scale when the clock stands before the last received instant', async () => {
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('10:00') } }),
+    );
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
+  });
+
+  it('should extend the scale only up to the hour that follows the clock once the handle stands beyond the frame', async () => {
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('14:20') } }),
+    );
+
+    await whenTheHandleMovesTo(poigneeFixture('14:20', { bornes: { min: instantAt('08:00'), max: instantAt('14:20') } }));
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
+  });
+
+  it.each([
+    { cas: 'after', instant: new Date(2026, 8, 20, 10, 0), tenue: new Date(2026, 8, 14, 15, 0) },
+    { cas: 'before', instant: new Date(2026, 8, 10, 10, 0), tenue: new Date(2026, 8, 14, 8, 0) },
+  ])(
+    'should hold the handle at the nearest end of its range on the scale when it stands $cas every received instant',
+    async ({ instant, tenue }) => {
+      await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00', { instant: instantLocalFixture(instant) }));
+
+      thenTheHandleHoldsAt(tenue);
+    },
+  );
+
+  it('should give the handle a range, a value and a readable time within its bounds', async () => {
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:05', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    thenTheHandleReads({
+      min: new Date(2026, 8, 14, 8, 0).getTime(),
+      max: new Date(2026, 8, 14, 13, 0).getTime(),
+      now: new Date(2026, 8, 14, 10, 5).getTime(),
+      text: '10:05',
+    });
+  });
+
+  it('should end the frame two hours after an automatic end that does not fall on the hour', async () => {
+    await whenRenderingTheFrise(vueEntre('08:00', '12:30'));
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00']);
+  });
+
+  it('should frame the activity, not the bound nor the range of the handle, when they fall days after', async () => {
+    const dossier = avecLaBorneLe(vueEntre('08:30', '12:00'), 17, '08:00');
+
+    await whenRenderingTheFrise(dossier, poigneeFixture('10:00', poigneeJusquaLe17()));
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
+  });
+
+  it.each([
+    { cas: 'after the end of the frame', clientX: 5000, instant: new Date(2026, 8, 14, 13, 0) },
+    { cas: 'before the start of the frame', clientX: -4000, instant: new Date(2026, 8, 14, 7, 0) },
+  ])('should ask for the edge of the frame when the handle is dragged $cas', async ({ clientX, instant }) => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
+
+    whenDraggingTheHandle({ from: 500, to: clientX });
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: instant.getTime() }]);
+  });
+
+  it('should keep the whole frame once the handle has left the frame, even when it comes back', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
+
+    await whenTheHandleMovesTo(poigneeFixture('15:00'));
+    await whenTheHandleMovesTo(poigneeFixture('10:00'));
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00']);
+  });
+
+  it('should not change the scale under a drag when the handle comes back into the frame of the activity', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('15:00'));
+    await whenTheHandleMovesTo(poigneeFixture('10:00'));
+
+    whenDraggingTheHandle({ from: 500, to: 625 });
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 0).getTime() }]);
+  });
+
+  it('should go on showing the bound up to the hour that follows it once the handle is gone, after the whole frame was shown', async () => {
+    await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '20:00'), poigneeFixture('15:00'));
+
+    await whenTheHandleIsRemoved();
+
+    thenTheClosureIsNamed('20:00:00 · Clôture');
+  });
+
+  describe('of the button that widens the frise to the limit of the end', () => {
+    const avecLeDemarrageSuivant = (): VueDeFrise =>
+      avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00', pointageA('debut-suivant', 'DEMARRAGE', instantAt('08:00', 17)));
+    const avecLaCloture = (): VueDeFrise => avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00');
+
+    it.each([
+      {
+        cas: 'the next start of the key',
+        dossier: avecLeDemarrageSuivant,
+        limite: limiteFixture('BORNE', '08:00'),
+        texte: 'Voir jusqu’au démarrage suivant · jeu. 17 sept. 08:00',
+      },
+      {
+        cas: 'the closure',
+        dossier: avecLaCloture,
+        limite: limiteFixture('BORNE', '08:00'),
+        texte: 'Voir jusqu’à la clôture · jeu. 17 sept. 08:00',
+      },
+      {
+        cas: 'the clock, without a day',
+        dossier: dossierDeLaFinAutomatique,
+        limite: limiteFixture('HORLOGE', '18:00', 14),
+        texte: 'Voir jusqu’à maintenant',
+      },
+    ])('should offer to see up to $cas when the limit of the end falls after the frame', async ({ dossier, limite, texte }) => {
+      await whenRenderingTheFrise(dossier(), poigneeFixture('10:00'), undefined, limite);
+
+      thenTheFrameButtonReads(texte);
+    });
+
+    it.each([
+      { cas: 'within the frame', limite: limiteFixture('HORLOGE', '12:30', 14) },
+      { cas: 'on the end of the frame', limite: limiteFixture('HORLOGE', '13:00', 14) },
+      { cas: 'unknown', limite: undefined },
+    ])('should offer nothing when the limit of the end is $cas', async ({ limite }) => {
+      await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'), undefined, limite);
+
+      thenNoFrameButtonIsDrawn();
+    });
+
+    it('should offer nothing while the handle stands beyond the frame', async () => {
+      await whenRenderingTheFrise(
+        avecLaCloture(),
+        poigneeFixture('14:00', poigneeJusquaLe17()),
+        undefined,
+        limiteFixture('BORNE', '08:00'),
+      );
+
+      thenNoFrameButtonIsDrawn();
+    });
+
+    it('should show the whole frame, with the bound, by the same button which only changes its text', async () => {
+      await whenRenderingTheFrise(
+        avecLaCloture(),
+        poigneeFixture('10:00', poigneeJusquaLe17()),
+        undefined,
+        limiteFixture('BORNE', '08:00'),
+      );
+      const button = frameButton();
+
+      await whenPressingTheFrameButton();
+
+      thenTheFrameButtonReads('Revenir sur l’activité');
+      thenTheFrameButtonIs(button);
+      thenTheClosureIsNamed('08:00:00 · Clôture');
+    });
+
+    it('should bring the frame back to the activity by the same button, which only changes its text', async () => {
+      await whenRenderingTheFrise(
+        avecLaCloture(),
+        poigneeFixture('10:00', poigneeJusquaLe17()),
+        undefined,
+        limiteFixture('BORNE', '08:00'),
+      );
+      const button = frameButton();
+      await whenPressingTheFrameButton();
+
+      await whenPressingTheFrameButton();
+
+      thenTheFrameButtonReads('Voir jusqu’à la clôture · jeu. 17 sept. 08:00');
+      thenTheFrameButtonIs(button);
+      thenNoClosureIsDrawn();
+    });
+
+    it('should be a button that submits nothing', async () => {
+      await whenRenderingTheFrise(avecLaCloture(), poigneeFixture('10:00'), undefined, limiteFixture('BORNE', '08:00'));
+
+      thenTheFrameButtonSubmitsNothing();
+    });
+
+    it('should widen the frise to the bound when no handle is drawn', async () => {
+      await whenRenderingTheFrise(
+        avecLaBorne(vueEntre('08:00', '12:00'), '20:00'),
+        undefined,
+        undefined,
+        limiteFixture('BORNE', '20:00', 14),
+      );
+
+      await whenPressingTheFrameButton();
+
+      thenTheClosureIsNamed('20:00:00 · Clôture');
+    });
+  });
+
+  it('should hold the handle on the edge of the frame, with the frame of the activity, while it stands on it', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('13:00'));
+
+    thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
+  });
+
+  it.each<{ touche: string; maj: boolean; demande: DemandeDeDeplacement }>([
+    { touche: 'ArrowRight', maj: false, demande: { kind: 'DE', minutes: 1 } },
+    { touche: 'ArrowUp', maj: false, demande: { kind: 'DE', minutes: 1 } },
+    { touche: 'ArrowLeft', maj: false, demande: { kind: 'DE', minutes: -1 } },
+    { touche: 'ArrowDown', maj: false, demande: { kind: 'DE', minutes: -1 } },
+    { touche: 'ArrowRight', maj: true, demande: { kind: 'DE', minutes: 15 } },
+    { touche: 'ArrowUp', maj: true, demande: { kind: 'DE', minutes: 15 } },
+    { touche: 'ArrowLeft', maj: true, demande: { kind: 'DE', minutes: -15 } },
+    { touche: 'ArrowDown', maj: true, demande: { kind: 'DE', minutes: -15 } },
+    { touche: 'Home', maj: false, demande: { kind: 'BORNE', borne: 'MIN' } },
+    { touche: 'End', maj: false, demande: { kind: 'BORNE', borne: 'MAX' } },
+  ])('should ask $demande.kind the handle when $touche is pressed (shift: $maj)', async ({ touche, maj, demande }) => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
+
+    whenPressingKeyOnTheHandle(touche, maj);
+
+    thenTheMovesAsked([demande]);
+  });
+
+  it('should leave the other keys to the browser so that the tab key still leaves the handle', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
+
+    const touche = whenPressingKeyOnTheHandle('Tab');
+
+    thenTheMovesAsked([]);
+    thenTheKeyIsLeftToTheBrowser(touche);
+  });
+
+  it('should ask to move the handle to the instant under the pointer dragging it', async () => {
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    whenDraggingTheHandle({ from: 500, to: 750 });
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 30).getTime() }]);
+  });
+
+  it.each([
+    { cas: 'down to the nearest five minutes', to: 756, heure: new Date(2026, 8, 14, 11, 30) },
+    { cas: 'up to the nearest five minutes', to: 762, heure: new Date(2026, 8, 14, 11, 35) },
+  ])('should round the instant under the pointer $cas', async ({ to, heure }) => {
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    whenDraggingTheHandle({ from: 500, to });
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: heure.getTime() }]);
+  });
+
+  it('should keep the point of the handle that was grabbed under the pointer instead of jumping to its centre', async () => {
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    whenDraggingTheHandle({ from: 520, to: 770 });
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 30).getTime() }]);
+  });
+
+  it('should ignore a pointer that moves over the handle without having pressed it', async () => {
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+
+    whenMovingThePointerOverTheHandleTo(750);
+
+    thenTheMovesAsked([]);
+  });
+
+  it.each(['pointerup', 'pointercancel'])('should stop following the pointer once it ends with %s', async fin => {
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+    whenDraggingTheHandle({ from: 500, to: 750 });
+
+    whenTheGestureEndsWith(fin);
+    whenMovingThePointerOverTheHandleTo(900);
+
+    thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 30).getTime() }]);
+  });
+
+  it('should capture the pointer that presses the handle so that the drag goes on outside of it', async () => {
+    await whenRenderingTheFrise(
+      dossierDeLaFinAutomatique(),
+      poigneeFixture('10:00', { bornes: { min: instantAt('08:00'), max: instantAt('13:00') } }),
+    );
+    const captured = givenTheBrowserCapturesPointers();
+
+    whenPressingTheHandleAt(500, 7);
+
+    expect(captured).toEqual([7]);
+  });
+
+  it('should name the handle and show the time it stands at', async () => {
+    await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:05'));
+
+    thenTheHandleIsNamedAndShows('Heure proposée de la fin', '10:05');
+  });
+
+  describe('of the bound of the end', () => {
+    it('should draw the marker of the next start of the key on the instant that bounds the end', async () => {
+      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '12:30', pointageFixture('debut-suivant', 'DEMARRAGE', '12:30'));
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheMarkersAre(['debut-a-1', 'debut-suivant']);
+      thenTheMarkerIsNamed('debut-suivant', '12:30:00 · Démarrage');
+      thenTheMarkerStandsAtTheHour('debut-suivant', 12, 30);
+    });
+
+    it('should draw the marker of a next start in non-conformity as a non-conformity', async () => {
+      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '12:30', pointageFixture('nc-suivante', 'DEMARRAGE_NC', '12:30'));
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheMarkerFlagIs('nc-suivante', 'data-non-conformite', 'true');
+    });
+
+    it('should draw a closure marker when no start of the key bounds the end', async () => {
+      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '12:30');
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheMarkersAre(['debut-a-1']);
+      thenTheClosureIsNamed('12:30:00 · Clôture');
+      thenTheClosureReads('Clôture 12:30');
+    });
+
+    it('should draw a closure marker rather than a stop that falls on the instant of the bound', async () => {
+      const dossier = avecLaBorne(vueEntre('08:00', '12:00'), '12:30', pointageFixture('fin-20', 'ARRET', '12:30'));
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheMarkersAre(['debut-a-1']);
+      thenTheClosureIsNamed('12:30:00 · Clôture');
+    });
+
+    it('should draw no marker for the bound when nothing bounds the end', async () => {
+      await whenRenderingTheFrise(vueEntre('08:00', '12:00'));
+
+      thenNoClosureIsDrawn();
+    });
+
+    it('should not stretch the scale to a bound that falls after the frame, and draw no marker for it', async () => {
+      const suivant = pointageA('debut-suivant', 'DEMARRAGE', instantAt('20:00'));
+
+      await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '20:00', suivant));
+
+      thenTheGraduationsAre(['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00']);
+      thenTheMarkersAre(['debut-a-1']);
+    });
+
+    it('should draw no closure for a bound that falls after the frame', async () => {
+      await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '20:00'));
+
+      thenNoClosureIsDrawn();
+    });
+
+    it('should draw the bound that falls on the end of the frame', async () => {
+      await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '13:00'));
+
+      thenTheClosureIsNamed('13:00:00 · Clôture');
+    });
+
+    it('should draw the bound in the whole frame once the handle stands beyond the frame, extending the scale to the hour after it', async () => {
+      await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '20:00'), poigneeFixture('10:00', poigneeJusqua('20:00')));
+
+      await whenTheHandleMovesTo(poigneeFixture('20:00', poigneeJusqua('20:00')));
+
+      thenTheClosureIsNamed('20:00:00 · Clôture');
+      thenTheGraduationsAre([
+        '07:00',
+        '08:00',
+        '09:00',
+        '10:00',
+        '11:00',
+        '12:00',
+        '13:00',
+        '14:00',
+        '15:00',
+        '16:00',
+        '17:00',
+        '18:00',
+        '19:00',
+        '20:00',
+        '21:00',
+      ]);
+    });
+
+    it('should keep the closure marker whole inside the frise when the bound falls days after the end', async () => {
+      const dossier = avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00');
+      await whenRenderingTheFrise(dossier, poigneeFixture('10:00', poigneeJusquaLe17()));
+      await whenTheHandleMovesTo(poigneeFixture('08:00', poigneeJusquaLe17(), 17));
+
+      await whenTheFriseIsMeasured(1000);
+
+      thenTheClosureLeavesRoomForItsWidthAtTheRightEdge();
+    });
+
+    it('should keep the marker of the next start whole inside the frise when the bound falls days after the end', async () => {
+      const suivant = pointageA('debut-suivant', 'DEMARRAGE', instantAt('08:00', 17));
+      await whenRenderingTheFrise(
+        avecLaBorneLe(vueEntre('08:00', '12:00'), 17, '08:00', suivant),
+        poigneeFixture('10:00', poigneeJusquaLe17()),
+      );
+      await whenTheHandleMovesTo(poigneeFixture('08:00', poigneeJusquaLe17(), 17));
+
+      await whenTheFriseIsMeasured(1000);
+
+      thenTheMarkerLeavesRoomForItsWidthAtTheRightEdge('debut-suivant');
+    });
+
+    it('should let the pointer through the closure marker to the placement row under it', async () => {
+      await whenRenderingTheFrise(avecLaBorne(vueEntre('08:00', '12:00'), '12:30'), undefined, placementDeLaFixture());
+
+      thenThePointerGoesThroughTheClosure();
+    });
+  });
+
+  describe('of an automatic end', () => {
+    const uneFinAutomatique = (): VueDeFrise => vueEntre('08:00', '12:00');
+
+    it('should lay the bar of the expired activity under the axis and its start marker on the start of its bar', async () => {
+      await whenRenderingTheFrise(vueEntre('08:00', '21:00'));
+
+      thenTheBarsStandOnRowsAt([36]);
+      thenTheStartMarkerStandsOnTheStartOfItsBar('debut-a-1', 'a-1');
+    });
+
+    it('should stand the handle on the row of the bar it terminates, without a row of its own', async () => {
+      await whenRenderingTheFrise(vueEntre('08:00', '21:00'), poigneeFixture('17:00'));
+
+      expect(topOf(handle())).toBe(36);
+      thenTheBarsStandOnRowsAt([36]);
+    });
+
+    it('should lay the placement row on the row of the bar the instant will terminate, without a row of its own', async () => {
+      await whenRenderingTheFrise(vueEntre('08:00', '21:00'), undefined, placementFixture());
+
+      thenThePlacementRowStandsAt({ top: 36, height: 44 });
+      thenTheBarsStandOnRowsAt([36]);
+    });
+
+    it('should stand an hourless handle at the received end of the bar it will terminate, in the tab order and read as holding no hour', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
+
+      thenTheHandleStandsAt({ left: (5 / 6) * 100, onTheRowOf: 'a-1' });
+      thenTheHandleIsHourless('Heure ?');
+      thenTheHandleIsASliderInTheTabOrderWithNoHour();
+      thenTheAutomaticEndsDrawnAre([]);
+      thenNoPartIsRemoved();
+    });
+
+    it('should ask to place the instant where the hourless handle is dragged to', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
+
+      whenDraggingTheHandle({ from: 833, to: 917 });
+
+      thenThePlacementsAsked([new Date(2026, 8, 14, 12, 30).getTime()]);
+      thenTheMovesAsked([]);
+    });
+
+    it('should ask for nothing when the hourless handle is pressed and released without moving', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
+
+      whenPressingTheHandleAt(833);
+      whenTheGestureEndsWith('pointerup');
+
+      thenThePlacementsAsked([]);
+      thenTheMovesAsked([]);
+    });
+
+    it.each<{ touche: string; maj: boolean; demande: DemandeDeDeplacement }>([
+      { touche: 'ArrowRight', maj: false, demande: { kind: 'VERS', instant: new Date(2026, 8, 14, 12, 0).getTime() } },
+      { touche: 'ArrowLeft', maj: true, demande: { kind: 'VERS', instant: new Date(2026, 8, 14, 12, 0).getTime() } },
+      { touche: 'Home', maj: false, demande: { kind: 'BORNE', borne: 'MIN' } },
+      { touche: 'End', maj: false, demande: { kind: 'BORNE', borne: 'MAX' } },
+    ])(
+      'should ask to place the instant $demande.kind when $touche is pressed on the hourless handle (shift: $maj)',
+      async ({ touche, maj, demande }) => {
+        await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
+
+        const pressee = whenPressingKeyOnTheHandle(touche, maj);
+
+        thenThePlacementDemandsAsked([demande]);
+        thenTheMovesAsked([]);
+        expect(pressee.defaultPrevented).toBe(true);
+      },
+    );
+
+    it('should leave the other keys to the browser on the hourless handle', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
+
+      const touche = whenPressingKeyOnTheHandle('Tab');
+
+      thenThePlacementsAsked([]);
+      thenTheKeyIsLeftToTheBrowser(touche);
+    });
+
+    it('should keep the same element for the handle once its first move gave the fact an hour', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
+      const hourlessHandle = handle();
+      const touchedNodes = givenTheNodesOfThePlanAreWatched();
+
+      await whenTheFactGetsItsHour(poigneeFixture('13:00', { bornes: placementDeLaFixture().bornes }));
+
+      expect(handle()).toBe(hourlessHandle);
+      expect(touchedNodes()).not.toContain(hourlessHandle);
+      thenTheHandleHoldsAt(new Date(2026, 8, 14, 13, 0));
+      thenTheHandleIsASliderInTheTabOrder();
+    });
+
+    it('should go on moving the handle within the same gesture once the first move gave the fact an hour', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
+      whenDraggingTheHandle({ from: 833, to: 917 });
+      await whenTheFactGetsItsHour(poigneeFixture('12:30', { bornes: placementDeLaFixture().bornes }));
+
+      whenMovingThePointerOverTheHandleTo(750);
+
+      thenTheMovesAsked([{ kind: 'VERS', instant: new Date(2026, 8, 14, 11, 30).getTime() }]);
+    });
+
+    it('should ask to place the instant where the row of the bar is clicked', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
+
+      whenClickingThePlacementRowAt(917);
+
+      thenThePlacementsAsked([new Date(2026, 8, 14, 12, 30).getTime()]);
+    });
+
+    it('should end the bar the handle terminates at the time the handle stands at', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('10:00'));
+
+      thenTheBarSpans('a-1', { left: 100 / 6, width: 200 / 6 });
+      thenTheHandleStandsAt({ left: 50, onTheRowOf: 'a-1' });
+      thenTheBarAttributeIs('a-1', 'data-fin', 'PROPOSEE');
+      thenTheBarIsNamed(
+        'a-1',
+        'Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 12:00 · Fin automatique · heure proposée 10:00',
+      );
+    });
+
+    it('should draw the part the handle removes up to the received end', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('10:00'));
+
+      thenTheRemovedPartSpans({ left: 50, width: 200 / 6 });
+      thenTheRemovedPartStandsOnTheRowOf('a-1');
+      thenTheRemovedPartIsDecorative();
+    });
+
+    it('should lengthen the bar past its received end when the handle stands after it, with nothing removed', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('14:00'));
+
+      thenTheBarSpans('a-1', { left: 12.5, width: 75 });
+      thenNoPartIsRemoved();
+    });
+
+    it('should draw the automatic end of the expired activity while the handle is active', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('10:00'));
+
+      thenTheAutomaticEndsDrawnAre(['Fin automatique 12:00']);
+      thenTheAutomaticEndStands({ left: (5 / 6) * 100, onTheRowOf: 'a-1' });
+      thenTheAutomaticEndIsDecorative();
+    });
+
+    it('should draw no automatic end while no handle is active', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique());
+
+      thenTheAutomaticEndsDrawnAre([]);
+    });
+
+    it('should keep on the marker laid on its bar its name, its symbol and its hour', async () => {
+      await whenRenderingTheFrise(vueEntre('08:00', '11:00'));
+
+      thenTheMarkerIsNamed('debut-a-1', '08:00:00 · Démarrage');
+      thenTheMarkerSymbolIs('debut-a-1', '▶');
+      thenTheMarkerTimeIs('debut-a-1', '08:00');
+    });
+
+    it('should draw the marker and the bar as images, with no button, out of the tab order', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique());
+
+      thenTheMarkersAndTheBarsAreImages(['debut-a-1'], ['a-1']);
+      thenTheTabOrderIs([]);
+    });
+
+    it('should let the pointer through the marker and the bar to the placement row under them', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), undefined, placementDeLaFixture());
+
+      thenThePointerGoesThroughTheMarkersAndTheBars(['debut-a-1'], ['a-1']);
+    });
+
+    it('should leave the handle the only element of the focus order, still a slider that moves with the keys', async () => {
+      await whenRenderingTheFrise(dossierDeLaFinAutomatique(), poigneeFixture('10:00'));
+
+      whenPressingKeyOnTheHandle('ArrowLeft');
+
+      thenTheFocusOrderIs(['Heure proposée de la fin']);
+      thenTheHandleIsASlider();
+      thenTheMovesAsked([{ kind: 'DE', minutes: -1 }]);
+    });
+  });
+
+  const whenRenderingTheFrise = async (
+    dossier: VueDeFrise,
+    poignee?: PoigneeDeFrise,
+    placement?: PlacementDeLInstant,
+    limite?: LimiteDeLaFin,
+  ): Promise<void> => {
+    fixture = TestBed.createComponent(FriseDeLaFin);
+    fixture.componentRef.setInput('limite', limite);
+    fixture.componentRef.setInput('dossier', dossier);
+    fixture.componentRef.setInput('poignee', poignee);
+    fixture.componentRef.setInput('placement', placement);
+    fixture.componentRef.setInput('now', new Date(2026, 9, 5, 10, 0));
+    fixture.componentInstance.deplacementDemande.subscribe(demande => requestedMoves.push(demande));
+    fixture.componentInstance.placementDemande.subscribe(demande => requestedPlacements.push(demande));
+    await fixture.whenStable();
+  };
+
+  const whenTheFactGetsItsHour = async (poignee: PoigneeDeFrise): Promise<void> => {
+    fixture.componentRef.setInput('placement', undefined);
+    fixture.componentRef.setInput('poignee', poignee);
+    await fixture.whenStable();
+  };
+
+  const whenTheHandleMovesTo = async (poignee: PoigneeDeFrise): Promise<void> => {
+    fixture.componentRef.setInput('poignee', poignee);
+    await fixture.whenStable();
+  };
+
+  const whenTheHandleIsRemoved = async (): Promise<void> => {
+    fixture.componentRef.setInput('poignee', undefined);
+    await fixture.whenStable();
+  };
+
+  const frameButton = (): HTMLButtonElement =>
+    requiredFixture(
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(dataSelector('regularisation-frise-cadre')),
+      'frame button',
+    );
+
+  const whenPressingTheFrameButton = async (): Promise<void> => {
+    frameButton().click();
+    await fixture.whenStable();
+  };
+
+  const thenTheFrameButtonIs = (expected: HTMLElement): void => {
+    expect(frameButton()).toBe(expected);
+  };
+
+  const thenTheFrameButtonSubmitsNothing = (): void => {
+    expect(frameButton().getAttribute('type')).toBe('button');
+  };
+
+  const thenTheFrameButtonReads = (expected: string): void => {
+    expect(frameButton().textContent.trim()).toBe(expected);
+  };
+
+  const thenNoFrameButtonIsDrawn = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('regularisation-frise-cadre'))).toBeNull();
+  };
+
+  const whenTheFriseIsMeasured = async (width: number): Promise<void> => {
+    resizeObserver.announce(width);
+    await fixture.whenStable();
+  };
+
+  const whenDestroyingTheFrise = (): void => {
+    fixture.destroy();
+  };
+
+  const handle = (): HTMLElement =>
+    requiredFixture((fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('regularisation-poignee')), 'handle');
+
+  const givenTheBrowserCapturesPointers = (): number[] => {
+    const captured: number[] = [];
+    handle().setPointerCapture = (pointerId: number) => {
+      captured.push(pointerId);
+    };
+    return captured;
+  };
+
+  const whenDraggingTheHandle = ({ from, to }: { from: number; to: number }): void => {
+    whenPressingTheHandleAt(from);
+    whenMovingThePointerOverTheHandleTo(to);
+  };
+
+  const whenPressingTheHandleAt = (clientX: number, pointerId = 1): void => {
+    thePlan().getBoundingClientRect = () => new DOMRect(0, 0, PLAN_WIDTH, 200);
+    handle().dispatchEvent(new PointerEvent('pointerdown', { pointerId, clientX, bubbles: true }));
+  };
+
+  const whenMovingThePointerOverTheHandleTo = (clientX: number, pointerId = 1): void => {
+    thePlan().getBoundingClientRect = () => new DOMRect(0, 0, PLAN_WIDTH, 200);
+    handle().dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX, bubbles: true }));
+  };
+
+  const whenClickingThePlacementRowAt = (clientX: number): void => {
+    thePlan().getBoundingClientRect = () => new DOMRect(0, 0, PLAN_WIDTH, 200);
+    requiredFixture(
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('regularisation-frise-placement')),
+      'placement row',
+    ).dispatchEvent(new MouseEvent('click', { clientX, bubbles: true }));
+  };
+
+  const thenNoPlacementRowIsDrawn = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('regularisation-frise-placement'))).toBeNull();
+  };
+
+  const thenThePlacementsAsked = (expected: readonly number[]): void => {
+    thenThePlacementDemandsAsked(expected.map(instant => ({ kind: 'VERS', instant })));
+  };
+
+  const thenThePlacementDemandsAsked = (expected: readonly DemandeDeDeplacement[]): void => {
+    expect(requestedPlacements.map(placement => placement.demande)).toEqual(expected);
+  };
+
+  const whenTheGestureEndsWith = (type: string, pointerId = 1): void => {
+    handle().dispatchEvent(new PointerEvent(type, { pointerId, bubbles: true }));
+  };
+
+  const whenPressingKeyOnTheHandle = (key: string, shiftKey = false): KeyboardEvent => {
+    const touche = new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, cancelable: true });
+    handle().dispatchEvent(touche);
+    return touche;
+  };
+
+  const thenTheKeyIsLeftToTheBrowser = (touche: KeyboardEvent): void => {
+    expect(touche.defaultPrevented).toBe(false);
+  };
+
+  const thenTheMovesAsked = (expected: readonly DemandeDeDeplacement[]): void => {
+    expect(requestedMoves.map(deplacement => deplacement.demande)).toEqual(expected);
+  };
+
+  const thenTheHandleStandsAt = (expected: { left: number; onTheRowOf: string }): void => {
+    expect(Number.parseFloat(handle().style.left)).toBeCloseTo(expected.left);
+    expect(handle().style.top).toBe(bar(expected.onTheRowOf).style.top);
+  };
+
+  const thenTheHandleIsHourless = (expectedText: string): void => {
+    expect(handle().hasAttribute('data-sans-heure')).toBe(true);
+    expect(handle().textContent.trim()).toBe(expectedText);
+  };
+
+  const thenTheHandleIsASliderInTheTabOrderWithNoHour = (): void => {
+    expect(handle().getAttribute('role')).toBe('slider');
+    expect(handle().hasAttribute('aria-hidden')).toBe(false);
+    expect(handle().getAttribute('tabindex')).toBe('0');
+    expect(handle().hasAttribute('aria-valuenow')).toBe(false);
+    expect(handle().getAttribute('aria-valuetext')).toBe('Aucune heure posée');
+  };
+
+  const givenTheNodesOfThePlanAreWatched = (): (() => readonly Node[]) => {
+    const records: MutationRecord[] = [];
+    const observer = new MutationObserver(batch => records.push(...batch));
+    observer.observe(thePlan(), { childList: true, subtree: true });
+    return () => {
+      records.push(...observer.takeRecords());
+      observer.disconnect();
+      return records.flatMap(record => [...record.addedNodes, ...record.removedNodes]);
+    };
+  };
+
+  const thenTheHandleIsASliderInTheTabOrder = (): void => {
+    expect(handle().hasAttribute('data-sans-heure')).toBe(false);
+    expect(handle().hasAttribute('aria-hidden')).toBe(false);
+    expect(handle().getAttribute('tabindex')).toBe('0');
+  };
+
+  const thenTheHandleIsASlider = (): void => {
+    expect(handle().getAttribute('role')).toBe('slider');
+  };
+
+  const thenTheHandleReads = (expected: { min: number; max: number; now: number; text: string }): void => {
+    expect({
+      min: Number(handle().getAttribute('aria-valuemin')),
+      max: Number(handle().getAttribute('aria-valuemax')),
+      now: Number(handle().getAttribute('aria-valuenow')),
+      text: handle().getAttribute('aria-valuetext'),
+    }).toEqual(expected);
+  };
+
+  const thenTheHandleIsReadAs = (expected: string): void => {
+    expect(handle().getAttribute('aria-valuetext')).toBe(expected);
+  };
+
+  const thenTheHandleIsNamedAndShows = (name: string, time: string): void => {
+    expect(handle().getAttribute('aria-label')).toBe(name);
+    expect(handle().textContent.trim()).toBe(time);
+  };
+
+  const thenTheHandleHoldsAt = (expected: Date): void => {
+    expect(Number(handle().getAttribute('aria-valuenow'))).toBe(expected.getTime());
+  };
+
+  const markers = (): HTMLElement[] => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('regularisation-pointage')),
+  ];
+
+  const marker = (pointage: string): HTMLElement =>
+    requiredFixture(
+      markers().find(candidate => candidate.dataset['pointage'] === pointage),
+      `marker of ${pointage}`,
+    );
+
+  const thenTheMarkerIsNamed = (pointage: string, expected: string): void => {
+    expect(marker(pointage).getAttribute('aria-label')).toBe(expected);
+  };
+
+  const thenTheMarkerFlagIs = (pointage: string, attribut: string, expected: string): void => {
+    expect(marker(pointage).getAttribute(attribut)).toBe(expected);
+  };
+
+  const thenTheMarkerSymbolIs = (pointage: string, expected: string): void => {
+    const symbole = requiredFixture(
+      marker(pointage).querySelector<HTMLElement>(dataSelector('regularisation-pointage-symbole')),
+      'marker symbol',
+    );
+    expect(symbole.textContent.trim()).toBe(expected);
+  };
+
+  const thenTheMarkerTimeIs = (pointage: string, expected: string): void => {
+    const heure = requiredFixture(
+      marker(pointage).querySelector<HTMLElement>(dataSelector('regularisation-pointage-heure')),
+      'marker time',
+    );
+    expect(heure.textContent.trim()).toBe(expected);
+  };
+
+  const bars = (): HTMLElement[] => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('regularisation-activite')),
+  ];
+
+  const bar = (activite: string): HTMLElement =>
+    requiredFixture(
+      bars().find(candidate => candidate.dataset['activite'] === activite),
+      `bar of ${activite}`,
+    );
+
+  const thenTheBarReads = (activite: string, expected: string): void => {
+    expect(bar(activite).textContent.replace(/\s+/g, ' ').trim()).toBe(expected);
+  };
+
+  const thenTheBarAttributeIs = (activite: string, attribut: string, expected: string | null): void => {
+    expect(bar(activite).getAttribute(attribut)).toBe(expected);
+  };
+
+  const thenTheBarNameEndsWith = (activite: string, expected: string): void => {
+    expect(bar(activite).getAttribute('aria-label')?.slice(-expected.length)).toBe(expected);
+  };
+
+  const thenTheBarIsNamed = (activite: string, expected: string): void => {
+    expect(bar(activite).getAttribute('aria-label')).toBe(expected);
+  };
+
+  const thenTheMarkersAndTheBarsAreImages = (pointages: readonly string[], activites: readonly string[]): void => {
+    const elements = [...pointages.map(marker), ...activites.map(bar)];
+    expect(elements.map(element => [element.tagName, element.getAttribute('role')])).toEqual(elements.map(() => ['DIV', 'img']));
+  };
+
+  const thenThePointerGoesThroughTheMarkersAndTheBars = (pointages: readonly string[], activites: readonly string[]): void => {
+    const elements = [...pointages.map(marker), ...activites.map(bar)];
+    expect(elements.map(element => getComputedStyle(element).pointerEvents)).toEqual(elements.map(() => 'none'));
+  };
+
+  const thenTheTabOrderIs = (expected: readonly string[]): void => {
+    const buttons = [...(fixture.nativeElement as HTMLElement).querySelectorAll('button')];
+    expect(buttons.map(button => button.getAttribute('aria-label'))).toEqual(expected);
+  };
+
+  const thenTheFocusOrderIs = (expected: readonly string[]): void => {
+    const focusables = [...(fixture.nativeElement as HTMLElement).querySelectorAll('button, [role="slider"]')];
+    expect(focusables.map(focusable => focusable.getAttribute('aria-label'))).toEqual(expected);
+  };
+
+  const thenTheGraduationsAre = (expected: readonly string[]): void => {
+    const graduations = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('regularisation-frise-graduation-heure')),
+    ];
+    expect(graduations.map(graduation => graduation.textContent.trim())).toEqual(expected);
+  };
+
+  const thenTheNumberOfGraduationsIs = (expected: number): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll(dataSelector('regularisation-frise-graduation'))).toHaveLength(expected);
+  };
+
+  const thenTheGraduationsStandAt = (expected: readonly number[]): void => {
+    const lefts = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('regularisation-frise-graduation')),
+    ].map(graduation => Number.parseFloat(graduation.style.left));
+    expect(lefts).toHaveLength(expected.length);
+    expected.forEach((left, rang) => {
+      expect(lefts[rang]).toBeCloseTo(left);
+    });
+  };
+
+  const thenNoTwoGraduationsAreCloserThan = (pixels: number, width: number): void => {
+    const lefts = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('regularisation-frise-graduation')),
+    ].map(graduation => (Number.parseFloat(graduation.style.left) / 100) * width);
+    lefts.slice(1).forEach((left, rang) => {
+      expect(left - (lefts[rang] ?? Number.NaN)).toBeGreaterThanOrEqual(pixels);
+    });
+  };
+
+  const topOf = (element: HTMLElement): number => Number.parseFloat(element.style.top);
+
+  const thePlan = (): HTMLElement =>
+    requiredFixture(
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('regularisation-frise-plan')),
+      'frise plan',
+    );
+
+  const graduations = (): HTMLElement[] => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('regularisation-frise-graduation')),
+  ];
+
+  const thenNoGraduationTellsItsDay = (): void => {
+    expect(graduations().map(graduation => graduation.textContent.trim())).not.toContainEqual(expect.stringContaining('sept.'));
+  };
+
+  const thenTheGraduationsOpenTheDaysOfTheBand = (expected: readonly string[]): void => {
+    const dayOpenedAt = (left: number): string | undefined =>
+      daysOfTheBand()
+        .find(jour => Math.abs(Number.parseFloat(jour.style.left) - left) < 1e-9)
+        ?.textContent.trim();
+    expect(graduations().map(graduation => dayOpenedAt(Number.parseFloat(graduation.style.left)))).toEqual(expected);
+  };
+
+  const daysOfTheBand = (): HTMLElement[] => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('regularisation-frise-bandeau-jour')),
+  ];
+
+  const thenTheDaysOfTheBandAre = (expected: readonly string[]): void => {
+    expect(daysOfTheBand().map(jour => jour.textContent.trim())).toEqual(expected);
+  };
+
+  const thenTheDaysOfTheBandSpan = (expected: readonly { left: number; width: number }[]): void => {
+    const spans = daysOfTheBand().map(jour => ({ left: Number.parseFloat(jour.style.left), width: Number.parseFloat(jour.style.width) }));
+    expect(spans).toHaveLength(expected.length);
+    expected.forEach(({ left, width }, rang) => {
+      expect(spans[rang]?.left).toBeCloseTo(left);
+      expect(spans[rang]?.width).toBeCloseTo(width);
+    });
+  };
+
+  const thenTheMidnightLinesStandAt = (expected: readonly number[]): void => {
+    const lefts = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('regularisation-frise-minuit')),
+    ].map(ligne => Number.parseFloat(ligne.style.left));
+    expect(lefts).toHaveLength(expected.length);
+    expected.forEach((left, rang) => {
+      expect(lefts[rang]).toBeCloseTo(left);
+    });
+  };
+
+  const thenNoBandOfDaysIsDrawn = (): void => {
+    expect((fixture.nativeElement as HTMLElement).querySelector(dataSelector('regularisation-frise-bandeau'))).toBeNull();
+  };
+
+  const thenTheBarsStandOnRowsAt = (expected: readonly number[]): void => {
+    expect(bars().map(topOf)).toEqual(expected);
+  };
+
+  const thenTheStartMarkerStandsOnTheStartOfItsBar = (pointage: string, activite: string): void => {
+    expect(marker(pointage).style.left).toBe(bar(activite).style.left);
+    expect(marker(pointage).style.top).toBe(bar(activite).style.top);
+  };
+
+  const removedPart = (): HTMLElement | null =>
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('regularisation-frise-retrait'));
+
+  const thenTheRemovedPartSpans = (expected: { left: number; width: number }): void => {
+    const part = requiredFixture(removedPart(), 'removed part');
+    expect(Number.parseFloat(part.style.left)).toBeCloseTo(expected.left);
+    expect(Number.parseFloat(part.style.width)).toBeCloseTo(expected.width);
+  };
+
+  const thenTheRemovedPartStandsOnTheRowOf = (activite: string): void => {
+    expect(requiredFixture(removedPart(), 'removed part').style.top).toBe(bar(activite).style.top);
+  };
+
+  const thenNoPartIsRemoved = (): void => {
+    expect(removedPart()).toBeNull();
+  };
+
+  const automaticEnds = (): HTMLElement[] => [
+    ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(dataSelector('regularisation-frise-fin-automatique')),
+  ];
+
+  const thenTheAutomaticEndsDrawnAre = (expected: readonly string[]): void => {
+    expect(automaticEnds().map(end => end.textContent.replace(/\s+/g, ' ').trim())).toEqual(expected);
+  };
+
+  const thenTheAutomaticEndStands = (expected: { left: number; onTheRowOf: string }): void => {
+    const end = requiredFixture(automaticEnds()[0], 'automatic end');
+    expect(Number.parseFloat(end.style.left)).toBeCloseTo(expected.left);
+    expect(end.style.top).toBe(bar(expected.onTheRowOf).style.top);
+  };
+
+  const thenTheAutomaticEndIsDecorative = (): void => {
+    expect(requiredFixture(automaticEnds()[0], 'automatic end').getAttribute('aria-hidden')).toBe('true');
+  };
+
+  const thenTheRemovedPartIsDecorative = (): void => {
+    expect(requiredFixture(removedPart(), 'removed part').getAttribute('aria-hidden')).toBe('true');
+  };
+
+  const thenTheBarSpans = (activite: string, expected: { left: number; width: number }): void => {
+    expect(Number.parseFloat(bar(activite).style.left)).toBeCloseTo(expected.left);
+    expect(Number.parseFloat(bar(activite).style.width)).toBeCloseTo(expected.width);
+  };
+
+  const thenThePlacementRowStandsAt = (expected: { top: number; height: number }): void => {
+    const row = requiredFixture(
+      (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('regularisation-frise-placement')),
+      'placement row',
+    );
+    expect({ top: topOf(row), height: Number.parseFloat(row.style.height) }).toEqual(expected);
+  };
+
+  const closure = (): HTMLElement | null =>
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(dataSelector('regularisation-cloture'));
+
+  const thenTheClosureIsNamed = (expected: string): void => {
+    expect(requiredFixture(closure(), 'closure marker').getAttribute('aria-label')).toBe(expected);
+  };
+
+  const thenTheClosureReads = (expected: string): void => {
+    const lines = [...requiredFixture(closure(), 'closure marker').children].map(line => line.textContent.trim());
+    expect(lines.join(' ')).toBe(expected);
+  };
+
+  const thenTheClosureLeavesRoomForItsWidthAtTheRightEdge = (): void => {
+    expect(Number.parseFloat(requiredFixture(closure(), 'closure marker').style.left)).toBeLessThanOrEqual(93.2);
+  };
+
+  const thenTheMarkerLeavesRoomForItsWidthAtTheRightEdge = (pointage: string): void => {
+    expect(Number.parseFloat(marker(pointage).style.left)).toBeLessThanOrEqual(95.6);
+  };
+
+  const thenNoClosureIsDrawn = (): void => {
+    expect(closure()).toBeNull();
+  };
+
+  const thenThePointerGoesThroughTheClosure = (): void => {
+    expect(getComputedStyle(requiredFixture(closure(), 'closure marker')).pointerEvents).toBe('none');
+  };
+
+  const thenTheMarkerStandsAtTheHour = (pointage: string, heure: number, minutes: number): void => {
+    const debut = Date.parse(instantAt('07:00'));
+    const fin = Date.parse(instantAt('13:00'));
+    const attendu = ((new Date(2026, 8, 14, heure, minutes).getTime() - debut) / (fin - debut)) * 100;
+    expect(Number.parseFloat(marker(pointage).style.left)).toBeCloseTo(attendu);
+  };
+
+  const thenTheMarkersAre = (expected: readonly string[]): void => {
+    expect(markers().map(marker => marker.dataset['pointage'])).toEqual(expected);
+  };
+
+  describe('in a time zone that changes hour', () => {
+    const original = process.env['TZ'];
+
+    beforeEach(() => {
+      process.env['TZ'] = 'Europe/Paris';
+    });
+
+    afterEach(() => {
+      if (original === undefined) delete process.env['TZ'];
+      else process.env['TZ'] = original;
+    });
+
+    it('should graduate every elapsed hour across the hour the clock repeats', async () => {
+      const dossier = vueEntreInstants(new Date(Date.UTC(2026, 9, 24, 23, 30)), new Date(Date.UTC(2026, 9, 25, 1, 30)));
+
+      await whenRenderingTheFrise(dossier);
+
+      thenTheNumberOfGraduationsIs(6);
+    });
+
+    it('should graduate the extended scale hour by hour across midnight and the hour the clock repeats', async () => {
+      const dossier = vueEntreInstants(new Date(Date.UTC(2026, 9, 24, 21, 0)), new Date(Date.UTC(2026, 9, 24, 22, 30)));
+      const bornes = {
+        min: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString(),
+        max: new Date(Date.UTC(2026, 9, 25, 1, 30)).toISOString(),
+      };
+
+      await whenRenderingTheFrise(
+        dossier,
+        poigneeFixture('00:00', { instant: new Date(Date.UTC(2026, 9, 24, 22, 30)).toISOString(), bornes }),
+      );
+      await whenTheHandleMovesTo(poigneeFixture('00:00', { instant: bornes.max, bornes }));
+
+      thenTheNumberOfGraduationsIs(7);
+    });
+
+    it.each([
+      { cas: 'first', instant: new Date(Date.UTC(2026, 9, 25, 0, 30)), texte: '02:30 UTC+02:00' },
+      { cas: 'second', instant: new Date(Date.UTC(2026, 9, 25, 1, 30)), texte: '02:30 UTC+01:00' },
+    ])('should tell the $cas occurrence of the hour the clock repeats apart in the time of the handle', async ({ instant, texte }) => {
+      const dossier = vueEntreInstants(new Date(Date.UTC(2026, 9, 24, 21, 0)), new Date(Date.UTC(2026, 9, 24, 22, 0)));
+      const bornes = {
+        min: new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString(),
+        max: new Date(Date.UTC(2026, 9, 25, 5, 0)).toISOString(),
+      };
+
+      await whenRenderingTheFrise(dossier, poigneeFixture('00:00', { instant: instant.toISOString(), bornes }));
+
+      thenTheHandleIsReadAs(texte);
+    });
+
+    it.each([
+      { cas: 'first', instant: new Date(Date.UTC(2026, 9, 25, 0, 30)), proposee: 'heure proposée 02:30 UTC+02:00' },
+      { cas: 'second', instant: new Date(Date.UTC(2026, 9, 25, 1, 30)), proposee: 'heure proposée 02:30 UTC+01:00' },
+    ])(
+      'should tell the $cas occurrence of the hour the clock repeats apart in the name of the bar it ends',
+      async ({ instant, proposee }) => {
+        const debut = new Date(Date.UTC(2026, 9, 24, 21, 0)).toISOString();
+        const fin = new Date(Date.UTC(2026, 9, 25, 5, 0)).toISOString();
+
+        await whenRenderingTheFrise(
+          vueDe(activiteA('a-1', debut, fin)),
+          poigneeFixture('00:00', { instant: instant.toISOString(), bornes: { min: debut, max: fin } }),
+        );
+
+        thenTheBarNameEndsWith('a-1', ` · ${proposee}`);
+      },
+    );
+
+    it('should graduate every two hours the day the clock repeats an hour, without two graduations closer than 64 pixels', async () => {
+      await whenRenderingTheFrise(vueEntreInstants(new Date(Date.UTC(2026, 9, 24, 23, 30)), new Date(Date.UTC(2026, 9, 25, 1, 30))));
+
+      await whenTheFriseIsMeasured(200);
+
+      thenTheGraduationsStandAt([0, 40, 100]);
+      thenNoTwoGraduationsAreCloserThan(64, 200);
+    });
+
+    it('should graduate every three hours the day the clock skips an hour, without two graduations closer than 64 pixels', async () => {
+      await whenRenderingTheFrise(vueEntreInstants(new Date(Date.UTC(2026, 2, 28, 23, 30)), new Date(Date.UTC(2026, 2, 29, 2, 30))));
+
+      await whenTheFriseIsMeasured(140);
+
+      thenTheGraduationsStandAt([100 / 6, 100]);
+      thenNoTwoGraduationsAreCloserThan(64, 140);
+    });
+  });
+
+  describe('in a time zone that repeats midnight', () => {
+    const original = process.env['TZ'];
+
+    beforeEach(() => {
+      process.env['TZ'] = 'America/Havana';
+    });
+
+    afterEach(() => {
+      if (original === undefined) delete process.env['TZ'];
+      else process.env['TZ'] = original;
+    });
+
+    it('should keep the second midnight, and drop the graduation before it, when the first one is too close', async () => {
+      await whenRenderingTheFrise(vueEntreInstants(new Date(Date.UTC(2026, 10, 1, 2, 0)), new Date(Date.UTC(2026, 10, 1, 8, 0))));
+
+      await whenTheFriseIsMeasured(400);
+
+      thenTheGraduationsStandAt([12.5, 50, 75, 100]);
+    });
+  });
+});

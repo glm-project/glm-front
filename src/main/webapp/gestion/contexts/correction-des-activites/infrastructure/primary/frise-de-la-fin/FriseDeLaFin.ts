@@ -1,0 +1,135 @@
+import { formatInstantShortWeekdayDayMonth, formatInstantTime } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
+import { afterNextRender, Component, computed, DestroyRef, ElementRef, inject, input, linkedSignal, output, signal } from '@angular/core';
+import { LimiteDeLaFin } from '../../../domain/fin-automatique/CadreDeLaFin';
+import { LIBELLES_CORRECTION_DES_ACTIVITES } from '../LibellesCorrectionDesActivites';
+import { PositionDePoignee, PositionSansHeure, VueDeFrise } from './DispositionFrise';
+import { finDuCadreDe, instantSousLePointeur, positionSur } from './EchelleFrise';
+import { dispositionDeFrise } from './FriseEnLigne';
+import {
+  DemandeDeDeplacement,
+  demandeDeLaTouche,
+  DeplacementDemande,
+  PlacementDeLInstant,
+  PlacementDemande,
+  PoigneeDeFrise,
+} from './PoigneeDeFrise';
+import { clotureDeLaFrise } from './PointagesDeLaFrise';
+
+const LARGEUR_DE_REFERENCE_PX = 1214;
+
+const placementAuClavier = (demande: DemandeDeDeplacement, position: PositionSansHeure): DemandeDeDeplacement =>
+  demande.kind === 'BORNE' ? demande : { kind: 'VERS', instant: position.instant };
+
+@Component({
+  selector: 'glm-frise-de-la-fin',
+  templateUrl: './FriseDeLaFin.html',
+  styleUrls: ['./FriseDeLaFin.css', './Boutons.css'],
+})
+export class FriseDeLaFin {
+  readonly dossier = input.required<VueDeFrise>();
+  readonly now = input.required<Date>();
+  readonly poignee = input<PoigneeDeFrise | undefined>(undefined);
+  readonly placement = input<PlacementDeLInstant | undefined>(undefined);
+  readonly limite = input<LimiteDeLaFin | undefined>(undefined);
+  readonly deplacementDemande = output<DeplacementDemande>();
+  readonly placementDemande = output<PlacementDemande>();
+  protected readonly libelles = LIBELLES_CORRECTION_DES_ACTIVITES.regularisation;
+  private readonly hote = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly largeur = signal(LARGEUR_DE_REFERENCE_PX);
+  private readonly finDuCadre = computed(() => finDuCadreDe(this.dossier().activite));
+  private readonly poigneeAuDela = computed(() => {
+    const poignee = this.poignee();
+    if (poignee === undefined) return false;
+    const { min, max } = poignee.bornes;
+    return Math.min(Math.max(Date.parse(poignee.instant), Date.parse(min)), Date.parse(max)) > this.finDuCadre();
+  });
+  private readonly cadreComplet = linkedSignal<boolean, boolean>({
+    source: this.poigneeAuDela,
+    computation: (auDela, precedent) => auDela || (precedent?.value ?? false),
+  });
+  private prise: { readonly decalage: number } | undefined;
+  protected readonly disposition = computed(() =>
+    dispositionDeFrise({
+      vue: this.dossier(),
+      maintenant: this.now(),
+      poignee: this.poignee(),
+      placement: this.placement(),
+      largeur: this.largeur(),
+      cadreComplet: this.cadreComplet(),
+    }),
+  );
+
+  protected readonly texteDuCadre = computed(() => {
+    const limite = this.limite();
+    return limite !== undefined && this.limiteHorsCadre(limite) ? this.texteDuBouton(limite) : undefined;
+  });
+
+  constructor() {
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => {
+      const observateur = new ResizeObserver(mesures => {
+        for (const mesure of mesures) this.mesure(mesure.contentRect.width);
+      });
+      observateur.observe(this.hote.nativeElement);
+      destroyRef.onDestroy(() => {
+        observateur.disconnect();
+      });
+    });
+  }
+
+  protected saisit(pointeur: PointerEvent, plan: HTMLElement, poignee: PositionDePoignee): void {
+    (pointeur.currentTarget as Element).setPointerCapture(pointeur.pointerId);
+    const { left, width } = plan.getBoundingClientRect();
+    this.prise = { decalage: pointeur.clientX - (left + (positionSur(this.disposition().echelle, poignee.instant) / 100) * width) };
+  }
+
+  protected glisse(pointeur: PointerEvent, plan: HTMLElement, position: PositionDePoignee): void {
+    if (this.prise === undefined) return;
+    const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), pointeur.clientX - this.prise.decalage);
+    if (position.heure === 'AVEC_HEURE') this.deplacementDemande.emit({ demande: { kind: 'VERS', instant }, poignee: position.source });
+    else this.placementDemande.emit({ demande: { kind: 'VERS', instant } });
+  }
+
+  protected bascule(): void {
+    this.cadreComplet.update(complet => !complet);
+  }
+
+  private limiteHorsCadre(limite: LimiteDeLaFin): boolean {
+    return !this.poigneeAuDela() && Date.parse(limite.instant) > this.finDuCadre();
+  }
+
+  private texteDuBouton(limite: LimiteDeLaFin): string {
+    return this.cadreComplet() ? LIBELLES_CORRECTION_DES_ACTIVITES.regularisation.frise.revenirSurLActivite : this.texteDeLaLimite(limite);
+  }
+
+  private texteDeLaLimite(limite: LimiteDeLaFin): string {
+    const libelles = LIBELLES_CORRECTION_DES_ACTIVITES.regularisation.frise;
+    if (limite.par === 'HORLOGE') return libelles.voirJusquAMaintenant;
+    const instant = new Date(limite.instant);
+    const moment = `${formatInstantShortWeekdayDayMonth(instant)} ${formatInstantTime(instant)}`;
+    return clotureDeLaFrise(this.dossier()) === undefined
+      ? libelles.voirJusquAuDemarrageSuivant(moment)
+      : libelles.voirJusquALaCloture(moment);
+  }
+
+  private mesure(largeur: number): void {
+    if (largeur > 0) this.largeur.set(largeur);
+  }
+
+  protected relache(): void {
+    this.prise = undefined;
+  }
+
+  protected place(clic: MouseEvent, plan: HTMLElement): void {
+    const instant = instantSousLePointeur(this.disposition().echelle, plan.getBoundingClientRect(), clic.clientX);
+    this.placementDemande.emit({ demande: { kind: 'VERS', instant } });
+  }
+
+  protected touche(touche: KeyboardEvent, position: PositionDePoignee): void {
+    const demande = demandeDeLaTouche(touche);
+    if (demande === undefined) return;
+    touche.preventDefault();
+    if (position.heure === 'AVEC_HEURE') this.deplacementDemande.emit({ demande, poignee: position.source });
+    else this.placementDemande.emit({ demande: placementAuClavier(demande, position) });
+  }
+}

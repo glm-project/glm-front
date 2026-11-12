@@ -258,6 +258,43 @@ describe('Activities of the day', () => {
     expect(document.activeElement).toBe(document.body);
   });
 
+  it('should offer to regularise the end of an activity ended automatically, named by its element and its hours', async () => {
+    await whenShowingTheDay([matin, finAutomatique]);
+
+    expect(labels('activite-regulariser')).toEqual(['Régulariser la fin de l’activité OF 24-131, 18:30 → 21:45']);
+  });
+
+  it('should offer no regularisation for an activity ended automatically whose suivi is closed', async () => {
+    await whenShowingTheDay([{ ...suiviCloture, etat: terminee(instantLocal(5, 10, 30), 'PT30M', 'TERMINEE_AUTOMATIQUEMENT') }]);
+
+    expect(labels('activite-regulariser')).toEqual([]);
+  });
+
+  it('should ask to regularise the end of the activity whose button is pressed', async () => {
+    const demandes = givenTheRegularisationsAsked();
+    await whenShowingTheDay([matin, finAutomatique]);
+
+    whenPressingTheRegularisation();
+
+    expect(demandes.map(demande => demande.id.value)).toEqual(['soir']);
+  });
+
+  it('should give the focus back to the button that regularises the end of an activity', async () => {
+    await whenShowingTheDay([matin, finAutomatique]);
+
+    shown.componentInstance.donnerLeFocusALaRegularisation(new ActiviteDeLaJourneeId('soir'));
+
+    expect(document.activeElement).toBe(all('activite-regulariser')[0]);
+  });
+
+  it('should forbid the regularisation while a correction is being sent', async () => {
+    shown.componentRef.setInput('envoiEnCours', true);
+
+    await whenShowingTheDay([finAutomatique]);
+
+    expect(disabledStates('activite-regulariser')).toEqual([true]);
+  });
+
   it('should forbid every correction while one is being sent', async () => {
     shown.componentRef.setInput('envoiEnCours', true);
     await whenShowingTheDay([matin, soir]);
@@ -335,6 +372,16 @@ describe('Activities of the day', () => {
 
   const whenPressingTheChangeOfWorkstationOfTheSecondActivity = (): void => {
     all('activite-changer-poste')[1]?.click();
+  };
+
+  const givenTheRegularisationsAsked = (): ActiviteTerminee[] => {
+    const demandes: ActiviteTerminee[] = [];
+    shown.componentInstance.regularisationDemandee.subscribe(activite => demandes.push(activite));
+    return demandes;
+  };
+
+  const whenPressingTheRegularisation = (): void => {
+    all('activite-regulariser')[0]?.click();
   };
 
   const whenShowingTheDayWithTheSelection = async (activites: readonly ActiviteSemee[], selection: string): Promise<void> => {

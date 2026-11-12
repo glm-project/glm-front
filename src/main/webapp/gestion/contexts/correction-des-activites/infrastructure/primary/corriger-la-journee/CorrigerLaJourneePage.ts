@@ -33,6 +33,7 @@ import { maintenant } from '../Horloge';
 import { LIBELLES_CORRECTION_DES_ACTIVITES } from '../LibellesCorrectionDesActivites';
 import { PanneauDAjout } from '../panneau-d-ajout/PanneauDAjout';
 import { PanneauDeChangementDePoste } from '../panneau-de-changement-de-poste/PanneauDeChangementDePoste';
+import { PanneauDeRegularisation } from '../panneau-de-regularisation/PanneauDeRegularisation';
 import { DonneesDuRetrait, RetraitDeLActivite } from '../retrait-de-l-activite/RetraitDeLActivite';
 
 export type EtatDeLaPage =
@@ -64,7 +65,17 @@ const operateurDe = (chemin: ParamMap): string => {
 @Component({
   selector: 'glm-corriger-la-journee',
   host: { 'data-selector': 'corriger-page' },
-  imports: [ActivitesDuJour, ErrorMessage, FriseDuJour, Icon, MatButtonModule, PanneauDAjout, PanneauDeChangementDePoste, RouterLink],
+  imports: [
+    ActivitesDuJour,
+    ErrorMessage,
+    FriseDuJour,
+    Icon,
+    MatButtonModule,
+    PanneauDAjout,
+    PanneauDeChangementDePoste,
+    PanneauDeRegularisation,
+    RouterLink,
+  ],
   templateUrl: './CorrigerLaJourneePage.html',
   styleUrl: './CorrigerLaJourneePage.css',
   providers: [CorrectionDUneActivite],
@@ -102,6 +113,11 @@ export class CorrigerLaJourneePage {
   });
 
   private readonly activiteEnChangement = linkedSignal<AdresseDeLaJournee | undefined, ActiviteDeLaJourneeId | undefined>({
+    source: this.adresse,
+    computation: () => undefined,
+  });
+
+  private readonly activiteARegulariser = linkedSignal<AdresseDeLaJournee | undefined, ActiviteDeLaJourneeId | undefined>({
     source: this.adresse,
     computation: () => undefined,
   });
@@ -162,13 +178,38 @@ export class CorrigerLaJourneePage {
     return activite === undefined ? undefined : { journee, activite };
   }
 
+  protected regularisationDe(journee: JourneeACorriger): ActiviteTerminee | undefined {
+    const identifiant = this.activiteARegulariser();
+    const activite = identifiant === undefined ? undefined : journee.activiteCorrigeable(identifiant);
+    return activite?.etat.kind === 'TERMINEE_AUTOMATIQUEMENT' ? activite : undefined;
+  }
+
   protected ouvrirLeChangementDePoste(activite: ActiviteTerminee): void {
     this.ajout.set(undefined);
+    this.activiteARegulariser.set(undefined);
     this.activiteEnChangement.set(activite.id);
+  }
+
+  protected ouvrirLaRegularisation(activite: ActiviteTerminee): void {
+    this.ajout.set(undefined);
+    this.activiteEnChangement.set(undefined);
+    this.activiteARegulariser.set(activite.id);
+  }
+
+  protected abandonnerLaRegularisation(activite: ActiviteTerminee, liste: ActivitesDuJour): void {
+    this.activiteARegulariser.set(undefined);
+    this.rendreLeFocusALaRegularisation(activite, liste);
+  }
+
+  protected regularisationCorrigee(issue: IssueDeCorrection): void {
+    this.activiteARegulariser.set(undefined);
+    this.relire(LIBELLES_CORRECTION_DES_ACTIVITES.regularisation.annonce[issue]);
+    this.donnerLeFocusAuMessage();
   }
 
   protected ouvrirLAjout(journee: JourneeACorriger): void {
     this.activiteEnChangement.set(undefined);
+    this.activiteARegulariser.set(undefined);
     this.ajout.update(ouvert => ouvert ?? AjoutEnPreparation.ouvrir(journee, maintenant(), calendrierDuNavigateur));
   }
 
@@ -214,6 +255,7 @@ export class CorrigerLaJourneePage {
   private fermerLesPanneauxApresLeRetrait(issue: IssueDeCorrection, activite: ActiviteTerminee): void {
     if (issue === 'JOURNEE_CHANGEE') {
       this.activiteEnChangement.set(undefined);
+      this.activiteARegulariser.set(undefined);
       this.ajout.set(undefined);
     } else {
       this.fermerLeChangementDeLActiviteRetiree(activite);
@@ -244,6 +286,15 @@ export class CorrigerLaJourneePage {
     afterNextRender(
       () => {
         liste.donnerLeFocusAuBoutonDAjout();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private rendreLeFocusALaRegularisation(activite: ActiviteTerminee, liste: ActivitesDuJour): void {
+    afterNextRender(
+      () => {
+        liste.donnerLeFocusALaRegularisation(activite.id);
       },
       { injector: this.injector },
     );

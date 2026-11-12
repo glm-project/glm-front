@@ -1,0 +1,135 @@
+import { ActiviteEchue, PointageDuDossier } from '../../../domain/fin-automatique/DossierDeLaFin';
+import { LIBELLES_CORRECTION_DES_ACTIVITES } from '../LibellesCorrectionDesActivites';
+import {
+  BarreFrise,
+  ClotureFrise,
+  DispositionFrise,
+  EntreesDeFrise,
+  FinAutomatiqueDeFrise,
+  PositionDePoignee,
+  RangeeDePlacement,
+  RepereFrise,
+  RetraitDeFrise,
+} from './DispositionFrise';
+import {
+  EchelleFrise,
+  graduationsDe,
+  JourDeFrise,
+  joursDe,
+  LARGEUR_D_UN_REPERE_PX,
+  LARGEUR_DE_LA_CLOTURE_PX,
+  positionDeRepereTenueAuBordDroit,
+  positionSur,
+} from './EchelleFrise';
+import {
+  barreDe,
+  clotureDe,
+  ESPACE_ENTRE_RANGEES_PX,
+  HAUTEUR_D_UN_ELEMENT_PX,
+  HAUTEUR_DE_L_AXE_PX,
+  hauteurDeLaFrise,
+  instantTenuSur,
+  lectureDeLaFrise,
+  positionDeLaPoignee,
+  positionDeLaPoigneeSansHeure,
+  repereDe,
+} from './ElementsDeFrise';
+import { PlacementDeLInstant, PoigneeDeFrise, texteDeLHeure } from './PoigneeDeFrise';
+import { clotureDeLaFrise } from './PointagesDeLaFrise';
+
+const barreJusquALaPoignee = (barre: BarreFrise, poignee: PoigneeDeFrise, echelle: EchelleFrise): BarreFrise => ({
+  ...barre,
+  largeur: positionSur(echelle, instantTenuSur(poignee, echelle)) - barre.gauche,
+  fin: 'PROPOSEE',
+  nom: `${barre.nom} · ${LIBELLES_CORRECTION_DES_ACTIVITES.regularisation.frise.heureProposee} ${texteDeLHeure(poignee.instant)}`,
+});
+
+const barreDeLaFin = (barreRecue: BarreFrise, poignee: PoigneeDeFrise | undefined, echelle: EchelleFrise): BarreFrise =>
+  poignee === undefined ? barreRecue : barreJusquALaPoignee(barreRecue, poignee, echelle);
+
+const retraitDe = (
+  activite: ActiviteEchue,
+  barre: BarreFrise,
+  poignee: PoigneeDeFrise,
+  echelle: EchelleFrise,
+): RetraitDeFrise | undefined => {
+  const gauche = positionSur(echelle, instantTenuSur(poignee, echelle));
+  const largeur = positionSur(echelle, Date.parse(activite.echeance)) - gauche;
+  return largeur > 0 ? { gauche, largeur, haut: barre.haut } : undefined;
+};
+
+const finAutomatiqueTraceeDe = (activite: ActiviteEchue, barre: BarreFrise, echelle: EchelleFrise): FinAutomatiqueDeFrise => ({
+  gauche: positionSur(echelle, Date.parse(activite.echeance)),
+  haut: barre.haut,
+  texte: `${LIBELLES_CORRECTION_DES_ACTIVITES.regularisation.frise.finAutomatique} ${texteDeLHeure(activite.echeance)}`,
+});
+
+const positionsDePoignee = (
+  { poignee, placement }: Pick<EntreesDeFrise, 'poignee' | 'placement'>,
+  activite: ActiviteEchue,
+  barre: BarreFrise,
+  echelle: EchelleFrise,
+  largeur: number,
+): readonly PositionDePoignee[] => {
+  if (poignee !== undefined) return [positionDeLaPoignee(poignee, echelle, barre.haut, largeur)];
+  return placement === undefined ? [] : [positionDeLaPoigneeSansHeure(placement, activite.echeance, echelle, barre.haut, largeur)];
+};
+
+const rangeeDePlacementSur = (placement: PlacementDeLInstant | undefined, barre: BarreFrise): RangeeDePlacement | undefined =>
+  placement === undefined ? undefined : { haut: barre.haut, hauteur: HAUTEUR_D_UN_ELEMENT_PX };
+
+const gaucheDuRepere = (echelle: EchelleFrise, instant: string, largeur: number, largeurDuRepere: number): number =>
+  positionDeRepereTenueAuBordDroit(positionSur(echelle, Date.parse(instant)), largeur, largeurDuRepere);
+
+const reperePlace = (pointage: PointageDuDossier, echelle: EchelleFrise, haut: number, largeur: number): RepereFrise => ({
+  ...repereDe(pointage),
+  gauche: gaucheDuRepere(echelle, pointage.fait.instant, largeur, LARGEUR_D_UN_REPERE_PX),
+  haut,
+});
+
+const cloturePlacee = (borne: string, echelle: EchelleFrise, haut: number, largeur: number): ClotureFrise => ({
+  ...clotureDe(borne),
+  gauche: gaucheDuRepere(echelle, borne, largeur, LARGEUR_DE_LA_CLOTURE_PX),
+  haut,
+});
+
+const elementDeLaBorne = (
+  demarrage: PointageDuDossier | undefined,
+  cloture: string | undefined,
+  echelle: EchelleFrise,
+  haut: number,
+  largeur: number,
+): readonly (RepereFrise | ClotureFrise)[] => {
+  if (demarrage !== undefined) return [reperePlace(demarrage, echelle, haut, largeur)];
+  return cloture === undefined ? [] : [cloturePlacee(cloture, echelle, haut, largeur)];
+};
+
+const bandeauDe = (jours: readonly JourDeFrise[]): readonly JourDeFrise[] => (jours.length > 1 ? jours : []);
+
+export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise => {
+  const { vue, maintenant: now, poignee, placement, largeur } = entrees;
+  const { pointages, demarrageDeLaBorne, finDuCadre, echelle } = lectureDeLaFrise(entrees);
+  const activite = vue.activite;
+  const jours = joursDe(echelle);
+  const haut = HAUTEUR_DE_L_AXE_PX + ESPACE_ENTRE_RANGEES_PX;
+  const barreRecue = barreDe(activite, haut, { now, echelle });
+  const barre = barreDeLaFin(barreRecue, poignee, echelle);
+  const reperes = pointages.map(pointage => reperePlace(pointage, echelle, haut, largeur));
+  const borne = elementDeLaBorne(demarrageDeLaBorne, clotureDeLaFrise(vue), echelle, haut, largeur).filter(
+    element => entrees.cadreComplet || element.instant <= finDuCadre,
+  );
+  const elements = [barre, ...reperes, ...borne, ...positionsDePoignee(entrees, activite, barre, echelle, largeur)].sort(
+    (gauche, droite) => gauche.instant - droite.instant,
+  );
+  return {
+    echelle,
+    hauteur: hauteurDeLaFrise(elements),
+    graduations: graduationsDe(echelle, largeur),
+    bandeau: bandeauDe(jours),
+    minuits: jours.slice(1),
+    elements,
+    retrait: poignee === undefined ? undefined : retraitDe(activite, barre, poignee, echelle),
+    finAutomatique: poignee === undefined ? undefined : finAutomatiqueTraceeDe(activite, barre, echelle),
+    rangeeDePlacement: rangeeDePlacementSur(placement, barre),
+  };
+};

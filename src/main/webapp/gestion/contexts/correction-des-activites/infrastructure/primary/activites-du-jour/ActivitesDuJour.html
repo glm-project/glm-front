@@ -53,6 +53,20 @@
       </span>
       @if (ligne.corrections; as corrections) {
       <span class="actions">
+        @if (corrections.regularisation; as regularisation) {
+        <button
+          #regulariser
+          mat-icon-button
+          type="button"
+          [disabled]="envoiEnCours()"
+          [attr.aria-label]="regularisation.nom"
+          [attr.data-activite]="ligne.cle"
+          (click)="regularisationDemandee.emit(regularisation.activite)"
+          data-selector="activite-regulariser"
+        >
+          <glm-icon name="clock" />
+        </button>
+        }
         <button
           #changerLePoste
           mat-icon-button

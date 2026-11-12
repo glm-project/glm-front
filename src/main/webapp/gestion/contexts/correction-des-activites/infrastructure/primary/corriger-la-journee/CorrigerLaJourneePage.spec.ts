@@ -4,6 +4,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, convertToParamMap, ParamMap, Router } from '@angular/router';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
 import { CorrectionsFixture } from '@test/unit/fixtures/gestion/correction-des-activites/CorrectionsFixture';
+import { DossierDeLaFinFixture } from '@test/unit/fixtures/gestion/correction-des-activites/DossierDeLaFinFixture';
 import {
   elementFixture,
   fraiseuseFixture,
@@ -13,10 +14,14 @@ import {
   terminee,
   tourFixture,
 } from '@test/unit/fixtures/gestion/correction-des-activites/JourneeACorrigerFixture';
+import { ResizeObserverFixture } from '@test/unit/fixtures/gestion/correction-des-activites/ResizeObserverFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { BehaviorSubject, EMPTY, firstValueFrom } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CorrectionsPort } from '../../../domain/correction/CorrectionsPort';
+import { DossierDeLaFinPort } from '../../../domain/fin-automatique/DossierDeLaFinPort';
+import { PointageDuDossierId } from '../../../domain/fin-automatique/PointageDuDossierId';
+import { ActiviteDeLaJourneeId } from '../../../domain/journee/ActiviteDeLaJourneeId';
 import { JourneeACorrigerPort } from '../../../domain/journee/JourneeACorrigerPort';
 import { PosteDeLaJournee } from '../../../domain/journee/PosteDeLaJournee';
 import { PosteDeLaJourneeId } from '../../../domain/journee/PosteDeLaJourneeId';
@@ -114,6 +119,27 @@ const lundiSansLeSoir = journeeFixture({
   postes: [tourFixture, fraiseuseFixture],
 });
 
+const soirOublie = { ...soirSurLeTour, etat: terminee(instantLocal(5, 21, 45), 'PT3H15M', 'TERMINEE_AUTOMATIQUEMENT') };
+
+const lundiAvecUneFinAutomatique = journeeFixture({
+  jour: 5,
+  suivis: SUIVIS,
+  operationnelle: 'PT4H45M',
+  activites: [matinSurLeTour, soirOublie],
+  postes: [tourFixture, fraiseuseFixture],
+});
+
+const dossierDuSoir = {
+  journal: [{ id: new PointageDuDossierId('soir'), fait: { type: 'DEBUT', instant: instantLocal(5, 18, 30).value.toISOString() } }],
+  activite: {
+    id: new ActiviteDeLaJourneeId('soir'),
+    ouvrant: new PointageDuDossierId('soir'),
+    categorie: 'TRAVAIL',
+    debut: instantLocal(5, 18, 30).value.toISOString(),
+    echeance: instantLocal(5, 21, 45).value.toISOString(),
+  },
+} as const;
+
 const mardi = journeeFixture({ jour: 6, suivis: SUIVIS, operationnelle: 'PT0S', activites: [] });
 
 describe('Page to correct the day of an operator', () => {
@@ -122,6 +148,8 @@ describe('Page to correct the day of an operator', () => {
   let route: RouteFixture;
   let router: RouterFixture;
   let shown: ComponentFixture<CorrigerLaJourneePage>;
+  let dossiers: DossierDeLaFinFixture;
+  let resizeObserver: ResizeObserverFixture;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -130,6 +158,9 @@ describe('Page to correct the day of an operator', () => {
     corrections = new CorrectionsFixture();
     port.journees.set('2026-10-05', lundi);
     port.journees.set('2026-10-06', mardi);
+    dossiers = new DossierDeLaFinFixture();
+    dossiers.semer(dossierDuSoir);
+    resizeObserver = new ResizeObserverFixture();
     route = new RouteFixture();
     router = new RouterFixture();
     TestBed.configureTestingModule({
@@ -137,6 +168,7 @@ describe('Page to correct the day of an operator', () => {
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: JourneeACorrigerPort, useValue: port },
         { provide: CorrectionsPort, useValue: corrections },
+        { provide: DossierDeLaFinPort, useValue: dossiers },
         { provide: ActivatedRoute, useValue: route },
         { provide: Router, useValue: router },
         { provide: ErrorHandlerPort, useClass: ErrorHandlerFixture },
@@ -151,6 +183,7 @@ describe('Page to correct the day of an operator', () => {
     dialogs.closeAll();
     await fermeture;
     shown.destroy();
+    resizeObserver.restore();
     vi.useRealTimers();
   });
 
@@ -459,6 +492,73 @@ describe('Page to correct the day of an operator', () => {
     expect(disabledStates('activite-retirer')).toEqual([true, true]);
   });
 
+  it('should open the panel to regularise the end beside the day, which stays on screen, and mark the activity', async () => {
+    await whenOpeningThePageOnADayWithAnAutomaticEnd();
+
+    await whenAskingToRegulariseTheEnd();
+
+    expect(text('regularisation-titre')).toBe('Régulariser la fin');
+    expect(texts('activite-horaires')).toEqual(['08:00 → 09:30', '18:30 → 21:45']);
+    expect(currents('activite')).toEqual([null, 'true']);
+    expect(dossiers.lectures).toEqual([{ suivi: 'suivi-1', activite: 'soir' }]);
+  });
+
+  it('should close the panel to regularise and give the focus back to its button when the manager abandons', async () => {
+    await whenOpeningThePageOnADayWithAnAutomaticEnd();
+    await whenAskingToRegulariseTheEnd();
+
+    await whenAbandoningTheRegularisation();
+
+    expect(texts('regularisation-titre')).toEqual([]);
+    expect(document.activeElement).toBe(all('activite-regulariser')[0]);
+  });
+
+  it('should close the panel to regularise, read the day again and ask to start over when the end is no longer automatic', async () => {
+    dossiers.repondre({ kind: 'INTROUVABLE' });
+    await whenOpeningThePageOnADayWithAnAutomaticEnd();
+
+    await whenAskingToRegulariseTheEnd();
+
+    expect(texts('regularisation-titre')).toEqual([]);
+    expect(port.lectures).toHaveLength(2);
+    expect(text('corriger-annonce')).toBe('La journée a changé, recommencez');
+    expect(document.activeElement).toBe(all('corriger-annonce')[0]);
+  });
+
+  it('should open one panel at a time between the regularisation, the change of workstation and the addition', async () => {
+    await whenOpeningThePageOnADayWithAnAutomaticEnd();
+    await whenAskingToRegulariseTheEnd();
+
+    await whenAskingToChangeTheWorkstationOfTheSecondActivity();
+    const avecLeChangement = [texts('regularisation-titre'), texts('changement-titre')];
+    await whenAskingToRegulariseTheEnd();
+    const avecLaRegularisation = [texts('regularisation-titre'), texts('changement-titre')];
+    await whenAskingToAddAnActivity();
+
+    expect(avecLeChangement).toEqual([[], ['Changer le poste']]);
+    expect(avecLaRegularisation).toEqual([['Régulariser la fin'], []]);
+    expect([texts('regularisation-titre'), texts('ajout-titre')]).toEqual([[], ['Ajouter une activité']]);
+  });
+
+  it('should close the panel to regularise when the day changed meanwhile a removal', async () => {
+    corrections.repondre({ kind: 'JOURNEE_CHANGEE' });
+    await whenOpeningThePageOnADayWithAnAutomaticEnd();
+    await whenAskingToRegulariseTheEnd();
+
+    await whenRemovingTheFirstActivity();
+
+    expect(texts('regularisation-titre')).toEqual([]);
+  });
+
+  it('should close the panel to regularise once the end of its activity is no longer automatic when the day is read again', async () => {
+    await whenOpeningThePageOnADayWithAnAutomaticEnd();
+    await whenAskingToRegulariseTheEnd();
+
+    await whenTheDayIsReadAgainWithTheEndRegularisedAfterRemovingTheFirstActivity();
+
+    expect(texts('regularisation-titre')).toEqual([]);
+  });
+
   it('should open the panel to add an activity beside the day, which stays on screen, with the focus on its first field', async () => {
     await whenOpeningThePageOnADayWithWorkstations();
 
@@ -764,6 +864,29 @@ describe('Page to correct the day of an operator', () => {
   const chosenWorkstation = (): string => (all('changement-poste')[0] as HTMLSelectElement).value;
 
   const disabledStates = (selector: string): boolean[] => all(selector).map(element => (element as HTMLButtonElement).disabled);
+
+  const whenOpeningThePageOnADayWithAnAutomaticEnd = async (): Promise<void> => {
+    port.journees.set('2026-10-05', lundiAvecUneFinAutomatique);
+    await whenOpeningThePage();
+  };
+
+  const whenAskingToRegulariseTheEnd = async (): Promise<void> => {
+    all('activite-regulariser')[0]?.click();
+    await new Promise(resolve => setTimeout(resolve));
+    await shown.whenStable();
+    await new Promise(resolve => setTimeout(resolve));
+    await shown.whenStable();
+  };
+
+  const whenAbandoningTheRegularisation = async (): Promise<void> => {
+    all('regularisation-abandonner')[0]?.click();
+    await shown.whenStable();
+  };
+
+  const whenTheDayIsReadAgainWithTheEndRegularisedAfterRemovingTheFirstActivity = async (): Promise<void> => {
+    port.journees.set('2026-10-05', lundiAvecDesPostes);
+    await whenRemovingTheFirstActivity();
+  };
 
   const whenOpeningThePageOnADayWithWorkstations = async (): Promise<void> => {
     port.journees.set('2026-10-05', lundiAvecDesPostes);

@@ -22,8 +22,10 @@ export class ActivitesDuJour {
   readonly ajoutDemande = output();
   readonly retraitDemande = output<ActiviteTerminee>();
   readonly changementDePosteDemande = output<ActiviteTerminee>();
+  readonly regularisationDemandee = output<ActiviteTerminee>();
   private readonly boutonDAjout = viewChild.required<unknown, ElementRef<HTMLButtonElement>>('ajouter', { read: ElementRef });
   private readonly boutonsDeChangement = viewChildren<unknown, ElementRef<HTMLButtonElement>>('changerLePoste', { read: ElementRef });
+  private readonly boutonsDeRegularisation = viewChildren<unknown, ElementRef<HTMLButtonElement>>('regulariser', { read: ElementRef });
   protected readonly libelles = LIBELLES_CORRECTION_DES_ACTIVITES.activites;
   protected readonly libelleDeLAjout = LIBELLES_CORRECTION_DES_ACTIVITES.ajout.bouton;
   protected readonly operateur = computed(() => this.journee().operateur.id.value);
@@ -34,8 +36,14 @@ export class ActivitesDuJour {
   }
 
   donnerLeFocusAuChangementDePoste(activite: ActiviteDeLaJourneeId): void {
-    this.boutonsDeChangement()
-      .find(candidat => candidat.nativeElement.dataset['activite'] === activite.value)
-      ?.nativeElement.focus();
+    this.donnerLeFocusAuBoutonDe(activite, this.boutonsDeChangement());
+  }
+
+  donnerLeFocusALaRegularisation(activite: ActiviteDeLaJourneeId): void {
+    this.donnerLeFocusAuBoutonDe(activite, this.boutonsDeRegularisation());
+  }
+
+  private donnerLeFocusAuBoutonDe(activite: ActiviteDeLaJourneeId, boutons: readonly ElementRef<HTMLButtonElement>[]): void {
+    boutons.find(candidat => candidat.nativeElement.dataset['activite'] === activite.value)?.nativeElement.focus();
   }
 }
