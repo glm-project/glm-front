@@ -272,6 +272,15 @@ describe('Regularisation of an automatic end in Gestion', () => {
     thenTheEndIsSaidRegularisedAt('17:00');
   });
 
+  it('should draw the bar up to the regularised end once the end is validated', () => {
+    givenTheRegularisationIsCreated();
+
+    whenValidatingTheEndPlacedAt(HEURE_PLACEE);
+
+    thenTheEndIsSaidRegularisedAt('17:00');
+    thenTheBarEndsAtTheRegularisedHour(17);
+  });
+
   it('should say why the server refused the end and let the manager validate again', () => {
     givenTheRegularisationIsRefusedWith(409, 'fin-apres-borne');
 
@@ -297,6 +306,16 @@ describe('Regularisation of an automatic end in Gestion', () => {
   const whenValidatingTheEndPlacedAtTwice = (instant: Date): void => {
     whenValidatingTheEndPlacedAt(instant);
     whenValidatingTheEnd();
+  };
+
+  const thenTheBarEndsAtTheRegularisedHour = (hour: number): void => {
+    barreDeLActivite().should('have.attr', 'data-fin', 'REGULARISEE');
+    abscisseDeLHeure(hour).then(abscisse => {
+      barreDeLActivite().should(barre => {
+        expect(requiredFixture(barre[0], 'barre').getBoundingClientRect().right).to.be.closeTo(abscisse, 1);
+      });
+    });
+    cy.get(dataSelector('anomalie-frise-fin-automatique')).should('not.exist');
   };
 
   const thenTheRefusalIsSaidAndTheValidationIsAvailableAgain = (message: string): void => {

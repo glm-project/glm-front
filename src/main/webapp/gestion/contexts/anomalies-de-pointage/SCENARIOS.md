@@ -14,7 +14,7 @@ dans [`AGENTS.md`](AGENTS.md) ; ce fichier dit ce que les tests garantissent et 
   gardent l'identifiant ; une autre heure en prend un neuf.
 - **Application** (`RegularisationDeLaFin.spec.ts`) : rien n'est envoyé sans heure lisible, pendant un envoi ni après
   le succès ; un renvoi après un échec technique ou un refus garde l'identifiant.
-- **Composant** : l'identifiant et l'heure envoyés, « Fin régularisée à HH:MM », le refus dit sous le bouton avec la
+- **Composant** : l'identifiant et l'heure envoyés, « Fin régularisée à HH:MM » et la barre finie à cette heure, le refus dit sous le bouton avec la
   possibilité de valider de nouveau, le même identifiant renvoyé après une panne.
 - **Application Cypress** : le parcours complet, de l'ouverture du dossier à la fin régularisée, le refus du serveur et le
   lien vers les heures de l'opérateur.
@@ -28,7 +28,8 @@ dans [`AGENTS.md`](AGENTS.md) ; ce fichier dit ce que les tests garantissent et 
   Origine et Fin, clic arrondi, jamais hors des bornes ni de l'échelle affichée (clic et glisser). Le cadre de l'activité
   s'arrête à `finDuCadre` ; le cadre complet est collant après Fin ; une borne hors cadre n'est pas dessinée. Le bouton du cadre apparaît
   quand la limite dépasse `finDuCadre` (démarrage suivant, clôture ou maintenant), bascule vers le cadre complet et revient,
-  et reste le même élément ; après régularisation il se fonde sur la borne seule. Une frise qui passe minuit nomme ses
+  et reste le même élément ; après régularisation il se fonde sur la borne seule. Après régularisation, la barre finit à
+  l'heure régularisée (`REGULARISEE`), sans portion retirée ni fin automatique, et le cadre complet la couvre. Une frise qui passe minuit nomme ses
   jours dans un bandeau, chacun de son minuit (ou du début de l'échelle) au suivant (ou à la fin), et trace un trait à
   chaque minuit ; la graduation de minuit ne dit que l'heure ; une frise d'un seul jour n'a pas de bandeau.
 - **Composant** : aucune heure n'est inventée avant le placement, le clic avant le début ramène au début, le glissé

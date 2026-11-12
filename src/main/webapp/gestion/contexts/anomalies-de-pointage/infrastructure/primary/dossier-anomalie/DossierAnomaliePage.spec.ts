@@ -390,6 +390,14 @@ describe('Anomaly dossier page', () => {
       thenAbsent('anomalie-poignee');
     });
 
+    it('should draw the bar up to the regularised end, not up to the automatic end, once the end is validated', async () => {
+      await whenRendering();
+
+      await whenRegularisingTheEnd();
+
+      thenTheBarEndsAtTheRegularisedEnd();
+    });
+
     it.each([
       { code: 'activite-visee-introuvable', message: 'Cette activité est introuvable dans ce suivi.' },
       { code: 'activite-deja-regularisee', message: 'Cette fin automatique est déjà régularisée.' },
@@ -618,6 +626,13 @@ describe('Anomaly dossier page', () => {
   const thenTheMarkersAndTheBarsAreImages = (): void => {
     expect(friseElements('anomalie-activite').map(barre => barre.getAttribute('role'))).toEqual(['img']);
     expect(friseElements('anomalie-pointage').map(repere => repere.getAttribute('role'))).toEqual(['img']);
+  };
+
+  const thenTheBarEndsAtTheRegularisedEnd = (): void => {
+    const [barre] = friseElements('anomalie-activite');
+    expect(barre?.getAttribute('data-fin')).toBe('REGULARISEE');
+    expect(barre?.getAttribute('aria-label')).toContain('Fin régularisée');
+    expect(friseElements('anomalie-frise-fin-automatique')).toEqual([]);
   };
 
   const thenTheHandleHoldsNoHour = (): void => {

@@ -47,9 +47,13 @@ export class ResolutionDeFin {
   protected readonly rechercheEnCours = signal(false);
   protected readonly operateur = computed(() => operateurDuDossier(this.dossier(), this.operateurs()));
   protected readonly etat = this.regularisation.etat;
-  protected readonly regularisee = computed(() => {
+  protected readonly finRegularisee = computed(() => {
     const etat = this.etat();
-    return etat.kind === 'REGULARISEE' ? heureDe(etat.dateDeSurvenue) : undefined;
+    return etat.kind === 'REGULARISEE' ? etat.dateDeSurvenue : undefined;
+  });
+  protected readonly regularisee = computed(() => {
+    const fin = this.finRegularisee();
+    return fin === undefined ? undefined : heureDe(fin);
   });
   protected readonly message = computed(() => {
     const etat = this.etat();

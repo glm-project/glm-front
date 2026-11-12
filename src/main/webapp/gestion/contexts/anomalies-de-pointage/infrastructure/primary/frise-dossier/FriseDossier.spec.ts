@@ -980,6 +980,34 @@ describe('Frise of a dossier', () => {
       thenTheAutomaticEndsDrawnAre([]);
     });
 
+    it('should end the bar at the regularised end once the handle is gone, with nothing removed nor automatic end drawn', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('10:00'));
+
+      await whenTheEndIsRegularisedAt('10:00');
+
+      thenTheBarSpans('a-1', { left: 100 / 6, width: 200 / 6 });
+      thenTheBarAttributeIs('a-1', 'data-fin', 'REGULARISEE');
+      thenNoPartIsRemoved();
+      thenTheAutomaticEndsDrawnAre([]);
+    });
+
+    it('should name the bar by its category, its start and its regularised end', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique());
+
+      await whenTheEndIsRegularisedAt('10:00');
+
+      thenTheBarIsNamed('a-1', 'Travail · lundi 14 septembre à 08:00 → lundi 14 septembre à 10:00 · Fin régularisée');
+      thenTheBarReads('a-1', 'Travail · Fin régularisée');
+    });
+
+    it('should keep on the whole frame the regularised end that falls after the frame of the activity', async () => {
+      await whenRenderingTheFrise(uneFinAutomatique(), poigneeFixture('16:00', poigneeJusqua('17:00')));
+
+      await whenTheEndIsRegularisedAt('16:00');
+
+      thenTheBarSpans('a-1', { left: 100 / 9, width: 800 / 9 });
+    });
+
     it('should keep on the marker laid on its bar its name, its symbol and its hour', async () => {
       await whenRenderingTheFrise(vueEntre('08:00', '11:00'));
 
@@ -1042,6 +1070,13 @@ describe('Frise of a dossier', () => {
 
   const whenTheHandleIsRemoved = async (): Promise<void> => {
     fixture.componentRef.setInput('poignee', undefined);
+    await fixture.whenStable();
+  };
+
+  const whenTheEndIsRegularisedAt = async (heure: string): Promise<void> => {
+    fixture.componentRef.setInput('poignee', undefined);
+    fixture.componentRef.setInput('placement', undefined);
+    fixture.componentRef.setInput('finRegularisee', instantAt(heure));
     await fixture.whenStable();
   };
 

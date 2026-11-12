@@ -30,6 +30,7 @@ export class FriseDossier {
   readonly now = input.required<Date>();
   readonly poignee = input<PoigneeDeFrise | undefined>(undefined);
   readonly placement = input<PlacementDeLInstant | undefined>(undefined);
+  readonly finRegularisee = input<string | undefined>(undefined);
   readonly limite = input<LimiteDeLaFin | undefined>(undefined);
   readonly deplacementDemande = output<DeplacementDemande>();
   readonly placementDemande = output<PlacementDemande>();
@@ -54,6 +55,7 @@ export class FriseDossier {
       maintenant: this.now(),
       poignee: this.poignee(),
       placement: this.placement(),
+      finRegularisee: this.finRegularisee(),
       largeur: this.largeur(),
       cadreComplet: this.cadreComplet(),
     }),
