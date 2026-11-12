@@ -158,3 +158,7 @@ something stays, with a status that says what died.
 - [0058 — Ouvrir Gestion au seul gestionnaire](0058-open-gestion-to-the-gestionnaire-alone.md) —
   le shell vérifie `ROLE_GESTIONNAIRE` une fois et montre sinon un écran d'accès réservé ; plus de garde, de
   directive ni de menu filtré ; il amende 0052 et 0056
+
+- [0059 — Régulariser une fin automatique depuis la journée à corriger](0059-regularise-an-automatic-end-from-the-day-to-correct.md) —
+  un panneau latéral lit le dossier et reprend la frise à poignée, dupliquée dans la correction des activités ; il
+  amende 0056

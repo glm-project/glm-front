@@ -1,0 +1,61 @@
+<aside class="gestion-carte" aria-labelledby="regularisation-titre" data-selector="regularisation-panneau">
+  <div class="border-b border-border px-5 py-4">
+    <h2 id="regularisation-titre" class="text-section" data-selector="regularisation-titre">{{ libelles.titre }}</h2>
+  </div>
+  <div class="flex flex-col gap-5 p-5">
+    <div>
+      <p class="font-semibold" data-selector="regularisation-element">
+        {{ activite().element.categorie.value }} {{ activite().element.numero() }}
+      </p>
+      @if (activite().element.description; as designation) {
+      <p class="text-body-sm text-ink-muted" data-selector="regularisation-designation">{{ designation }}</p>
+      }
+      <p class="text-body-sm tabular-nums text-ink-muted" data-selector="regularisation-horaires">{{ horaires(activite()) }}</p>
+    </div>
+    @if (vue(); as vue) {
+    <div>
+      <glm-frise-de-la-fin
+        [dossier]="vue.dossier"
+        [now]="now"
+        [poignee]="vue.poignee"
+        [placement]="vue.placement"
+        [limite]="vue.limite"
+        (deplacementDemande)="deplacer(vue.dossier, $event)"
+        (placementDemande)="placer(vue.dossier, $event)"
+      />
+      <p class="mt-2 text-body-sm text-ink-muted" data-selector="regularisation-aide">{{ libelles.aide }}</p>
+    </div>
+    } @else if (enErreur()) {
+    <glm-error-message
+      data-selector="regularisation-erreur"
+      [message]="libelles.echecDeLecture"
+      [retryLabel]="libelles.reessayer"
+      retrySelector="regularisation-retry"
+      (retryRequested)="relire()"
+    />
+    } @else if (enChargement()) {
+    <p role="status" class="text-body-sm text-ink-muted" data-selector="regularisation-chargement">{{ libelles.chargement }}</p>
+    }
+    <div class="flex flex-wrap gap-2">
+      @if (vue()) {
+      <button
+        mat-flat-button
+        type="button"
+        [disabled]="finPlacee() === undefined || enCours()"
+        (click)="valider()"
+        data-selector="regularisation-valider"
+      >
+        {{ enCours() ? libelles.enregistrement : libelleDeValider() }}
+      </button>
+      }
+      <button mat-button type="button" [disabled]="enCours()" (click)="abandon.emit()" data-selector="regularisation-abandonner">
+        {{ libelles.abandonner }}
+      </button>
+    </div>
+    @if (refus(); as motif) {
+    <p role="alert" class="text-body-sm text-danger" data-selector="regularisation-refus">{{ libelles.refus[motif] }}</p>
+    } @if (echec()) {
+    <p role="alert" class="text-body-sm text-danger" data-selector="regularisation-echec">{{ libelles.echec }}</p>
+    }
+  </div>
+</aside>

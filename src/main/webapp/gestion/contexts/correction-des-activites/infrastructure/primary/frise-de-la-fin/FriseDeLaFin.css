@@ -1,0 +1,98 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.barre,
+.repere {
+  position: absolute;
+  display: flex;
+  height: var(--spacing-touch);
+  min-width: var(--spacing-touch);
+  padding: 0 0.5rem;
+  align-items: center;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--text-body-sm);
+}
+[data-selector='regularisation-activite'][role='img'],
+[data-selector='regularisation-pointage'][role='img'],
+[data-selector='regularisation-cloture'][role='img'] {
+  pointer-events: none;
+}
+.repere {
+  width: var(--spacing-touch);
+  flex-direction: column;
+  justify-content: center;
+  padding: 0;
+  line-height: 1.1;
+}
+.cloture {
+  width: 4.25rem;
+  padding: 0;
+}
+.repere[data-non-conformite='true'] {
+  border-color: var(--color-ink);
+  background: var(--color-nc);
+}
+[data-selector='regularisation-poignee'] {
+  transform: translateX(-50%);
+}
+[data-selector='regularisation-poignee']:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+[data-selector='regularisation-poignee'][data-sans-heure] {
+  border-style: dashed;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+[data-selector='regularisation-frise-placement'] {
+  border-block: 1px dashed var(--color-border-strong);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+.barre {
+  justify-content: flex-start;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-width: 2px;
+  font-weight: 600;
+}
+[data-selector='regularisation-activite'] {
+  padding-left: calc(var(--spacing-touch) + 0.5rem);
+}
+[data-selector='regularisation-activite'][data-fin='PROPOSEE'] {
+  padding-right: calc(var(--spacing-touch) / 2 + 0.5rem);
+}
+[data-selector='regularisation-frise-fin-automatique'] {
+  border-left: 2px dashed var(--color-warn);
+}
+.barre[data-categorie='TRAVAIL'] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.barre[data-categorie='NON_CONFORMITE'] {
+  border-color: var(--color-ink);
+  background: var(--color-nc);
+  color: var(--color-ink);
+}
+.barre[data-fin='AUTOMATIQUE']::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1.75rem;
+  background: var(--gestion-hachure-fin-automatique);
+  content: '';
+}
+
+.jour + .jour {
+  border-left: 2px solid var(--color-ink-muted);
+}
+.minuit {
+  border-left: 2px solid var(--color-ink-muted);
+  box-shadow: 0 0 0 2px var(--color-surface);
+}

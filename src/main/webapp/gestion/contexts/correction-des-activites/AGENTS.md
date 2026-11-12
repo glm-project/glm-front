@@ -1,7 +1,8 @@
 # Correction des activités
 
 Ce contexte de `gestion` porte la correction, par le gestionnaire, de la journée d'un opérateur : ajouter une
-activité oubliée, changer le poste d'une activité, retirer une activité pointée par erreur. Il corrige des activités,
+activité oubliée, changer le poste d'une activité, retirer une activité pointée par erreur, régulariser la fin d'une
+fin automatique ([ADR 0059](../../../../../../documentation/adr/0059-regularise-an-automatic-end-from-the-day-to-correct.md)). Il corrige des activités,
 jamais des pointages. La page garde le titre « Corriger la journée ». La décision est l'ADR 0055
 ([documentation/adr/0056-let-the-gestionnaire-correct-an-operator-day.md](../../../../../../documentation/adr/0056-let-the-gestionnaire-correct-an-operator-day.md)).
 
@@ -20,7 +21,7 @@ immédiate (chevauchement, clôture, habilitation) appartiennent au `SuiviDAteli
 | durée                  | un temps exact, à la milliseconde (`Duree`) : portion, total d'une activité, durée opérationnelle                |
 | suivi présent          | un suivi engagé avant la fin du jour et non clôturé avant son début                                              |
 | type                   | travail ou non-conformité (`categorie` dans le domaine et le contrat)                                            |
-| correction             | un ajout, un changement de poste ou un retrait                                                                   |
+| correction             | un ajout, un changement de poste, un retrait ou une régularisation                                               |
 | saisie                 | le contenu d'une correction et son identifiant, oubliés une fois la correction enregistrée ou la journée changée |
 | effet sur les journées | la prévision par jour touché                                                                                     |
 | plage d'ajout          | le début (sur le jour affiché) et la fin (sur le jour de la fin) tapés en `HH:MM` d'une activité à ajouter       |
@@ -28,10 +29,13 @@ immédiate (chevauchement, clôture, habilitation) appartiennent au `SuiviDAteli
 | portions de l'ajout    | la durée de l'ajout comptée sur le jour affiché et, s'il finit le lendemain, sur le lendemain                    |
 | ajout en préparation   | ce que le gestionnaire a choisi et tapé dans le panneau d'ajout : élément, poste, type, plage                    |
 | journée changée        | la journée lue n'est plus celle du serveur : on relit et on recommence                                           |
+| régularisation         | placer la fin réelle d'une activité en fin automatique ; le seul sens de ce mot ici                              |
+| dossier de la fin      | ce que lit le panneau de régularisation : activité échue, pointages de sa clé, borne de fin                      |
+| borne de fin           | le plus tôt du démarrage suivant sur la clé et de la clôture, reçu dans le dossier, jamais calculé               |
 
 Mots à éviter : « pointage » (on corrige des activités ; seul l'identifiant du pointage ouvrant nomme une activité),
-« acte » (on dit correction), « nature » pour le type (la nature est celle du poste), « régularisation » (le mot des
-anomalies dans le front), « supprimer » ou « annuler » (on retire, et le fait reste au journal).
+« acte » (on dit correction), « nature » pour le type (la nature est celle du poste), « régularisation » pour autre
+chose que la fin d'une fin automatique, « supprimer » ou « annuler » (on retire, et le fait reste au journal).
 
 ## Lecture de la journée
 
@@ -93,7 +97,8 @@ après aujourd'hui ni de borne vers le passé. Le jour affiché n'est lu que dan
   `jourDeLaFin`). « en cours » sans durée, « fin automatique », « Clôturé le lundi 5 à 11:00 » pour un suivi clôturé. Une
   activité en cours depuis la veille nomme son jour de début (« depuis lundi 5 à 22:00 », comme la frise) ; le back ne lui
   envoie aucune portion, donc aucun lien « début le … ». Chaque activité corrigeable porte le bouton-icône « Retirer l'activité OF 24-131, 18:30 → 21:45 » (nom construit
-  du numéro de l'élément et des horaires, par `LibellesCorrectionDesActivites`). Elle porte aussi le bouton-icône « Changer le poste de l'activité OF 24-131, 18:30 → 21:45 » (même nommage).
+  du numéro de l'élément et des horaires, par `LibellesCorrectionDesActivites`). Elle porte aussi le bouton-icône « Changer le poste de l'activité OF 24-131, 18:30 → 21:45 » (même nommage),
+  et, en fin automatique seulement, « Régulariser la fin de l'activité OF 24-131, 18:30 → 21:45 » (icône horloge).
   Son en-tête porte le bouton « Ajouter une activité » (désactivé pendant un envoi, `aria-expanded` tant que le panneau d'ajout
   est ouvert), même sur un jour vide.
 - Tous les mots affichés sont dans `LibellesCorrectionDesActivites.ts` ; les jours et les heures passent par `DateFormats`.
@@ -217,3 +222,25 @@ de poste n'a que `CHEVAUCHEMENT` ; l'ajout a `CHEVAUCHEMENT` et `FIN_FUTURE`.
   `REFUS { FIN_FUTURE }` (`date-de-survenue-future`), ou signalent une fois la panne par
   `ErrorHandlerPort` et la rejettent ; la liste des codes et leur issue sont dans
   [`api.md`](../../../../../../documentation/api.md). Le retrait ne vérifie aucune habilitation ; l'ajout envoie ses instants avec le décalage local (`toOffsetIsoString`).
+
+## Régularisation d'une fin automatique
+
+- **Panneau.** Le bouton de la liste demande à la page (`regularisationDemandee`) d'ouvrir `PanneauDeRegularisation`, un
+  `<aside>` non modal au même emplacement que les autres panneaux : un seul panneau à la fois, la page ne retient que
+  l'identifiant de l'activité et le panneau disparaît quand l'activité relue n'est plus corrigeable ou plus en fin
+  automatique. Il rappelle l'activité comme le changement de poste, puis lit le dossier de la fin (`DossierDeLaFinPort`,
+  `HttpDossierDeLaFin` sur `GET /api/atelier/suivis/{id}/anomalies/{pointage}`) : « Chargement de l'activité… », puis la
+  frise, ou une erreur avec « Réessayer ». Un dossier introuvable (`suivi-d-atelier-introuvable`,
+  `fin-automatique-introuvable`) veut dire que la fin n'est plus automatique : le panneau rend `JOURNEE_CHANGEE`.
+- **Frise.** `frise-de-la-fin` est une copie de la frise du dossier d'anomalie (`anomalies-de-pointage/…/frise-dossier`),
+  avec son domaine (`domain/fin-automatique` : `CadreDeLaFin`, `InstantDuDossier`, `DemarrageDeLaBorne`) : poignée sans
+  heure au départ, clic, glisser et clavier, cadre de l'activité ou complet, bandeau de minuit. Seul l'état « fin
+  régularisée » n'est pas repris, puisque le panneau se ferme après l'envoi. Les règles de la poignée et de la frise
+  sont celles du contexte des anomalies ; **une correction de l'une des deux frises se reporte sur l'autre**.
+- **Envoi.** « Valider la fin à HH:MM » (inactif tant qu'aucune heure n'est posée) envoie
+  `CorrectionDUneActivite.regulariserLaFin(activite, fin)`. `SaisieDeRegularisation` lie l'identifiant à l'activité et
+  à l'instant (comparé comme instant). Les refus que le gestionnaire peut corriger (`FIN_AVANT_LE_DEBUT`,
+  `FIN_APRES_LA_BORNE`, `FIN_FUTURE`) s'affichent sous les boutons, l'heure reste posée ; un échec technique le dit et
+  garde la saisie. Le succès ferme le panneau, relit la journée, annonce « Fin régularisée » et donne le focus au
+  message ; `JOURNEE_CHANGEE` annonce « La journée a changé, recommencez ». Un panneau fermé sans issue oublie sa saisie
+  (`abandonnerLaRegularisation()`).

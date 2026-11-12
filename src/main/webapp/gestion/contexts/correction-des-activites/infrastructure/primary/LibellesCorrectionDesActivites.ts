@@ -6,7 +6,7 @@ import {
   formatInstantWeekdayDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { IssueDeCorrection } from '../../application/CorrectionDUneActivite';
-import { MotifDAjout, MotifDeChangementDePoste } from '../../domain/correction/CorrectionsPort';
+import { MotifDAjout, MotifDeChangementDePoste, MotifDeRegularisation } from '../../domain/correction/CorrectionsPort';
 import { ErreurDePlage } from '../../domain/correction/PlageDAjout';
 import { PortionsDeLAjout } from '../../domain/correction/PortionsDeLAjout';
 import { ActiviteDeLaJournee, ActiviteTerminee } from '../../domain/journee/ActiviteDeLaJournee';
@@ -139,6 +139,33 @@ const ANNONCES_DU_RETRAIT: Record<IssueDeCorrection, string> = {
 };
 
 const TYPES: Record<CategorieDActivite, string> = { TRAVAIL: 'Travail', NON_CONFORMITE: 'Non-conformité' };
+
+const REFUS_DE_LA_REGULARISATION: Record<MotifDeRegularisation, string> = {
+  FIN_AVANT_LE_DEBUT: 'La fin doit suivre le début de l’activité.',
+  FIN_APRES_LA_BORNE: 'La fin dépasse le démarrage suivant ou la clôture de l’élément.',
+  FIN_FUTURE: 'La fin dépasse l’heure du serveur. Choisissez une heure plus tôt ou réessayez dans un instant.',
+};
+
+const ANNONCES_DE_LA_REGULARISATION: Record<IssueDeCorrection, string> = {
+  ENREGISTREE: 'Fin régularisée',
+  JOURNEE_CHANGEE: 'La journée a changé, recommencez',
+};
+
+const FRISE_DE_LA_FIN = {
+  types: TYPES,
+  gestes: { DEBUT: 'Démarrage', NON_CONFORMITE: 'Démarrage en NC', FIN: 'Arrêt' },
+  symboles: { DEBUT: '▶', NON_CONFORMITE: '▷', FIN: '■' },
+  heureProposee: 'heure proposée',
+  finAutomatique: 'Fin automatique',
+  cloture: 'Clôture',
+  poignee: 'Heure proposée de la fin',
+  heureInconnue: 'Heure ?',
+  aucuneHeure: 'Aucune heure posée',
+  voirJusquAuDemarrageSuivant: (moment: string): string => `Voir jusqu’au démarrage suivant · ${moment}`,
+  voirJusquALaCloture: (moment: string): string => `Voir jusqu’à la clôture · ${moment}`,
+  voirJusquAMaintenant: 'Voir jusqu’à maintenant',
+  revenirSurLActivite: 'Revenir sur l’activité',
+} as const;
 
 export const LIBELLES_CORRECTION_DES_ACTIVITES = {
   page: {
@@ -291,5 +318,22 @@ export const LIBELLES_CORRECTION_DES_ACTIVITES = {
     debordement: (jours: readonly { readonly jour: JourACorriger; readonly retire: Duree }[]): string =>
       `Le retrait vaut pour toute l’activité : ${jours.map(perteSurUnAutreJour).join(' et ')}.`,
     annonce: ANNONCES_DU_RETRAIT,
+  },
+  regularisation: {
+    bouton: (activite: ActiviteDeLaJournee, bornes: BornesDuJour): string =>
+      `Régulariser la fin de l’activité ${nomDeLElement(activite.element)}, ${horaires(activite, bornes)}`,
+    titre: 'Régulariser la fin',
+    chargement: 'Chargement de l’activité…',
+    echecDeLecture: 'Impossible de charger l’activité. Vérifiez la connexion puis réessayez.',
+    reessayer: 'Réessayer',
+    aide: 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.',
+    validerLaFin: (heure: string): string => `Valider la fin à ${heure}`,
+    validerSansHeure: 'Valider la fin',
+    enregistrement: 'Enregistrement…',
+    abandonner: 'Abandonner',
+    refus: REFUS_DE_LA_REGULARISATION,
+    echec: 'La fin n’a pas pu être enregistrée. Vérifiez la connexion puis réessayez.',
+    annonce: ANNONCES_DE_LA_REGULARISATION,
+    frise: FRISE_DE_LA_FIN,
   },
 } as const;

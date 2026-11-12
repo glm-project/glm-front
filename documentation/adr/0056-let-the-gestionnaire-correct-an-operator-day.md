@@ -16,6 +16,8 @@ contrat de la correction des activités.
 - `Amended by 0058`: la route `operateurs/:operateur/journees/:jour` n'est plus gardée et la directive disparaît. Le
   bouton « Corriger la journée » du relevé s'affiche pour tout jour échu, puisque Gestion ne s'ouvre qu'au
   gestionnaire. Le reste de 0056 tient.
+- `Amended by 0059`: la page régularise elle-même une fin automatique, dans un panneau latéral avec la frise à poignée
+  du dossier d'anomalie ; les deux chemins ne s'ignorent plus.
 
 Un lecteur qui arrive ici depuis un autre ADR garde la règle en vigueur : **le gestionnaire corrige des activités, pas
 des pointages, depuis une page dédiée ; chaque correction ajoute un fait au journal, qui reste la seule trace, et la

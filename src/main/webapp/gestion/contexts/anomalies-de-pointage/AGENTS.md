@@ -27,7 +27,9 @@ et des coûts reste au backend, selon l'[ADR 0047](../../../../../../documentati
 - **Poignée** : l'heure de fin que le gestionnaire place sur la frise ; une saisie qui émet un instant.
 - **Cadre de la fin** (`CadreDeLaFin`) : Value Object qui rend les bornes de la poignée et la limite qui les plafonne (voir « Poignée »).
 - **Frise** : représentation, en présentation seule, de l'activité échue, du pointage qui l'ouvre, de la borne
-  de fin et de la poignée sur une échelle de temps. Elle n'invente aucune fin ni aucune heure.
+  de fin et de la poignée sur une échelle de temps. Elle n'invente aucune fin ni aucune heure. La correction des
+  activités en garde une copie (`frise-de-la-fin`, [ADR 0059](../../../../../../documentation/adr/0059-regularise-an-automatic-end-from-the-day-to-correct.md)) :
+  une correction de l'une des deux frises se reporte sur l'autre.
 - **Saisie de régularisation** (`SaisieDeRegularisation`) : activité, heure et identifiant de la commande à envoyer.
 - **Anomalie suivante** : bouton qui mène à une autre fin automatique de la liste après une régularisation.
 - **Geste** : le libellé, côté gestionnaire, d'un type de pointage : « Démarrage » (`DEBUT`), « Démarrage en NC »

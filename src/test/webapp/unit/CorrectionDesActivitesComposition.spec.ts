@@ -1,10 +1,12 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { CorrectionsPort, ResultatDeCorrection } from '@/gestion/contexts/correction-des-activites/domain/correction/CorrectionsPort';
 import { SaisieDeRetrait } from '@/gestion/contexts/correction-des-activites/domain/correction/SaisieDeRetrait';
+import { DossierDeLaFinPort } from '@/gestion/contexts/correction-des-activites/domain/fin-automatique/DossierDeLaFinPort';
 import { JourACorriger } from '@/gestion/contexts/correction-des-activites/domain/journee/JourACorriger';
 import { JourneeACorrigerPort } from '@/gestion/contexts/correction-des-activites/domain/journee/JourneeACorrigerPort';
 import { OperateurDeLaJourneeId } from '@/gestion/contexts/correction-des-activites/domain/journee/OperateurDeLaJourneeId';
 import { HttpCorrections } from '@/gestion/contexts/correction-des-activites/infrastructure/secondary/HttpCorrections';
+import { HttpDossierDeLaFin } from '@/gestion/contexts/correction-des-activites/infrastructure/secondary/HttpDossierDeLaFin';
 import { HttpJourneeACorriger } from '@/gestion/contexts/correction-des-activites/infrastructure/secondary/HttpJourneeACorriger';
 import { correctionDesActivitesProvider } from '@/gestion/correction-des-activites.provider';
 import { provideHttpClient } from '@angular/common/http';
@@ -105,5 +107,17 @@ describe('Real composition of the activity correction', () => {
 
   const whenTheRemovalIsRecorded = (): void => {
     server.expectOne('/api/atelier/suivis/suivi-1/activites/debut-8/retrait').flush({}, { status: 201, statusText: 'Created' });
+  };
+
+  it('should resolve the dossier of an automatic end to its HTTP adapter', () => {
+    const port = whenResolvingTheDossierPort();
+
+    thenItIsTheHttpDossier(port);
+  });
+
+  const whenResolvingTheDossierPort = (): DossierDeLaFinPort => TestBed.inject(DossierDeLaFinPort);
+
+  const thenItIsTheHttpDossier = (port: DossierDeLaFinPort): void => {
+    expect(port).toBeInstanceOf(HttpDossierDeLaFin);
   };
 });

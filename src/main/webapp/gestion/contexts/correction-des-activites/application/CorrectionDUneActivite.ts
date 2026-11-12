@@ -1,8 +1,9 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { ContenuDAjout } from '../domain/correction/ContenuDAjout';
-import { CorrectionsPort, MotifDAjout, MotifDeChangementDePoste } from '../domain/correction/CorrectionsPort';
+import { CorrectionsPort, MotifDAjout, MotifDeChangementDePoste, MotifDeRegularisation } from '../domain/correction/CorrectionsPort';
 import { SaisieDAjout } from '../domain/correction/SaisieDAjout';
 import { SaisieDeChangementDePoste } from '../domain/correction/SaisieDeChangementDePoste';
+import { SaisieDeRegularisation } from '../domain/correction/SaisieDeRegularisation';
 import { SaisieDeRetrait } from '../domain/correction/SaisieDeRetrait';
 import { ActiviteTerminee } from '../domain/journee/ActiviteDeLaJournee';
 import { PosteDeLaJournee } from '../domain/journee/PosteDeLaJournee';
@@ -13,7 +14,8 @@ export type EtatDeCorrection =
   | { readonly kind: 'REPOS' | 'EN_COURS' | 'ECHEC' }
   | { readonly kind: 'A_RELIRE'; readonly issue: IssueDeCorrection }
   | { readonly kind: 'REFUSEE'; readonly motif: MotifDeChangementDePoste }
-  | { readonly kind: 'AJOUT_REFUSE'; readonly motif: MotifDAjout };
+  | { readonly kind: 'AJOUT_REFUSE'; readonly motif: MotifDAjout }
+  | { readonly kind: 'REGULARISATION_REFUSEE'; readonly motif: MotifDeRegularisation };
 
 @Injectable()
 export class CorrectionDUneActivite {
@@ -21,6 +23,7 @@ export class CorrectionDUneActivite {
   private saisieDeRetrait: SaisieDeRetrait | undefined;
   private saisieDeChangement: SaisieDeChangementDePoste | undefined;
   private saisieDAjout: SaisieDAjout | undefined;
+  private saisieDeRegularisation: SaisieDeRegularisation | undefined;
   private readonly etatCourant = signal<EtatDeCorrection>({ kind: 'REPOS' });
   readonly etat = this.etatCourant.asReadonly();
 
@@ -34,6 +37,14 @@ export class CorrectionDUneActivite {
 
   async ajouter(contenu: ContenuDAjout): Promise<void> {
     await this.corriger(() => this.envoyerLAjout(contenu));
+  }
+
+  async regulariserLaFin(activite: ActiviteTerminee, dateDeSurvenue: string): Promise<void> {
+    await this.corriger(() => this.envoyerLaRegularisation(activite, dateDeSurvenue));
+  }
+
+  abandonnerLaRegularisation(): void {
+    this.saisieDeRegularisation = undefined;
   }
 
   abandonnerLeChangementDePoste(): void {
@@ -74,6 +85,18 @@ export class CorrectionDUneActivite {
       return { kind: 'REFUSEE', motif: resultat.motif };
     }
     this.saisieDeChangement = undefined;
+    return { kind: 'A_RELIRE', issue: resultat.kind };
+  }
+
+  private async envoyerLaRegularisation(activite: ActiviteTerminee, dateDeSurvenue: string): Promise<EtatDeCorrection> {
+    this.saisieDeRegularisation = SaisieDeRegularisation.pour(this.saisieDeRegularisation, activite, dateDeSurvenue, () =>
+      crypto.randomUUID(),
+    );
+    const resultat = await this.port.regulariserLaFin(this.saisieDeRegularisation);
+    if (resultat.kind === 'REFUS') {
+      return { kind: 'REGULARISATION_REFUSEE', motif: resultat.motif };
+    }
+    this.saisieDeRegularisation = undefined;
     return { kind: 'A_RELIRE', issue: resultat.kind };
   }
 

@@ -1,0 +1,132 @@
+<div class="rounded-surface border border-border bg-surface" data-selector="regularisation-frise">
+  @if (disposition().bandeau.length > 0) {
+  <div class="relative h-8 overflow-hidden border-b border-b-border" aria-hidden="true" data-selector="regularisation-frise-bandeau">
+    @for (jour of disposition().bandeau; track jour.instant) {
+    <span
+      class="jour absolute inset-y-0 truncate pl-2 text-(length:--text-label) leading-8 font-semibold text-ink"
+      data-selector="regularisation-frise-bandeau-jour"
+      [style.left.%]="jour.gauche"
+      [style.width.%]="jour.largeur"
+      >{{ jour.jour }}</span
+    >
+    }
+  </div>
+  }
+  <div #plan class="relative w-full overflow-x-clip" data-selector="regularisation-frise-plan" [style.height.px]="disposition().hauteur">
+    @for (graduation of disposition().graduations; track graduation.instant) {
+    <span
+      class="pointer-events-none absolute inset-y-0 flex flex-col border-l border-l-border pt-1 pl-1 text-(length:--text-label) leading-[1.2] text-ink-muted tabular-nums"
+      data-selector="regularisation-frise-graduation"
+      aria-hidden="true"
+      [style.left.%]="graduation.gauche"
+    >
+      <span data-selector="regularisation-frise-graduation-heure">{{ graduation.heure }}</span>
+    </span>
+    } @if (disposition().rangeeDePlacement; as rangee) {
+    <div
+      class="absolute inset-x-0 cursor-crosshair"
+      aria-hidden="true"
+      data-selector="regularisation-frise-placement"
+      [style.top.px]="rangee.haut"
+      [style.height.px]="rangee.hauteur"
+      (click)="place($event, plan)"
+    ></div>
+    } @if (disposition().retrait; as retrait) {
+    <div
+      class="pointer-events-none absolute h-touch rounded-control border-2 border-dashed border-warn bg-(image:--gestion-hachure-fin-automatique)"
+      aria-hidden="true"
+      data-selector="regularisation-frise-retrait"
+      [style.left.%]="retrait.gauche"
+      [style.width.%]="retrait.largeur"
+      [style.top.px]="retrait.haut"
+    ></div>
+    } @if (disposition().finAutomatique; as finAutomatique) {
+    <div
+      class="pointer-events-none absolute h-touch w-0"
+      aria-hidden="true"
+      data-selector="regularisation-frise-fin-automatique"
+      [style.left.%]="finAutomatique.gauche"
+      [style.top.px]="finAutomatique.haut"
+    >
+      <span class="absolute top-0 right-1 bg-surface px-1 text-(length:--text-label) leading-5 whitespace-nowrap text-ink"
+        >{{ finAutomatique.texte }}</span
+      >
+    </div>
+    } @for (element of disposition().elements; track element.cle) { @switch (element.kind) { @case ('BARRE') {
+    <div
+      role="img"
+      class="barre cursor-default"
+      data-selector="regularisation-activite"
+      [attr.data-activite]="element.activite"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
+      [style.width.%]="element.largeur"
+      [attr.aria-label]="element.nom"
+      [attr.data-categorie]="element.categorie"
+      [attr.data-fin]="element.fin"
+    >
+      {{ element.texte }}
+    </div>
+    } @case ('REPERE') {
+    <div
+      role="img"
+      class="repere cursor-default"
+      data-selector="regularisation-pointage"
+      [attr.data-pointage]="element.pointage"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
+      [attr.aria-label]="element.nom"
+      [attr.data-non-conformite]="element.nonConformite"
+    >
+      <span aria-hidden="true" data-selector="regularisation-pointage-symbole">{{ element.symbole }}</span>
+      <time class="text-(length:--text-label) tabular-nums" data-selector="regularisation-pointage-heure">{{ element.heure }}</time>
+    </div>
+    } @case ('CLOTURE') {
+    <div
+      role="img"
+      class="repere cloture cursor-default"
+      data-selector="regularisation-cloture"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
+      [attr.aria-label]="element.nom"
+    >
+      <span aria-hidden="true">{{ libelles.frise.cloture }}</span>
+      <time class="text-(length:--text-label) tabular-nums">{{ element.heure }}</time>
+    </div>
+    } @case ('POIGNEE') { @let sansHeure = element.heure === 'SANS_HEURE';
+    <div
+      role="slider"
+      class="absolute z-2 flex h-touch min-w-touch cursor-grab touch-none items-center justify-center rounded-control border-2 border-ink bg-accent px-2 text-(length:--text-body-sm) font-semibold whitespace-nowrap text-on-accent tabular-nums select-none"
+      data-selector="regularisation-poignee"
+      tabindex="0"
+      [attr.data-sans-heure]="sansHeure || null"
+      [style.left.%]="element.gauche"
+      [style.top.px]="element.haut"
+      [attr.aria-label]="libelles.frise.poignee"
+      [attr.aria-valuemin]="element.min"
+      [attr.aria-valuemax]="element.max"
+      [attr.aria-valuenow]="element.heure === 'AVEC_HEURE' ? element.lecture.valeur : null"
+      [attr.aria-valuetext]="element.heure === 'AVEC_HEURE' ? element.lecture.texte : libelles.frise.aucuneHeure"
+      (keydown)="touche($event, element)"
+      (pointerdown)="saisit($event, plan, element)"
+      (pointermove)="glisse($event, plan, element)"
+      (pointerup)="relache()"
+      (pointercancel)="relache()"
+    >
+      {{ element.etiquette }}
+    </div>
+    } } } @for (minuit of disposition().minuits; track minuit.instant) {
+    <span
+      class="minuit pointer-events-none absolute inset-y-0 z-1 w-0"
+      aria-hidden="true"
+      data-selector="regularisation-frise-minuit"
+      [style.left.%]="minuit.gauche"
+    ></span>
+    }
+  </div>
+</div>
+@if (texteDuCadre(); as texte) {
+<div class="mt-2 flex justify-end">
+  <button type="button" class="bouton" data-selector="regularisation-frise-cadre" (click)="bascule()">{{ texte }}</button>
+</div>
+}

@@ -16,10 +16,17 @@ import {
 } from '@test/unit/fixtures/gestion/correction-des-activites/JourneeACorrigerFixture';
 import { requiredFixture } from '@test/utils/RequiredFixture';
 import { ContenuDAjout } from '../../domain/correction/ContenuDAjout';
-import { CorrectionsPort, MotifDAjout, MotifDeChangementDePoste, ResultatDeCorrection } from '../../domain/correction/CorrectionsPort';
+import {
+  CorrectionsPort,
+  MotifDAjout,
+  MotifDeChangementDePoste,
+  MotifDeRegularisation,
+  ResultatDeCorrection,
+} from '../../domain/correction/CorrectionsPort';
 import { IntervalleDAjout } from '../../domain/correction/IntervalleDAjout';
 import { SaisieDAjout } from '../../domain/correction/SaisieDAjout';
 import { SaisieDeChangementDePoste } from '../../domain/correction/SaisieDeChangementDePoste';
+import { SaisieDeRegularisation } from '../../domain/correction/SaisieDeRegularisation';
 import { SaisieDeRetrait } from '../../domain/correction/SaisieDeRetrait';
 import { InstantDeLaJournee } from '../../domain/journee/InstantDeLaJournee';
 import { SuiviDAtelierId } from '../../domain/journee/SuiviDAtelierId';
@@ -54,6 +61,13 @@ const CONTENU_DE_L_AJOUT = ContenuDAjout.de(
 );
 const AJOUT = SaisieDAjout.pour(undefined, CONTENU_DE_L_AJOUT, () => 'saisie-3');
 const URL_DE_L_AJOUT = '/api/atelier/suivis/suivi-1/activites';
+const REGULARISATION = SaisieDeRegularisation.pour(
+  undefined,
+  activiteTerminee(JOURNEE, 'debut-8'),
+  '2026-10-05T21:00:00-03:00',
+  () => 'saisie-4',
+);
+const URL_DE_LA_REGULARISATION = '/api/atelier/suivis/suivi-1/regularisations';
 const URL_DU_CHANGEMENT = '/api/atelier/suivis/suivi-1/activites/debut-8/poste';
 const URL_DU_RETRAIT = '/api/atelier/suivis/suivi-1/activites/debut-8/retrait';
 
@@ -118,6 +132,61 @@ describe('Beyond the contract: HTTP corrections of the activities', () => {
     { cas: 'a server failure with no business code', status: 500, corps: {} },
   ])('should reject and report once $cas instead of taking it for a change of the day', async ({ status, corps }) => {
     const rejet = await whenRemovingRejectedWith(status, corps);
+
+    expect(rejet).toBeInstanceOf(HttpErrorResponse);
+    expect(errors.errors).toEqual([rejet]);
+  });
+
+  it('should send the entry, the activity and the end to the regularisations of the suivi', async () => {
+    const envoi = await whenRegularisingAnsweredWith(201, {});
+
+    thenTheRegularisationSentIs(envoi.requete, { id: 'saisie-4', activite: 'debut-8', dateDeSurvenue: '2026-10-05T21:00:00-03:00' });
+  });
+
+  it.each([
+    { cas: 'the end is recorded', status: 201 },
+    { cas: 'the same entry is sent again and already stands in the journal', status: 200 },
+  ])('should record the regularisation when $cas', async ({ status }) => {
+    const envoi = await whenRegularisingAnsweredWith(status, {});
+
+    expect(envoi.resultat).toEqual({ kind: 'ENREGISTREE' });
+  });
+
+  it.each([
+    { code: 'fin-avant-debut', status: 409, motif: 'FIN_AVANT_LE_DEBUT' },
+    { code: 'fin-apres-borne', status: 409, motif: 'FIN_APRES_LA_BORNE' },
+    { code: 'date-de-survenue-future', status: 400, motif: 'FIN_FUTURE' },
+  ] as const)('should resolve $code as a refusal the manager can correct, and report nothing', async ({ code, status, motif }) => {
+    const envoi = await whenRegularisingAnsweredWith(status, { type: `urn:glm:erreur:atelier:${code}` });
+
+    expect(envoi.resultat).toEqual({ kind: 'REFUS', motif });
+    expect(errors.errors).toEqual([]);
+  });
+
+  it.each([
+    { code: 'saisie-concurrente', status: 409 },
+    { code: 'suivi-d-atelier-introuvable', status: 404 },
+    { code: 'activite-visee-introuvable', status: 404 },
+    { code: 'activite-deja-regularisee', status: 409 },
+    { code: 'activite-non-echue', status: 409 },
+    { code: 'operateur-introuvable', status: 404 },
+    { code: 'poste-de-travail-introuvable', status: 404 },
+    { code: 'operateur-non-habilite', status: 409 },
+  ] as const)(
+    'should resolve $code on a regularisation as a change of the day, to reread, and report nothing',
+    async ({ code, status }) => {
+      const envoi = await whenRegularisingAnsweredWith(status, { type: `urn:glm:erreur:atelier:${code}` });
+
+      expect(envoi.resultat).toEqual({ kind: 'JOURNEE_CHANGEE' });
+      expect(errors.errors).toEqual([]);
+    },
+  );
+
+  it.each([
+    { cas: 'an unknown business code', status: 409, corps: { type: 'urn:glm:erreur:atelier:pointage-ignore' } },
+    { cas: 'a server failure with no business code', status: 500, corps: {} },
+  ])('should reject and report once $cas on a regularisation', async ({ status, corps }) => {
+    const rejet = await whenRegularisingRejectedWith(status, corps);
 
     expect(rejet).toBeInstanceOf(HttpErrorResponse);
     expect(errors.errors).toEqual([rejet]);
@@ -285,6 +354,29 @@ describe('Beyond the contract: HTTP corrections of the activities', () => {
   };
 
   const thenTheChangeSentIs = (requete: TestRequest, corps: object): void => {
+    expect(requete.request.method).toBe('POST');
+    expect(requete.request.body).toEqual(corps);
+  };
+
+  interface EnvoiDeRegularisation {
+    readonly requete: TestRequest;
+    readonly resultat: ResultatDeCorrection<MotifDeRegularisation>;
+  }
+
+  const whenRegularisingAnsweredWith = async (status: number, corps: object): Promise<EnvoiDeRegularisation> => {
+    const resultat = port.regulariserLaFin(REGULARISATION);
+    const requete = server.expectOne(URL_DE_LA_REGULARISATION);
+    requete.flush(corps, { status, statusText: 'Answered' });
+    return { requete, resultat: await resultat };
+  };
+
+  const whenRegularisingRejectedWith = async (status: number, corps: object): Promise<unknown> => {
+    const rejet = port.regulariserLaFin(REGULARISATION).catch((failure: unknown) => failure);
+    server.expectOne(URL_DE_LA_REGULARISATION).flush(corps, { status, statusText: 'Failed' });
+    return rejet;
+  };
+
+  const thenTheRegularisationSentIs = (requete: TestRequest, corps: object): void => {
     expect(requete.request.method).toBe('POST');
     expect(requete.request.body).toEqual(corps);
   };

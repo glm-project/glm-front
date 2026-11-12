@@ -33,6 +33,7 @@ export interface LigneDActivite {
 export interface CorrectionsProposees {
   readonly retrait: CorrectionProposee;
   readonly changementDePoste: CorrectionProposee;
+  readonly regularisation: CorrectionProposee | undefined;
 }
 
 export interface CorrectionProposee {
@@ -63,6 +64,10 @@ const correctionsDeLActivite = (activite: ActiviteDeLaJournee, journee: JourneeA
     ? {
         retrait: { activite, nom: LIBELLES.retrait.bouton(activite, journee.bornes) },
         changementDePoste: { activite, nom: LIBELLES.changement.bouton(activite, journee.bornes) },
+        regularisation:
+          activite.etat.kind === 'TERMINEE_AUTOMATIQUEMENT'
+            ? { activite, nom: LIBELLES.regularisation.bouton(activite, journee.bornes) }
+            : undefined,
       }
     : undefined;
 
