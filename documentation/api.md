@@ -134,6 +134,11 @@ same command; 201 and 200 are both successes. The refusals the context translate
 (404), `activite-deja-regularisee`, `activite-non-echue`, `fin-avant-debut` and `fin-apres-borne` (409),
 `date-de-survenue-future` (400), `operateur-non-habilite` (409), `operateur-introuvable` and
 `poste-de-travail-introuvable` (404); `saisie-concurrente` is not a refusal but a request to reread the dossier.
+The correction of the activities sends the same command from the day to correct (`CorrectionsPort.regulariserLaFin`) and
+reads the same dossier (`DossierDeLaFinPort`). There, only `fin-avant-debut`, `fin-apres-borne` and
+`date-de-survenue-future` are refusals the gestionnaire can correct (`REFUS { FIN_AVANT_LE_DEBUT | FIN_APRES_LA_BORNE |
+FIN_FUTURE }`); every other code of the list, and `saisie-concurrente`, resolves as `JOURNEE_CHANGEE`; any unknown code
+stays a technical failure.
 
 The removal of an activity by the gestionnaire is `POST /api/atelier/suivis/{id}/activites/{activite}/retrait` with
 `{ id }`, under the same identifier rule; 201 and 200 are both successes. `saisie-concurrente`,
