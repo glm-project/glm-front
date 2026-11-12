@@ -16,6 +16,7 @@ import {
 } from '@test/unit/fixtures/gestion/correction-des-activites/JourneeACorrigerFixture';
 import { ResizeObserverFixture } from '@test/unit/fixtures/gestion/correction-des-activites/ResizeObserverFixture';
 import { dataSelector } from '@test/utils/DataSelector';
+import { requiredFixture } from '@test/utils/RequiredFixture';
 import { BehaviorSubject, EMPTY, firstValueFrom } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CorrectionsPort } from '../../../domain/correction/CorrectionsPort';
@@ -503,6 +504,18 @@ describe('Page to correct the day of an operator', () => {
     expect(dossiers.lectures).toEqual([{ suivi: 'suivi-1', activite: 'soir' }]);
   });
 
+  it('should lay the panel to regularise across the width, between the frise of the day and the list, for the handle to be placed precisely', async () => {
+    await whenOpeningThePageOnADayWithAnAutomaticEnd();
+
+    await whenAskingToRegulariseTheEnd();
+
+    expect(orderOf('frise-operationnel', 'regularisation-panneau', 'activites-titre')).toEqual([
+      'frise-operationnel',
+      'regularisation-panneau',
+      'activites-titre',
+    ]);
+  });
+
   it('should close the panel to regularise and give the focus back to its button when the manager abandons', async () => {
     await whenOpeningThePageOnADayWithAnAutomaticEnd();
     await whenAskingToRegulariseTheEnd();
@@ -918,6 +931,12 @@ describe('Page to correct the day of an operator', () => {
     await new Promise(resolve => setTimeout(resolve));
     await shown.whenStable();
   };
+
+  const orderOf = (...selectors: readonly string[]): string[] =>
+    selectors
+      .map(selector => requiredFixture(all(selector)[0], selector))
+      .sort((un, autre) => (un.compareDocumentPosition(autre) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))
+      .map(element => element.dataset['selector'] ?? '');
 
   const whenAbandoningTheRegularisation = async (): Promise<void> => {
     all('regularisation-abandonner')[0]?.click();

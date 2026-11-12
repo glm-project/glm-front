@@ -73,13 +73,16 @@
   />
   } } @if (etat(); as vue) { @if (vue.kind === 'SUCCES') { @let panneau = panneauDe(vue.journee); @let regularisation =
   regularisationDe(vue.journee); @let selection = panneau?.activite ?? regularisation;
-  <div
-    class="grille"
-    [class.grille-avec-panneau]="panneau !== undefined || regularisation !== undefined || ajout() !== undefined"
-    [attr.aria-busy]="relecture()"
-  >
+  <div class="grille" [class.grille-avec-panneau]="panneau !== undefined || ajout() !== undefined" [attr.aria-busy]="relecture()">
     <div class="flex min-w-0 flex-col gap-6">
       <glm-frise-du-jour [journee]="vue.journee" [selection]="selection" [ajout]="ajout()" />
+      @for (ouverte of regularisation ? [regularisation] : []; track ouverte.id.value) {
+      <glm-panneau-de-regularisation
+        [activite]="ouverte"
+        (abandon)="abandonnerLaRegularisation(ouverte, liste)"
+        (corrigee)="regularisationCorrigee($event)"
+      />
+      }
       <glm-activites-du-jour
         #liste
         [journee]="vue.journee"
@@ -98,12 +101,6 @@
       [activite]="ouvert.activite"
       (abandon)="abandonnerLeChangementDePoste(ouvert.activite, liste)"
       (corrigee)="changementDePosteCorrige(ouvert.activite, $event, liste)"
-    />
-    } @for (ouverte of regularisation ? [regularisation] : []; track ouverte.id.value) {
-    <glm-panneau-de-regularisation
-      [activite]="ouverte"
-      (abandon)="abandonnerLaRegularisation(ouverte, liste)"
-      (corrigee)="regularisationCorrigee($event)"
     />
     } @if (ajout(); as ouvert) {
     <glm-panneau-d-ajout
