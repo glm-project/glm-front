@@ -101,7 +101,8 @@ La frise (`glm-frise-dossier`) dessine, du plus tôt au plus tard :
 
 - la barre de l'activité échue, `accent` pour le travail et `nc` pour la non-conformité, finie à l'échéance par
   l'embout hachuré `warn` de Gestion ; avec une poignée, elle finit à l'heure proposée, la portion retirée se
-  dessine jusqu'à l'échéance et la fin automatique reste tracée ;
+  dessine jusqu'à l'échéance et la fin automatique reste tracée ; après la régularisation, elle finit à l'heure
+  régularisée (`finRegularisee`, `data-fin="REGULARISEE"`), sans portion retirée ni fin automatique ;
 - le repère du pointage qui ouvre l'activité ;
 - la **borne tracée** : le repère du `DEBUT` ou de la `NON_CONFORMITE` du journal dont l'instant égale
   `borneDeFin` (`demarrageDeLaBorne`, comparaison à la nanoseconde ; une `FIN` n'en est jamais un), sinon un
@@ -112,7 +113,7 @@ Les autres pointages de la clé ne sont pas tracés. Par défaut l'échelle **ca
 le début à `finDuCadre`, soit l'heure entière qui suit l'échéance plus une heure (1 à 2 h de marge),
 sans égard à la borne ni à l'horloge. La borne ne se dessine que si elle tombe au plus tard à `finDuCadre`. Le **cadre
 complet** est l'ancienne échelle, jusqu'à l'heure qui suit le plafond de la poignée et la borne, qui s'y dessine
-toujours. Il est **collant** : `FriseDossier` le tient dans un `linkedSignal` (`cadreComplet`) que ferme seule une
+toujours ; après la régularisation, l'heure régularisée tient lieu de plafond. Il est **collant** : `FriseDossier` le tient dans un `linkedSignal` (`cadreComplet`) que ferme seule une
 action explicite ; dès que l'instant de la poignée, tenu par les bornes du domaine et non par l'échelle, dépasse
 strictement `finDuCadre` (touche Fin, Maj + →), il reste affiché même si la poignée rentre dans le cadre. Une relecture
 détruit la vue et le cadre repart de l'activité. Le pointeur est tenu à l'échelle affichée : un glisser hors du plan
@@ -159,6 +160,7 @@ message qui conserve la saisie.
 ### Après la régularisation
 
 La vue affiche **« Fin régularisée à HH:MM »** et **« Anomalie suivante »** ; la poignée et « Valider » disparaissent.
+La frise montre l'activité corrigée, finie à l'heure régularisée, et non plus telle que le serveur l'a reçue.
 `RechercheDeLAnomalieSuivante` lit la liste avec les filtres de l'adresse de retour et mène, dans l'ordre : à la
 première ligne autre que l'adresse d'origine de la page demandée, puis de la page précédente (une seule) ; sinon
 à la liste, `page` retirée et `plusAucune=1` ; si la lecture de la liste échoue, à la liste d'origine, qui affiche

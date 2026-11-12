@@ -1,5 +1,6 @@
 import { ActiviteEchue, PointageAnomalie } from '../../../domain/dossier/DossierAnomalie';
 import { LIBELLES_ANOMALIES } from '../LibellesAnomalies';
+import { libelleActivite, libelleCategorie } from '../PresentationDossier';
 import {
   BarreFrise,
   ClotureFrise,
@@ -43,6 +44,31 @@ const barreJusquALaPoignee = (barre: BarreFrise, poignee: PoigneeDeFrise, echell
   fin: 'PROPOSEE',
   nom: `${barre.nom} · ${LIBELLES_ANOMALIES.frise.heureProposee} ${texteDeLHeure(poignee.instant)}`,
 });
+
+const barreJusquALaFinRegularisee = (
+  barre: BarreFrise,
+  activite: ActiviteEchue,
+  fin: string,
+  now: Date,
+  echelle: EchelleFrise,
+): BarreFrise => ({
+  ...barre,
+  largeur: positionSur(echelle, Math.min(Math.max(Date.parse(fin), echelle.debut), echelle.fin)) - barre.gauche,
+  fin: 'REGULARISEE',
+  nom: `${libelleActivite({ ...activite, echeance: fin }, now)} · ${LIBELLES_ANOMALIES.frise.finRegularisee}`,
+  texte: `${libelleCategorie(activite.categorie)} · ${LIBELLES_ANOMALIES.frise.finRegularisee}`,
+});
+
+const barreDeLaFin = (
+  barreRecue: BarreFrise,
+  { vue, maintenant, poignee, finRegularisee }: EntreesDeFrise,
+  echelle: EchelleFrise,
+): BarreFrise => {
+  if (poignee !== undefined) return barreJusquALaPoignee(barreRecue, poignee, echelle);
+  return finRegularisee === undefined
+    ? barreRecue
+    : barreJusquALaFinRegularisee(barreRecue, vue.activite, finRegularisee, maintenant, echelle);
+};
 
 const retraitDe = (
   activite: ActiviteEchue,
@@ -110,7 +136,7 @@ export const dispositionDeFrise = (entrees: EntreesDeFrise): DispositionFrise =>
   const jours = joursDe(echelle);
   const haut = HAUTEUR_DE_L_AXE_PX + ESPACE_ENTRE_RANGEES_PX;
   const barreRecue = barreDe(activite, haut, { now, echelle });
-  const barre = poignee === undefined ? barreRecue : barreJusquALaPoignee(barreRecue, poignee, echelle);
+  const barre = barreDeLaFin(barreRecue, entrees, echelle);
   const reperes = pointages.map(pointage => reperePlace(pointage, echelle, haut, largeur));
   const borne = elementDeLaBorne(demarrageDeLaBorne, clotureDeLaFrise(vue), echelle, haut, largeur).filter(
     element => entrees.cadreComplet || element.instant <= finDuCadre,

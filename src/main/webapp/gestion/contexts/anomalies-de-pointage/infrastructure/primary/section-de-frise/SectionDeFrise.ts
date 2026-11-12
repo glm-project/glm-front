@@ -20,6 +20,7 @@ export class SectionDeFrise {
   readonly operateur = input<string | undefined>(undefined);
   readonly poignee = input<PoigneeDeFrise | undefined>(undefined);
   readonly placement = input<PlacementDeLInstant | undefined>(undefined);
+  readonly finRegularisee = input<string | undefined>(undefined);
   readonly limite = input<LimiteDeLaFin | undefined>(undefined);
   readonly deplacementDemande = output<DeplacementDemande>();
   readonly placementDemande = output<PlacementDemande>();

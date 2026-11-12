@@ -73,20 +73,29 @@ const echelleDeLaFrise = (
   borneDeFin: string | undefined,
   poignee: PoigneeDeFrise | undefined,
   placement: PlacementDeLInstant | undefined,
+  finRegularisee: string | undefined,
   cadreComplet: boolean,
 ): EchelleFrise => {
   if (!cadreComplet) return echelleDe(activite);
   const bornes = (poignee ?? placement)?.bornes;
-  return echelleDe(activite, { borne: borneDeFin, plafond: bornes && Date.parse(bornes.max) });
+  const plafond = bornes === undefined ? finRegularisee : bornes.max;
+  return echelleDe(activite, { borne: borneDeFin, plafond: plafond === undefined ? undefined : Date.parse(plafond) });
 };
 
-export const lectureDeLaFrise = ({ vue, poignee, placement, cadreComplet }: EntreesDeFrise) => {
+export const lectureDeLaFrise = ({ vue, poignee, placement, finRegularisee, cadreComplet }: EntreesDeFrise) => {
   const pointages = pointagesDeLActivite(vue);
   return {
     pointages,
     demarrageDeLaBorne: demarrageDeLaBorneDeLaFrise(vue),
     finDuCadre: finDuCadreDe(vue.activite),
-    echelle: echelleDeLaFrise(instantsDeLActivite(pointages, vue.activite), vue.borneDeFin, poignee, placement, cadreComplet),
+    echelle: echelleDeLaFrise(
+      instantsDeLActivite(pointages, vue.activite),
+      vue.borneDeFin,
+      poignee,
+      placement,
+      finRegularisee,
+      cadreComplet,
+    ),
   };
 };
 

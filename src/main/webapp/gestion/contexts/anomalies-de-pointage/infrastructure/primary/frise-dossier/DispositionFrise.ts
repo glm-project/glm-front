@@ -9,11 +9,12 @@ export interface EntreesDeFrise {
   readonly maintenant: Date;
   readonly poignee: PoigneeDeFrise | undefined;
   readonly placement: PlacementDeLInstant | undefined;
+  readonly finRegularisee: string | undefined;
   readonly largeur: number;
   readonly cadreComplet: boolean;
 }
 
-export type FinDeBarre = 'AUTOMATIQUE' | 'PROPOSEE';
+export type FinDeBarre = 'AUTOMATIQUE' | 'PROPOSEE' | 'REGULARISEE';
 
 export interface BarreFrise {
   readonly kind: 'BARRE';
