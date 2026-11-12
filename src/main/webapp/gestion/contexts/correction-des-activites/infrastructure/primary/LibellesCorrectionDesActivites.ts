@@ -6,7 +6,7 @@ import {
   formatInstantWeekdayDay,
 } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { IssueDeCorrection } from '../../application/CorrectionDUneActivite';
-import { MotifDAjout, MotifDeChangementDePoste } from '../../domain/correction/CorrectionsPort';
+import { MotifDAjout, MotifDeChangementDePoste, MotifDeRegularisation } from '../../domain/correction/CorrectionsPort';
 import { ErreurDePlage } from '../../domain/correction/PlageDAjout';
 import { PortionsDeLAjout } from '../../domain/correction/PortionsDeLAjout';
 import { ActiviteDeLaJournee, ActiviteTerminee } from '../../domain/journee/ActiviteDeLaJournee';
@@ -139,6 +139,12 @@ const ANNONCES_DU_RETRAIT: Record<IssueDeCorrection, string> = {
 };
 
 const TYPES: Record<CategorieDActivite, string> = { TRAVAIL: 'Travail', NON_CONFORMITE: 'Non-conformité' };
+
+const REFUS_DE_LA_REGULARISATION: Record<MotifDeRegularisation, string> = {
+  FIN_AVANT_LE_DEBUT: 'La fin doit suivre le début de l’activité.',
+  FIN_APRES_LA_BORNE: 'La fin dépasse le démarrage suivant ou la clôture de l’élément.',
+  FIN_FUTURE: 'La fin dépasse l’heure du serveur. Choisissez une heure plus tôt ou réessayez dans un instant.',
+};
 
 const ANNONCES_DE_LA_REGULARISATION: Record<IssueDeCorrection, string> = {
   ENREGISTREE: 'Fin régularisée',
@@ -321,7 +327,12 @@ export const LIBELLES_CORRECTION_DES_ACTIVITES = {
     echecDeLecture: 'Impossible de charger l’activité. Vérifiez la connexion puis réessayez.',
     reessayer: 'Réessayer',
     aide: 'Tirez le bout de la barre ou cliquez dessus pour placer la fin réelle.',
+    validerLaFin: (heure: string): string => `Valider la fin à ${heure}`,
+    validerSansHeure: 'Valider la fin',
+    enregistrement: 'Enregistrement…',
     abandonner: 'Abandonner',
+    refus: REFUS_DE_LA_REGULARISATION,
+    echec: 'La fin n’a pas pu être enregistrée. Vérifiez la connexion puis réessayez.',
     annonce: ANNONCES_DE_LA_REGULARISATION,
     frise: FRISE_DE_LA_FIN,
   },

@@ -5,11 +5,14 @@ type RestActivite = components['schemas']['RestActiviteDeLaJournee'];
 type RestElement = components['schemas']['RestElementDeLaJournee'];
 type RestPoste = components['schemas']['RestPosteDeLaJournee'];
 type RestSuiviPresent = components['schemas']['RestSuiviPresent'];
+type RestDossier = components['schemas']['RestDossierAnomalie'];
 
 const JOURNEE = '/api/atelier/operateurs/*/journees/*';
 const RETRAIT = '/api/atelier/suivis/*/activites/*/retrait';
 const CHANGEMENT_DE_POSTE = '/api/atelier/suivis/*/activites/*/poste';
 const AJOUT = '/api/atelier/suivis/*/activites';
+const DOSSIER = '/api/atelier/suivis/*/anomalies/*';
+const REGULARISATION = '/api/atelier/suivis/*/regularisations';
 const CHEVAUCHEMENT = 'urn:glm:erreur:atelier:chevauchement';
 const DATE_DE_SURVENUE_FUTURE = 'urn:glm:erreur:atelier:date-de-survenue-future';
 const SAISIE_CONCURRENTE = 'urn:glm:erreur:atelier:saisie-concurrente';
@@ -70,7 +73,9 @@ export class JourneeApiFixture {
   journeeChangee = false;
   chevauchement = false;
   finFuture = false;
+  refusDeLaRegularisation: string | undefined;
   private readonly journees = new Map<string, RestJournee>();
+  private readonly dossiers = new Map<string, RestDossier>();
   private journeesApresLaCorrection: readonly RestJournee[] = [];
   private lectureLibre: Promise<void> = Promise.resolve();
 
@@ -84,6 +89,35 @@ export class JourneeApiFixture {
 
   seed(journee: RestJournee): void {
     this.journees.set(journee.jour, journee);
+  }
+
+  seedDossier(dossier: RestDossier): void {
+    this.dossiers.set(dossier.adresse.pointage, dossier);
+  }
+
+  installDossier(): void {
+    cy.intercept({ method: 'GET', pathname: DOSSIER }, request => {
+      const pointage = new URL(request.url).pathname.split('/').slice(-1)[0] ?? '';
+      const dossier = this.dossiers.get(pointage);
+      request.reply(
+        dossier === undefined
+          ? { statusCode: 404, body: { type: 'urn:glm:erreur:atelier:fin-automatique-introuvable' } }
+          : { body: dossier },
+      );
+    }).as('dossierRead');
+  }
+
+  installRegularisation(): void {
+    cy.intercept({ method: 'POST', pathname: REGULARISATION }, request => {
+      if (this.refusDeLaRegularisation !== undefined) {
+        request.reply({ statusCode: 409, body: { type: `urn:glm:erreur:atelier:${this.refusDeLaRegularisation}` } });
+        return;
+      }
+      this.journeesApresLaCorrection.forEach(journee => {
+        this.seed(journee);
+      });
+      request.reply({ statusCode: 201, body: {} });
+    }).as('regularisationWrite');
   }
 
   install(): void {

@@ -45,6 +45,7 @@ const contenuDAjout = (categorie: CategorieDActivite): ContenuDAjout =>
 const AJOUT = contenuDAjout('TRAVAIL');
 const AJOUT_EN_NON_CONFORMITE = contenuDAjout('NON_CONFORMITE');
 const SOIR = activiteTerminee(JOURNEE, 'soir');
+const FIN_REELLE = '2026-10-05T21:00:00-03:00';
 const MATIN = activiteTerminee(JOURNEE, 'matin');
 
 describe('Correction of an activity', () => {
@@ -264,6 +265,68 @@ describe('Correction of an activity', () => {
     expect(port.changements).toEqual([]);
   });
 
+  it('should regularise the end of the aimed activity under the identifier of the entry', async () => {
+    givenTheEntryIdentifiers('saisie-1');
+
+    await whenRegularising(SOIR, FIN_REELLE);
+
+    expect(port.regularisations.map(saisie => [saisie.id, saisie.suivi.value, saisie.activite.value, saisie.dateDeSurvenue])).toEqual([
+      ['saisie-1', 'suivi-1', 'soir', FIN_REELLE],
+    ]);
+  });
+
+  it.each([{ issue: 'ENREGISTREE' }, { issue: 'JOURNEE_CHANGEE' }] as const)(
+    'should ask to reread the day once the regularisation is answered $issue',
+    async ({ issue }) => {
+      port.repondreALaRegularisation({ kind: issue });
+
+      await whenRegularising(SOIR, FIN_REELLE);
+
+      thenTheStateIs({ kind: 'A_RELIRE', issue });
+    },
+  );
+
+  it('should tell the refusal with its reason when the server refuses the regularisation', async () => {
+    port.repondreALaRegularisation({ kind: 'REFUS', motif: 'FIN_APRES_LA_BORNE' });
+
+    await whenRegularising(SOIR, FIN_REELLE);
+
+    thenTheStateIs({ kind: 'REGULARISATION_REFUSEE', motif: 'FIN_APRES_LA_BORNE' });
+  });
+
+  it.each([
+    { cas: 'a technical failure', reponse: new Error('Réponse perdue') },
+    { cas: 'a refusal', reponse: { kind: 'REFUS', motif: 'FIN_FUTURE' } },
+  ] as const)('should keep the identifier when the same end is sent again after $cas', async ({ reponse }) => {
+    givenTheEntryIdentifiers('saisie-1', 'saisie-2');
+    port.repondreALaRegularisation(reponse);
+    await whenRegularising(SOIR, FIN_REELLE);
+
+    await whenRegularising(SOIR, FIN_REELLE);
+
+    expect(port.regularisations.map(saisie => saisie.id)).toEqual(['saisie-1', 'saisie-1']);
+  });
+
+  it('should forget the entry once the regularisation is recorded, so that the same end later gets a new identifier', async () => {
+    givenTheEntryIdentifiers('saisie-1', 'saisie-2');
+    await whenRegularising(SOIR, FIN_REELLE);
+
+    await whenRegularising(SOIR, FIN_REELLE);
+
+    expect(port.regularisations.map(saisie => saisie.id)).toEqual(['saisie-1', 'saisie-2']);
+  });
+
+  it('should give a new identifier to the same end once the regularisation was abandoned after a failure', async () => {
+    givenTheEntryIdentifiers('saisie-1', 'saisie-2');
+    port.repondreALaRegularisation(new Error('Réponse perdue'));
+    await whenRegularising(SOIR, FIN_REELLE);
+    whenAbandoningTheRegularisation();
+
+    await whenRegularising(SOIR, FIN_REELLE);
+
+    expect(port.regularisations.map(saisie => saisie.id)).toEqual(['saisie-1', 'saisie-2']);
+  });
+
   it('should add the activity to its suivi under the identifier of the entry', async () => {
     givenTheEntryIdentifiers('saisie-1');
 
@@ -417,6 +480,13 @@ describe('Correction of an activity', () => {
 
   const whenChangingTheWorkstation = (activite: ActiviteTerminee, poste: PosteDeLaJournee): Promise<void> =>
     service().changerDePoste(activite, poste);
+
+  const whenRegularising = (activite: ActiviteTerminee, dateDeSurvenue: string): Promise<void> =>
+    service().regulariserLaFin(activite, dateDeSurvenue);
+
+  const whenAbandoningTheRegularisation = (): void => {
+    service().abandonnerLaRegularisation();
+  };
 
   const whenAdding = (contenu: ContenuDAjout): Promise<void> => service().ajouter(contenu);
 

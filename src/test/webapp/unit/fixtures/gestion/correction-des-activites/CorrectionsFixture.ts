@@ -2,10 +2,12 @@ import {
   CorrectionsPort,
   MotifDAjout,
   MotifDeChangementDePoste,
+  MotifDeRegularisation,
   ResultatDeCorrection,
 } from '@/gestion/contexts/correction-des-activites/domain/correction/CorrectionsPort';
 import { SaisieDAjout } from '@/gestion/contexts/correction-des-activites/domain/correction/SaisieDAjout';
 import { SaisieDeChangementDePoste } from '@/gestion/contexts/correction-des-activites/domain/correction/SaisieDeChangementDePoste';
+import { SaisieDeRegularisation } from '@/gestion/contexts/correction-des-activites/domain/correction/SaisieDeRegularisation';
 import { SaisieDeRetrait } from '@/gestion/contexts/correction-des-activites/domain/correction/SaisieDeRetrait';
 
 const realSetTimeout = setTimeout;
@@ -13,14 +15,17 @@ const realSetTimeout = setTimeout;
 export type ReponseDeCorrection = ResultatDeCorrection | Error;
 export type ReponseDeChangementDePoste = ResultatDeCorrection<MotifDeChangementDePoste> | Error;
 export type ReponseDAjout = ResultatDeCorrection<MotifDAjout> | Error;
+export type ReponseDeRegularisation = ResultatDeCorrection<MotifDeRegularisation> | Error;
 
 export class CorrectionsFixture extends CorrectionsPort {
   readonly retraits: SaisieDeRetrait[] = [];
   readonly changements: SaisieDeChangementDePoste[] = [];
   readonly ajouts: SaisieDAjout[] = [];
+  readonly regularisations: SaisieDeRegularisation[] = [];
   private readonly reponsesAuxRetraits: ReponseDeCorrection[] = [];
   private readonly reponsesAuxChangements: ReponseDeChangementDePoste[] = [];
   private readonly reponsesAuxAjouts: ReponseDAjout[] = [];
+  private readonly reponsesAuxRegularisations: ReponseDeRegularisation[] = [];
   private arrivee: (() => void) | undefined;
   private liberation: (() => void) | undefined;
 
@@ -34,6 +39,10 @@ export class CorrectionsFixture extends CorrectionsPort {
 
   repondreALAjout(...reponses: ReponseDAjout[]): void {
     this.reponsesAuxAjouts.push(...reponses);
+  }
+
+  repondreALaRegularisation(...reponses: ReponseDeRegularisation[]): void {
+    this.reponsesAuxRegularisations.push(...reponses);
   }
 
   retenir(): Promise<void> {
@@ -59,6 +68,11 @@ export class CorrectionsFixture extends CorrectionsPort {
   override ajouter(saisie: SaisieDAjout): Promise<ResultatDeCorrection<MotifDAjout>> {
     this.ajouts.push(saisie);
     return this.repondreA(this.reponsesAuxAjouts.shift() ?? { kind: 'ENREGISTREE' });
+  }
+
+  override regulariserLaFin(saisie: SaisieDeRegularisation): Promise<ResultatDeCorrection<MotifDeRegularisation>> {
+    this.regularisations.push(saisie);
+    return this.repondreA(this.reponsesAuxRegularisations.shift() ?? { kind: 'ENREGISTREE' });
   }
 
   private repondreA<R>(reponse: R | Error): Promise<R> {

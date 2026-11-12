@@ -3,9 +3,16 @@ import { findApiErrorIn } from '@/app/shared/api-client/infrastructure/secondary
 import { toOffsetIsoString } from '@/app/shared/date-format/infrastructure/primary/DateFormats';
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { inject, Injectable } from '@angular/core';
-import { CorrectionsPort, MotifDAjout, MotifDeChangementDePoste, ResultatDeCorrection } from '../../domain/correction/CorrectionsPort';
+import {
+  CorrectionsPort,
+  MotifDAjout,
+  MotifDeChangementDePoste,
+  MotifDeRegularisation,
+  ResultatDeCorrection,
+} from '../../domain/correction/CorrectionsPort';
 import { SaisieDAjout } from '../../domain/correction/SaisieDAjout';
 import { SaisieDeChangementDePoste } from '../../domain/correction/SaisieDeChangementDePoste';
+import { SaisieDeRegularisation } from '../../domain/correction/SaisieDeRegularisation';
 import { SaisieDeRetrait } from '../../domain/correction/SaisieDeRetrait';
 
 const URN_ATELIER = 'urn:glm:erreur:atelier:';
@@ -33,6 +40,23 @@ const CODES_DE_JOURNEE_CHANGEE_DE_L_AJOUT = [
   'evenement-anterieur-a-l-engagement',
   'evenement-posterieur-a-la-cloture',
 ] as const;
+
+const CODES_DE_JOURNEE_CHANGEE_DE_LA_REGULARISATION = [
+  'saisie-concurrente',
+  'suivi-d-atelier-introuvable',
+  'activite-visee-introuvable',
+  'activite-deja-regularisee',
+  'activite-non-echue',
+  'operateur-introuvable',
+  'poste-de-travail-introuvable',
+  'operateur-non-habilite',
+] as const;
+
+const MOTIFS_DE_LA_REGULARISATION: ReadonlyMap<string, MotifDeRegularisation> = new Map([
+  [`${URN_ATELIER}fin-avant-debut`, 'FIN_AVANT_LE_DEBUT'],
+  [`${URN_ATELIER}fin-apres-borne`, 'FIN_APRES_LA_BORNE'],
+  [`${URN_ATELIER}date-de-survenue-future`, 'FIN_FUTURE'],
+]);
 
 const MOTIFS_DE_L_AJOUT: ReadonlyMap<string, MotifDAjout> = new Map([
   [`${URN_ATELIER}chevauchement`, 'CHEVAUCHEMENT'],
@@ -91,6 +115,30 @@ export class HttpCorrections extends CorrectionsPort {
     } catch (failure: unknown) {
       return this.resultatDuChangementDePosteEnEchec(failure);
     }
+  }
+
+  override async regulariserLaFin(saisie: SaisieDeRegularisation): Promise<ResultatDeCorrection<MotifDeRegularisation>> {
+    try {
+      await this.api.write('/api/atelier/suivis/{id}/regularisations', {
+        pathParams: { id: saisie.suivi.value },
+        body: { id: saisie.id, activite: saisie.activite.value, dateDeSurvenue: saisie.dateDeSurvenue },
+      });
+      return { kind: 'ENREGISTREE' };
+    } catch (failure: unknown) {
+      return this.resultatDeLaRegularisationEnEchec(failure);
+    }
+  }
+
+  private resultatDeLaRegularisationEnEchec(failure: unknown): ResultatDeCorrection<MotifDeRegularisation> {
+    const urn = findApiErrorIn(failure)?.urn;
+    const motif = urn === undefined ? undefined : MOTIFS_DE_LA_REGULARISATION.get(urn);
+    if (motif !== undefined) {
+      return { kind: 'REFUS', motif };
+    }
+    if (journeeChangee(CODES_DE_JOURNEE_CHANGEE_DE_LA_REGULARISATION, urn)) {
+      return { kind: 'JOURNEE_CHANGEE' };
+    }
+    return this.signalee(failure);
   }
 
   private resultatDeLAjoutEnEchec(failure: unknown): ResultatDeCorrection<MotifDAjout> {

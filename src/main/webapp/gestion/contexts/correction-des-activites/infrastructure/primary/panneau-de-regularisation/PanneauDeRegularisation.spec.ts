@@ -1,6 +1,7 @@
 import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ComponentFixture, ComponentFixtureAutoDetect, TestBed } from '@angular/core/testing';
 import { ErrorHandlerFixture } from '@test/unit/fixtures/ErrorHandlerFixture';
+import { CorrectionsFixture } from '@test/unit/fixtures/gestion/correction-des-activites/CorrectionsFixture';
 import { DossierDeLaFinFixture } from '@test/unit/fixtures/gestion/correction-des-activites/DossierDeLaFinFixture';
 import {
   ActiviteSemee,
@@ -14,7 +15,8 @@ import {
 import { ResizeObserverFixture } from '@test/unit/fixtures/gestion/correction-des-activites/ResizeObserverFixture';
 import { dataSelector } from '@test/utils/DataSelector';
 import { requiredFixture } from '@test/utils/RequiredFixture';
-import { IssueDeCorrection } from '../../../application/CorrectionDUneActivite';
+import { CorrectionDUneActivite, IssueDeCorrection } from '../../../application/CorrectionDUneActivite';
+import { CorrectionsPort } from '../../../domain/correction/CorrectionsPort';
 import { DossierDeLaFin } from '../../../domain/fin-automatique/DossierDeLaFin';
 import { DossierDeLaFinPort } from '../../../domain/fin-automatique/DossierDeLaFinPort';
 import { PointageDuDossierId } from '../../../domain/fin-automatique/PointageDuDossierId';
@@ -44,6 +46,7 @@ const dossierDuSoir = (): DossierDeLaFin => ({
 describe('Panel to regularise the end of an automatic end', () => {
   let shown: ComponentFixture<PanneauDeRegularisation>;
   let dossiers: DossierDeLaFinFixture;
+  let corrections: CorrectionsFixture;
   let errors: ErrorHandlerFixture;
   let corrigees: IssueDeCorrection[];
   let abandons: number;
@@ -54,6 +57,7 @@ describe('Panel to regularise the end of an automatic end', () => {
     vi.setSystemTime(new Date(2026, 9, 6, 10, 0));
     resizeObserver = new ResizeObserverFixture();
     dossiers = new DossierDeLaFinFixture();
+    corrections = new CorrectionsFixture();
     dossiers.semer(dossierDuSoir());
     errors = new ErrorHandlerFixture();
     corrigees = [];
@@ -63,11 +67,14 @@ describe('Panel to regularise the end of an automatic end', () => {
         { provide: ComponentFixtureAutoDetect, useValue: true },
         { provide: DossierDeLaFinPort, useValue: dossiers },
         { provide: ErrorHandlerPort, useValue: errors },
+        { provide: CorrectionsPort, useValue: corrections },
+        CorrectionDUneActivite,
       ],
     });
   });
 
   afterEach(() => {
+    corrections.liberer();
     vi.useRealTimers();
     resizeObserver.restore();
   });
@@ -148,6 +155,96 @@ describe('Panel to regularise the end of an automatic end', () => {
     expect(timeOfTheHandle()).toBe('Aucune heure posée');
   });
 
+  it('should offer to validate the end only once an hour is placed, naming that hour', async () => {
+    await whenOpening();
+    const avant = [text('regularisation-valider'), disabledStates('regularisation-valider')];
+
+    await whenPressing('ArrowRight');
+
+    expect(avant).toEqual(['Valider la fin', [true]]);
+    expect([text('regularisation-valider'), disabledStates('regularisation-valider')]).toEqual(['Valider la fin à 22:30', [false]]);
+  });
+
+  it('should send the end placed for the activity and tell the day must be reread', async () => {
+    await whenOpening();
+    await whenPressing('ArrowRight');
+
+    await whenValidating();
+
+    expect(corrections.regularisations.map(saisie => [saisie.activite.value, Date.parse(saisie.dateDeSurvenue)])).toEqual([
+      ['soir', instantLocal(5, 22, 30).value.getTime()],
+    ]);
+    expect(corrigees).toEqual(['ENREGISTREE']);
+  });
+
+  it('should tell the day changed when the server says so on the validation', async () => {
+    corrections.repondreALaRegularisation({ kind: 'JOURNEE_CHANGEE' });
+    await whenOpening();
+    await whenPressing('ArrowRight');
+
+    await whenValidating();
+
+    expect(corrigees).toEqual(['JOURNEE_CHANGEE']);
+  });
+
+  it.each([
+    { motif: 'FIN_AVANT_LE_DEBUT', message: 'La fin doit suivre le début de l’activité.' },
+    { motif: 'FIN_APRES_LA_BORNE', message: 'La fin dépasse le démarrage suivant ou la clôture de l’élément.' },
+    {
+      motif: 'FIN_FUTURE',
+      message: 'La fin dépasse l’heure du serveur. Choisissez une heure plus tôt ou réessayez dans un instant.',
+    },
+  ] as const)('should explain the refusal $motif under the buttons and keep the end placed', async ({ motif, message }) => {
+    corrections.repondreALaRegularisation({ kind: 'REFUS', motif });
+    await whenOpening();
+    await whenPressing('ArrowRight');
+
+    await whenValidating();
+
+    expect(text('regularisation-refus')).toBe(message);
+    expect(corrigees).toEqual([]);
+    expect(timeOfTheHandle()).toBe('22:30');
+  });
+
+  it('should say the end failed and keep it after a technical failure', async () => {
+    corrections.repondreALaRegularisation(new Error('Réseau coupé'));
+    await whenOpening();
+    await whenPressing('ArrowRight');
+
+    await whenValidating();
+
+    expect(text('regularisation-echec')).toBe('La fin n’a pas pu être enregistrée. Vérifiez la connexion puis réessayez.');
+    expect(corrigees).toEqual([]);
+  });
+
+  it('should show the end being sent and forbid validating or abandoning meanwhile', async () => {
+    const arrivee = corrections.retenir();
+    await whenOpening();
+    await whenPressing('ArrowRight');
+
+    whenValidatingWithoutWaiting();
+    await arrivee;
+    await shown.whenStable();
+
+    expect(text('regularisation-valider')).toBe('Enregistrement…');
+    expect(disabledStates('regularisation-valider')).toEqual([true]);
+    expect(disabledStates('regularisation-abandonner')).toEqual([true]);
+  });
+
+  it('should forget its entry when it is closed without an outcome, so that the same end sent later is a new command', async () => {
+    corrections.repondreALaRegularisation({ kind: 'REFUS', motif: 'FIN_APRES_LA_BORNE' });
+    await whenOpening();
+    await whenPressing('ArrowRight');
+    await whenValidating();
+    shown.destroy();
+    await whenOpening();
+    await whenPressing('ArrowRight');
+
+    await whenValidating();
+
+    expect(new Set(corrections.regularisations.map(saisie => saisie.id)).size).toBe(2);
+  });
+
   it('should move the focus to the abandon button when it opens', async () => {
     await whenOpening();
 
@@ -189,6 +286,15 @@ describe('Panel to regularise the end of an automatic end', () => {
     await settled();
   };
 
+  const whenValidatingWithoutWaiting = (): void => {
+    requiredFixture(all('regularisation-valider')[0], 'regularisation-valider').click();
+  };
+
+  const whenValidating = async (): Promise<void> => {
+    whenValidatingWithoutWaiting();
+    await settled();
+  };
+
   const whenAbandoning = (): void => {
     requiredFixture(all('regularisation-abandonner')[0], 'regularisation-abandonner').click();
   };
@@ -203,6 +309,7 @@ describe('Panel to regularise the end of an automatic end', () => {
   ];
   const text = (selector: string): string => all(selector)[0]?.textContent.replace(/\s+/g, ' ').trim() ?? '';
   const handle = (): HTMLElement => requiredFixture(all('regularisation-poignee')[0], 'regularisation-poignee');
+  const disabledStates = (selector: string): boolean[] => all(selector).map(element => (element as HTMLButtonElement).disabled);
   const drawnHandles = (): HTMLElement[] => all('regularisation-poignee');
   const timeOfTheHandle = (): string | null => handle().getAttribute('aria-valuetext');
   const focusedSelector = (): string | undefined => (document.activeElement as HTMLElement | null)?.dataset['selector'];

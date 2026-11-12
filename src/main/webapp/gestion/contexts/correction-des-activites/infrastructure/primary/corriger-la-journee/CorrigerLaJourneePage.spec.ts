@@ -525,6 +525,34 @@ describe('Page to correct the day of an operator', () => {
     expect(document.activeElement).toBe(all('corriger-annonce')[0]);
   });
 
+  it('should close the panel to regularise, read the day again and say the end was regularised once it is recorded', async () => {
+    await whenOpeningThePageOnADayWithAnAutomaticEnd();
+    await whenAskingToRegulariseTheEnd();
+    await whenPlacingTheEnd();
+
+    await whenValidatingTheEnd();
+
+    expect(corrections.regularisations.map(saisie => saisie.activite.value)).toEqual(['soir']);
+    expect(texts('regularisation-titre')).toEqual([]);
+    expect(port.lectures).toHaveLength(2);
+    expect(text('corriger-annonce')).toBe('Fin régularisée');
+    expect(document.activeElement).toBe(all('corriger-annonce')[0]);
+  });
+
+  it('should forbid every correction while the end is being sent', async () => {
+    const arrivee = corrections.retenir();
+    await whenOpeningThePageOnADayWithAnAutomaticEnd();
+    await whenAskingToRegulariseTheEnd();
+    await whenPlacingTheEnd();
+
+    all('regularisation-valider')[0]?.click();
+    await arrivee;
+    await shown.whenStable();
+
+    expect(disabledStates('activite-regulariser')).toEqual([true]);
+    expect(disabledStates('activite-retirer')).toEqual([true, true]);
+  });
+
   it('should open one panel at a time between the regularisation, the change of workstation and the addition', async () => {
     await whenOpeningThePageOnADayWithAnAutomaticEnd();
     await whenAskingToRegulariseTheEnd();
@@ -872,6 +900,19 @@ describe('Page to correct the day of an operator', () => {
 
   const whenAskingToRegulariseTheEnd = async (): Promise<void> => {
     all('activite-regulariser')[0]?.click();
+    await new Promise(resolve => setTimeout(resolve));
+    await shown.whenStable();
+    await new Promise(resolve => setTimeout(resolve));
+    await shown.whenStable();
+  };
+
+  const whenPlacingTheEnd = async (): Promise<void> => {
+    all('regularisation-poignee')[0]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await shown.whenStable();
+  };
+
+  const whenValidatingTheEnd = async (): Promise<void> => {
+    all('regularisation-valider')[0]?.click();
     await new Promise(resolve => setTimeout(resolve));
     await shown.whenStable();
     await new Promise(resolve => setTimeout(resolve));

@@ -37,7 +37,25 @@
     <p role="status" class="text-body-sm text-ink-muted" data-selector="regularisation-chargement">{{ libelles.chargement }}</p>
     }
     <div class="flex flex-wrap gap-2">
-      <button mat-button type="button" (click)="abandon.emit()" data-selector="regularisation-abandonner">{{ libelles.abandonner }}</button>
+      @if (vue()) {
+      <button
+        mat-flat-button
+        type="button"
+        [disabled]="finPlacee() === undefined || enCours()"
+        (click)="valider()"
+        data-selector="regularisation-valider"
+      >
+        {{ enCours() ? libelles.enregistrement : libelleDeValider() }}
+      </button>
+      }
+      <button mat-button type="button" [disabled]="enCours()" (click)="abandon.emit()" data-selector="regularisation-abandonner">
+        {{ libelles.abandonner }}
+      </button>
     </div>
+    @if (refus(); as motif) {
+    <p role="alert" class="text-body-sm text-danger" data-selector="regularisation-refus">{{ libelles.refus[motif] }}</p>
+    } @if (echec()) {
+    <p role="alert" class="text-body-sm text-danger" data-selector="regularisation-echec">{{ libelles.echec }}</p>
+    }
   </div>
 </aside>

@@ -1,9 +1,24 @@
+import { ErrorHandlerPort } from '@/app/shared/error-handler/domain/ErrorHandlerPort';
 import { ErrorMessage } from '@/gestion/shared/design-system/infrastructure/primary/error-message/ErrorMessage';
-import { afterNextRender, Component, computed, ElementRef, inject, input, output, resource, signal, untracked } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  input,
+  output,
+  resource,
+  signal,
+  untracked,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { IssueDeCorrection } from '../../../application/CorrectionDUneActivite';
+import { CorrectionDUneActivite, IssueDeCorrection } from '../../../application/CorrectionDUneActivite';
+import { MotifDeRegularisation } from '../../../domain/correction/CorrectionsPort';
 import { DossierDeLaFin } from '../../../domain/fin-automatique/DossierDeLaFin';
 import { DossierDeLaFinPort } from '../../../domain/fin-automatique/DossierDeLaFinPort';
+import { InstantDuDossier } from '../../../domain/fin-automatique/InstantDuDossier';
 import { ActiviteTerminee } from '../../../domain/journee/ActiviteDeLaJournee';
 import { instantDeplace, uneMinuteEntiereEntre } from '../frise-de-la-fin/DeplacementDeLaPoignee';
 import { FriseDeLaFin } from '../frise-de-la-fin/FriseDeLaFin';
@@ -15,6 +30,7 @@ import {
   placementDuDossier,
   poigneeDuDossier,
 } from '../frise-de-la-fin/PoigneeDeFrise';
+import { heureDe } from '../frise-de-la-fin/PresentationDeLaFrise';
 import { LIBELLES_CORRECTION_DES_ACTIVITES } from '../LibellesCorrectionDesActivites';
 
 @Component({
@@ -29,6 +45,8 @@ export class PanneauDeRegularisation {
   readonly corrigee = output<IssueDeCorrection>();
 
   private readonly port = inject(DossierDeLaFinPort);
+  private readonly correction = inject(CorrectionDUneActivite);
+  private readonly errors = inject(ErrorHandlerPort);
   private readonly hote = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly libelles = LIBELLES_CORRECTION_DES_ACTIVITES.regularisation;
@@ -54,9 +72,20 @@ export class PanneauDeRegularisation {
         };
   });
   protected readonly enChargement = computed(() => this.lecture.isLoading());
+  protected readonly enCours = computed(() => this.correction.etat().kind === 'EN_COURS');
+  protected readonly finPlacee = computed(() => (new InstantDuDossier(this.instant()).isValid() ? this.instant() : undefined));
+  protected readonly libelleDeValider = computed(() => {
+    const fin = this.finPlacee();
+    return fin === undefined ? this.libelles.validerSansHeure : this.libelles.validerLaFin(heureDe(fin));
+  });
+  protected readonly refus = signal<MotifDeRegularisation | undefined>(undefined);
+  protected readonly echec = signal(false);
   protected readonly enErreur = computed(() => this.lecture.status() === 'error');
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      this.correction.abandonnerLaRegularisation();
+    });
     afterNextRender(() => this.hote.nativeElement.querySelector<HTMLElement>('button')?.focus());
   }
 
@@ -73,6 +102,20 @@ export class PanneauDeRegularisation {
     this.lireLHorloge();
     const bornes = bornesDuFait(dossier, this.maintenant());
     this.instant.set(uneMinuteEntiereEntre(bornes) ? instantDeplace(demande, this.maintenant(), bornes) : '');
+  }
+
+  protected valider(): void {
+    this.errors.observe(this.regulariser(this.instant()));
+  }
+
+  private async regulariser(fin: string): Promise<void> {
+    await this.correction.regulariserLaFin(this.activite(), fin);
+    const etat = this.correction.etat();
+    this.refus.set(etat.kind === 'REGULARISATION_REFUSEE' ? etat.motif : undefined);
+    this.echec.set(etat.kind === 'ECHEC');
+    if (etat.kind === 'A_RELIRE') {
+      this.corrigee.emit(etat.issue);
+    }
   }
 
   private lireLHorloge(): void {
