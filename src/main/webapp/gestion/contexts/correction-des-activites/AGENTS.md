@@ -226,7 +226,9 @@ de poste n'a que `CHEVAUCHEMENT` ; l'ajout a `CHEVAUCHEMENT` et `FIN_FUTURE`.
 ## Régularisation d'une fin automatique
 
 - **Panneau.** Le bouton de la liste demande à la page (`regularisationDemandee`) d'ouvrir `PanneauDeRegularisation`, un
-  `<aside>` non modal au même emplacement que les autres panneaux : un seul panneau à la fois, la page ne retient que
+  `<aside>` non modal posé **en pleine largeur entre la frise du jour et la liste**, et non à côté comme les autres
+  panneaux : à côté, la frise tenait 15 h dans 350 px et la poignée, large comme le repère du début, ne se posait pas
+  près de lui. Un seul panneau à la fois, la page ne retient que
   l'identifiant de l'activité et le panneau disparaît quand l'activité relue n'est plus corrigeable ou plus en fin
   automatique. Il rappelle l'activité comme le changement de poste, puis lit le dossier de la fin (`DossierDeLaFinPort`,
   `HttpDossierDeLaFin` sur `GET /api/atelier/suivis/{id}/anomalies/{pointage}`) : « Chargement de l'activité… », puis la
