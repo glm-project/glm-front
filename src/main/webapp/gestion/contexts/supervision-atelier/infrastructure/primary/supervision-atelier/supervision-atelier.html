@@ -53,7 +53,6 @@
     libelles.couloirs[couloir.couloir];
     <section
       class="flex min-w-0 flex-col rounded-surface border-t-4 bg-sunken px-1.5 pb-1.5"
-      [class.couloir-vide]="couloir.operateurs.length === 0"
       [class.border-t-ok]="couloir.couloir === 'AU_TRAVAIL'"
       [class.border-t-border-strong]="couloir.couloir === 'SANS_ACTIVITE'"
       [attr.aria-labelledby]="'couloir-' + slug + '-titre'"
