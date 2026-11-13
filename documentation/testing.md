@@ -38,7 +38,10 @@ How we write tests here. Common commands live in `AGENTS.md`; `package.json` is 
    cache, clears the origin, waits for an activated and controlling worker, and cuts the browser network over
    CDP. An uncached request to a URL outside the worker manifest must fail before an offline restart counts as
    evidence. The companion run makes `ngsw-worker.js` unavailable and proves that the same restart cannot
-   mount the shell.
+   mount the shell. The same run asks Chrome whether the shipped pupitre is installable
+   (`Page.getInstallabilityErrors`). Chrome judges only a top-level page, never the harness iframes, so the
+   scenario opens its own tab and queries it once `load` has fired: `Page.getAppManifest` hangs while the page
+   is still loading.
 
    The static fixture server supplies deterministic API and RFC 8628 responses; it is not a backend or
    Keycloak substitute in the application graph. `/` always serves the unmodified production artifact. A

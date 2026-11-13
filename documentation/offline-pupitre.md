@@ -153,7 +153,8 @@ worker to activate and control a restarted pupitre, verifies the browser is offl
 request, and recreates the application twice while disconnected. Durable setup and inspection use
 `JournauxDuPupitrePort`; the fixture never reads or writes the local adapter's database layout. A second clean
 origin with `ngsw-worker.js` unavailable proves that HTTP cache or the fixture server cannot make the same
-offline navigation pass.
+offline navigation pass. The same suite proves that Chrome accepts the shipped manifest and its icons as an
+installable application.
 
 [ADR 0007](adr/0007-durable-offline-pupitre.md) records durability and synchronization. [ADR 0009](adr/0009-pupitre-domain-responsibilities.md)
 records the domain and application ownership split. [ADR 0013](adr/0013-keep-business-decisions-in-rich-domain-models.md)
