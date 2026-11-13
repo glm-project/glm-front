@@ -3,7 +3,8 @@ import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/Du
 import { referentielApiFixture } from '@test/utils/pupitre/ReferentielApiFixture';
 import { dataSelector } from '../../../utils/DataSelector';
 import { longPressFixture } from '../../../utils/LongPressFixture';
-import { clearPupitreStorageFixture, givenEnrolledPupitreFixture } from '../../../utils/PupitreStorageFixture';
+import { givenAPupitreEnrolledThroughItsDeviceFlowFixture } from '../../../utils/pupitre/EnrolementFixture';
+import { clearPupitreStorageFixture } from '../../../utils/PupitreStorageFixture';
 
 const entrepriseFixture = 'entreprise-a';
 const referentielFixture: ReferentielDuPupitre = {
@@ -146,6 +147,7 @@ describe('Pupitre my pointages journey', () => {
   });
 
   const givenAnEnrolledPupitreWithOperator049 = (): void => {
+    givenAPupitreEnrolledThroughItsDeviceFlowFixture(entrepriseFixture);
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('deviceAuthorization');
     cy.intercept('POST', '**/protocol/openid-connect/token', { statusCode: 503, body: {} });
     cy.intercept('GET', '/api/pupitre/referentiel', {
@@ -162,9 +164,6 @@ describe('Pupitre my pointages journey', () => {
     cy.intercept('GET', '/api/feuilles-de-temps/jean*', request => {
       request.reply({ body: feuilleFixture(Number(request.query['semaine']), String(request.query['evaluation'])) });
     }).as('feuille');
-    cy.visit('/');
-    cy.wait('@deviceAuthorization');
-    givenEnrolledPupitreFixture({ entreprise: entrepriseFixture, referentiel: referentielFixture });
     cy.reload();
     cy.wait('@workshop');
     cy.get(dataSelector('designation')).should('be.visible');
