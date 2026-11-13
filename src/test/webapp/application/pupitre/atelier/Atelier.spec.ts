@@ -191,7 +191,7 @@ describe('Pupitre workshop journey', () => {
   });
 
   const givenAnEnrolledPupitre = (referentiel: ReferentielDuPupitre, withClock = false): void => {
-    givenAPupitreEnrolledThroughItsDeviceFlowFixture(entrepriseFixture);
+    givenAPupitreEnrolledThroughItsDeviceFlowFixture(entrepriseFixture, referentielApiOf(referentiel));
     if (withClock) givenAControlledClock();
     givenAuthorizationAndWorkshopEdges(referentiel);
 
@@ -209,29 +209,30 @@ describe('Pupitre workshop journey', () => {
   const givenAuthorizationAndWorkshopEdges = (referentiel: ReferentielDuPupitre): void => {
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('deviceAuthorization');
     cy.intercept('POST', '**/protocol/openid-connect/token', { statusCode: 503, body: {} });
-    cy.intercept('GET', '/api/pupitre/referentiel', {
-      body: referentielApiFixture({
-        operateurs: referentiel.operateurs,
-        suivis: referentiel.suivis.map(suivi => ({
-          id: suivi.id,
-          nom: suivi.nom,
-          etat: suivi.etat,
-          categorie: suivi.categorie,
-          ...(suivi.reference === undefined ? {} : { reference: suivi.reference }),
-          activites: suivi.activites.map(activite => ({
-            operateur: activite.operateurId,
-            categorie: activite.categorie,
-            depuis: activite.depuis,
-            ouverture: activite.ouverture,
-            echeance: activite.echeance,
-            ...(activite.posteId === undefined ? {} : { poste: activite.posteId }),
-          })),
-        })),
-        categories: referentiel.categories,
-      }),
-    }).as('workshop');
+    cy.intercept('GET', '/api/pupitre/referentiel', { body: referentielApiOf(referentiel) }).as('workshop');
     observeWorkshopWrites();
   };
+
+  const referentielApiOf = (referentiel: ReferentielDuPupitre): ReturnType<typeof referentielApiFixture> =>
+    referentielApiFixture({
+      operateurs: referentiel.operateurs,
+      suivis: referentiel.suivis.map(suivi => ({
+        id: suivi.id,
+        nom: suivi.nom,
+        etat: suivi.etat,
+        categorie: suivi.categorie,
+        ...(suivi.reference === undefined ? {} : { reference: suivi.reference }),
+        activites: suivi.activites.map(activite => ({
+          operateur: activite.operateurId,
+          categorie: activite.categorie,
+          depuis: activite.depuis,
+          ouverture: activite.ouverture,
+          echeance: activite.echeance,
+          ...(activite.posteId === undefined ? {} : { poste: activite.posteId }),
+        })),
+      })),
+      categories: referentiel.categories,
+    });
 
   const observeWorkshopWrites = (): void => {
     cy.intercept('POST', '/api/atelier/suivis/*/pointages', request => {

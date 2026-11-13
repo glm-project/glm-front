@@ -6,7 +6,10 @@ const SECONDES_DANS_UNE_SEMAINE = 604_800;
 
 export const pupitreTokenFixture = (entreprise: string): string => `header.${btoa(JSON.stringify({ tenant: entreprise }))}.signature`;
 
-export const givenAPupitreEnrolledThroughItsDeviceFlowFixture = (entreprise: string): void => {
+export const givenAPupitreEnrolledThroughItsDeviceFlowFixture = (
+  entreprise: string,
+  referentielApi: ReturnType<typeof referentielApiFixture> = referentielApiFixture(),
+): void => {
   cy.intercept('POST', `${OPENID_CONNECT}/auth/device`, {
     statusCode: 200,
     body: {
@@ -21,7 +24,7 @@ export const givenAPupitreEnrolledThroughItsDeviceFlowFixture = (entreprise: str
     statusCode: 200,
     body: { access_token: pupitreTokenFixture(entreprise), refresh_token: 'refresh-fixture', expires_in: SECONDES_DANS_UNE_SEMAINE },
   }).as('enrolementTokensFixture');
-  cy.intercept('GET', '/api/pupitre/referentiel', { body: referentielApiFixture() }).as('enrolementReferentielFixture');
+  cy.intercept('GET', '/api/pupitre/referentiel', { body: referentielApi }).as('enrolementReferentielFixture');
   cy.visit('/');
   cy.wait('@enrolementTokensFixture');
   cy.wait('@enrolementReferentielFixture');

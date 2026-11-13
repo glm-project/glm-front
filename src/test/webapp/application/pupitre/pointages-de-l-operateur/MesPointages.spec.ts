@@ -147,17 +147,16 @@ describe('Pupitre my pointages journey', () => {
   });
 
   const givenAnEnrolledPupitreWithOperator049 = (): void => {
-    givenAPupitreEnrolledThroughItsDeviceFlowFixture(entrepriseFixture);
+    const referentielApi = referentielApiFixture({
+      genereLe: '2026-09-17T05:00:00Z',
+      operateurs: referentielFixture.operateurs,
+      suivis: [{ id: 'piece-1', nom: '204', etat: 'EN_ATTENTE', categorie: 'OF', activites: [] }],
+      categories: ['OF'],
+    });
+    givenAPupitreEnrolledThroughItsDeviceFlowFixture(entrepriseFixture, referentielApi);
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('deviceAuthorization');
     cy.intercept('POST', '**/protocol/openid-connect/token', { statusCode: 503, body: {} });
-    cy.intercept('GET', '/api/pupitre/referentiel', {
-      body: referentielApiFixture({
-        genereLe: '2026-09-17T05:00:00Z',
-        operateurs: referentielFixture.operateurs,
-        suivis: [{ id: 'piece-1', nom: '204', etat: 'EN_ATTENTE', categorie: 'OF', activites: [] }],
-        categories: ['OF'],
-      }),
-    }).as('workshop');
+    cy.intercept('GET', '/api/pupitre/referentiel', { body: referentielApi }).as('workshop');
     cy.intercept('GET', '/api/syntheses-des-heures/jean*', request => {
       request.reply({ body: syntheseFixture(Number(request.query['semaine']), String(request.query['evaluation'])) });
     }).as('synthese');

@@ -23,7 +23,9 @@ How we write tests here. Common commands live in `AGENTS.md`; `package.json` is 
    **The pupitre is the exception.** It has no `auth.provider.cypress.ts`: device enrolment has no redirect,
    so its application test drives the real adapter against intercepted authorization endpoints. Journeys
    needing an existing enrolment obtain it through that same flow with
-   `givenAPupitreEnrolledThroughItsDeviceFlowFixture`, then reload so the pupitre restores it from disk.
+   `givenAPupitreEnrolledThroughItsDeviceFlowFixture`, given the scenario's reference, then reload so the
+   pupitre restores both from disk. The flow claims its tokens on a real timer: install a full `cy.clock`
+   only after it. The granted session lasts a week from the application's `Date`, simulated or not.
    `PupitreStorageFixture` prepares pending gestures through `JournauxDuPupitrePort` and clears the origin's
    databases; no application spec knows IndexedDB names, stores or document keys. A scenario needing
    another tab opens a real second pupitre in an iframe of the same origin.

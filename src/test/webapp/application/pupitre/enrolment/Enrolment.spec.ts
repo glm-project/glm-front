@@ -228,10 +228,10 @@ describe('Pupitre enrolment', () => {
   });
 });
 
+const REFERENTIEL_API = referentielApiFixture({ operateurs: [OPERATEUR] });
+
 const givenAWorkshopBehindTheAuthorizationServer = (): void => {
-  cy.intercept('GET', '/api/pupitre/referentiel', {
-    body: referentielApiFixture({ operateurs: [OPERATEUR] }),
-  }).as('workshop');
+  cy.intercept('GET', '/api/pupitre/referentiel', { body: REFERENTIEL_API }).as('workshop');
   cy.intercept('POST', `${OPENID_CONNECT}/logout`, { statusCode: 204, body: {} }).as('logout');
 };
 
@@ -285,7 +285,7 @@ const givenAFrozenClock = (): void => {
 };
 
 const givenAnEnrolledPupitre = (): void => {
-  givenAPupitreEnrolledThroughItsDeviceFlowFixture(ENTREPRISE);
+  givenAPupitreEnrolledThroughItsDeviceFlowFixture(ENTREPRISE, REFERENTIEL_API);
   givenAFrozenClock();
   givenAWorkshopBehindTheAuthorizationServer();
   givenAnAuthorizationServerAnswering('authorization_pending');
@@ -296,7 +296,7 @@ const givenAnEnrolledPupitre = (): void => {
 };
 
 const givenAnEnrolledPupitreWithAnUnpublishedGesture = (): void => {
-  givenAPupitreEnrolledThroughItsDeviceFlowFixture(ENTREPRISE);
+  givenAPupitreEnrolledThroughItsDeviceFlowFixture(ENTREPRISE, REFERENTIEL_API);
   givenAFrozenClock();
   givenAWorkshopBehindTheAuthorizationServer();
   cy.intercept('POST', '/api/atelier/suivis/*/pointages', { forceNetworkError: true }).as('push');
