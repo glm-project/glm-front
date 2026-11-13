@@ -1,14 +1,8 @@
-import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { referentielApiFixture } from '@test/utils/pupitre/ReferentielApiFixture';
 import type { StaticResponse } from 'cypress/types/net-stubbing';
 import { dataSelector } from '../../../utils/DataSelector';
-import {
-  clearPupitreStorageFixture,
-  givenDurablePupitreFixture,
-  givenEnrolledPupitreFixture,
-  givenRetiredPupitreSessionFixture,
-  pupitreTokenFixture,
-} from '../../../utils/PupitreStorageFixture';
+import { givenAPupitreEnrolledThroughItsDeviceFlowFixture, pupitreTokenFixture } from '../../../utils/pupitre/EnrolementFixture';
+import { clearPupitreStorageFixture, givenAPendingGestureFixture } from '../../../utils/PupitreStorageFixture';
 import { requiredFixture } from '../../../utils/RequiredFixture';
 
 const OPENID_CONNECT = '**/realms/glmproject/protocol/openid-connect';
@@ -147,7 +141,7 @@ describe('Pupitre enrolment', () => {
 
   it('should show a new approval code when synchronization discovers a session retired in another tab', () => {
     givenAnEnrolledPupitre();
-    givenRetiredPupitreSessionFixture(ENTREPRISE);
+    givenAnotherTabRetiredTheSession();
 
     whenSynchronizingAfterAnotherTabRetiredTheSession();
 
@@ -158,7 +152,7 @@ describe('Pupitre enrolment', () => {
 
   it('should show a new approval code when renewal discovers a session retired in another tab', () => {
     givenAnEnrolledPupitre();
-    givenRetiredPupitreSessionFixture(ENTREPRISE);
+    givenAnotherTabRetiredTheSession();
 
     whenRenewalDiscoversAnotherTabRetiredTheSession();
 
@@ -234,10 +228,10 @@ describe('Pupitre enrolment', () => {
   });
 });
 
+const REFERENTIEL_API = referentielApiFixture({ operateurs: [OPERATEUR] });
+
 const givenAWorkshopBehindTheAuthorizationServer = (): void => {
-  cy.intercept('GET', '/api/pupitre/referentiel', {
-    body: referentielApiFixture({ operateurs: [OPERATEUR] }),
-  }).as('workshop');
+  cy.intercept('GET', '/api/pupitre/referentiel', { body: REFERENTIEL_API }).as('workshop');
   cy.intercept('POST', `${OPENID_CONNECT}/logout`, { statusCode: 204, body: {} }).as('logout');
 };
 
@@ -291,14 +285,10 @@ const givenAFrozenClock = (): void => {
 };
 
 const givenAnEnrolledPupitre = (): void => {
+  givenAPupitreEnrolledThroughItsDeviceFlowFixture(ENTREPRISE, REFERENTIEL_API);
   givenAFrozenClock();
+  givenAWorkshopBehindTheAuthorizationServer();
   givenAnAuthorizationServerAnswering('authorization_pending');
-  cy.visit('/');
-  cy.wait('@deviceAuthorization');
-  givenEnrolledPupitreFixture({
-    entreprise: ENTREPRISE,
-    referentiel: { operateurs: [OPERATEUR], suivis: [], categories: [], dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs },
-  });
   cy.reload();
   cy.wait('@workshop');
   cy.tick(0);
@@ -306,12 +296,12 @@ const givenAnEnrolledPupitre = (): void => {
 };
 
 const givenAnEnrolledPupitreWithAnUnpublishedGesture = (): void => {
+  givenAPupitreEnrolledThroughItsDeviceFlowFixture(ENTREPRISE, REFERENTIEL_API);
   givenAFrozenClock();
+  givenAWorkshopBehindTheAuthorizationServer();
   cy.intercept('POST', '/api/atelier/suivis/*/pointages', { forceNetworkError: true }).as('push');
   givenAnAuthorizationServerAnswering('authorization_pending');
-  cy.visit('/');
-  cy.wait('@deviceAuthorization');
-  givenDurablePupitreFixture({ entreprise: ENTREPRISE, geste: PENDING_GESTURE });
+  givenAPendingGestureFixture(ENTREPRISE, PENDING_GESTURE);
   cy.reload();
   cy.wait('@push');
   cy.tick(0);
@@ -334,6 +324,20 @@ const whenTheJournalsAreErasedAndTheNewCodeIsShown = (): void => {
   cy.get<unknown[]>('@push.all').then(requests => {
     pushesBeforeTheReset = requests.length;
   });
+};
+
+const givenAnotherTabRetiredTheSession = (): void => {
+  cy.intercept('GET', '/api/pupitre/referentiel', { statusCode: 401, body: {} }).as('otherTabRefusal');
+  cy.document().then(document => {
+    const otherTab = document.createElement('iframe');
+    otherTab.src = '/';
+    otherTab.dataset['selector'] = 'other-tab';
+    document.body.append(otherTab);
+  });
+  cy.wait('@otherTabRefusal');
+  cy.wait('@deviceAuthorization');
+  cy.get(dataSelector('other-tab')).then(otherTab => otherTab.remove());
+  givenAWorkshopBehindTheAuthorizationServer();
 };
 
 const givenARevokedRefreshCredential = (): void => {

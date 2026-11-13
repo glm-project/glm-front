@@ -5,7 +5,8 @@ import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { dataSelector } from '../../../utils/DataSelector';
 import { interceptForever } from '../../../utils/Interceptor';
 import { controlledTimeFixture, longPressFixture } from '../../../utils/LongPressFixture';
-import { clearPupitreStorageFixture, givenEnrolledPupitreFixture, pupitreTokenFixture } from '../../../utils/PupitreStorageFixture';
+import { givenAPupitreEnrolledThroughItsDeviceFlowFixture, pupitreTokenFixture } from '../../../utils/pupitre/EnrolementFixture';
+import { clearPupitreStorageFixture } from '../../../utils/PupitreStorageFixture';
 
 const entrepriseFixture = 'entreprise-a';
 const operateurFixture = {
@@ -169,7 +170,6 @@ describe('Pupitre workshop journey', () => {
   });
 
   it('should close workstation choice on finish without sending work', () => {
-    givenAControlledClock();
     givenAnEnrolledPupitre(referentielMultiPosteFixture, true);
     whenDesignatingOperator049(true);
     whenOpeningWorkstationChoice('piece-1');
@@ -179,7 +179,6 @@ describe('Pupitre workshop journey', () => {
   });
 
   it('should close workstation choice on expiry without sending work', () => {
-    givenAControlledClock();
     givenAnEnrolledPupitre(referentielMultiPosteFixture, true);
     whenDesignatingOperator049(true);
     whenOpeningWorkstationChoice('piece-1');
@@ -192,10 +191,9 @@ describe('Pupitre workshop journey', () => {
   });
 
   const givenAnEnrolledPupitre = (referentiel: ReferentielDuPupitre, withClock = false): void => {
+    givenAPupitreEnrolledThroughItsDeviceFlowFixture(entrepriseFixture, referentielApiOf(referentiel));
+    if (withClock) givenAControlledClock();
     givenAuthorizationAndWorkshopEdges(referentiel);
-    cy.visit('/');
-    cy.wait('@deviceAuthorization');
-    givenEnrolledPupitreFixture({ entreprise: entrepriseFixture, referentiel });
 
     cy.reload();
     cy.wait('@workshop');
@@ -211,29 +209,30 @@ describe('Pupitre workshop journey', () => {
   const givenAuthorizationAndWorkshopEdges = (referentiel: ReferentielDuPupitre): void => {
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('deviceAuthorization');
     cy.intercept('POST', '**/protocol/openid-connect/token', { statusCode: 503, body: {} });
-    cy.intercept('GET', '/api/pupitre/referentiel', {
-      body: referentielApiFixture({
-        operateurs: referentiel.operateurs,
-        suivis: referentiel.suivis.map(suivi => ({
-          id: suivi.id,
-          nom: suivi.nom,
-          etat: suivi.etat,
-          categorie: suivi.categorie,
-          ...(suivi.reference === undefined ? {} : { reference: suivi.reference }),
-          activites: suivi.activites.map(activite => ({
-            operateur: activite.operateurId,
-            categorie: activite.categorie,
-            depuis: activite.depuis,
-            ouverture: activite.ouverture,
-            echeance: activite.echeance,
-            ...(activite.posteId === undefined ? {} : { poste: activite.posteId }),
-          })),
-        })),
-        categories: referentiel.categories,
-      }),
-    }).as('workshop');
+    cy.intercept('GET', '/api/pupitre/referentiel', { body: referentielApiOf(referentiel) }).as('workshop');
     observeWorkshopWrites();
   };
+
+  const referentielApiOf = (referentiel: ReferentielDuPupitre): ReturnType<typeof referentielApiFixture> =>
+    referentielApiFixture({
+      operateurs: referentiel.operateurs,
+      suivis: referentiel.suivis.map(suivi => ({
+        id: suivi.id,
+        nom: suivi.nom,
+        etat: suivi.etat,
+        categorie: suivi.categorie,
+        ...(suivi.reference === undefined ? {} : { reference: suivi.reference }),
+        activites: suivi.activites.map(activite => ({
+          operateur: activite.operateurId,
+          categorie: activite.categorie,
+          depuis: activite.depuis,
+          ouverture: activite.ouverture,
+          echeance: activite.echeance,
+          ...(activite.posteId === undefined ? {} : { poste: activite.posteId }),
+        })),
+      })),
+      categories: referentiel.categories,
+    });
 
   const observeWorkshopWrites = (): void => {
     cy.intercept('POST', '/api/atelier/suivis/*/pointages', request => {
@@ -385,7 +384,7 @@ describe('Pupitre workshop journey', () => {
   };
 
   const thenNoNewDeviceAuthorizationWasRequested = (): void => {
-    cy.get('@deviceAuthorization.all').should('have.length', 1);
+    cy.get('@deviceAuthorization.all').should('have.length', 0);
   };
 
   const thenEveryPersonalActivityWasFinished = (): void => {

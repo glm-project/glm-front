@@ -1,12 +1,10 @@
-import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
 import { referentielApiFixture } from '@test/utils/pupitre/ReferentielApiFixture';
 import { dataSelector } from '../../../utils/DataSelector';
-import { clearPupitreStorageFixture, givenEnrolledPupitreFixture } from '../../../utils/PupitreStorageFixture';
+import { givenAPupitreEnrolledThroughItsDeviceFlowFixture } from '../../../utils/pupitre/EnrolementFixture';
+import { clearPupitreStorageFixture } from '../../../utils/PupitreStorageFixture';
 
 const entrepriseFixture = 'entreprise-a';
 const versionFixture = 'aaaaaaaaaaaaaaaa';
-const imageStockeeFixture = 'data:image/png;base64,iVBORw0KGgo=';
-const referentielVideFixture = { operateurs: [], suivis: [], categories: [], dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs };
 
 const pngDecodableFixture = (): ArrayBuffer => {
   const toile = document.createElement('canvas');
@@ -20,8 +18,8 @@ describe('Logo of the company in the pupitre header', () => {
   afterEach(() => clearPupitreStorageFixture());
 
   it('should show the logo of the company and download it once for its version', () => {
-    givenTheServerGivesTheLogo();
     givenAnEnrolledPupitre();
+    givenTheServerGivesTheLogo();
 
     whenRestartingAndReadingTheReference();
 
@@ -30,8 +28,8 @@ describe('Logo of the company in the pupitre header', () => {
   });
 
   it('should keep showing the stored logo without a network', () => {
-    givenNoNetwork();
     givenAnEnrolledPupitreWithAStoredLogo();
+    givenNoNetwork();
 
     whenRestarting();
 
@@ -57,22 +55,22 @@ const givenTheServerGivesTheLogo = (): void => {
 const givenNoNetwork = (): void => {
   givenEdges();
   cy.intercept('GET', '/api/pupitre/referentiel', { forceNetworkError: true }).as('reference');
-  cy.intercept('GET', '/api/parametrage/logo/*', { forceNetworkError: true }).as('logo');
+  cy.intercept('GET', '/api/parametrage/logo/*', { forceNetworkError: true }).as('unreachableLogo');
 };
 
 const givenAnEnrolledPupitre = (): void => {
-  cy.visit('/');
-  cy.wait('@deviceAuthorization');
-  givenEnrolledPupitreFixture({ entreprise: entrepriseFixture, referentiel: referentielVideFixture });
+  givenAPupitreEnrolledThroughItsDeviceFlowFixture(entrepriseFixture);
 };
 
 const givenAnEnrolledPupitreWithAStoredLogo = (): void => {
-  cy.visit('/');
-  cy.wait('@deviceAuthorization');
-  givenEnrolledPupitreFixture({
-    entreprise: entrepriseFixture,
-    referentiel: { ...referentielVideFixture, logo: { version: versionFixture, image: imageStockeeFixture } },
-  });
+  givenAnEnrolledPupitre();
+  givenTheServerGivesTheLogo();
+  cy.reload();
+  cy.wait('@logo');
+  cy.get(dataSelector('header-logo'))
+    .should('have.attr', 'src')
+    .and('match', /^data:image\/png;base64,/)
+    .as('storedLogo', { type: 'static' });
 };
 
 const whenRestartingAndReadingTheReference = (): void => {
@@ -105,6 +103,8 @@ const thenTheLogoWasDownloadedOnce = (): void => {
 };
 
 const thenTheHeaderShowsTheStoredLogo = (): void => {
-  cy.get(dataSelector('header-logo')).should('have.attr', 'src', imageStockeeFixture);
-  cy.get('@logo.all').should('have.length', 0);
+  cy.get<string>('@storedLogo').then(storedLogo => {
+    cy.get(dataSelector('header-logo')).should('have.attr', 'src', storedLogo);
+  });
+  cy.get('@unreachableLogo.all').should('have.length', 0);
 };

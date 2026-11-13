@@ -1,119 +1,42 @@
-import type { EvenementDuJournal, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
-import { dureeMaximaleFixtureEnMs } from '@test/unit/fixtures/pupitre/atelier/DureeMaximaleFixture';
+import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/Entreprise';
+import type { GesteDePointage } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
+import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
+import { IndexedDbJournauxDuPupitre } from '@/pupitre/contexts/atelier/infrastructure/secondary/local/IndexedDbJournauxDuPupitre';
+import { LocalStoragePort } from '@/pupitre/shared/local-storage/domain/LocalStoragePort';
+import { IndexedDbLocalStorage } from '@/pupitre/shared/local-storage/infrastructure/secondary/IndexedDbLocalStorage';
+import { Injector, runInInjectionContext } from '@angular/core';
 
-interface DurablePupitreFixture {
-  entreprise: string;
-  geste: { id: string; dateDeSurvenue: string; operateurId: string };
+interface PendingGestureFixture {
+  readonly id: string;
+  readonly dateDeSurvenue: string;
+  readonly operateurId: string;
 }
 
-interface EnrolledPupitreFixture {
-  readonly entreprise: string;
-  readonly referentiel: ReferentielDuPupitre;
-}
+const stockageDeLOrigineDuPupitreFixture = new IndexedDbLocalStorage();
+const journauxFixture: JournauxDuPupitrePort = runInInjectionContext(
+  Injector.create({ providers: [{ provide: LocalStoragePort, useValue: stockageDeLOrigineDuPupitreFixture }] }),
+  () => new IndexedDbJournauxDuPupitre(),
+);
 
-interface StoredPupitreFixture extends EnrolledPupitreFixture {
-  readonly evenements: readonly EvenementDuJournal[];
-}
+export const givenAPendingGestureFixture = (entreprise: string, geste: PendingGestureFixture): void => {
+  const pointage: GesteDePointage = { ...geste, nature: 'POINTAGE', suiviId: 'piece', type: 'DEBUT' };
+  cy.then(() => journauxFixture.append(Entreprise.of(entreprise), [pointage]));
+};
 
-export const pupitreTokenFixture = (entreprise: string): string => `header.${btoa(JSON.stringify({ tenant: entreprise }))}.signature`;
-
-const persistPupitreFixture = (window: Cypress.AUTWindow, fixture: StoredPupitreFixture): Promise<void> =>
+const deleteDatabaseFixture = (name: string | undefined): Promise<void> =>
   new Promise<void>((resolve, reject) => {
-    const request = window.indexedDB.open('glm-pupitre', 1);
-    request.onupgradeneeded = () => request.result.createObjectStore('documents');
-    request.onsuccess = () => {
-      const database = request.result;
-      const transaction = database.transaction('documents', 'readwrite');
-      const token = pupitreTokenFixture(fixture.entreprise);
-      transaction.objectStore('documents').put(
-        {
-          tenant: fixture.entreprise,
-          session: {
-            tenant: fixture.entreprise,
-            accessToken: token,
-            refreshToken: 'refresh-fixture',
-            expiresAt: Date.now() + 300_000,
-          },
-        },
-        'enrolement',
-      );
-      transaction.objectStore('documents').put(
-        {
-          connecte: true,
-          referentiel: fixture.referentiel,
-          evenements: fixture.evenements,
-        },
-        `atelier-activites-v2:${fixture.entreprise}`,
-      );
-      transaction.oncomplete = () => {
-        database.close();
-        resolve();
-      };
-      transaction.onabort = () => {
-        database.close();
-        reject(new Error('Fixture non conservee'));
-      };
-    };
-    request.onerror = () => reject(new Error('Stockage fixture inaccessible'));
+    if (name === undefined) {
+      resolve();
+      return;
+    }
+    const request = indexedDB.deleteDatabase(name);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(new Error('Impossible de nettoyer le stockage fixture', { cause: request.error }));
   });
-
-export const givenDurablePupitreFixture = (fixture: DurablePupitreFixture): void => {
-  cy.window().then(window =>
-    persistPupitreFixture(window, {
-      entreprise: fixture.entreprise,
-      referentiel: { operateurs: [], suivis: [], categories: [], dureeMaximaleDActiviteEnMs: dureeMaximaleFixtureEnMs },
-      evenements: [
-        {
-          etat: 'EN_ATTENTE',
-          geste: {
-            id: fixture.geste.id,
-            dateDeSurvenue: fixture.geste.dateDeSurvenue,
-            operateurId: fixture.geste.operateurId,
-            nature: 'POINTAGE',
-            suiviId: 'piece',
-            type: 'DEBUT',
-          },
-        },
-      ],
-    }),
-  );
-};
-
-export const givenEnrolledPupitreFixture = (fixture: EnrolledPupitreFixture): void => {
-  cy.window().then(window => persistPupitreFixture(window, { ...fixture, evenements: [] }));
-};
-
-const retirePupitreSessionFixture = (window: Cypress.AUTWindow, entreprise: string): Promise<void> =>
-  new Promise<void>((resolve, reject) => {
-    const request = window.indexedDB.open('glm-pupitre', 1);
-    request.onupgradeneeded = () => request.result.createObjectStore('documents');
-    request.onsuccess = () => {
-      const database = request.result;
-      const transaction = database.transaction('documents', 'readwrite');
-      transaction.objectStore('documents').put({ tenant: entreprise }, 'enrolement');
-      transaction.oncomplete = () => {
-        database.close();
-        resolve();
-      };
-      transaction.onabort = () => {
-        database.close();
-        reject(new Error('Retrait de la session fixture non conserve'));
-      };
-    };
-    request.onerror = () => reject(new Error('Stockage fixture inaccessible'));
-  });
-
-export const givenRetiredPupitreSessionFixture = (entreprise: string): void => {
-  cy.window().then(window => retirePupitreSessionFixture(window, entreprise));
-};
 
 export const clearPupitreStorageFixture = (): void => {
-  cy.window().then(
-    window =>
-      new Cypress.Promise<void>((resolve, reject) => {
-        const request = window.indexedDB.deleteDatabase('glm-pupitre');
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(new Error('Impossible de nettoyer le stockage fixture'));
-      }),
-  );
+  cy.then(async () => {
+    const bases = await indexedDB.databases();
+    await Promise.all(bases.map(({ name }) => deleteDatabaseFixture(name)));
+  });
 };

@@ -1,6 +1,7 @@
 import { referentielApiFixture } from '@test/utils/pupitre/ReferentielApiFixture';
 import { dataSelector } from '../../../utils/DataSelector';
-import { clearPupitreStorageFixture, givenDurablePupitreFixture, pupitreTokenFixture } from '../../../utils/PupitreStorageFixture';
+import { givenAPupitreEnrolledThroughItsDeviceFlowFixture, pupitreTokenFixture } from '../../../utils/pupitre/EnrolementFixture';
+import { clearPupitreStorageFixture, givenAPendingGestureFixture } from '../../../utils/PupitreStorageFixture';
 
 const entrepriseFixture = 'entreprise-a';
 const dateFixture = '2026-09-05T00:00:00Z';
@@ -30,6 +31,7 @@ describe('Pupitre offline restart', () => {
 
   const givenAnEnrolledPupitreWithAPendingGesture = (): void => {
     online = false;
+    givenAPupitreEnrolledThroughItsDeviceFlowFixture(entrepriseFixture);
     cy.intercept('POST', '**/protocol/openid-connect/auth/device', { statusCode: 503, body: {} }).as('enrolment');
     cy.intercept('POST', '**/protocol/openid-connect/token', { forceNetworkError: true });
     cy.intercept('GET', '/api/pupitre/referentiel', {
@@ -55,12 +57,7 @@ describe('Pupitre offline restart', () => {
         request.reply({ forceNetworkError: true });
       }
     }).as('push');
-    cy.visit('/');
-    cy.wait('@enrolment');
-    givenDurablePupitreFixture({
-      entreprise: entrepriseFixture,
-      geste: { id: idFixture, dateDeSurvenue: dateFixture, operateurId: operateurFixture },
-    });
+    givenAPendingGestureFixture(entrepriseFixture, { id: idFixture, dateDeSurvenue: dateFixture, operateurId: operateurFixture });
   };
 
   const whenRestartingPupitre = (): void => {
@@ -92,14 +89,14 @@ describe('Pupitre offline restart', () => {
   };
   const thenTheSameGestureWasAcceptedWithoutEnrollingAgain = (): void => {
     thenOriginalSignedGestureWasSent('accepted-request');
-    cy.get('@accepted-enrolment-count').should('equal', 1);
+    cy.get('@accepted-enrolment-count').should('equal', 0);
   };
   const thenItDoesNotReplayAnAcknowledgedGesture = (): void => {
     cy.wait('@reference');
     cy.get<number>('@accepted-push-count').then(completedPushes => {
       cy.get('@push.all').should('have.length', completedPushes);
     });
-    cy.get('@enrolment.all').should('have.length', 1);
+    cy.get('@enrolment.all').should('have.length', 0);
     cy.get(dataSelector('pupitre-connected')).should('be.visible');
   };
   const thenOriginalSignedGestureWasSent = (alias: string): void => {
