@@ -66,6 +66,7 @@ const otherCompanyReferenceFixture: ReferentielDuPupitre = {
 };
 const serviceWorkerSessions: string[] = [];
 let documentBeforeUpdate: Document | undefined;
+let installationTabId: string | undefined;
 
 interface ServerStateFixture {
   authorizationRequests: number;
@@ -90,6 +91,31 @@ interface TargetListFixture {
 
 interface AttachedTargetFixture {
   sessionId: string;
+}
+
+interface CreatedTargetFixture {
+  targetId: string;
+}
+
+interface InstallabilityFixture {
+  manifestUrl: string;
+  errors: string[];
+}
+
+interface NavigationFixture {
+  errorText?: string;
+}
+
+interface EvaluationFixture {
+  exceptionDetails?: { text: string };
+}
+
+interface AppManifestFixture {
+  url: string;
+}
+
+interface InstallabilityErrorsFixture {
+  installabilityErrors: { errorId: string }[];
 }
 
 interface NetworkProbeFixture {
@@ -168,6 +194,86 @@ describe('Production pupitre offline restart', () => {
     thenTheNewVersionLoadsWithoutUserNavigation();
   });
 });
+
+describe('Production pupitre installation', () => {
+  beforeEach(() => {
+    givenACleanBrowserWithHttpCacheDisabled();
+  });
+
+  afterEach(() => {
+    whenClosingTheInstallationTab();
+  });
+
+  it('should be installable as an application on the workstation', () => {
+    whenAskingChromeWhetherThePupitreIsInstallable();
+
+    thenChromeOffersToInstallThePupitre();
+  });
+});
+
+const whenAskingChromeWhetherThePupitreIsInstallable = (): void => {
+  cy.then({ timeout: 20_000 }, () => readInstallabilityOfATopLevelPupitre()).as('installability', { type: 'static' });
+};
+
+const thenChromeOffersToInstallThePupitre = (): void => {
+  cy.get<InstallabilityFixture>('@installability')
+    .its('manifestUrl')
+    .should('match', /\/manifest\.webmanifest$/);
+  cy.get<InstallabilityFixture>('@installability').its('errors').should('deep.equal', []);
+};
+
+const whenClosingTheInstallationTab = (): void => {
+  cy.then(() => {
+    const targetId = installationTabId;
+    installationTabId = undefined;
+    return targetId === undefined ? undefined : sendCdp('Target.closeTarget', { targetId }).catch(() => undefined);
+  });
+};
+
+const readInstallabilityOfATopLevelPupitre = (): Promise<InstallabilityFixture> => {
+  const origin = Cypress.config('baseUrl');
+  if (origin === null) throw new Error('The production offline origin is missing.');
+  return sendCdp<CreatedTargetFixture>('Target.createTarget', { url: 'about:blank' })
+    .then(({ targetId }) => {
+      installationTabId = targetId;
+      return sendCdp<AttachedTargetFixture>('Target.attachToTarget', { targetId, flatten: true });
+    })
+    .then(({ sessionId }) => readInstallabilityOfALoadedPupitre(sessionId, `${origin}/`));
+};
+
+const readInstallabilityOfALoadedPupitre = (sessionId: string, url: string): Promise<InstallabilityFixture> =>
+  sendCdp<NavigationFixture>('Page.navigate', { url }, sessionId)
+    .then(navigation => {
+      if (navigation.errorText !== undefined) throw new Error(`The production pupitre did not load: ${navigation.errorText}.`);
+      return sendCdp<EvaluationFixture>(
+        'Runtime.evaluate',
+        {
+          expression:
+            "new Promise(loaded => document.readyState === 'complete' ? loaded(true) : addEventListener('load', () => loaded(true)))",
+          awaitPromise: true,
+        },
+        sessionId,
+      );
+    })
+    .then(evaluation => {
+      if (evaluation.exceptionDetails !== undefined)
+        throw new Error(`The production pupitre never finished loading: ${evaluation.exceptionDetails.text}.`);
+      return sendCdp<AppManifestFixture>('Page.getAppManifest', {}, sessionId);
+    })
+    .then(({ url: manifestUrl }) =>
+      sendCdp<InstallabilityErrorsFixture>('Page.getInstallabilityErrors', {}, sessionId).then(answer => ({
+        manifestUrl,
+        errors: answer.installabilityErrors.map(error => error.errorId),
+      })),
+    );
+
+const sendCdp = <T = unknown>(command: string, params: object = {}, sessionId?: string): Promise<T> =>
+  Promise.resolve(
+    Cypress.automation(
+      'remote:debugger:protocol',
+      sessionId === undefined ? { command, params } : { command, params, sessionId },
+    ) as PromiseLike<T>,
+  );
 
 const givenACleanBrowserWithHttpCacheDisabled = (): void => {
   cy.then(() => detachServiceWorkers());
