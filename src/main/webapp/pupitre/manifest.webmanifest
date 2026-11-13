@@ -1,7 +1,7 @@
 {
-  "name": "glmfront — pupitre",
-  "short_name": "pupitre",
-  "description": "glmfront pupitre",
+  "name": "GLM · Pupitre",
+  "short_name": "GLM Pupitre",
+  "description": "GLM, pupitre d’atelier",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
