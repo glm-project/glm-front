@@ -136,6 +136,11 @@
                 "glob": "manifest.webmanifest",
                 "input": "src/main/webapp/pupitre",
                 "output": ""
+              },
+              {
+                "glob": "*",
+                "input": "src/main/webapp/pupitre/icons",
+                "output": "icons"
               }
             ],
             "styles": ["src/main/webapp/styles.css", "src/main/webapp/pupitre/styles.css"],

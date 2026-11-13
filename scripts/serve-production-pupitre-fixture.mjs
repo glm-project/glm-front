@@ -115,6 +115,8 @@ const contentTypes = new Map([
   ['.html', 'text/html'],
   ['.js', 'text/javascript'],
   ['.json', 'application/json'],
+  ['.png', 'image/png'],
+  ['.svg', 'image/svg+xml'],
   ['.webmanifest', 'application/manifest+json'],
 ]);
 

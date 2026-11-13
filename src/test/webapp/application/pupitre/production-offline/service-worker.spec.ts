@@ -92,6 +92,15 @@ interface AttachedTargetFixture {
   sessionId: string;
 }
 
+interface CreatedTargetFixture {
+  targetId: string;
+}
+
+interface InstallabilityFixture {
+  manifestUrl: string;
+  errors: string[];
+}
+
 interface NetworkProbeFixture {
   failureName?: string;
   reached: boolean;
@@ -167,7 +176,65 @@ describe('Production pupitre offline restart', () => {
 
     thenTheNewVersionLoadsWithoutUserNavigation();
   });
+
+  it('should be installable as an application on the workstation', () => {
+    whenBootingTheProductionPupitre();
+    whenWaitingForServiceWorkerActivation();
+    whenAskingChromeWhetherThePupitreIsInstallable();
+
+    thenChromeOffersToInstallThePupitre();
+  });
 });
+
+const whenAskingChromeWhetherThePupitreIsInstallable = (): void => {
+  cy.then({ timeout: 20_000 }, () => readInstallabilityOfATopLevelPupitre()).as('installability', { type: 'static' });
+};
+
+const thenChromeOffersToInstallThePupitre = (): void => {
+  cy.get<InstallabilityFixture>('@installability')
+    .its('manifestUrl')
+    .should('match', /\/manifest\.webmanifest$/);
+  cy.get<InstallabilityFixture>('@installability').its('errors').should('deep.equal', []);
+};
+
+const readInstallabilityOfATopLevelPupitre = (): Promise<InstallabilityFixture> => {
+  const origin = Cypress.config('baseUrl');
+  if (origin === null) throw new Error('The production offline origin is missing.');
+  return sendCdp<CreatedTargetFixture>('Target.createTarget', { url: 'about:blank' }).then(({ targetId }) =>
+    sendCdp<AttachedTargetFixture>('Target.attachToTarget', { targetId, flatten: true })
+      .then(({ sessionId }) => readInstallabilityOfALoadedPupitre(sessionId, `${origin}/`))
+      .finally(() => sendCdp('Target.closeTarget', { targetId })),
+  );
+};
+
+const readInstallabilityOfALoadedPupitre = (sessionId: string, url: string): Promise<InstallabilityFixture> =>
+  sendCdp('Page.navigate', { url }, sessionId)
+    .then(() =>
+      sendCdp(
+        'Runtime.evaluate',
+        {
+          expression:
+            "new Promise(loaded => document.readyState === 'complete' ? loaded(true) : addEventListener('load', () => loaded(true)))",
+          awaitPromise: true,
+        },
+        sessionId,
+      ),
+    )
+    .then(() => sendCdp<{ url: string }>('Page.getAppManifest', {}, sessionId))
+    .then(({ url: manifestUrl }) =>
+      sendCdp<{ installabilityErrors: { errorId: string }[] }>('Page.getInstallabilityErrors', {}, sessionId).then(answer => ({
+        manifestUrl,
+        errors: answer.installabilityErrors.map(error => error.errorId),
+      })),
+    );
+
+const sendCdp = <T = unknown>(command: string, params: object = {}, sessionId?: string): Promise<T> =>
+  Promise.resolve(
+    Cypress.automation(
+      'remote:debugger:protocol',
+      sessionId === undefined ? { command, params } : { command, params, sessionId },
+    ) as PromiseLike<T>,
+  );
 
 const givenACleanBrowserWithHttpCacheDisabled = (): void => {
   cy.then(() => detachServiceWorkers());
