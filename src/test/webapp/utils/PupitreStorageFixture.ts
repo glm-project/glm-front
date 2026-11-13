@@ -20,6 +20,7 @@ export const pupitreTokenFixture = (entreprise: string): string => `header.${bto
 const persistPupitreFixture = (window: Cypress.AUTWindow, fixture: StoredPupitreFixture): Promise<void> =>
   new Promise<void>((resolve, reject) => {
     const request = window.indexedDB.open('glm-pupitre', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('documents');
     request.onsuccess = () => {
       const database = request.result;
       const transaction = database.transaction('documents', 'readwrite');
@@ -85,6 +86,7 @@ export const givenEnrolledPupitreFixture = (fixture: EnrolledPupitreFixture): vo
 const retirePupitreSessionFixture = (window: Cypress.AUTWindow, entreprise: string): Promise<void> =>
   new Promise<void>((resolve, reject) => {
     const request = window.indexedDB.open('glm-pupitre', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('documents');
     request.onsuccess = () => {
       const database = request.result;
       const transaction = database.transaction('documents', 'readwrite');
