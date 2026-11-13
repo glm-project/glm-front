@@ -66,6 +66,7 @@ const otherCompanyReferenceFixture: ReferentielDuPupitre = {
 };
 const serviceWorkerSessions: string[] = [];
 let documentBeforeUpdate: Document | undefined;
+let installationTabId: string | undefined;
 
 interface ServerStateFixture {
   authorizationRequests: number;
@@ -99,6 +100,22 @@ interface CreatedTargetFixture {
 interface InstallabilityFixture {
   manifestUrl: string;
   errors: string[];
+}
+
+interface NavigationFixture {
+  errorText?: string;
+}
+
+interface EvaluationFixture {
+  exceptionDetails?: { text: string };
+}
+
+interface AppManifestFixture {
+  url: string;
+}
+
+interface InstallabilityErrorsFixture {
+  installabilityErrors: { errorId: string }[];
 }
 
 interface NetworkProbeFixture {
@@ -176,10 +193,18 @@ describe('Production pupitre offline restart', () => {
 
     thenTheNewVersionLoadsWithoutUserNavigation();
   });
+});
+
+describe('Production pupitre installation', () => {
+  beforeEach(() => {
+    givenACleanBrowserWithHttpCacheDisabled();
+  });
+
+  afterEach(() => {
+    whenClosingTheInstallationTab();
+  });
 
   it('should be installable as an application on the workstation', () => {
-    whenBootingTheProductionPupitre();
-    whenWaitingForServiceWorkerActivation();
     whenAskingChromeWhetherThePupitreIsInstallable();
 
     thenChromeOffersToInstallThePupitre();
@@ -197,20 +222,30 @@ const thenChromeOffersToInstallThePupitre = (): void => {
   cy.get<InstallabilityFixture>('@installability').its('errors').should('deep.equal', []);
 };
 
+const whenClosingTheInstallationTab = (): void => {
+  cy.then(() => {
+    const targetId = installationTabId;
+    installationTabId = undefined;
+    return targetId === undefined ? undefined : sendCdp('Target.closeTarget', { targetId }).catch(() => undefined);
+  });
+};
+
 const readInstallabilityOfATopLevelPupitre = (): Promise<InstallabilityFixture> => {
   const origin = Cypress.config('baseUrl');
   if (origin === null) throw new Error('The production offline origin is missing.');
-  return sendCdp<CreatedTargetFixture>('Target.createTarget', { url: 'about:blank' }).then(({ targetId }) =>
-    sendCdp<AttachedTargetFixture>('Target.attachToTarget', { targetId, flatten: true })
-      .then(({ sessionId }) => readInstallabilityOfALoadedPupitre(sessionId, `${origin}/`))
-      .finally(() => sendCdp('Target.closeTarget', { targetId })),
-  );
+  return sendCdp<CreatedTargetFixture>('Target.createTarget', { url: 'about:blank' })
+    .then(({ targetId }) => {
+      installationTabId = targetId;
+      return sendCdp<AttachedTargetFixture>('Target.attachToTarget', { targetId, flatten: true });
+    })
+    .then(({ sessionId }) => readInstallabilityOfALoadedPupitre(sessionId, `${origin}/`));
 };
 
 const readInstallabilityOfALoadedPupitre = (sessionId: string, url: string): Promise<InstallabilityFixture> =>
-  sendCdp('Page.navigate', { url }, sessionId)
-    .then(() =>
-      sendCdp(
+  sendCdp<NavigationFixture>('Page.navigate', { url }, sessionId)
+    .then(navigation => {
+      if (navigation.errorText !== undefined) throw new Error(`The production pupitre did not load: ${navigation.errorText}.`);
+      return sendCdp<EvaluationFixture>(
         'Runtime.evaluate',
         {
           expression:
@@ -218,11 +253,15 @@ const readInstallabilityOfALoadedPupitre = (sessionId: string, url: string): Pro
           awaitPromise: true,
         },
         sessionId,
-      ),
-    )
-    .then(() => sendCdp<{ url: string }>('Page.getAppManifest', {}, sessionId))
+      );
+    })
+    .then(evaluation => {
+      if (evaluation.exceptionDetails !== undefined)
+        throw new Error(`The production pupitre never finished loading: ${evaluation.exceptionDetails.text}.`);
+      return sendCdp<AppManifestFixture>('Page.getAppManifest', {}, sessionId);
+    })
     .then(({ url: manifestUrl }) =>
-      sendCdp<{ installabilityErrors: { errorId: string }[] }>('Page.getInstallabilityErrors', {}, sessionId).then(answer => ({
+      sendCdp<InstallabilityErrorsFixture>('Page.getInstallabilityErrors', {}, sessionId).then(answer => ({
         manifestUrl,
         errors: answer.installabilityErrors.map(error => error.errorId),
       })),
