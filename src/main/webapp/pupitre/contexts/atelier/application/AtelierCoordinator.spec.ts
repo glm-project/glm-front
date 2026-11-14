@@ -478,6 +478,7 @@ describe('AtelierCoordinator', () => {
 
     expect(designation.refusAtelier()).toEqual({
       contexte: { kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' },
+      motif: MotifDeRefus.from('suivi-d-atelier-cloture'),
       message: 'cause conservee',
     });
   });

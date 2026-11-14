@@ -1,4 +1,8 @@
-import { ContexteDeGesteDAtelier, IntentionGlobaleDAtelier } from '../../../domain/designation/fenetre-operateur/ContexteDeGesteDAtelier';
+import {
+  ContexteDeGesteDAtelier,
+  IntentionGlobaleDAtelier,
+  RefusDAtelier,
+} from '../../../domain/designation/fenetre-operateur/ContexteDeGesteDAtelier';
 import { ElementDePointage } from '../../../domain/designation/fenetre-operateur/VueDePointage';
 import { NumeroDElement } from '../../../domain/designation/NumeroDElement';
 import { RetardDePublication } from '../../../domain/journal-du-pupitre/RetardDePublication';
@@ -17,6 +21,9 @@ const COMMANDES_GLOBALES: Record<IntentionGlobaleDAtelier, string> = {
 
 export const toLibelleContexteAtelier = (contexte: ContexteDeGesteDAtelier): string =>
   contexte.kind === 'ELEMENT' ? contexte.numero.toString() : COMMANDES_GLOBALES[contexte.intention];
+
+export const toLibelleRefusAtelier = (refus: RefusDAtelier): string =>
+  refus.motif.is('date-de-survenue-future') ? "L'heure de cette tablette est décalée. Prévenez votre responsable." : refus.message;
 
 export const LIBELLES_POINTAGE = {
   nonConformite: 'NC',

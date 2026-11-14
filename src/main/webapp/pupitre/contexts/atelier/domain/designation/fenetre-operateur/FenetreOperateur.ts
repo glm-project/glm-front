@@ -12,6 +12,7 @@ import {
   TypeDOuverture,
 } from '../../journal-du-pupitre/JournalDuPupitre';
 import { projectReferentiel } from '../../journal-du-pupitre/JournalDuPupitreProjection';
+import { MotifDeRefus } from '../../refus/MotifDeRefus';
 import { ContextesParGeste } from '../ContextesParGeste';
 import { Identifiant } from '../Identifiant';
 import { IdentifiantInconnu } from '../IdentifiantInconnu';
@@ -170,7 +171,10 @@ export class FenetreOperateur {
     const contexte = refus === undefined ? undefined : this.etat.contextesParGeste.contexteOf(refus.geste.id);
     return this.with({
       vue,
-      refusVisible: refus !== undefined && contexte !== undefined ? { contexte, message: refus.refus.message } : undefined,
+      refusVisible:
+        refus !== undefined && contexte !== undefined
+          ? { contexte, motif: MotifDeRefus.from(refus.refus.motif), message: refus.refus.message }
+          : undefined,
     });
   }
   prepareAcceptance(decision: LotDeGestesDAtelier): AcceptationDeGestes {

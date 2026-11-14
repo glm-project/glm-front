@@ -39,10 +39,12 @@ expiration y compris hors ligne, sans créer de `FIN`. Le gel de la durée indic
 `pointage-ignore`. Le pupitre retire son effet local et se recale sur le référentiel de la synchronisation
 suivante, par le mécanisme existant ; le refus reste au journal local (ADR 0049, [ADR 0054](../../../../../../documentation/adr/0054-ignore-incoherent-pointages-at-reception.md)).
 
-**Refus affiché** : seul le refus `suivi-d-atelier-cloture` est montré à l'opérateur
-(`MotifDeRefus.isShownToTheOperator()`). Tout autre refus, y compris un code que l'adaptateur ne reconnaît
-pas, reste au journal local sans affichage. Un lot qui mêle un refus silencieux et une clôture expose la
-clôture.
+**Refus affiché** : seuls les refus `suivi-d-atelier-cloture` et `date-de-survenue-future` sont montrés à
+l'opérateur (`MotifDeRefus.isShownToTheOperator()`). La clôture montre le message du serveur ;
+`date-de-survenue-future`, qui signale une horloge de tablette en avance sur le serveur, montre un libellé fixe
+du pupitre (`LibellesAtelier`) qui demande de prévenir le responsable ([ADR 0060](../../../../../../documentation/adr/0060-show-the-operator-a-tablet-clock-running-ahead.md)).
+Tout autre refus, y compris un code que l'adaptateur ne reconnaît pas, reste au journal local sans affichage.
+Un lot qui mêle un refus silencieux et un refus affiché expose le refus affiché.
 
 **Identifiant** : code de 1 à 6 chiffres saisi au pupitre pour retrouver localement un opérateur du référentiel d'atelier ; le pavé ignore un septième chiffre. Il ne constitue ni un secret ni une preuve d'identité; éviter mot de passe et code PIN. Sa définition est locale au pupitre et ne crée aucun contrat métier avec `gestion`.
 
@@ -87,7 +89,7 @@ clôture.
 - Lorsqu'une ouverture exige de choisir parmi plusieurs postes habilités, la fenêtre opérateur retourne explicitement ce besoin. La pop-up ne conserve qu'une attente éphémère, et le domaine revalide la fenêtre et le poste au choix final; fermer ou laisser expirer cette attente ne produit aucun geste.
 - Un pointage sans choix de poste reçoit son identifiant et son heure à la déclaration de son intention, soit à l'échéance de l'appui maintenu sur sa cible. Avec une pop-up multiposte, ils naissent au choix final du poste; ouvrir puis abandonner la pop-up ne crée aucune identité de geste.
 - Une fenêtre ouverte réconcilie chaque nouvelle version du journal de son entreprise sans changer l'opérateur désigné ni son instant d'observation. La projection optimiste disparaît ainsi dès qu'un geste de cette fenêtre est refusé.
-- La fenêtre expose au plus le dernier refus affichable d'un geste né pendant son ouverture, accompagné du numéro de l'élément concerné : seul le refus de clôture l'est. Une nouvelle intention tactile l'efface; les refus issus du rejeu de fenêtres antérieures restent silencieux.
+- La fenêtre expose au plus le dernier refus affichable d'un geste né pendant son ouverture, accompagné du numéro de l'élément concerné : seul un refus affiché l'est. Une nouvelle intention tactile l'efface; les refus issus du rejeu de fenêtres antérieures restent silencieux.
 - Le pupitre accepte durablement les gestes avant de les confirmer et les publie ensuite.
 - `RetardDePublication.of(journal, instant)` répond `undefined` ou `{ gestes, depuis }` : `gestes` est le nombre total de gestes en attente et `depuis` l'ancienneté du plus ancien. Le signal `retardDePublication` d'`EtatHorsLigneDuPupitre` n'avance que lorsque `updateClock()` pousse l'instant courant : l'écran de désignation le fait à son affichage puis chaque minute, et cesse à sa destruction. Il affiche le retard dans un bandeau d'état au-dessus de l'identifiant, sans bloquer la saisie.
 - Toute modification du journal du pupitre est atomique pour une entreprise; les journaux de deux entreprises restent indépendants.
@@ -122,7 +124,7 @@ Pendant l'acceptation durable d'une action, l'adaptateur primaire désactive les
 
 Un échec d'acceptation locale affiche dans le chrome « Action non enregistrée — recommencez ». Ce message technique persiste jusqu'à la prochaine acceptation durable réussie ou la fermeture de la fenêtre; il ne se confond ni avec un refus métier ni avec l'état réseau.
 
-Le chrome accompagne le refus de clôture du numéro de l'élément pour un pointage de tuile et du libellé `PAUSE`, `REPRENDRE` ou `TOUT ARRÊTER` pour un geste issu d'une commande globale. Il montre le message du serveur et seulement le dernier refus affichable du lot.
+Le chrome accompagne un refus affiché du numéro de l'élément pour un pointage de tuile et du libellé `PAUSE`, `REPRENDRE` ou `TOUT ARRÊTER` pour un geste issu d'une commande globale. Il montre le message du serveur pour la clôture, le libellé fixe pour l'horloge en avance, et seulement le dernier refus affichable du lot.
 
 Tant que l'appareil n'est pas enrôlé et que son premier référentiel complet n'est pas actif, la composition rend l'écran d'enrôlement sous le chrome permanent, jamais un pavé ni un pointage. La bascule lit l'état projeté par le contexte [enrôlement](../enrolement/AGENTS.md), pas la seule présence du référentiel. Ce contexte n'expose son état de chargement que par l'adaptateur primaire `TypeScriptChargementDeLAtelier`, et le comptage des gestes en attente comme l'effacement des journaux que par `TypeScriptEffacementDesJournaux`, tous deux appelés depuis un adaptateur secondaire d'`enrolement`.
 

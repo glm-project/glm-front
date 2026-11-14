@@ -1,3 +1,4 @@
+import { MotifDeRefus } from '../../refus/MotifDeRefus';
 import { NumeroDElement } from '../NumeroDElement';
 
 export type IntentionGlobaleDAtelier = 'PAUSE' | 'REPRENDRE' | 'TOUT_ARRETER';
@@ -13,4 +14,5 @@ export interface MessageDAtelier {
 
 export interface RefusDAtelier extends MessageDAtelier {
   readonly contexte: ContexteDeGesteDAtelier;
+  readonly motif: MotifDeRefus;
 }

@@ -118,7 +118,8 @@ A 200 or 201 publication is accepted; 200 answers the replay of an identifier th
 the server judges incompatible with the state of its key (operator, element and workstation) is not an error of the
 gesture: it answers 409 `pointage-ignore`, which the adapter returns as a durable refusal like any other code. The
 pupitre drops the local effect of that gesture and realigns on the reference at the next synchronization; it never
-shows it to the operator. Of all the refusals, only `suivi-d-atelier-cloture` is shown (`MotifDeRefus`); the others
+shows it to the operator. Of all the refusals, only `suivi-d-atelier-cloture` and `date-de-survenue-future` (400, a tablet clock
+running ahead of the server) are shown (`MotifDeRefus`, [ADR 0060](adr/0060-show-the-operator-a-tablet-clock-running-ahead.md)); the others
 stay in the local journal ([ADR 0049](adr/0049-forget-integrated-gestures-at-reference-activation.md)).
 
 Pointage bodies carry the captured `type` (`DEBUT`, `NON_CONFORMITE`, `FIN`), the operator, the optional workstation,

@@ -237,7 +237,7 @@ press changes the category of an activity, the operator stops then opens again
 A pointage the server judges incompatible with its key answers 409 `pointage-ignore`. The gesture stays refused in the
 journal ([ADR 0049](adr/0049-forget-integrated-gestures-at-reference-activation.md)), its optimistic effect disappears
 when the window reconciles, and the next synchronization realigns the projection on the reference. Only the closure refusal
-is shown to the operator.
+and the refusal of a tablet clock running ahead are shown to the operator.
 
 The activity journal uses `atelier-activites-v2:<tenant>`. The documents of the obsolete prefixes, `atelier:` and
 `atelier-activites-v1:`, are discarded through `LocalStoragePort` when the journal is read, without reading or migrating
@@ -265,8 +265,8 @@ projected state, never the reference alone: an administration reset returns the 
 before the erasure of the journals ends, so the keypad never waits for the disk. The header's own reset gesture opens a confirmation the page
 owns. The same chrome identifies a
 refused pointage by its element number and a refused gesture of a global command by the originating `PAUSE`,
-`REPRENDRE` or `TOUT ARRÊTER` action. Only the closure refusal (`suivi-d-atelier-cloture`) is shown to the
-operator, with the server message and only the latest one in a batch; every other refusal stays in the journal
-without display. Any local
+`REPRENDRE` or `TOUT ARRÊTER` action. Only the closure refusal (`suivi-d-atelier-cloture`), with the server message, and the
+refusal of a tablet clock running ahead (`date-de-survenue-future`), with a fixed pupitre label, are shown to the
+operator, and only the latest one in a batch; every other refusal stays in the journal without display. Any local
 acceptance failure instead shows “Action non enregistrée — recommencez” until the next durable local success
 or window closure.

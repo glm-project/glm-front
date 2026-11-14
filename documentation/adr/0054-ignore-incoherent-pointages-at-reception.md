@@ -20,6 +20,8 @@ réception du backend.
 - `Amended by 0056`: une fin régularisée n'est plus définitive ; le gestionnaire ajoute, retire ou change le poste
   d'une activité terminée depuis une page dédiée, chaque correction ajoutant un fait au journal, et la règle de
   réception juge les pointages sur le journal après corrections.
+- `Amended by 0060`: le refus `date-de-survenue-future` (horloge de tablette en avance) est affiché à l'opérateur
+  avec la clôture, par un libellé fixe du pupitre ; tout autre refus reste au journal sans affichage.
 - `Amends 0050`, `0053`: la clé du journal est `v2` ; la traduction à la lecture d'un journal d'avant les catégories
   disparaît avec les journaux d'avant `v2`.
 
