@@ -7,7 +7,7 @@ export type MotifDeChangementDePoste = 'CHEVAUCHEMENT';
 
 export type MotifDAjout = 'CHEVAUCHEMENT' | 'FIN_FUTURE';
 
-export type MotifDeRegularisation = 'FIN_AVANT_LE_DEBUT' | 'FIN_APRES_LA_BORNE' | 'FIN_FUTURE';
+export type MotifDeRegularisation = 'FIN_AVANT_LE_DEBUT' | 'FIN_APRES_LA_BORNE' | 'FIN_FUTURE' | 'OPERATEUR_NON_HABILITE';
 
 export type ResultatDeCorrection<Motif = never> =
   | { readonly kind: 'ENREGISTREE' }

@@ -194,6 +194,10 @@ describe('Panel to regularise the end of an automatic end', () => {
       motif: 'FIN_FUTURE',
       message: 'La fin dépasse l’heure du serveur. Choisissez une heure plus tôt ou réessayez dans un instant.',
     },
+    {
+      motif: 'OPERATEUR_NON_HABILITE',
+      message: 'L’opérateur de cette activité n’est plus habilité sur son poste : la fin ne peut pas être régularisée.',
+    },
   ] as const)('should explain the refusal $motif under the buttons and keep the end placed', async ({ motif, message }) => {
     corrections.repondreALaRegularisation({ kind: 'REFUS', motif });
     await whenOpening();

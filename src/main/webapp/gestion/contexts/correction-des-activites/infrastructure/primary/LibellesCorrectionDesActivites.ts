@@ -144,6 +144,7 @@ const REFUS_DE_LA_REGULARISATION: Record<MotifDeRegularisation, string> = {
   FIN_AVANT_LE_DEBUT: 'La fin doit suivre le début de l’activité.',
   FIN_APRES_LA_BORNE: 'La fin dépasse le démarrage suivant ou la clôture de l’élément.',
   FIN_FUTURE: 'La fin dépasse l’heure du serveur. Choisissez une heure plus tôt ou réessayez dans un instant.',
+  OPERATEUR_NON_HABILITE: 'L’opérateur de cette activité n’est plus habilité sur son poste : la fin ne peut pas être régularisée.',
 };
 
 const ANNONCES_DE_LA_REGULARISATION: Record<IssueDeCorrection, string> = {

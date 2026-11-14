@@ -49,13 +49,13 @@ const CODES_DE_JOURNEE_CHANGEE_DE_LA_REGULARISATION = [
   'activite-non-echue',
   'operateur-introuvable',
   'poste-de-travail-introuvable',
-  'operateur-non-habilite',
 ] as const;
 
 const MOTIFS_DE_LA_REGULARISATION: ReadonlyMap<string, MotifDeRegularisation> = new Map([
   [`${URN_ATELIER}fin-avant-debut`, 'FIN_AVANT_LE_DEBUT'],
   [`${URN_ATELIER}fin-apres-borne`, 'FIN_APRES_LA_BORNE'],
   [`${URN_ATELIER}date-de-survenue-future`, 'FIN_FUTURE'],
+  [`${URN_ATELIER}operateur-non-habilite`, 'OPERATEUR_NON_HABILITE'],
 ]);
 
 const MOTIFS_DE_L_AJOUT: ReadonlyMap<string, MotifDAjout> = new Map([
