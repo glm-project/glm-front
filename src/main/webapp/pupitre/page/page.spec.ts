@@ -18,6 +18,7 @@ import { Entreprise } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre
 import { EMPTY_JOURNAL_DU_PUPITRE, ReferentielDuPupitre } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournalDuPupitre';
 import { JournauxDuPupitrePort } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/JournauxDuPupitrePort';
 import { RetardDePublication } from '@/pupitre/contexts/atelier/domain/journal-du-pupitre/RetardDePublication';
+import { MotifDeRefus } from '@/pupitre/contexts/atelier/domain/refus/MotifDeRefus';
 import { AtelierExchangePort } from '@/pupitre/contexts/atelier/domain/synchronisation/AtelierExchangePort';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { ChargementDeLAtelierPort } from '@/pupitre/contexts/enrolement/domain/ChargementDeLAtelierPort';
@@ -255,10 +256,29 @@ describe('Pupitre page', () => {
   });
 
   it.each([
-    [{ contexte: { kind: 'ELEMENT' as const, numero: NumeroDElement.assigned('204') }, message: 'Pointage refusé' }, '204 Pointage refusé'],
     [
-      { contexte: { kind: 'COMMANDE_GLOBALE' as const, intention: 'TOUT_ARRETER' as const }, message: 'Commande refusée' },
+      {
+        contexte: { kind: 'ELEMENT' as const, numero: NumeroDElement.assigned('204') },
+        motif: MotifDeRefus.from('suivi-d-atelier-cloture'),
+        message: 'Pointage refusé',
+      },
+      '204 Pointage refusé',
+    ],
+    [
+      {
+        contexte: { kind: 'COMMANDE_GLOBALE' as const, intention: 'TOUT_ARRETER' as const },
+        motif: MotifDeRefus.from('suivi-d-atelier-cloture'),
+        message: 'Commande refusée',
+      },
       'TOUT ARRÊTER Commande refusée',
+    ],
+    [
+      {
+        contexte: { kind: 'ELEMENT' as const, numero: NumeroDElement.assigned('204') },
+        motif: MotifDeRefus.from('date-de-survenue-future'),
+        message: 'La date de survenue est dans le futur.',
+      },
+      "204 L'heure de cette tablette est décalée. Prévenez votre responsable.",
     ],
   ])('should render the workshop message in presentation vocabulary', (message, expected) => {
     givenWorkshopMessage(message);
@@ -307,7 +327,11 @@ describe('Pupitre page', () => {
   });
 
   it('should display a local capture failure ahead of a workshop refusal', () => {
-    givenWorkshopMessage({ contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('204') }, message: 'Pointage refusé' });
+    givenWorkshopMessage({
+      contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('204') },
+      motif: MotifDeRefus.from('suivi-d-atelier-cloture'),
+      message: 'Pointage refusé',
+    });
     givenLocalCaptureFailure();
 
     whenRenderingThePage();

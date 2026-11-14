@@ -4,6 +4,7 @@ export const CODES_DE_REFUS_D_ATELIER = [
   'poste-de-travail-introuvable',
   'operateur-non-habilite',
   'suivi-d-atelier-cloture',
+  'date-de-survenue-future',
   'saisie-concurrente',
   'pointage-ignore',
 ] as const;
@@ -30,6 +31,6 @@ export class MotifDeRefus {
   }
 
   isShownToTheOperator(): boolean {
-    return this.is('suivi-d-atelier-cloture');
+    return this.is('suivi-d-atelier-cloture') || this.is('date-de-survenue-future');
   }
 }

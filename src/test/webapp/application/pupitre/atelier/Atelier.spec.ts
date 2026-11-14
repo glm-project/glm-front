@@ -137,6 +137,18 @@ describe('Pupitre workshop journey', () => {
     thenRefusalReconcilesElementAndHeader('piece-1', '204', 'Pointage refusé par le serveur');
   });
 
+  it('should show a fixed clock message instead of the server message when the tablet clock runs ahead', () => {
+    givenAnEnrolledPupitre(referentielFixture);
+    whenDesignatingOperator049();
+    const refusal = givenStartingElementWillBeRefusedAsDatedInTheFuture();
+
+    whenStartingElementOptimistically('piece-1');
+    whenServerAnswers(refusal);
+
+    thenRefusalReconcilesElementAndHeader('piece-1', '204', "L'heure de cette tablette est décalée. Prévenez votre responsable.");
+    thenHeaderDoesNotShow('Pointage refusé par le serveur');
+  });
+
   it('should remove an optimistic pointage without any message when the server ignores it', () => {
     givenAnEnrolledPupitre(referentielFixture);
     whenDesignatingOperator049();
@@ -299,10 +311,13 @@ describe('Pupitre workshop journey', () => {
   const givenStartingElementWillBeIgnored = (): ReturnType<typeof interceptForever> =>
     givenStartingElementWillBeAnsweredBy('urn:glm:erreur:atelier:pointage-ignore');
 
-  const givenStartingElementWillBeAnsweredBy = (urn: string): ReturnType<typeof interceptForever> => {
+  const givenStartingElementWillBeRefusedAsDatedInTheFuture = (): ReturnType<typeof interceptForever> =>
+    givenStartingElementWillBeAnsweredBy('urn:glm:erreur:atelier:date-de-survenue-future', 400);
+
+  const givenStartingElementWillBeAnsweredBy = (urn: string, statusCode = 409): ReturnType<typeof interceptForever> => {
     pendingResponse = interceptForever(
       { method: 'POST', url: '/api/atelier/suivis/piece-1/pointages' },
-      { statusCode: 409, body: { type: urn, message: 'Pointage refusé par le serveur' } },
+      { statusCode, body: { type: urn, message: 'Pointage refusé par le serveur' } },
       'refusedPointage',
     );
     return pendingResponse;
@@ -409,6 +424,10 @@ describe('Pupitre workshop journey', () => {
       .find(dataSelector('duration'))
       .should('not.exist');
     cy.get(dataSelector('header-message')).should('contain.text', context).and('contain.text', message);
+  };
+
+  const thenHeaderDoesNotShow = (message: string): void => {
+    cy.get(dataSelector('header-message')).should('not.contain.text', message);
   };
 
   const thenIgnoredPointageLeavesNoTraceOnElementAndHeader = (elementId: string): void => {

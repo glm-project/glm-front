@@ -4,7 +4,7 @@ import { IntentionGlobale } from '@/pupitre/contexts/atelier/application/Command
 import { CurrentOperateurLifecycle } from '@/pupitre/contexts/atelier/application/CurrentOperateurLifecycle';
 import { EtatHorsLigneDuPupitre } from '@/pupitre/contexts/atelier/application/EtatHorsLigneDuPupitre';
 import { Designation } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/designation/designation';
-import { toLibelleContexteAtelier } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
+import { toLibelleContexteAtelier, toLibelleRefusAtelier } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/LibellesAtelier';
 import { Pointage } from '@/pupitre/contexts/atelier/infrastructure/primary/pupitre/pointage/pointage';
 import { EnrolementDuPupitre } from '@/pupitre/contexts/enrolement/application/EnrolementDuPupitre';
 import { Enrolement } from '@/pupitre/contexts/enrolement/infrastructure/primary/pupitre/enrolement/enrolement';
@@ -44,7 +44,7 @@ export class PupitrePage implements OnInit, OnDestroy {
     if (this.pupitre.echecCaptureLocale()) return { message: 'Action non enregistrée — recommencez' };
     const message = this.designation.refusAtelier();
     if (message === undefined) return undefined;
-    return { message: message.message, contexte: toLibelleContexteAtelier(message.contexte) };
+    return { message: toLibelleRefusAtelier(message), contexte: toLibelleContexteAtelier(message.contexte) };
   });
 
   private readonly guardPointerDown = (event: PointerEvent): void => {

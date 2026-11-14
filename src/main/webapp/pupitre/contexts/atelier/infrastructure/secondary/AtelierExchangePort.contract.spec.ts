@@ -244,15 +244,16 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     await thenReplayDecisionIs(refused, code, decision);
   });
 
-  it.each<[string, string | undefined]>([
-    ['urn:glm:erreur:atelier:pointage-ignore', 'pointage-ignore'],
-    ['urn:glm:erreur:atelier:suivi-d-atelier-cloture', 'suivi-d-atelier-cloture'],
-    ['urn:glm:erreur:atelier:evenement-anterieur-a-l-engagement', undefined],
-    ['urn:glm:erreur:autre:pointage-ignore', undefined],
-  ])('should translate the refusal %s into the reason %s', async (code, motif) => {
+  it.each<[string, number, string | undefined]>([
+    ['urn:glm:erreur:atelier:pointage-ignore', 409, 'pointage-ignore'],
+    ['urn:glm:erreur:atelier:suivi-d-atelier-cloture', 409, 'suivi-d-atelier-cloture'],
+    ['urn:glm:erreur:atelier:date-de-survenue-future', 400, 'date-de-survenue-future'],
+    ['urn:glm:erreur:atelier:evenement-anterieur-a-l-engagement', 409, undefined],
+    ['urn:glm:erreur:autre:pointage-ignore', 409, undefined],
+  ])('should translate the refusal %s answered with status %i into the reason %s', async (code, status, motif) => {
     const refused = whenSending(ouvertureFixture);
 
-    await whenServerRefusesWrite(code, 'cause');
+    await whenServerRefusesWrite(code, 'cause', status);
 
     await thenRefusalReasonIs(refused, motif);
   });
@@ -311,9 +312,9 @@ describe.each(adapters)('AtelierExchangePort contract, honoured by %s', (_adapte
     request.flush(suiviDetailleFixture, { status: 200, statusText: 'Replay accepted' });
     return request;
   };
-  const whenServerRefusesWrite = async (code: string, message: string): Promise<void> => {
+  const whenServerRefusesWrite = async (code: string, message: string, status = 409): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));
-    http.expectOne('/api/atelier/suivis/piece/pointages').flush({ type: code, message }, { status: 409, statusText: 'Conflict' });
+    http.expectOne('/api/atelier/suivis/piece/pointages').flush({ type: code, message }, { status, statusText: 'Refused' });
   };
   const whenTransportFails = async (): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve));

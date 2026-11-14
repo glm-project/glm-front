@@ -8,6 +8,7 @@ import {
   JournalDuPupitre,
   Suspension,
 } from '../../journal-du-pupitre/JournalDuPupitre';
+import { MotifDeRefus } from '../../refus/MotifDeRefus';
 import { Identifiant } from '../Identifiant';
 import { IntentionGlobaleInitiee } from '../IntentionGlobaleInitiee';
 import { NumeroDElement } from '../NumeroDElement';
@@ -514,6 +515,7 @@ describe('FenetreOperateur', () => {
 
     expect(fenetre.refusal()).toEqual({
       contexte: { kind: 'COMMANDE_GLOBALE', intention: 'TOUT_ARRETER' },
+      motif: MotifDeRefus.from('suivi-d-atelier-cloture'),
       message: "L'élément a été clôturé.",
     });
   });
@@ -539,6 +541,7 @@ describe('FenetreOperateur', () => {
 
     expect(reconciled.refusal()).toEqual({
       contexte: { kind: 'COMMANDE_GLOBALE', intention },
+      motif: MotifDeRefus.from('suivi-d-atelier-cloture'),
       message: 'Le pointage est refusé.',
     });
   });
@@ -636,7 +639,7 @@ describe('FenetreOperateur', () => {
   });
 
   it.each<MotifFixture>([POINTAGE_IGNORE, NON_HABILITE])(
-    'should never expose the %s refusal, only the closed element refusal is shown',
+    'should never expose the %s refusal, only the closed element and clock refusals are shown',
     motif => {
       const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'PRINCIPALE'));
 
@@ -645,6 +648,18 @@ describe('FenetreOperateur', () => {
       thenNoRefusalIsVisible();
     },
   );
+
+  it('should expose the refusal of a pointage dated in the future with its reason, for a tablet clock running ahead', () => {
+    const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'PRINCIPALE'));
+
+    whenReconciling(givenTheDecisionWasRefusedAsDatedInTheFuture(gestures));
+
+    expect(fenetre.refusal()).toEqual({
+      contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('1015') },
+      motif: MotifDeRefus.from('date-de-survenue-future'),
+      message: 'La date de survenue est dans le futur.',
+    });
+  });
 
   it('should never expose a refusal whose reason the adapter did not recognize', () => {
     const gestures = givenAcceptedDecision(whenDeciding('moule-1015', 'PRINCIPALE'));
@@ -686,6 +701,7 @@ describe('FenetreOperateur', () => {
     expect(previous.refusal()).toBeUndefined();
     expect(reconciled.refusal()).toEqual({
       contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('1015') },
+      motif: MotifDeRefus.from('suivi-d-atelier-cloture'),
       message: "L'élément a été clôturé.",
     });
   });
@@ -938,6 +954,7 @@ describe('FenetreOperateur', () => {
     expect(choice.fenetre.refusal()).toBeUndefined();
     expect(reconciled.refusal()).toEqual({
       contexte: { kind: 'ELEMENT', numero: NumeroDElement.generated('OF-2026-000042') },
+      motif: MotifDeRefus.from('suivi-d-atelier-cloture'),
       message: "L'élément a été clôturé.",
     });
   });
@@ -1170,6 +1187,18 @@ describe('FenetreOperateur', () => {
       refus: { code: 'suivi-cloture', motif: 'suivi-d-atelier-cloture', message: "L'élément a été clôturé." },
     })),
   });
+  const givenTheDecisionWasRefusedAsDatedInTheFuture = (gestures: readonly GesteDePointage[]): JournalDuPupitre => ({
+    ...structuredClone(vueFixture),
+    evenements: gestures.map(geste => ({
+      geste,
+      etat: 'REFUSE',
+      refus: {
+        code: 'urn:glm:erreur:atelier:date-de-survenue-future',
+        motif: 'date-de-survenue-future',
+        message: 'La date de survenue est dans le futur.',
+      },
+    })),
+  });
   const messageOf = (motif: MotifFixture): { code: string; message: string; motif: MotifFixture } => ({
     code: 'code-de-diagnostic',
     motif,
@@ -1344,6 +1373,7 @@ describe('FenetreOperateur', () => {
   const thenLatestRefusalNamesTheElement = (): void => {
     expect(fenetre.refusal()).toEqual({
       contexte: { kind: 'ELEMENT', numero: NumeroDElement.assigned('1015') },
+      motif: MotifDeRefus.from('suivi-d-atelier-cloture'),
       message: "L'élément a été clôturé.",
     });
   };

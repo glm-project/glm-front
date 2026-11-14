@@ -162,3 +162,7 @@ something stays, with a status that says what died.
 - [0059 — Régulariser une fin automatique depuis la journée à corriger](0059-regularise-an-automatic-end-from-the-day-to-correct.md) —
   un panneau latéral lit le dossier et reprend la frise à poignée, dupliquée dans la correction des activités ; il
   amende 0056
+
+- [0060 — Montrer à l'opérateur une horloge de tablette en avance](0060-show-the-operator-a-tablet-clock-running-ahead.md) —
+  le refus `date-de-survenue-future` s'affiche avec la clôture, par un libellé fixe du pupitre qui demande de prévenir
+  le responsable ; il amende 0054

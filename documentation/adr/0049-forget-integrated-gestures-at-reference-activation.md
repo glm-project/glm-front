@@ -12,7 +12,8 @@ always holds the last pause of each operator, and TOUT ARRÊTER no longer retain
 `Amends` [ADR 0047](0047-count-only-finished-activities.md): TOUT ARRÊTER keeps pending and refused gestures, and the
 accepted ones only while they are still the last gesture of their operator or carry the last pause.
 `Amended by` [ADR 0054](0054-ignore-incoherent-pointages-at-reception.md): the pupitre keeps the refusals a server ignore produces
-(`pointage-ignore`) in this journal without showing them; only the closure refusal reaches the operator.
+(`pointage-ignore`) in this journal without showing them; only the closure refusal reaches the operator, with, since
+[ADR 0060](0060-show-the-operator-a-tablet-clock-running-ahead.md), the refusal of a tablet clock running ahead.
 
 ## Context
 
