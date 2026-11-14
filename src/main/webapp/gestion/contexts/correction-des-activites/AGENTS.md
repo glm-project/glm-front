@@ -106,7 +106,7 @@ après aujourd'hui ni de borne vers le passé. Le jour affiché n'est lu que dan
 ## Corrections
 
 Une correction est une commande sur un seul suivi, envoyée par `CorrectionsPort` et résolue en `ResultatDeCorrection` :
-`ENREGISTREE`, `JOURNEE_CHANGEE`, ou `REFUS { motif }` quand la correction a des motifs qu'un gestionnaire peut corriger.
+`ENREGISTREE`, `JOURNEE_CHANGEE`, ou `REFUS { motif }` quand la correction a des motifs à expliquer au gestionnaire.
 Le type du résultat prend le type des motifs : le retrait n'en a aucun, donc aucun `REFUS` n'existe pour lui ; le changement
 de poste n'a que `CHEVAUCHEMENT` ; l'ajout a `CHEVAUCHEMENT` et `FIN_FUTURE`.
 
@@ -241,8 +241,9 @@ de poste n'a que `CHEVAUCHEMENT` ; l'ajout a `CHEVAUCHEMENT` et `FIN_FUTURE`.
   sont celles du contexte des anomalies ; **une correction de l'une des deux frises se reporte sur l'autre**.
 - **Envoi.** « Valider la fin à HH:MM » (inactif tant qu'aucune heure n'est posée) envoie
   `CorrectionDUneActivite.regulariserLaFin(activite, fin)`. `SaisieDeRegularisation` lie l'identifiant à l'activité et
-  à l'instant (comparé comme instant). Les refus que le gestionnaire peut corriger (`FIN_AVANT_LE_DEBUT`,
-  `FIN_APRES_LA_BORNE`, `FIN_FUTURE`) s'affichent sous les boutons, l'heure reste posée ; un échec technique le dit et
-  garde la saisie. Le succès ferme le panneau, relit la journée, annonce « Fin régularisée » et donne le focus au
+  à l'instant (comparé comme instant). Les refus (`FIN_AVANT_LE_DEBUT`, `FIN_APRES_LA_BORNE`, `FIN_FUTURE`,
+  `OPERATEUR_NON_HABILITE`) s'affichent sous les boutons, panneau ouvert et sans relecture, l'heure reste posée : une
+  relecture ne lèverait pas la perte d'habilitation et ramènerait le même bouton. Un échec technique le dit et garde la
+  saisie. Le succès ferme le panneau, relit la journée, annonce « Fin régularisée » et donne le focus au
   message ; `JOURNEE_CHANGEE` annonce « La journée a changé, recommencez ». Un panneau fermé sans issue oublie sa saisie
   (`abandonnerLaRegularisation()`).

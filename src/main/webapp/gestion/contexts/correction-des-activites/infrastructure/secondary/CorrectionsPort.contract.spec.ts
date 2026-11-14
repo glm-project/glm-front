@@ -156,7 +156,8 @@ describe('Beyond the contract: HTTP corrections of the activities', () => {
     { code: 'fin-avant-debut', status: 409, motif: 'FIN_AVANT_LE_DEBUT' },
     { code: 'fin-apres-borne', status: 409, motif: 'FIN_APRES_LA_BORNE' },
     { code: 'date-de-survenue-future', status: 400, motif: 'FIN_FUTURE' },
-  ] as const)('should resolve $code as a refusal the manager can correct, and report nothing', async ({ code, status, motif }) => {
+    { code: 'operateur-non-habilite', status: 409, motif: 'OPERATEUR_NON_HABILITE' },
+  ] as const)('should resolve $code as a refusal explained to the manager, and report nothing', async ({ code, status, motif }) => {
     const envoi = await whenRegularisingAnsweredWith(status, { type: `urn:glm:erreur:atelier:${code}` });
 
     expect(envoi.resultat).toEqual({ kind: 'REFUS', motif });
@@ -171,7 +172,6 @@ describe('Beyond the contract: HTTP corrections of the activities', () => {
     { code: 'activite-non-echue', status: 409 },
     { code: 'operateur-introuvable', status: 404 },
     { code: 'poste-de-travail-introuvable', status: 404 },
-    { code: 'operateur-non-habilite', status: 409 },
   ] as const)(
     'should resolve $code on a regularisation as a change of the day, to reread, and report nothing',
     async ({ code, status }) => {
